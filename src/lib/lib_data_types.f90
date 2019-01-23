@@ -4,14 +4,17 @@ module lib_data_types
     integer, parameter :: element_kind = 4
 
     ! list element
-    type octree_element
+    type lib_octree_element
         integer(kind=element_kind)   :: start
         integer(kind=element_kind)   :: end
         integer(kind=element_kind)   :: parent_element
-    end type octree_element
+    end type lib_octree_element
 
-!    type octree_level
-!        type(octree_element), dimension() ::
+!    type octree_parent
+!        type(octree_element), dimension(8) :: children
+!        type(ectree_element), dimension() :: neighbor
 !    end type octree_level
+
+
 
 end module lib_data_types
