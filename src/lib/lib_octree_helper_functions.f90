@@ -21,7 +21,7 @@ module lib_octree_helper_functions
         ! Arguments
         ! ----
         !   R_c: double precision
-        !       number of the node, with n ranging form 0 to 2^(3*l) in a three-dimensional space
+        !
         !
         ! Returns
         ! ----
@@ -29,8 +29,8 @@ module lib_octree_helper_functions
         !       the minimum number of neighbours
         !
         !
-        double precision(kind=octree_integer_kind), intent (in) :: R_c
-        double precision(kind=octree_integer_kind) :: buffer
+        double precision, intent (in) :: R_c
+        double precision :: buffer
         integer(kind=octree_integer_kind) :: k
 
         buffer = 0.5 * (R_c * sqrt(fmm_d) -1 )
@@ -60,8 +60,8 @@ module lib_octree_helper_functions
         !       the minimum number of neighbours
         !
         !
-        double precision(kind=octree_integer_kind), intent (in) :: r_c
-        double precision(kind=octree_integer_kind) :: buffer
+        double precision, intent (in) :: r_c
+        double precision :: buffer
         integer(kind=octree_integer_kind) :: k
 
         buffer = 0.5 * (1/r_c * sqrt(fmm_d) -1 )
@@ -91,8 +91,8 @@ module lib_octree_helper_functions
         !       the minimum number of neighbours
         !
         !
-        double precision(kind=octree_integer_kind), intent (in) :: r_c
-        double precision(kind=octree_integer_kind) :: buffer
+        double precision, intent (in) :: r_c
+        double precision :: buffer
         integer(kind=octree_integer_kind) :: k
 
         buffer = 0.5 * (max(1/r_c, R_c) * sqrt(fmm_d) -1 )
