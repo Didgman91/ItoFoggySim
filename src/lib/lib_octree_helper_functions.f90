@@ -3,8 +3,10 @@ module lib_octree_helper_functions
 
     private
 
-    integer, parameter :: octree_integer_kind = 4
-    integer, parameter :: fmm_d = 3 ! dimensions
+    public :: get_universal_index
+
+    integer, private, parameter :: octree_integer_kind = 4
+    integer, private, parameter :: fmm_dimensions = 3 ! dimensions
 
     contains
 
@@ -33,7 +35,7 @@ module lib_octree_helper_functions
         double precision :: buffer
         integer(kind=octree_integer_kind) :: k
 
-        buffer = 0.5 * ( R_c * sqrt(real(fmm_d)) - 1 )
+        buffer = 0.5 * ( R_c * sqrt(real(fmm_dimensions)) - 1 )
 
         k = ceiling(buffer)
 
@@ -64,7 +66,7 @@ module lib_octree_helper_functions
         double precision :: buffer
         integer(kind=octree_integer_kind) :: k
 
-        buffer = 0.5 * (1/r_c * sqrt(real(fmm_d)) -1 )
+        buffer = 0.5 * (1/r_c * sqrt(real(fmm_dimensions)) -1 )
 
         k = ceiling(buffer)
 
@@ -96,7 +98,7 @@ module lib_octree_helper_functions
         double precision :: buffer
         integer(kind=octree_integer_kind) :: k
 
-        buffer = 0.5 * (max(1/r_c2, R_c1) * sqrt(real(fmm_d)) -1 )
+        buffer = 0.5 * (max(1/r_c2, R_c1) * sqrt(real(fmm_dimensions)) -1 )
 
         k = ceiling(buffer)
 
@@ -167,7 +169,7 @@ module lib_octree_helper_functions
                 buffer = 0
             end if
 
-            n = n +  (2**fmm_dim)**(l-i) * buffer
+            n = n +  (2**fmm_dimensions)**(l-i) * buffer
 
 !            n = n +  2**(l-i) * point_n(i)
         end do

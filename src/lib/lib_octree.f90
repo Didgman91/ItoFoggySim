@@ -1,10 +1,11 @@
 module lib_octree
+use lib_octree_helper_functions
     implicit none
     ! Data Structures, Optimal Choice of Parameters, and Complexity Results for Generalized Multilevel Fast Multipole Methods in d Dimensions
 
-    private
-
-    public :: lib_octree_get_parent
+!    private
+!
+!    public :: lib_octree_get_parent
 
     integer, parameter :: octree_integer_kind = 4
     integer, parameter :: fmm_d = 3 ! dimensions
