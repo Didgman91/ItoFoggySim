@@ -6,7 +6,7 @@ module lib_octree_helper_functions
     public :: get_universal_index
 
     integer, private, parameter :: octree_integer_kind = 4
-    integer, private, parameter :: fmm_dimensions = 3 ! dimensions
+    integer, private, parameter :: fmm_dimensions = 1 ! dimensions
 
     contains
 
@@ -126,8 +126,9 @@ module lib_octree_helper_functions
         !
         ! Arguments
         ! ----
-        !   point_x: real
-        !       normalised single precision floating point number (0.0 .. 1.0)
+        !   point_x: double precision
+        !       normalised floating point number (0.0 .. 1.0)
+        !       HINT: datatype real is also possible, use *_1D_float() instead
         !
         !   l: integer(kind=1)
         !       number of layers
@@ -140,7 +141,7 @@ module lib_octree_helper_functions
         !
 
         ! dummy arguments
-        real, intent (in) :: point_x
+        double precision, intent (in) :: point_x
         integer(kind=1), intent (in) :: l
         integer(kind=4) :: n
 
@@ -148,10 +149,11 @@ module lib_octree_helper_functions
         integer :: i
         integer(kind=1) :: buffer
 
-        integer(kind=4) :: coordinate_binary
-        integer, parameter :: COORDINATE_BINARY_NUMBER_OF_BYTES = 4
+        integer(kind=8) :: coordinate_binary
+        integer, parameter :: COORDINATE_BINARY_NUMBER_OF_BYTES = 8
 
-        coordinate_binary = get_coordinate_binary_number_1D_float(point_x)
+!        coordinate_binary = get_coordinate_binary_number_1D_float(point_x)
+        coordinate_binary = get_coordinate_binary_number_1D_double(point_x)
 
 !        do i = 1, COORDINATE_BINARY_NUMBER_OF_BYTES*8
 !            if (btest(coordinate_binary, i-1)) then ! bit number starts at 0
@@ -238,14 +240,14 @@ module lib_octree_helper_functions
         equivalence (f_integer_buffer, f_byte)
 
         ! auxiiary variables
-        logical :: bit
-        byte :: mask_bit_0_true
-        data mask_bit_0_true/ B'00000001' /
+        integer(kind=4) :: shift
 
-        integer(kind=1), parameter :: INT_MIN_ABS = 127
-        integer(kind=1), parameter :: SHIFT_EXPONENT = 1
-        integer(kind=1), parameter :: SHIFT_MANTISSA = 9
-        integer(kind=1) :: shift
+        ! parametres
+        integer(kind=1), parameter :: INTEGER_SIGNED_MIN_ABS = 127
+        integer(kind=1), parameter :: BITS_SIGN = 1
+        integer(kind=1), parameter :: BITS_EXPONENT = 8
+        integer(kind=1), parameter :: BITS_MANTISSA = 23
+
 
         f_buffer = f
 
@@ -258,18 +260,12 @@ module lib_octree_helper_functions
         !   S: algebraic sign
         !   E: Exponent
         !   M: Mantissa
-        f_exponent = ishft(f_byte(4), SHIFT_EXPONENT)
+        f_exponent = ishft(f_byte(4), BITS_SIGN)
 
         if (btest(f_byte(3), 7)) then
-            bit = .true.
+            f_exponent = ibset(f_exponent, 0)
         else
-            bit = .false.
-        end if
-
-        if (bit) then
-            f_exponent = or(f_exponent, mask_bit_0_true)
-        else
-            f_exponent = and(f_exponent, not(mask_bit_0_true))
+            f_exponent = ibclr(f_exponent, 0)
         end if
 
         ! --- extract the mantissa from byte 3, 2 and 1 ---
@@ -287,22 +283,153 @@ module lib_octree_helper_functions
         !   Byte 2: |M|M|M|M| |M|M|M|M|
         !   Byte 2: |0|0|0|0| |0|0|0|0|
 
-        f_mantissa = ishft(f_integer_buffer, SHIFT_MANTISSA-1)
+        f_mantissa = ishft(f_integer_buffer, BITS_SIGN + BITS_EXPONENT - 1)
         f_mantissa = ibset(f_mantissa, 31)
 
         ! --- convert exponent ---
         ! binary representation: sigend integer, but interpreted as unsigned integer
-        ! e.g.: -2 (base 10) = 0111 1110 (base 2) displayed as 125 (base 10)
+        ! e.g.: -2 (base 10) = 0111 1101 (base 2) displayed as 125 (base 10)
         !
         ! -> f_exponent = INT_MIN_ABS - f_exponent
         !               = 127 - f_exponent
         !
 
         ! --- generate binary coordinate (only the decimal place) ---
-        shift = INT_MIN_ABS-f_exponent-1
+        shift = INTEGER_SIGNED_MIN_ABS - f_exponent - 1
         coordinate_binary = ishft(f_mantissa, -shift)
 
-
     end function get_coordinate_binary_number_1D_float
+
+    function get_coordinate_binary_number_1D_double(f) result (coordinate_binary)
+    implicit none
+        ! Calculates the binary coordinate of a normalised floating point (0..1).
+        !
+        !   String(n, l)=(N_1, N_2, ..., N_l), N_j=0, ..., 2**d−1, j=1, ..., l (48)
+        !
+        ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
+        !
+        ! Example:
+        !   Point |  x_10    |  x_2
+        !   --------------------------
+        !      1  |  0.125   | 0.001    -> String(n,l)=(0,0,1)
+        !      2  |  0.3125  | 0.0101   -> String(n,l)=(0,1,0,1)
+        !      3  |  0.375   | 0.011    -> String(n,l)=(0,1,1)
+        !      4  |  0.625   | 0.101    -> String(n,l)=(1,0,1)
+        !      5  |  0.825   | 0.111    -> String(n,l)=(1,1,1)
+        !
+        !
+        !
+        ! Floting point bitwise structure
+        !   Bit no.: 7 6 5 4   3 2 1 0
+        !   Byte 7: |S|E|E|E| |E|E|E|E|
+        !   Byte 6: |E|E|E|E| |M|M|M|M|
+        !   Byte 5: |M|M|M|M| |M|M|M|M|
+        !   Byte 4: |M|M|M|M| |M|M|M|M|
+        !   Byte 3: |M|M|M|M| |M|M|M|M|
+        !   Byte 2: |M|M|M|M| |M|M|M|M|
+        !   Byte 1: |M|M|M|M| |M|M|M|M|
+        !   Byte 0: |M|M|M|M| |M|M|M|M|
+        !
+        ! legend:
+        !   S: algebraic sign
+        !   E: Exponent
+        !   M: Mantissa
+        !   Point x_a: (base a)
+        !
+        !
+        ! Arguments
+        ! ----
+        !   f: float
+        !       normalised single precision floating point number (0.0 .. 1.0)
+        !
+        ! Returns
+        ! ----
+        !   the binary representation of the floating point number (only the decimal place).
+        !
+        !   coordinate_binary: 4 bytes
+        !
+        !
+
+
+        ! dummy arguments
+        double precision, intent(in) :: f
+        integer(kind=8) :: coordinate_binary
+
+        ! variable for the binary access
+        double precision :: f_buffer
+        integer(kind=8) :: f_integer_buffer
+        equivalence (f_integer_buffer, f_buffer)
+
+        integer(kind=8) :: f_exponent
+        integer(kind=8) :: f_mantissa
+
+
+        ! auxiiary variables
+        integer(kind=8) :: shift
+
+        ! parametres
+        integer(kind=2), parameter :: EXPONENT_CONVENTION = 1023
+        integer(kind=1), parameter :: BITS_SIGN = 1
+        integer(kind=1), parameter :: BITS_EXPONENT = 11
+        integer(kind=1), parameter :: BITS_MANTISSA = 52
+
+
+        f_buffer = f
+
+        ! --- extract the exponent from byte 7 and 6 ---
+        !  Bit no.: 7 6 5 4   3 2 1 0
+        !   Byte 7: |S|E|E|E| |E|E|E|E|
+        !   Byte 6: |E|E|E|E| |M|M|M|M|
+        !
+        ! Result: f_exponent
+        !  Bit no.: 7 6 5 4   3 2 1 0
+        !   Byte 1: |0|0|0|0| |0|E|E|E|
+        !   Byte 0: |E|E|E|E| |E|E|E|E|
+        !
+        ! legend:
+        !   S: algebraic sign
+        !   E: Exponent
+        !   M: Mantissa
+        f_exponent = ishft(f_integer_buffer, -BITS_MANTISSA)    ! shift right
+
+        ! --- extract the mantissa from byte 0-6 ---
+        ! f_integer_buffer:
+        !   Bit no.: 7 6 5 4   3 2 1 0
+        !   Byte 7: |S|E|E|E| |E|E|E|E|
+        !   Byte 6: |E|E|E|E| |M|M|M|M|
+        !   Byte 5: |M|M|M|M| |M|M|M|M|
+        !   Byte 4: |M|M|M|M| |M|M|M|M|
+        !   Byte 3: |M|M|M|M| |M|M|M|M|
+        !   Byte 2: |M|M|M|M| |M|M|M|M|
+        !   Byte 1: |M|M|M|M| |M|M|M|M|
+        !   Byte 0: |M|M|M|M| |M|M|M|M|
+        !
+        ! Result: f_mantissa
+        !   Bit no.: 7 6 5 4   3 2 1 0
+        !   Byte 4: |1|M|M|M| |M|M|M|M|   bit 7: "virtual 1 of mantissa: 1.MMMMM"
+        !   Byte 6: |M|M|M|M| |M|M|M|M|
+        !   Byte 5: |M|M|M|M| |M|M|M|M|
+        !   Byte 4: |M|M|M|M| |M|M|M|M|
+        !   Byte 3: |M|M|M|M| |M|M|M|M|
+        !   Byte 2: |M|M|M|M| |M|M|M|M|
+        !   Byte 1: |M|M|M|M| |M|0|0|0|
+        !   Byte 0: |0|0|0|0| |0|0|0|0|
+        f_mantissa = ishft(f_integer_buffer, BITS_SIGN + BITS_EXPONENT - 1)
+        f_mantissa = ibset(f_mantissa, 63)
+
+
+        ! --- convert exponent ---
+        ! binary representation: sigend integer, but interpreted as unsigned integer
+        ! e.g.: -2 (base 10) = 0000 0011 1111 1101 (base 2) displayed as 1021 (base 10)
+        !
+        ! -> f_exponent = EXPONENT_CONVENTION - f_exponent
+        !               = 1023 - f_exponent
+        !
+
+        ! --- generate binary coordinate (only the decimal place) ---
+        shift = EXPONENT_CONVENTION - int(f_exponent) - 1
+        coordinate_binary = ishft(f_mantissa, -shift)   ! right shift
+
+    end function get_coordinate_binary_number_1D_double
 
 end module lib_octree_helper_functions
