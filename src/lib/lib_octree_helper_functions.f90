@@ -6,7 +6,7 @@ module lib_octree_helper_functions
     public :: get_universal_index
 
     integer, private, parameter :: octree_integer_kind = 4
-    integer, private, parameter :: fmm_dimensions = 3 ! dimensions
+    integer, private, parameter :: fmm_dimensions = 1 ! dimensions
 
     contains
 
@@ -110,7 +110,7 @@ module lib_octree_helper_functions
         ! Related to the level *l*.
         !
         !   n = (2**d)**(l-1)*N_1 + (2**d)**(l-2)*N_2 + ... + (2**d)*N_l-1 + N_l      (49)
-
+        !
         ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
         !
         !
@@ -153,12 +153,18 @@ module lib_octree_helper_functions
 
         coordinate_binary = get_coordinate_binary_number_1D_float(point_x)
 
+!        ! use these lines instead to load all binary coordinates into the *point_n* variable.
 !        do i = 1, COORDINATE_BINARY_NUMBER_OF_BYTES*8
 !            if (btest(coordinate_binary, i-1)) then ! bit number starts at 0
 !                point_n(COORDINATE_BINARY_NUMBER_OF_BYTES*8-i+1) = 1
 !            else
 !                point_n(COORDINATE_BINARY_NUMBER_OF_BYTES*8-i+1) = 0
 !            end if
+!        end do
+!
+!        n = 0
+!        do i = 1, l
+!            n = n +  2**(l-i) * point_n(i)
 !        end do
 
         n = 0
@@ -170,8 +176,6 @@ module lib_octree_helper_functions
             end if
 
             n = n +  (2**fmm_dimensions)**(l-i) * buffer
-
-!            n = n +  2**(l-i) * point_n(i)
         end do
 
     end function
@@ -288,7 +292,7 @@ module lib_octree_helper_functions
         !   Byte 2: |0|0|0|0| |0|0|0|0|
 
         f_mantissa = ishft(f_integer_buffer, SHIFT_MANTISSA-1)
-        f_mantissa = ibset(f_mantissa, 31)
+        f_mantissa = ibset(f_mantissa, 31)  ! set virtual 1 of mantissa
 
         ! --- convert exponent ---
         ! binary representation: sigend integer, but interpreted as unsigned integer
@@ -299,10 +303,11 @@ module lib_octree_helper_functions
         !
 
         ! --- generate binary coordinate (only the decimal place) ---
-        shift = INT_MIN_ABS-f_exponent-1
+        shift = INT_MIN_ABS-f_exponent-1    ! -1: to respect the virtual 1 of mantissa
         coordinate_binary = ishft(f_mantissa, -shift)
 
 
     end function get_coordinate_binary_number_1D_float
+
 
 end module lib_octree_helper_functions

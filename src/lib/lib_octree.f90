@@ -8,7 +8,7 @@ use lib_octree_helper_functions
 !    public :: lib_octree_get_parent
 
     integer, parameter :: octree_integer_kind = 4
-    integer, parameter :: fmm_d = 3 ! dimensions
+    integer, parameter :: fmm_d = 1 ! dimensions
 
     type lib_octree_box_index
         integer(kind=octree_integer_kind)   :: n
