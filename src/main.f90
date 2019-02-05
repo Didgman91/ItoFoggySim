@@ -4,8 +4,16 @@ use lib_octree
 implicit none
 
     type(lib_octree_element), dimension(2) :: test
-    integer, dimension(5) :: universal_index
+    integer(kind=4), dimension(5) :: universal_index
+    integer(kind=4), dimension(5) :: parent_index
+    integer(kind=4), dimension(2,5) :: children_all_index
+    double precision, dimension(5) :: point_c
+    integer(kind=4), dimension(2,5) :: neighbours
+
     integer(kind=1), parameter :: l = 3
+    integer(kind=1), parameter :: k = 1
+
+    integer(kind=1) :: i
 
     test(1)%start = 34
     test(1)%end = 978
@@ -20,5 +28,11 @@ implicit none
     universal_index(4) = get_universal_index(0.625d+0, l)
     universal_index(5) = get_universal_index(0.825d+0, l)
 
+    do i = 1, 5
+        parent_index(i) = get_parent(universal_index(i))
+        children_all_index(:,i) = get_children_all(universal_index(i))
+        point_c(i) = get_centre_of_box(universal_index(i), l)
+        neighbours(:,i) = get_neighbour_all_1D(k, universal_index(i), l)
+    end do
 
 end program main

@@ -4,14 +4,18 @@ module lib_octree_helper_functions
     private
 
     public :: get_universal_index
+    public :: get_parent
+    public :: get_children_all
+    public :: get_centre_of_box
+    public :: get_neighbour_all_1D
 
     integer, private, parameter :: octree_integer_kind = 4
     integer, private, parameter :: fmm_dimensions = 1 ! dimensions
 
-    contains
+contains
 
     function lib_octree_hf_get_neighbourhood_size_S(R_c) result (k)
-    implicit none
+        implicit none
         ! "The S-expansion (10) near the center of the nth box at level l for
         !  x_i ∈ E_1 (n,l) is valid for any y in the domain E_3 (n,l)."
         !
@@ -42,7 +46,7 @@ module lib_octree_helper_functions
     end function lib_octree_hf_get_neighbourhood_size_S
 
     function lib_octree_hf_get_neighbourhood_size_R(r_c) result (k)
-    implicit none
+        implicit none
         ! "The R-expansion (8) near the center of the nth box at level l for x i ∈ E_3 (n,l) 
         ! is valid for any y from the domain E_1 (n,l)."
         !
@@ -73,7 +77,7 @@ module lib_octree_helper_functions
     end function lib_octree_hf_get_neighbourhood_size_R
 
     function lib_octree_hf_get_neighbourhood_size(R_c1, r_c2) result (k)
-    implicit none
+        implicit none
         ! "The R-expansion (8) near the center of the nth box at level l for x i ∈ E_3 (n,l) 
         ! is valid for any y from the domain E_1 (n,l)."
         !
@@ -105,7 +109,7 @@ module lib_octree_helper_functions
     end function lib_octree_hf_get_neighbourhood_size
 
     function get_universal_index(point_x, l) result(n)
-    implicit none
+        implicit none
         ! Calculates the universal index *n* of a given normalised floating point *point_x*.
         ! Related to the level *l*.
         !
@@ -143,7 +147,7 @@ module lib_octree_helper_functions
         ! dummy arguments
         double precision, intent (in) :: point_x
         integer(kind=1), intent (in) :: l
-        integer(kind=4) :: n
+        integer(kind=octree_integer_kind) :: n
 
         ! auxiliary
         integer :: i
@@ -152,22 +156,22 @@ module lib_octree_helper_functions
         integer(kind=8) :: coordinate_binary
         integer, parameter :: COORDINATE_BINARY_NUMBER_OF_BYTES = 8
 
-!        coordinate_binary = get_coordinate_binary_number_1D_float(point_x)
+        !        coordinate_binary = get_coordinate_binary_number_1D_float(point_x)
         coordinate_binary = get_coordinate_binary_number_1D_double(point_x)
 
-!        ! use these lines instead to load all binary coordinates into the *point_n* variable.
-!        do i = 1, COORDINATE_BINARY_NUMBER_OF_BYTES*8
-!            if (btest(coordinate_binary, i-1)) then ! bit number starts at 0
-!                point_n(COORDINATE_BINARY_NUMBER_OF_BYTES*8-i+1) = 1
-!            else
-!                point_n(COORDINATE_BINARY_NUMBER_OF_BYTES*8-i+1) = 0
-!            end if
-!        end do
-!
-!        n = 0
-!        do i = 1, l
-!            n = n +  2**(l-i) * point_n(i)
-!        end do
+        !        ! use these lines instead to load all binary coordinates into the *point_n* variable.
+        !        do i = 1, COORDINATE_BINARY_NUMBER_OF_BYTES*8
+        !            if (btest(coordinate_binary, i-1)) then ! bit number starts at 0
+        !                point_n(COORDINATE_BINARY_NUMBER_OF_BYTES*8-i+1) = 1
+        !            else
+        !                point_n(COORDINATE_BINARY_NUMBER_OF_BYTES*8-i+1) = 0
+        !            end if
+        !        end do
+        !
+        !        n = 0
+        !        do i = 1, l
+        !            n = n +  2**(l-i) * point_n(i)
+        !        end do
 
         n = 0
         do i = 1, l
@@ -183,7 +187,7 @@ module lib_octree_helper_functions
     end function
 
     function get_coordinate_binary_number_1D_float(f) result (coordinate_binary)
-    implicit none
+        implicit none
         ! Calculates the binary coordinate of a normalised floating point (0..1).
         !
         !   String(n, l)=(N_1, N_2, ..., N_l), N_j=0, ..., 2**d−1, j=1, ..., l (48)
@@ -305,7 +309,7 @@ module lib_octree_helper_functions
     end function get_coordinate_binary_number_1D_float
 
     function get_coordinate_binary_number_1D_double(f) result (coordinate_binary)
-    implicit none
+        implicit none
         ! Calculates the binary coordinate of a normalised floating point (0..1).
         !
         !   String(n, l)=(N_1, N_2, ..., N_l), N_j=0, ..., 2**d−1, j=1, ..., l (48)
@@ -435,5 +439,182 @@ module lib_octree_helper_functions
         coordinate_binary = ishft(f_mantissa, -shift)   ! right shift
 
     end function get_coordinate_binary_number_1D_double
+
+    function get_parent(n) result (parent_n)
+        implicit none
+        ! Calculates the universal index of the parent box.
+        !
+        !   Parent(n) = [n/(2^d)]     (57)
+        !
+        ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
+        !
+        ! case: one-dimensional tree
+        ! l=1
+        !  |     0     |     1     |
+        !  -------------------------
+        ! l=2
+        !  |  0  |  1  |  2  |  3  |
+        !  -------------------------
+        !
+        ! example:
+        !   Box(n,l) = (2,2)
+        !   Parent(2,2) = (1,1)
+        !
+        !
+        ! Arguments
+        ! ----
+        !   n: integer(kind=4)
+        !       universal index of a box
+        !
+        ! Returns
+        ! ----
+        !   the universal index of the parent box.
+        !
+        !   parent_n: Integer(kind=4)
+        !
+
+        ! dummy arguments
+        integer(kind=octree_integer_kind), intent (in) :: n
+        integer(kind=octree_integer_kind) :: parent_n
+
+        parent_n = n/(2**fmm_dimensions)
+
+    end function
+
+    function get_children_all(n) result (children_n)
+        implicit none
+        ! Calculates the universal index of all children's boxes
+        !
+        !   ChildrenAll(n) = {2^d * n + j}, j=0, ..., 2^d − 1   (58)
+        !
+        ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
+        !
+        ! example: one-dimensional tree
+        ! ----
+        !    l=1
+        !     |     0     |     1     |
+        !     -------------------------
+        !    l=2
+        !     |  0  |  1  |  2  |  3  |
+        !     -------------------------
+        !
+        !      Box(n,l) = (1,1)
+        !      ChildrenAll(1,1) = {(2,2), (3,2)}
+        !
+        ! Arguments
+        ! ----
+        !   n: integer(kind=4)
+        !       universal index of a box
+        !
+        ! Returns
+        ! ----
+        !   the universal indexes of all children boxes of the given box.
+        !
+        !   children_n: Integer(kind=4), dimension(2^d)
+
+        ! dummy arguments
+        integer(kind=octree_integer_kind), intent (in) :: n
+        integer(kind=octree_integer_kind), dimension(2**fmm_dimensions) :: children_n
+
+        ! auxiliary variables
+        integer(kind=1) :: j
+
+        do j = 0, 2**fmm_dimensions - 1
+            children_n(j+1) = 2**fmm_dimensions * n + j
+        end  do
+
+    end function
+
+    function get_centre_of_box(n,l) result (point)
+        implicit none
+        ! Calculates the centre of a box(n,l)
+        !
+        !   x_c (n, l) = 2^(−l) ( n + 2^(−1))       (73)
+        !
+        ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
+        !
+        ! Arguments
+        ! ----
+        !   n: integer
+        !       number of the node, with n ranging form 0 to 2^(3*l) in a three-dimensional space
+        !   l: integer
+        !       number of the level
+
+        ! dummy arguments
+        integer(kind=octree_integer_kind), intent (in) :: n
+        integer(kind=1), intent (in) :: l
+        double precision :: point
+
+        point = 2d+0**(-l) * (n + 0.5d+0)
+
+    end function
+
+    function get_neighbour_all_1D(k,n,l) result (neighbour_all)
+        implicit none
+        ! Calculates the universal index of all k-th neigbour's boxes
+        !
+        !   NeighborAll^(k)(n, l) = {(n−k, l), (n+k, l)}     (74)
+        !
+        ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
+        !
+        ! example: one-dimensional tree
+        ! ----
+        !    l=1
+        !     |     0     |     1     |
+        !     -------------------------
+        !    l=2
+        !     |  0  |  1  |  2  |  3  |
+        !     -------------------------
+        !             -k <-- * --> +k
+        !
+        !      Box(n,l) = (2,2)
+        !      NeighbourAll(1,2,2) = {(1,2), (3,2)}
+        !
+        ! Arguments
+        ! ----
+        !   k: integer(kind=octree_integer_kind)
+        !       k-th neighbour
+        !   n: integer(kind=octree_integer_kind)
+        !       universal index of a box
+        !   l: integer(kind=octree_integer_kind)
+        !       number of the level
+        !
+        ! Returns
+        ! ----
+        !   the universal indexes of all neigbour boxes of the given box.
+        !
+        !   neighbour_all: Integer(kind=octree_integer_kind), dimension(2^d)
+
+        ! dummy arguments
+        integer(kind=1), intent (in) :: k
+        integer(kind=octree_integer_kind), intent (in) :: n
+        integer(kind=1), intent (in) :: l
+        integer(kind=octree_integer_kind), dimension(2) :: neighbour_all
+
+        ! auxiliary variables
+        integer(kind=octree_integer_kind), parameter :: ignore_entry = -1
+        integer(kind=octree_integer_kind), parameter :: lower_boundary = 0
+        integer(kind=octree_integer_kind) :: upper_boundary
+        integer(kind=octree_integer_kind) :: buffer_n
+
+        upper_boundary = 2**l - 1
+
+        ! calculate left neighbour
+        buffer_n = n-k
+        if (buffer_n < lower_boundary) then
+            buffer_n = ignore_entry
+        end if
+
+        neighbour_all(1) = buffer_n
+
+        ! calculate right neigbour
+        buffer_n = n+k
+        if (buffer_n > upper_boundary) then
+            buffer_n = ignore_entry
+        end if
+
+        neighbour_all(2) = buffer_n
+
+    end function
 
 end module lib_octree_helper_functions
