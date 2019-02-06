@@ -1,46 +1,54 @@
+! File: lib_octree_helper_functions.F90
+!
+! Created on Tue Feb  5 16:33:05 2019
+!
+! @author: itodaiber
+!
+!
+! Notes
+! ----
+!
+! Preprocessor
+! -----
+!   standard value: FMM_DIMENSION = 3
+!
+! Eclipse settings
+! ------
+!   Project properties -> Fortran General -> Paths and Symbols -> Symbols
+!
+
+#define _FMM_DIMENSION_ 3
+
+! 1: true, 0: false (-> spatial point is real)
+#define _SPATIAL_POINT_IS_DOUBLE_ 1
+
 module lib_octree_helper_functions
     implicit none
-    ! File: lib_octree_helper_functions.F90
-    !
-    ! Created on Tue Feb  5 16:33:05 2019
-    !
-    ! @author: itodaiber
-    !
-    !
-    ! Notes
-    ! ----
-    !
-    ! Preprocessor
-    ! -----
-    !   standard value: FMM_DIMENSION = 3
-    !
-    ! Eclipse settings
-    ! ------
-    !   Project properties -> Fortran General -> Paths and Symbols -> Symbols
-    !
-
 
     private
 
+#if(_FMM_DIMENSION_ == 1)
+    integer(kind=1), public, parameter :: fmm_dimensions = 1 ! dimensions
+#elif(_FMM_DIMENSION_ == 3)
+    integer(kind=1), public, parameter :: fmm_dimensions = 3 ! dimensions
+#endif
+
+    type lib_octree_spatial_point
+#if(_SPATIAL_POINT_IS_DOUBLE_ == 1)
+        double precision, dimension(fmm_dimensions) :: x
+#elif(_SPATIAL_POINT_IS_DOUBLE_ == 0)
+        real, dimension(fmm_dimensions) :: x
+#endif
+    end type lib_octree_spatial_point
+
+    public :: lib_octree_spatial_point
     public :: lib_octree_hf_get_universal_index
     public :: lib_octree_hf_get_parent
     public :: lib_octree_hf_get_children_all
     public :: lib_octree_hf_get_centre_of_box
     public :: lib_octree_hf_get_neighbour_all_1D
-    public :: lib_octree_hf_get_coordinate_binary_number_3D_float
 
     integer(kind=1), private, parameter :: octree_integer_kind = 4
-
-#if (FMM_DIMENSION == 1)
-    integer(kind=1), private, parameter :: fmm_dimensions = 1 ! dimensions
-#elif (FMM_DIMENSION == 3)
-    integer(kind=1), private, parameter :: fmm_dimensions = 3 ! dimensions
-#endif
-
-    type lib_octree_spatial_point
-        integer(kind=octree_integer_kind), dimension(fmm_dimensions)   :: x
-    end type lib_octree_spatial_point
-
     integer(kind=1), private, parameter :: NUMBER_OF_BITS_PER_BYTE = 8
 
 contains
@@ -176,20 +184,45 @@ contains
         !
 
         ! dummy arguments
-!        #if (FMM_DIMENSION == 1)
-        double precision, intent (in) :: point_x
+        type(lib_octree_spatial_point), intent (in) :: point_x
         integer(kind=1), intent (in) :: l
         integer(kind=octree_integer_kind) :: n
 
         ! auxiliary
         integer :: i
         integer(kind=1) :: buffer
-
-        integer(kind=8) :: coordinate_binary
+#if(_FMM_DIMENSION_ == 1)
+#if(_SPATIAL_POINT_IS_DOUBLE_ == 1)
         integer, parameter :: COORDINATE_BINARY_NUMBER_OF_BYTES = 8
 
+#elif(_SPATIAL_POINT_IS_DOUBLE_ == 0)
+        integer, parameter :: COORDINATE_BINARY_NUMBER_OF_BYTES = 4
+#endif
+#elif(_FMM_DIMENSION_ == 3)
+#if(_SPATIAL_POINT_IS_DOUBLE_ == 1)
+        integer, parameter :: COORDINATE_BINARY_NUMBER_OF_BYTES = 16
+#elif(_SPATIAL_POINT_IS_DOUBLE_ == 0)
+        integer, parameter :: COORDINATE_BINARY_NUMBER_OF_BYTES = 16
+#endif
+#endif
+        integer(kind=COORDINATE_BINARY_NUMBER_OF_BYTES) :: coordinate_binary
+        integer(kind=COORDINATE_BINARY_NUMBER_OF_BYTES) :: n_buffer
+
         !        coordinate_binary = get_coordinate_binary_number_1D_float(point_x)
-        coordinate_binary = lib_octree_hf_get_coordinate_binary_number_1D_double(point_x)
+#if(_FMM_DIMENSION_ == 1)
+#if(_SPATIAL_POINT_IS_DOUBLE_ == 1)
+        coordinate_binary = lib_octree_hf_get_coordinate_binary_number_1D_double(point_x%x(1))
+#elif(_SPATIAL_POINT_IS_DOUBLE_ == 0)
+        coordinate_binary = lib_octree_hf_get_coordinate_binary_number_1D_float(point_x%x(1))
+#endif
+#elif(_FMM_DIMENSION_ == 3)
+#if(_SPATIAL_POINT_IS_DOUBLE_ == 1)
+        coordinate_binary = lib_octree_hf_get_coordinate_binary_number_3D_double(point_x%x)
+#elif(_SPATIAL_POINT_IS_DOUBLE_ == 0)
+        coordinate_binary = lib_octree_hf_get_coordinate_binary_number_3D_float(point_x%x)
+#endif
+#endif
+
 
         !        ! use these lines instead to load all binary coordinates into the *point_n* variable.
         !        do i = 1, COORDINATE_BINARY_NUMBER_OF_BYTES*8
@@ -205,16 +238,21 @@ contains
         !            n = n +  2**(l-i) * point_n(i)
         !        end do
 
-        n = 0
-        do i = 1, l
-            if (btest(coordinate_binary, COORDINATE_BINARY_NUMBER_OF_BYTES*8-i)) then ! bit number starts at 0
-                buffer = 1
-            else
-                buffer = 0
-            end if
+        i = l*fmm_dimensions
+        n_buffer = ibits(coordinate_binary, COORDINATE_BINARY_NUMBER_OF_BYTES*NUMBER_OF_BITS_PER_BYTE-i, i)
 
-            n = n +  (2**fmm_dimensions)**(l-i) * buffer
-        end do
+        n = n_buffer
+
+!        n = 0
+!        do i = 1, l*fmm_dimensions
+!            if (btest(coordinate_binary, COORDINATE_BINARY_NUMBER_OF_BYTES*NUMBER_OF_BITS_PER_BYTE-i)) then ! bit number starts at 0
+!                buffer = 1
+!            else
+!                buffer = 0
+!            end if
+!
+!            n = n +  (2**fmm_dimensions)**(l-i) * buffer
+!        end do
 
     end function lib_octree_hf_get_universal_index
 
@@ -386,7 +424,7 @@ contains
         ! ----
         !   the binary representation of the floating point number (only the decimal place).
         !
-        !   coordinate_binary: 4 bytes
+        !   coordinate_binary: 8 bytes
         !
         !
 
@@ -495,7 +533,7 @@ contains
         ! parameters
         integer(kind=1), parameter :: DIMENSION = 3         ! do not change, function is specialised in three-dimensional data points
         integer(kind=1), parameter :: NUMBER_OF_BYTES_COORDINATE_3D = 16  ! space for 3 (=DIMENSION) integer of kind 4 (OCTREE_INTEGER_KIND)
-        integer(kind=1), parameter :: NUMBER_OF_BITS_COORDINATE_1D = OCTREE_INTEGER_KIND * NUMBER_OF_BITS_PER_BYTE
+        integer(kind=1), parameter :: NUMBER_OF_BITS_COORDINATE_1D = 4 * NUMBER_OF_BITS_PER_BYTE
         integer(kind=2), parameter :: NUMBER_OF_BITS_COORDINATE_3D = NUMBER_OF_BYTES_COORDINATE_3D * NUMBER_OF_BITS_PER_BYTE
 
         ! dummy arguments
@@ -569,8 +607,8 @@ contains
 
         ! parameters
         integer(kind=1), parameter :: DIMENSION = 3         ! do not change, function is specialised in three-dimensional data points
-        integer(kind=1), parameter :: NUMBER_OF_BYTES_COORDINATE_3D = 16  ! space for 3 (=DIMENSION) integer of kind 4 (OCTREE_INTEGER_KIND)
-        integer(kind=1), parameter :: NUMBER_OF_BITS_COORDINATE_1D = OCTREE_INTEGER_KIND * NUMBER_OF_BITS_PER_BYTE
+        integer(kind=1), parameter :: NUMBER_OF_BYTES_COORDINATE_3D = 16  ! space for 3 (=DIMENSION) integer of kind 8
+        integer(kind=1), parameter :: NUMBER_OF_BITS_COORDINATE_1D = 8 * NUMBER_OF_BITS_PER_BYTE
         integer(kind=2), parameter :: NUMBER_OF_BITS_COORDINATE_3D = NUMBER_OF_BYTES_COORDINATE_3D * NUMBER_OF_BITS_PER_BYTE
 
         ! dummy arguments
@@ -582,6 +620,8 @@ contains
         integer(kind=1) :: i
         integer(kind=1) :: ii
         integer(kind=8), dimension(DIMENSION) :: coordinate_binary_1D
+        integer(kind=1) :: bit_number_3D
+        integer(kind=1) :: bit_number_1D
 
         do i = 1, DIMENSION
             f_buffer = f(i)
@@ -611,10 +651,14 @@ contains
         coordinate_binary_3D = 0 !ishft(coordinate_binary_3D, NUMBER_OF_BITS_COORDINATE_3D) ! set every bit to 0
         do i = 1, DIMENSION
             do ii = 0, NUMBER_OF_BITS_COORDINATE_1D - 1  ! bit operations: index starts at 0
-                if (btest(coordinate_binary_1D(i), NUMBER_OF_BITS_COORDINATE_1D - 1 - ii)) then
-                    coordinate_binary_3D = ibset(coordinate_binary_3D, NUMBER_OF_BITS_COORDINATE_3D - ii*DIMENSION - i)
-                else
-                    coordinate_binary_3D= ibclr(coordinate_binary_3D, NUMBER_OF_BITS_COORDINATE_3D - ii*DIMENSION - i)
+                bit_number_3D = NUMBER_OF_BITS_COORDINATE_3D - ii*DIMENSION - i
+                if (bit_number_3D >= 0) then
+                    bit_number_1D = NUMBER_OF_BITS_COORDINATE_1D - 1 - ii
+                    if (btest(coordinate_binary_1D(i), bit_number_1D)) then
+                        coordinate_binary_3D = ibset(coordinate_binary_3D, bit_number_3D)
+                    else
+                        coordinate_binary_3D= ibclr(coordinate_binary_3D, bit_number_3D)
+                    end if
                 end if
             end do
         end do
@@ -711,9 +755,9 @@ contains
 
     function lib_octree_hf_get_centre_of_box(n,l) result (point)
         implicit none
-        ! Calculates the centre of a box(n,l)
+        ! Calculates the centre of a box(n,l).
         !
-        !   x_c (n, l) = 2^(−l) ( n + 2^(−1))       (73)
+        !   x_m(n, l) = 2^(−l) ( n + 2^(−1))       (87)
         !
         ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
         !
@@ -723,13 +767,25 @@ contains
         !       number of the node, with n ranging form 0 to 2^(3*l) in a three-dimensional space
         !   l: integer
         !       number of the level
+        ! Returns
+        ! ----
+        !   x_m: integer
+        !       counting system undependet value
+        !
 
         ! dummy arguments
         integer(kind=octree_integer_kind), intent (in) :: n
         integer(kind=1), intent (in) :: l
-        double precision :: point
+        type(lib_octree_spatial_point) :: point
 
-        point = 2d+0**(-l) * (n + 0.5d+0)
+        ! auxiliary variables
+#if _SPATIAL_POINT_IS_DOUBLE_ == 1
+        integer(kind=8) :: x_m
+#elif _SPATIAL_POINT_IS_DOUBLE_ = 0
+        integer(kind=4) :: x_m
+#endif
+
+        x_m = 2d+0**(-l) * (n + 0.5d+0)
 
     end function
 

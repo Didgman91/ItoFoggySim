@@ -15,10 +15,10 @@ use lib_octree_helper_functions
         integer(kind=octree_integer_kind)   :: l
     end type lib_octree_box_index
 
-    ! a spatial point corresponds to our element, which consists of nodes
-    type lib_octree_spatial_point
-        integer(kind=octree_integer_kind), dimension(fmm_d)   :: x
-    end type lib_octree_spatial_point
+!    ! a spatial point corresponds to our element, which consists of nodes
+!    type lib_octree_spatial_point
+!        integer(kind=octree_integer_kind), dimension(fmm_d)   :: x
+!    end type lib_octree_spatial_point
 
     contains
 
@@ -114,7 +114,7 @@ use lib_octree_helper_functions
         integer(kind=octree_integer_kind), intent (in)  :: l
         type(lib_octree_spatial_point) :: rv
 
-         rv%x = (/1,2,3/)
+!         rv%x = (/1,2,3/)
     end function lib_octree_get_domain_e1
 
     function lib_octree_get_domain_e2(k,n,l) result (rv)
@@ -138,7 +138,7 @@ use lib_octree_helper_functions
         integer(kind=octree_integer_kind), intent (in) :: l
         type(lib_octree_spatial_point) :: rv
 
-        rv%x = (/1,2,3/)
+!        rv%x = (/1,2,3/)
     end function lib_octree_get_domain_e2
 
     function lib_octree_get_domain_e3(k,n,l) result (rv)
@@ -162,7 +162,7 @@ use lib_octree_helper_functions
         integer(kind=octree_integer_kind), intent (in) :: l
         type(lib_octree_spatial_point) :: rv
 
-        rv%x = (/1,2,3/)
+!        rv%x = (/1,2,3/)
     end function lib_octree_get_domain_e3
 
     function lib_octree_get_domain_e4(k,n,l) result (rv)
@@ -187,7 +187,7 @@ use lib_octree_helper_functions
         integer(kind=octree_integer_kind), intent (in) :: l
         type(lib_octree_spatial_point) :: rv
 
-        rv%x = (/1,2,3/)
+!        rv%x = (/1,2,3/)
     end function lib_octree_get_domain_e4
 
 end module lib_octree
