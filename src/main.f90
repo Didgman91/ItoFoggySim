@@ -15,6 +15,15 @@ implicit none
 
     integer(kind=1) :: i
 
+    real, dimension(3) :: f
+    integer(kind=16) :: coord
+
+
+    f(1) = 0.5
+    f(2) = 0.25
+    f(3) = 0.125
+    coord = get_coordinate_binary_number_3D_float(f)
+
     test(1)%start = 34
     test(1)%end = 978
     test(1)%parent_element = 78

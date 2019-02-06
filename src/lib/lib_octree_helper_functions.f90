@@ -8,9 +8,11 @@ module lib_octree_helper_functions
     public :: get_children_all
     public :: get_centre_of_box
     public :: get_neighbour_all_1D
+    public :: get_coordinate_binary_number_3D_float
 
-    integer, private, parameter :: octree_integer_kind = 4
-    integer, private, parameter :: fmm_dimensions = 1 ! dimensions
+    integer(kind=1), private, parameter :: octree_integer_kind = 4
+    integer(kind=1), private, parameter :: fmm_dimensions = 1 ! dimensions
+    integer(kind=1), private, parameter :: NUMBER_OF_BITS_PER_BYTE = 8
 
 contains
 
@@ -440,6 +442,108 @@ contains
 
     end function get_coordinate_binary_number_1D_double
 
+    function get_coordinate_binary_number_3D_float(f) result (coordinate_binary_3D)
+        implicit none
+        ! todo: adjust comments !
+        !
+        ! Calculates the binary coordinate of a normalised floating point vector (0..1, 0..1, 0..1).
+        !
+        !   String(n, l)=(N_1, N_2, ..., N_l), N_j=0, ..., 2**d−1, j=1, ..., l (48)
+        !
+        ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
+        !
+        ! Example:
+        !   Point |  x_10    |  x_2
+        !   --------------------------
+        !      1  |  0.125   | 0.001    -> String(n,l)=(0,0,1)
+        !      2  |  0.3125  | 0.0101   -> String(n,l)=(0,1,0,1)
+        !      3  |  0.375   | 0.011    -> String(n,l)=(0,1,1)
+        !      4  |  0.625   | 0.101    -> String(n,l)=(1,0,1)
+        !      5  |  0.825   | 0.111    -> String(n,l)=(1,1,1)
+        !
+        !
+        !
+        ! Floting point bitwise structure
+        !   Bit no.: 7 6 5 4   3 2 1 0
+        !   Byte 4: |S|E|E|E| |E|E|E|E|
+        !   Byte 3: |E|M|M|M| |M|M|M|M|
+        !   Byte 2: |M|M|M|M| |M|M|M|M|
+        !   Byte 1: |M|M|M|M| |M|M|M|M|
+        !
+        ! legend:
+        !   S: algebraic sign
+        !   E: Exponent
+        !   M: Mantissa
+        !   Point x_a: (base a)
+        !
+        !
+        ! Arguments
+        ! ----
+        !   f: float
+        !       normalised single precision floating point number (0.0 .. 1.0)
+        !
+        ! Returns
+        ! ----
+        !   the binary representation of the floating point number (only the decimal place).
+        !
+        !   coordinate_binary: 4 bytes
+        !
+        !
+
+        ! parameters
+        integer(kind=1), parameter :: DIMENSION = 3         ! do not change, function is specialised in three-dimensional data points
+        integer(kind=1), parameter :: NUMBER_OF_BYTES_COORDINATE_3D = 16  ! space for 3 (=DIMENSION) integer of kind 4 (OCTREE_INTEGER_KIND)
+        integer(kind=1), parameter :: NUMBER_OF_BITS_COORDINATE_1D = OCTREE_INTEGER_KIND * NUMBER_OF_BITS_PER_BYTE
+        integer(kind=2), parameter :: NUMBER_OF_BITS_COORDINATE_3D = NUMBER_OF_BYTES_COORDINATE_3D * NUMBER_OF_BITS_PER_BYTE
+
+        ! dummy arguments
+        real, dimension(DIMENSION), intent(in) :: f
+        integer(kind=NUMBER_OF_BYTES_COORDINATE_3D) :: coordinate_binary_3D
+
+        ! auxiliary variables
+        real :: f_buffer
+        integer(kind=1) :: i
+        integer(kind=1) :: ii
+        integer(kind=OCTREE_INTEGER_KIND), dimension(DIMENSION) :: coordinate_binary_1D
+
+        do i = 1, DIMENSION
+            f_buffer = f(i)
+            coordinate_binary_1D(i) = get_coordinate_binary_number_1D_float(f_buffer)
+        end do
+
+        ! make out of three binary coordinates one binary coordinate
+        ! Example
+        ! ----
+        !   x1: 0.100   => 0.5   (base 10)
+        !   x2: 0.010   => 0.25  (base 10)
+        !   x3: 0.001   => 0.125 (base 10)
+        !
+        !   x1: 0.1  |0  |0
+        !   x2: 0. 0 | 1 | 0
+        !   x3: 0.  0|  0|  1
+        !  ------------------
+        !  x3D: 0.100|010|001
+        !
+        ! Bit number example
+        ! ----
+        !   integer(kind=1): 1000 0100
+        !        bit number |7..4 3..0|
+        !
+
+        coordinate_binary_3D = ishft(coordinate_binary_3D, NUMBER_OF_BITS_COORDINATE_3D) ! set every bit to 0
+        do i = 1, DIMENSION
+            do ii = 0, NUMBER_OF_BITS_COORDINATE_1D - 1  ! bit operations: index starts at 0
+                if (btest(coordinate_binary_1D(i), NUMBER_OF_BITS_COORDINATE_1D - 1 - ii)) then
+                    coordinate_binary_3D = ibset(coordinate_binary_3D, NUMBER_OF_BITS_COORDINATE_3D - ii*DIMENSION - i)
+                else
+                    coordinate_binary_3D= ibclr(coordinate_binary_3D, NUMBER_OF_BITS_COORDINATE_3D - ii*DIMENSION - i)
+                end if
+            end do
+        end do
+
+
+    end function get_coordinate_binary_number_3D_float
+
     function get_parent(n) result (parent_n)
         implicit none
         ! Calculates the universal index of the parent box.
@@ -452,7 +556,8 @@ contains
         ! l=1
         !  |     0     |     1     |
         !  -------------------------
-        ! l=2
+        ! l=2             ^
+        !                 |
         !  |  0  |  1  |  2  |  3  |
         !  -------------------------
         !
@@ -494,7 +599,8 @@ contains
         !    l=1
         !     |     0     |     1     |
         !     -------------------------
-        !    l=2
+        !                      / \
+        !    l=2              v   v
         !     |  0  |  1  |  2  |  3  |
         !     -------------------------
         !
@@ -553,6 +659,9 @@ contains
         implicit none
         ! Calculates the universal index of all k-th neigbour's boxes
         !
+        !   N_(min)^(Neighbours)(d) = 2^d − 1                (19)
+        !   N_(max)^(Neighbours)(d) = 3^d − 1                (19)
+        !
         !   NeighborAll^(k)(n, l) = {(n−k, l), (n+k, l)}     (74)
         !
         ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
@@ -589,6 +698,7 @@ contains
         integer(kind=1), intent (in) :: k
         integer(kind=octree_integer_kind), intent (in) :: n
         integer(kind=1), intent (in) :: l
+        !integer(kind=octree_integer_kind), dimension(3**fmm_dimensions -1) :: neighbour_all
         integer(kind=octree_integer_kind), dimension(2) :: neighbour_all
 
         ! auxiliary variables
