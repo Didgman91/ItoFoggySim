@@ -110,3 +110,6 @@ local.properties
 
 Debug
 Release
+
+!.project
+!.cproject
