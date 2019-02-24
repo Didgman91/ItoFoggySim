@@ -10,7 +10,7 @@
 !
 ! Preprocessor
 ! -----
-!   standard value: FMM_DIMENSION = 3
+!   standard value: _FMM_DIMENSION_ = 3
 !
 ! Eclipse settings
 ! ------
@@ -27,11 +27,7 @@ module lib_octree_helper_functions
 
     private
 
-#if(_FMM_DIMENSION_ == 1)
-    integer(kind=1), public, parameter :: fmm_dimensions = 1 ! dimensions
-#elif(_FMM_DIMENSION_ == 3)
-    integer(kind=1), public, parameter :: fmm_dimensions = 3 ! dimensions
-#endif
+    integer(kind=1), public, parameter :: fmm_dimensions = _FMM_DIMENSION_ ! dimensions
 
     type lib_octree_spatial_point
 #if(_SPATIAL_POINT_IS_DOUBLE_ == 1)
@@ -665,6 +661,41 @@ contains
 
 
     end function lib_octree_hf_get_coordinate_binary_number_3D_double
+    
+    function lib_octree_hf_get_coordinate_binary_number_xD_double(f) result (coordinate_binary_3D)
+        implicit noneistent
+        ! Calculates the binary coordinate of a normalised floating point vector (0..1, 0..1, 0..1).
+        ! For each element separately.
+        !
+        ! Arguments
+        ! ----
+        !   f: double precision, dimension(fmm_dimensions)
+        !       normalised single precision floating point number (0.0..1.0, 0.0..1.0, 0.0..1.0)
+        !
+        ! Returns
+        ! ----
+        !   the binary representation of the floating point vector (only the decimal place).
+        !
+        !   coordinate_binary_D: vector<int(kind=8)>
+        !
+
+        ! parameters
+        integer(kind=1), parameter :: NUMBER_OF_BITS_COORDINATE_1D = 8 * NUMBER_OF_BITS_PER_BYTE
+
+        ! dummy arguments
+        double precision, dimension(fmm_dimensions), intent(in) :: f
+        integer(kind=NUMBER_OF_BYTES_COORDINATE_1D), dimension(fmm_dimensions), intent(out) :: coordinate_binary_xD
+
+        ! auxiliary variables
+        double precision :: f_buffer
+        integer(kind=1) :: i
+
+        do i = 1, fmm_dimensions
+            f_buffer = f(i)
+            coordinate_binary_xD(i) = lib_octree_hf_get_coordinate_binary_number_1D_double(f_buffer)
+        end do
+        
+    end function lib_octree_hf_get_coordinate_binary_number_xD_double
 
     function lib_octree_hf_get_parent(n) result (parent_n)
         implicit none
