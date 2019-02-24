@@ -642,12 +642,12 @@ contains
         ! ----
         !   integer(kind=1): 1000 0100
         !        bit number |7..4 3..0|
-        !
 
+        !
         coordinate_binary_3D = 0 !ishft(coordinate_binary_3D, NUMBER_OF_BITS_COORDINATE_3D) ! set every bit to 0
+                bit_number_3D = NUMBER_OF_BITS_COORDINATE_3D - ii*DIMENSION - i
         do i = 1, DIMENSION
             do ii = 0, NUMBER_OF_BITS_COORDINATE_1D - 1  ! bit operations: index starts at 0
-                bit_number_3D = NUMBER_OF_BITS_COORDINATE_3D - ii*DIMENSION - i
                 if (bit_number_3D >= 0) then
                     bit_number_1D = NUMBER_OF_BITS_COORDINATE_1D - 1 - ii
                     if (btest(coordinate_binary_1D(i), bit_number_1D)) then
@@ -662,8 +662,8 @@ contains
 
     end function lib_octree_hf_get_coordinate_binary_number_3D_double
     
-    function lib_octree_hf_get_coordinate_binary_number_xD_double(f) result (coordinate_binary_3D)
-        implicit noneistent
+    function lib_octree_hf_get_coordinate_binary_number_xD_double(f) result (coordinate_binary_xD)
+        implicit none
         ! Calculates the binary coordinate of a normalised floating point vector (0..1, 0..1, 0..1).
         ! For each element separately.
         !
@@ -680,11 +680,11 @@ contains
         !
 
         ! parameters
-        integer(kind=1), parameter :: NUMBER_OF_BITS_COORDINATE_1D = 8 * NUMBER_OF_BITS_PER_BYTE
+        integer(kind=1), parameter :: NUMBER_OF_BYTES_COORDINATE_1D = 8
 
         ! dummy arguments
         double precision, dimension(fmm_dimensions), intent(in) :: f
-        integer(kind=NUMBER_OF_BYTES_COORDINATE_1D), dimension(fmm_dimensions), intent(out) :: coordinate_binary_xD
+        integer(kind=NUMBER_OF_BYTES_COORDINATE_1D), dimension(fmm_dimensions) :: coordinate_binary_xD
 
         ! auxiliary variables
         double precision :: f_buffer
@@ -694,7 +694,7 @@ contains
             f_buffer = f(i)
             coordinate_binary_xD(i) = lib_octree_hf_get_coordinate_binary_number_1D_double(f_buffer)
         end do
-        
+
     end function lib_octree_hf_get_coordinate_binary_number_xD_double
 
     function lib_octree_hf_get_parent(n) result (parent_n)

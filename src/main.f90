@@ -79,7 +79,7 @@ program main
     do i = 1, 5
         parent_index(i) = lib_octree_hf_get_parent(universal_index(i))
         children_all_index(:,i) = lib_octree_hf_get_children_all(universal_index(i))
-        point_c(i) = lib_octree_hf_get_centre_of_box(universal_index(i), l)
+        point(i) = lib_octree_hf_get_centre_of_box(universal_index(i), l)
         neighbours(:,i) = lib_octree_hf_get_neighbour_all_1D(k, universal_index(i), l)
     end do
 
