@@ -4,9 +4,9 @@ program main
     implicit none
 
     type(lib_octree_element), dimension(2) :: test
-    integer(kind=4), dimension(5) :: universal_index
-    integer(kind=4), dimension(5) :: parent_index
-    integer(kind=4), dimension(2**fmm_dimensions,5) :: children_all_index
+    type(lib_octree_universal_index), dimension(5) :: universal_index
+    type(lib_octree_universal_index), dimension(5) :: parent_index
+!    type(lib_octree_universal_index), dimension(2**fmm_dimensions,5) :: children_all_index
     double precision, dimension(5) :: point_c
     integer(kind=4), dimension(2,5) :: neighbours
 
@@ -15,7 +15,7 @@ program main
 
     integer(kind=1) :: i
 
-    real, dimension(fmm_dimensions) :: f
+!    type(lib_octree_spatial_point), dimension(fmm_dimensions) :: f
     integer(kind=16), dimension(5) :: coord
 
     type(lib_octree_spatial_point), dimension(5) :: point
@@ -67,20 +67,12 @@ program main
         universal_index(i) = lib_octree_hf_get_universal_index(point(i), l)
     end do
 
-!    universal_index(1) = lib_octree_hf_get_universal_index(0d+0, l)
-!    universal_index(1) = lib_octree_hf_get_universal_index(1d+0, l)
 !
-!    universal_index(1) = lib_octree_hf_get_universal_index(0.125d+0, l)
-!    universal_index(2) = lib_octree_hf_get_universal_index(0.3125d+0, l)
-!    universal_index(3) = lib_octree_hf_get_universal_index(0.375d+0, l)
-!    universal_index(4) = lib_octree_hf_get_universal_index(0.625d+0, l)
-!    universal_index(5) = lib_octree_hf_get_universal_index(0.825d+0, l)
-!
-    do i = 1, 5
-        parent_index(i) = lib_octree_hf_get_parent(universal_index(i))
-        children_all_index(:,i) = lib_octree_hf_get_children_all(universal_index(i))
-        point(i) = lib_octree_hf_get_centre_of_box(universal_index(i), l)
-        neighbours(:,i) = lib_octree_hf_get_neighbour_all_1D(k, universal_index(i), l)
-    end do
+!    do i = 1, 5
+!        parent_index(i) = lib_octree_hf_get_parent(universal_index(i))
+!        children_all_index(:,i) = lib_octree_hf_get_children_all(universal_index(i))
+!        point(i) = lib_octree_hf_get_centre_of_box(universal_index(i), l)
+!        neighbours(:,i) = lib_octree_hf_get_neighbour_all_1D(k, universal_index(i), l)
+!    end do
 
 end program main
