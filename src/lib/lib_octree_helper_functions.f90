@@ -292,7 +292,7 @@ contains
     !
     ! Arguments
     ! ----
-    !   point_x: double precision
+    !   point_x: type(lib_octree_spatial_point)
     !       normalised floating point number (0.0 .. 1.0)
     !       HINT: datatype real is also possible, use *_1D_float() instead
     !
@@ -301,9 +301,9 @@ contains
     !
     ! Returns
     ! ----
-    !   the universal index *n*.
+    !   the universal index *uindex*.
     !
-    !   n: integer(kind=4)
+    !   uindex: type(lib_octree_universal_index)
     !
     function lib_octree_hf_get_universal_index(point_x, l) result(uindex)
         implicit none
@@ -800,23 +800,23 @@ contains
     !
     ! Arguments
     ! ----
-    !   n: integer(kind=4)
+    !   uindex: type(lib_octree_universal_index)
     !       universal index of a box
     !
     ! Returns
     ! ----
     !   the universal index of the parent box.
     !
-    !   parent_n: Integer(kind=4)
+    !   parent_uindex: type(lib_octree_universal_index)
     !
-    function lib_octree_hf_get_parent(n) result (parent_n)
+    function lib_octree_hf_get_parent(uindex) result (parent_uindex)
         implicit none
 
         ! dummy arguments
-        integer(kind=OCTREE_INTEGER_KIND), intent (in) :: n
-        integer(kind=OCTREE_INTEGER_KIND) :: parent_n
+        type(lib_octree_universal_index), intent (in) :: uindex
+        type(lib_octree_universal_index) :: parent_uindex
 
-        parent_n = n/(2**OCTREE_DIMENSIONS)
+        parent_uindex = n/(2**OCTREE_DIMENSIONS)
 
     end function
 
@@ -973,5 +973,50 @@ contains
         neighbour_all(2) = buffer_n
 
     end function
+
+    function lib_octree_hf_interleave_bits(binary) result(interleaved)
+
+        ! dummy
+        integer(kind=COORDINATE_BINARY_BYTES), dimension(OCTREE_DIMENSIONS) :: binary
+        integer(kind=COORDINATE_BINARY_BYTES), dimension(OCTREE_DIMENSIONS) :: inteleaved
+
+        ! make out of three binary coordinates one binary coordinate
+        !
+        ! Example
+        ! ----
+        !   x1: 0.100   => 0.5   (base 10)
+        !   x2: 0.010   => 0.25  (base 10)
+        !   x3: 0.001   => 0.125 (base 10)
+        !
+        !   x1: 0.1  |0  |0
+        !   x2: 0. 0 | 1 | 0
+        !   x3: 0.  0|  0|  1
+        !  ------------------
+        !  x3D: 0.100|010|001
+        !
+        ! Bit number example
+        ! ----
+        !   integer(kind=1): 1000 0100
+        !        bit number |7..4 3..0|
+
+        !
+        coordinate_binary_xD = 0 ! set every bit to 0
+        bit_number_3D = NUMBER_OF_BITS_COORDINATE_3D - ii*OCTREE_DIMENSIONS - i
+
+        do i = 1, OCTREE_DIMENSIONS
+            do ii = 0, NUMBER_OF_BITS_COORDINATE_1D - 1  ! bit operations: index starts at 0
+                if (bit_number_3D >= 0) then
+                    bit_number_1D = NUMBER_OF_BITS_COORDINATE_1D - 1 - ii
+                    if (btest(coordinate_binary_1D(i), bit_number_1D)) then
+                        coordinate_binary_3D = ibset(coordinate_binary_3D, bit_number_3D)
+                    else
+                        coordinate_binary_3D= ibclr(coordinate_binary_3D, bit_number_3D)
+                    end if
+                end if
+            end do
+        end do
+
+
+    end function lib_octree_hf_interleave_bits
 
 end module lib_octree_helper_functions
