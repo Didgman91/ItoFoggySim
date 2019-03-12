@@ -22,7 +22,11 @@
 ! 1: true, 0: false (-> spatial point is real)
 #define _SPATIAL_POINT_IS_DOUBLE_ 1
 
+! integer kind of the bit interleaving process
+#define _INTERLEAVE_BITS_INTEGER_KIND_ 1
+
 module lib_octree_helper_functions
+    use file_io
     implicit none
 
     private
@@ -63,6 +67,10 @@ module lib_octree_helper_functions
     public :: lib_octree_hf_get_children_all
     public :: lib_octree_hf_get_centre_of_box
     public :: lib_octree_hf_get_neighbour_all_1D
+
+    ! test
+    public :: lib_octree_hf_interleave_bits_use_lut
+    public :: lib_octree_hf_interleave_bits
 
 contains
 
@@ -816,7 +824,8 @@ contains
         type(lib_octree_universal_index), intent (in) :: uindex
         type(lib_octree_universal_index) :: parent_uindex
 
-        parent_uindex = n/(2**OCTREE_DIMENSIONS)
+        parent_uindex%n = uindex%n/(2**OCTREE_DIMENSIONS)
+        parent_uindex%l = uindex%l
 
     end function
 
@@ -974,49 +983,275 @@ contains
 
     end function
 
-    function lib_octree_hf_interleave_bits(binary) result(interleaved)
+    ! Calculates the interleaved bits form a x-dimensional integer.
+    !
+    ! Arguments
+    ! ----
+    !   x: integer, dimension(x)
+    !       integers to interleave
+    !
+    ! Returns
+    ! ----
+    !   rv: integer, dimension(:,:,:[,,:]) // 2- or 3-dimensional case
+    !       interleaved integers
+    !
+    ! Example
+    ! ----
+    !   Interleaving of two one-byte integers
+    !
+    !   x1:  0 0 0 0| 0 0 1 0   => 2 (base 10)
+    !   x2: 0 0 0 0 |0 0 0 0    => 0 (base 10)
+    !      -------------------
+    !       00000000|00000100   => 0|4 (base 10)
+    !
+    !   rv1 = 4
+    !   rv2 = 0
+    !
+    function lib_octree_hf_interleave_bits_use_lut(x) result(rv)
+        implicit none
+        ! parameter
+        integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+
+        integer(kind=x_kind), parameter :: integer_range_high = huge(integer_range_high)
+        integer(kind=x_kind), parameter :: integer_range_low = -integer_range_high-1
 
         ! dummy
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(OCTREE_DIMENSIONS) :: binary
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(OCTREE_DIMENSIONS) :: inteleaved
+        integer(kind=x_kind), dimension(:), intent(in) :: x
+        integer(kind=x_kind), dimension(size(x)) :: rv
 
-        ! make out of three binary coordinates one binary coordinate
-        !
-        ! Example
-        ! ----
-        !   x1: 0.100   => 0.5   (base 10)
-        !   x2: 0.010   => 0.25  (base 10)
-        !   x3: 0.001   => 0.125 (base 10)
-        !
-        !   x1: 0.1  |0  |0
-        !   x2: 0. 0 | 1 | 0
-        !   x3: 0.  0|  0|  1
-        !  ------------------
-        !  x3D: 0.100|010|001
-        !
-        ! Bit number example
-        ! ----
-        !   integer(kind=1): 1000 0100
-        !        bit number |7..4 3..0|
+#if (_INTERLEAVE_BITS_INTEGER_KIND_ == 1)
+#if (_FMM_DIMENSION_ == 2)
+        ! auxiliar
+        integer(kind=x_kind), dimension (integer_range_low:integer_range_high, &
+                                         integer_range_low:integer_range_high, &
+                                         1:2) :: lut
+        lut = lib_octree_hf_get_lut()
+        rv(1) = lut(x(1), x(2), 1)
+        rv(2) = lut(x(1), x(2), 2)
+#elif (_FMM_DIMENSION_ == 3)
+        ! auxiliar
+        integer(kind=x_kind), dimension (integer_range_low:integer_range_high, &
+                                         integer_range_low:integer_range_high, &
+                                         integer_range_low:integer_range_high, &
+                                         1:3) :: lut
+        lut = lib_octree_hf_get_lut()
+        rv(1) = lut(x(1), x(2), x(3), 1)
+        rv(2) = lut(x(1), x(2), x(3), 2)
+        rv(3) = lut(x(1), x(2), x(3), 3)
+#else
+        rv = lib_octree_hf_interleave_bits(x)
+#endif
+#elif
+        rv = lib_octree_hf_interleave_bits(x)
+#endif
 
-        !
-        coordinate_binary_xD = 0 ! set every bit to 0
-        bit_number_3D = NUMBER_OF_BITS_COORDINATE_3D - ii*OCTREE_DIMENSIONS - i
 
-        do i = 1, OCTREE_DIMENSIONS
-            do ii = 0, NUMBER_OF_BITS_COORDINATE_1D - 1  ! bit operations: index starts at 0
-                if (bit_number_3D >= 0) then
-                    bit_number_1D = NUMBER_OF_BITS_COORDINATE_1D - 1 - ii
-                    if (btest(coordinate_binary_1D(i), bit_number_1D)) then
-                        coordinate_binary_3D = ibset(coordinate_binary_3D, bit_number_3D)
-                    else
-                        coordinate_binary_3D= ibclr(coordinate_binary_3D, bit_number_3D)
-                    end if
+    end function lib_octree_hf_interleave_bits_use_lut
+
+    ! Returns the look-up table (LUT) for interleaved bits. If necessary, the LUT is recalculated.
+    !
+    ! *Hint*
+    !   This function has only global dependencies.
+    !
+    ! Dependences
+    ! ----
+    !   _FMM_DIMENSION_
+    !       number of dimensions
+    !   _INTERLEAVE_BITS_INTEGER_KIND_
+    !       number of bytes of the integer
+    !
+    ! Returns
+    ! ----
+    !   rv: integer, dimension(:,:,:[,,:])
+    !       the look-up tabel
+    function lib_octree_hf_get_lut() result(rv)
+        implicit none
+        ! parameter
+        integer(kind=1), parameter :: integer_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+        integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
+        integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
+
+#if (_FMM_DIMENSION_ == 2)
+        ! parameter
+        character (len = *), parameter :: file_lut="pre_calc/bit_interleaving_LUT_2d.dat"
+
+        ! dummy
+        integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
+                                               integer_range_low:integer_range_high, &
+                                               1:2) :: rv
+
+        ! check if LUT is already calculated
+        ! if yes: load
+        ! if not: calculate
+        if (file_exists(file_lut)) then
+            OPEN(UNIT=14, FILE=file_lut, ACTION="read", STATUS="old", &
+                 FORM='unformatted')
+            READ(14) rv
+            CLOSE(UNIT=14)
+        else
+            rv = lib_octree_hf_creat_lut()
+            OPEN(UNIT=13, FILE=file_lut, ACTION="write", STATUS="replace", &
+                 FORM="unformatted")
+            WRITE(13) rv
+            CLOSE(UNIT=13)
+        end if
+#elif (_FMM_DIMENSION_ == 3)
+        ! parameter
+        character (len = *), parameter :: file_lut="pre_calc/bit_interleaving_LUT_3d.dat"
+
+        ! dummy
+        integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
+                                           integer_range_low:integer_range_high, &
+                                           integer_range_low:integer_range_high, &
+                                           1:3) :: rv
+
+        ! check if LUT is already calculated
+        ! if yes: load
+        ! if not: calculate
+        if (file_exists(file_lut)) then
+            OPEN(UNIT=14, FILE=file_lut, ACTION="read", STATUS="old", &
+                 FORM='unformatted')
+            READ(14) rv
+            CLOSE(UNIT=14)
+        else
+            rv = lib_octree_hf_creat_lut()
+            OPEN(UNIT=13, FILE=file_lut, ACTION="write", STATUS="replace", &
+                 FORM="unformatted")
+            WRITE(13) rv
+            CLOSE(UNIT=13)
+        end if
+#endif
+
+    end function lib_octree_hf_get_lut
+
+    ! Creates the look-up table (LUT) for the interleaved bits.
+    !
+    ! *Hint*
+    !   This function has only global dependencies.
+    !
+    ! Dependences
+    ! ----
+    !   _FMM_DIMENSION_
+    !       number of dimensions
+    !   _INTERLEAVE_BITS_INTEGER_KIND_
+    !       number of bytes of the integer
+    !
+    ! Returns
+    ! ----
+    !   rv: integer, dimension(:,:,:[,,:])
+    !       the look-up tabel
+    !
+    function lib_octree_hf_creat_lut() result(rv)
+        implicit none
+        ! parameter
+        integer(kind=1), parameter :: integer_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+        integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
+        integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
+
+#if (_FMM_DIMENSION_ == 2)
+        ! dummy
+        integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
+                                               integer_range_low:integer_range_high, &
+                                               1:2) :: rv
+
+        ! auxiliary
+        integer(kind=integer_kind*2) :: i
+        integer(kind=integer_kind*2) :: ii
+
+        integer(kind=integer_kind), dimension(2) :: buffer
+
+        do i = integer_range_low, integer_range_high
+            do ii = integer_range_low, integer_range_high
+                buffer(1) = int(i,1)
+                buffer(2) = int(ii,1)
+                buffer = lib_octree_hf_interleave_bits(buffer)
+                rv(i,ii, 1) = buffer(1)
+                rv(i,ii, 2) = buffer(2)
+            end do
+            write(1, *) '(f3.2)',100.0*(i-integer_range_low)/(integer_range_high-integer_range_low)
+        end do
+
+#elif (_FMM_DIMENSION_ == 3)
+        ! dummy
+        integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
+                                               integer_range_low:integer_range_high, &
+                                               integer_range_low:integer_range_high, &
+                                               1:3) :: rv
+
+        ! auxiliary
+        integer(kind=integer_kind*2) :: i
+        integer(kind=integer_kind*2) :: ii
+        integer(kind=integer_kind*2) :: iii
+
+        integer(kind=integer_kind), dimension(3) :: buffer
+
+        do i = integer_range_low, integer_range_high
+            do ii = integer_range_low, integer_range_high
+                do iii = integer_range_low, integer_range_high
+                    buffer(1) = int(i,1)
+                    buffer(2) = int(ii,1)
+                    buffer(3) = int(iii,1)
+                    buffer = lib_octree_hf_interleave_bits(buffer)
+                    rv(i,ii, iii,1) = buffer(1)
+                    rv(i,ii, iii,2) = buffer(2)
+                    rv(i,ii, iii,3) = buffer(3)
+                end do
+            end do
+            print *, "create LUT: ", 100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), "%"
+        end do
+#endif
+    end function lib_octree_hf_creat_lut
+
+    ! Calculates the bit interleaving of x-dimensional integers.
+    ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
+    ! The dafault value is 1 (1 byte);
+    !
+    ! Argument
+    ! ----
+    !   x: integer, x-dimensional
+    !
+    !
+    ! Example
+    ! ----
+    !   x1: 0.100   => 0.5   (base 10)
+    !   x2: 0.010   => 0.25  (base 10)
+    !
+    !   x1: 0. 1| 0| 0
+    !   x2: 0.0 |1 |0
+    !  ------------------
+    !  x2D: 0.01|01|00
+    function lib_octree_hf_interleave_bits(x) result(rv)
+        implicit none
+        ! parameter
+        integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+
+        ! dummy
+        integer(kind=x_kind), dimension(:), intent(in) :: x
+        integer(kind=x_kind), dimension(size(x)) :: rv
+
+        ! auxiliary
+        integer(kind=1) :: i
+        integer(kind=1) :: ii
+        integer(kind=1) :: x_dimension
+        integer(kind=1) :: bit_number
+        integer(kind=1) :: x_element
+
+        x_dimension = int(size(x), 1)
+
+        do ii = 1, x_dimension
+            rv(ii) = 0
+        end do
+
+        do ii = 1, x_dimension
+            do i = 0, x_kind * NUMBER_OF_BITS_PER_BYTE - 1                                      ! e.g.: 16 bit =  2 byte * 8 bit / byte
+                bit_number = i*x_dimension+ii-int(1, 1)                                         ! calculates the "global" bit number; two element example (1 byte / element): bit_number=9; element 2: |15 ... 8| element 1: |7 ... 0|
+                x_element = int(bit_number / (x_kind * NUMBER_OF_BITS_PER_BYTE), 1) + int(1,1)  ! calculates the element; bit_number=9 => element=2
+                bit_number = bit_number - (x_element-int(1,1))*x_kind*NUMBER_OF_BITS_PER_BYTE   ! calculates the "local" bit_number; bit_number=9, element=2 => bit_number=1
+                if (btest(x(ii), i)) then       ! first bit number = 0
+                    rv(x_element) = ibset(rv(x_element), bit_number)
                 end if
             end do
         end do
-
-
     end function lib_octree_hf_interleave_bits
 
 end module lib_octree_helper_functions
