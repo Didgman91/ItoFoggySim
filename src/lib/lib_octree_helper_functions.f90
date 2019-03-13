@@ -17,12 +17,13 @@
 !   Project properties -> Fortran General -> Paths and Symbols -> Symbols
 !
 
-#define _FMM_DIMENSION_ 2
+! spatial dimension, value = [2,3]
+#define _FMM_DIMENSION_ 3
 
 ! 1: true, 0: false (-> spatial point is real)
 #define _SPATIAL_POINT_IS_DOUBLE_ 1
 
-! integer kind of the bit interleaving process
+! integer kind of the bit interleaving process, value = [1,2,3,4,8]
 #define _INTERLEAVE_BITS_INTEGER_KIND_ 1
 
 module lib_octree_helper_functions
@@ -53,7 +54,8 @@ module lib_octree_helper_functions
     end type lib_octree_spatial_point
 
     type lib_octree_universal_index
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(OCTREE_DIMENSIONS) :: n
+        integer(kind=COORDINATE_BINARY_BYTES) :: n
+        integer(kind=COORDINATE_BINARY_BYTES), dimension(OCTREE_DIMENSIONS) :: n_per_dimension
         integer(kind=4) :: l
     end type lib_octree_universal_index
     ! ~ type definitions ~
@@ -348,15 +350,91 @@ contains
         type(lib_octree_universal_index) :: uindex
 
         ! auxiliary
-        integer :: i
-        integer(kind=1) :: buffer
         integer(kind=COORDINATE_BINARY_BYTES), dimension(OCTREE_DIMENSIONS) :: coordinate_binary
+
+#if (_FMM_DIMENSION_ == 2)
+#elif (_FMM_DIMENSION_ == 3)
+        ! Example
+        ! ----
+        !
+        ! coordinate_binary: kind=4, dimension=3
+        ! element   byte representation
+        ! 1:       |---01---|---02---|---03---|---04---|
+        ! 2:       |---01---|---02---|---03---|---04---|
+        ! 3:       |---01---|---02---|---03---|---04---|
+        !
+        ! cb_buffer: kind=1, dimension=3*4=12
+        ! element   byte representation
+        ! 1-4:     |---01---|---02---|---03---|---04---|
+        ! 5-8:     |---05---|---06---|---07---|---08---|
+        ! 9-12:    |---09---|---10---|---11---|---12---|
+        !              *-->
+        !              interleave column wise
+        !
+        ! equivalence (coordinate_binary, cb_buffer)
+        !
+        ! Interleave bits
+        ! -----
+        !
+        ! interleaved_bits: kind=1, dimension=3*4=12
+        ! element   byte representation
+        ! 1-4:     |01-05-09|01-05-09|01-05-09|02-06-10|   <-- xx-yy-zz describes the bytes which were interleaved
+        ! 5-8:     |02-06-10|02-06-10|03-07-11|03-07-11|
+        ! 9-12:    |03-07-11|04-08-12|04-08-12|04-08-12|
+        !
+        ! ib_buffer: kind=1, dimension=3
+        ! element   byte representation
+        ! 1-3:     |---01---|---02---|---03---|
+        !
+        !
+        ! ib_buffer = interleave(cb_buffer(9), cb_buffer(5), cb_buffer(1))
+        ! iterleaved_bits(1:3) = ib_buffer
+        !
+        ! ...
+        !
+        ! ib_buffer = interleave(cb_buffer(12), cb_buffer(8), cb_buffer(4))
+        ! interleaved_bits(10:12) = ib_buffer
+        !
+        integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_) &
+            ,dimension(OCTREE_DIMENSIONS * COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_) &
+            :: interleaved_bits
+        integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_) &
+            ,dimension(OCTREE_DIMENSIONS * COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_) &
+            :: cb_buffer
+
+        equivalence (coordinate_binary, cb_buffer)
+
+        integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension(OCTREE_DIMENSIONS) :: ib_buffer
+
+        integer(kind=1) :: i
+        integer(kind=1) :: ii
+
+        ! calculate the x-dimensional binary coordinate
+        coordinate_binary = lib_octree_hf_get_coordinate_binary_number_xD(point_x%x)
+
+        ! interleave bits
+        do i=1, COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_
+            do ii=1, OCTREE_DIMENSIONS
+                ib_buffer(ii) = cb_buffer((i-1) * COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_ + ii)
+            end do
+            ib_buffer = lib_octree_hf_interleave_bits_use_lut(ib_buffer)
+
+            ii = int((i-1)*COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_ + 1, 1)
+            interleaved_bits(ii:ii+OCTREE_DIMENSIONS+1) = ib_buffer(:)
+        end do
+
+        ! calculte the universal index n
+!        do i=1, int(_INTERLEAVE_BITS_INTEGER_KIND_ * NUMBER_OF_BITS_PER_BYTE / l)+1  ! maximum number of bytes to respect by a given l
+!
+!        end do
+#else
 
         coordinate_binary = lib_octree_hf_get_coordinate_binary_number_xD(point_x%x)
 
         do i = 1, OCTREE_DIMENSIONS
             uindex%n(i) = ibits(coordinate_binary(i), COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE-l, l)
         end do
+#endif
 
         uindex%l = l
 

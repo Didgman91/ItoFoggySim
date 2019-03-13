@@ -25,12 +25,13 @@ program main
 
 
     integer :: number_of_runs = 1000000000
-    integer(kind=1), dimension(2) :: x
-    integer(kind=1), dimension(2) :: buffer
+    integer(kind=1), dimension(3) :: x
+    integer(kind=1), dimension(3) :: buffer
     real :: start, finish
 
     x(1) = 2
     x(2) = 0
+    x(3) = 0
 
     call cpu_time(start)
     buffer = lib_octree_hf_interleave_bits_use_lut(x)
