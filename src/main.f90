@@ -13,7 +13,7 @@ program main
     integer(kind=1), parameter :: l = 1
     integer(kind=1), parameter :: k = 1
 
-    integer(kind=1) :: i
+    integer :: i
 
 !    type(lib_octree_spatial_point), dimension(fmm_dimensions) :: f
     integer(kind=16), dimension(5) :: coord
@@ -24,15 +24,34 @@ program main
 
 
 
+    integer :: number_of_runs = 1000000000
     integer(kind=1), dimension(2) :: x
     integer(kind=1), dimension(2) :: buffer
+    real :: start, finish
 
     x(1) = 2
     x(2) = 0
 
+    call cpu_time(start)
     buffer = lib_octree_hf_interleave_bits_use_lut(x)
+    call cpu_time(finish)
+    print *, "Interleave + LUT Time = ", finish-start, " seconds."
 
-    buffer = lib_octree_hf_interleave_bits(x)
+    call cpu_time(start)
+    do i=1, number_of_runs
+        buffer = lib_octree_hf_interleave_bits_use_lut(x)
+    end do
+    call cpu_time(finish)
+    print *, "Interleave + LUT Time (second run) = ", (finish-start)/number_of_runs, " seconds."
+
+    call cpu_time(start)
+    do i=1, number_of_runs
+        buffer = lib_octree_hf_interleave_bits(x)
+    end do
+    call cpu_time(finish)
+    print *, "Interleave Time = ", (finish-start)/number_of_runs, " seconds."
+
+
 
 !    f(1) = 0.875
 !    f(2) = 0.875
@@ -87,5 +106,5 @@ program main
 !        neighbours(:,i) = lib_octree_hf_get_neighbour_all_1D(k, universal_index(i), l)
 !    end do
 
-
+    call lib_octree_hf_destructor()
 end program main
