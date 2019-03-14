@@ -4,7 +4,7 @@ program main
     implicit none
 
     type(lib_octree_element), dimension(2) :: test
-    type(lib_octree_universal_index), dimension(5) :: universal_index
+    type(lib_octree_universal_index) :: universal_index
     type(lib_octree_universal_index), dimension(5) :: parent_index
 !    type(lib_octree_universal_index), dimension(2**fmm_dimensions,5) :: children_all_index
     double precision, dimension(5) :: point_c
@@ -18,7 +18,7 @@ program main
 !    type(lib_octree_spatial_point), dimension(fmm_dimensions) :: f
     integer(kind=16), dimension(5) :: coord
 
-    type(lib_octree_spatial_point), dimension(5) :: point
+    type(lib_octree_spatial_point) :: point
     type(lib_octree_spatial_point) :: point_buffer
     real :: f_buffer
 
@@ -29,28 +29,35 @@ program main
     integer(kind=1), dimension(3) :: buffer
     real :: start, finish
 
-    x(1) = 2
-    x(2) = 0
-    x(3) = 0
+    point%x(1) = 0.75
+    point%x(2) = 0.5
+!    point%x(3) = 0.5!2.0**(-9.0) + 2.0**(-8)
+    universal_index = lib_octree_hf_get_universal_index(point, int(1,1))
 
-    call cpu_time(start)
-    buffer = lib_octree_hf_interleave_bits_use_lut(x)
-    call cpu_time(finish)
-    print *, "Interleave + LUT Time = ", finish-start, " seconds."
+!    x(1) = 2
+!    x(2) = 0
+!    x(3) = 0
+!
+!    call cpu_time(start)
+!    buffer = lib_octree_hf_interleave_bits_use_lut(x)
+!    call cpu_time(finish)
+!    print *, "Interleave + LUT Time = ", finish-start, " seconds."
+!
+!    call cpu_time(start)
+!    do i=1, number_of_runs
+!        buffer = lib_octree_hf_interleave_bits_use_lut(x)
+!    end do
+!    call cpu_time(finish)
+!    print *, "Interleave + LUT Time (second run) = ", (finish-start)/number_of_runs, " seconds."
+!
+!    call cpu_time(start)
+!    do i=1, number_of_runs
+!        buffer = lib_octree_hf_interleave_bits(x)
+!    end do
+!    call cpu_time(finish)
+!    print *, "Interleave Time = ", (finish-start)/number_of_runs, " seconds."
 
-    call cpu_time(start)
-    do i=1, number_of_runs
-        buffer = lib_octree_hf_interleave_bits_use_lut(x)
-    end do
-    call cpu_time(finish)
-    print *, "Interleave + LUT Time (second run) = ", (finish-start)/number_of_runs, " seconds."
 
-    call cpu_time(start)
-    do i=1, number_of_runs
-        buffer = lib_octree_hf_interleave_bits(x)
-    end do
-    call cpu_time(finish)
-    print *, "Interleave Time = ", (finish-start)/number_of_runs, " seconds."
 
 
 
