@@ -18,12 +18,13 @@
 !
 
 ! spatial dimension, value = [2,3]
-#define _FMM_DIMENSION_ 3
+#define _FMM_DIMENSION_ 2
 
 ! 1: true, 0: false (-> spatial point is real)
-#define _SPATIAL_POINT_IS_DOUBLE_ 1
+#define _SPATIAL_POINT_IS_DOUBLE_ 0
 
-! integer kind of the bit interleaving process, value = [1,2,3,4,8]
+! integer kind of the bit interleaving process, value = [1,2,4,8], default = 1
+! a value of 8 is only possible if the spatial point variable is of type double
 #define _INTERLEAVE_BITS_INTEGER_KIND_ 1
 
 module lib_octree_helper_functions
@@ -93,10 +94,15 @@ contains
     subroutine lib_octree_hf_destructor()
         implicit none
 
+
 #if (_FMM_DIMENSION_ == 2)
-        deallocate (lib_octree_interleave_bits_lut)
+        if (lib_octree_interleave_bits_lut_initialised) then
+           deallocate (lib_octree_interleave_bits_lut)
+        end if
 #elif (_FMM_DIMENSION_ == 3)
-        deallocate (lib_octree_interleave_bits_lut)
+        if (lib_octree_interleave_bits_lut_initialised) then
+            deallocate (lib_octree_interleave_bits_lut)
+        end if
 #endif
 
     end subroutine lib_octree_hf_destructor
@@ -1282,21 +1288,114 @@ contains
 #else
         rv = lib_octree_hf_interleave_bits(x)
 #endif
-
-
     end function lib_octree_hf_interleave_bits_use_lut
+
+    ! deinterleavs the
+    ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
+    ! The dafault value is 1 (1 byte);
+    !
+    ! Argument
+    ! ----
+    !   x:
+    !       counting system undependet value
+    !
+    !
+    ! Example
+    ! ----
+    !  x2D: 0.01|01|00
+    !  ------------------
+    !   x1: 0. 1| 0| 0
+    !   x2: 0.0 |1 |0
+    !
+    !   x1: 0.100   => 0.5   (base 10)
+    !   x2: 0.010   => 0.25  (base 10)
+    !
+    function lib_octree_hf_deinterleave_bits(x) result(rv)
+        implicit none
+        ! parameter
+        integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+
+        ! dummy
+        integer(kind=x_kind), dimension(:), intent(in) :: x
+        integer(kind=x_kind), dimension(size(x)) :: rv
+
+        ! auxiliary
+        integer(kind=1) :: i
+        integer(kind=1) :: ii
+        integer(kind=1) :: x_dimension
+        integer(kind=1) :: bit_number
+        integer(kind=1) :: target_element
+
+        x_dimension = int(size(x), 1)
+
+        do ii = 1, x_dimension
+            rv(ii) = 0
+        end do
+
+        do ii = 1, x_dimension
+            do i = 0, x_kind * NUMBER_OF_BITS_PER_BYTE - 1                                      ! e.g.: 16 bit =  2 byte * 8 bit / byte
+                ! global bit number = (ii-1)*x_kind * NUMBER_OF_BITS_PER_BYTE + i
+                ! target_element = mod(gloabel bit number + 1, OCTREE_DIMENSIONS)
+                ! target local bit number = int(global bit number / OCTREE_DIMENSIONS)
+                target_element = int((ii-1)*x_kind * NUMBER_OF_BITS_PER_BYTE + i, 1)
+                bit_number = int(target_element / OCTREE_DIMENSIONS, 1)
+                target_element = int(mod(target_element, OCTREE_DIMENSIONS) + 1, 1)
+                if (btest(x(ii), i)) then       ! first bit number = 0
+                    rv(target_element) = ibset(rv(target_element), bit_number)
+                end if
+            end do
+        end do
+    end function lib_octree_hf_deinterleave_bits
 
     subroutine lib_octree_hf_test_functions()
         implicit none
 
-        call benchmark_lib_octree_hf_interleave_bits_use_lut()
+        integer :: error_counter
 
-        call test_lib_octree_hf_get_universal_index()
+        error_counter = 0
+
+        if (.not. test_lib_octree_hf_get_parent()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_octree_hf_get_children_all()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_octree_hf_get_centre_of_box()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_octree_hf_get_coordinate_binary_number_xD()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_octree_hf_interleave_bits()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_octree_hf_interleave_bits_2()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_octree_hf_deinterleave_bits()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_octree_hf_deinterleave_bits_2()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_octree_hf_get_universal_index()) then
+            error_counter = error_counter + 1
+        end if
+
+
+        if (error_counter == 0) then
+            print *, "All tests: OK"
+        else
+            print *, error_counter,"test(s) FAILED"
+        end if
 
         contains
 
-        subroutine test_lib_octree_hf_get_universal_index()
+        function test_lib_octree_hf_get_universal_index() result(rv)
             implicit none
+
+            ! dummy
+            logical :: rv
 
             type(lib_octree_spatial_point) :: point
             type(lib_octree_universal_index) :: universal_index
@@ -1319,24 +1418,387 @@ contains
 
             universal_index_ground_trouth%n = 6
             universal_index_ground_trouth%n_per_dimension(3) = 0
+#else
+            print *, "test_lib_octree_hf_get_parent: Dimension not defines: ", _FMM_DIMENSION_
 #endif
 
             universal_index = lib_octree_hf_get_universal_index(point, l)
 
             if (universal_index%n == universal_index_ground_trouth%n) then
+                rv = .true.
                 print *, "test_lib_octree_hf_get_universal_index: ", "OK"
             else
+                rv = .false.
                 print *, "test_lib_octree_hf_get_universal_index: ", "FAILED"
             end if
-        end subroutine test_lib_octree_hf_get_universal_index
+        end function test_lib_octree_hf_get_universal_index
+
+        function test_lib_octree_hf_get_parent() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            type(lib_octree_universal_index) :: universal_index
+            type(lib_octree_universal_index) :: universal_index_parent
+
+            integer(kind=1) :: l
+            type(lib_octree_universal_index) :: universal_index_parent_ground_trouth
+
+            l = 1
+#if (_FMM_DIMENSION_ == 2)
+            universal_index%n = 2
+            universal_index_parent_ground_trouth%n = 0
+#elif (_FMM_DIMENSION_ == 3)
+            universal_index%n = 6
+            universal_index_parent_ground_trouth%n = 0
+#else
+            print *, "test_lib_octree_hf_get_parent: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            universal_index_parent = lib_octree_hf_get_parent(universal_index)
+
+            if (universal_index_parent%n == universal_index_parent_ground_trouth%n) then
+                print *, "test_lib_octree_hf_get_parent: ", "ok"
+                rv = .true.
+            else
+                print *, "test_lib_octree_hf_get_parent: ", "FAILED"
+                rv = .false.
+            end if
+
+        end function test_lib_octree_hf_get_parent
+
+        function test_lib_octree_hf_get_children_all() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            integer(kind=OCTREE_INTEGER_KIND) :: n
+            integer(kind=OCTREE_INTEGER_KIND), dimension(2**OCTREE_DIMENSIONS) :: children_n
+            integer(kind=OCTREE_INTEGER_KIND), dimension(2**OCTREE_DIMENSIONS) :: children_n_ground_truth
+
+            n = 1
+#if (_FMM_DIMENSION_ == 2)
+            children_n_ground_truth(1) = 4
+            children_n_ground_truth(2) = 5
+            children_n_ground_truth(3) = 6
+            children_n_ground_truth(4) = 7
+#elif (_FMM_DIMENSION_ == 3)
+            children_n_ground_truth(1) = 8
+            children_n_ground_truth(2) = 9
+            children_n_ground_truth(3) = 10
+            children_n_ground_truth(4) = 11
+            children_n_ground_truth(5) = 12
+            children_n_ground_truth(6) = 13
+            children_n_ground_truth(7) = 14
+            children_n_ground_truth(8) = 15
+#else
+            print *, "test_lib_octree_hf_get_children_all: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+            children_n = lib_octree_hf_get_children_all(n)
+
+            if (sum(children_n) == sum(children_n_ground_truth)) then
+                print *, "test_lib_octree_hf_get_children_all: ", "ok"
+                rv = .true.
+            else
+                print *, "test_lib_octree_hf_get_children_all: ", "FAILED"
+                rv = .false.
+            end if
+
+        end function test_lib_octree_hf_get_children_all
+
+        function test_lib_octree_hf_get_centre_of_box() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            integer(kind=OCTREE_INTEGER_KIND) :: n
+            integer(kind=1) :: l
+            type(lib_octree_spatial_point) :: point
+
+            type(lib_octree_spatial_point) :: point_ground_trouth
+
+            integer :: i
+
+            l=1
+            n=1
+#if (_FMM_DIMENSION_ == 2)
+            point_ground_trouth%x(1) = 0.25
+            point_ground_trouth%x(2) = 0.75
+#elif (_FMM_DIMENSION_ == 3)
+            point_ground_trouth%x(1) = 0.25
+            point_ground_trouth%x(2) = 0.25
+            point_ground_trouth%x(3) = 0.75
+#else
+            print *, "test_lib_octree_hf_get_centre_of_box: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+            point = lib_octree_hf_get_centre_of_box(n,l)
+
+            rv = .true.
+            do i=1,OCTREE_DIMENSIONS
+                if (point%x(i) == point_ground_trouth%x(i)) then
+                    print *, "test_lib_octree_hf_get_centre_of_box (dim: ", i,"): ", "ok"
+                else
+                    print *, "test_lib_octree_hf_get_centre_of_box (dim: ", i,"): ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+
+        end function test_lib_octree_hf_get_centre_of_box
+
+        function test_lib_octree_hf_get_coordinate_binary_number_xD() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+#if(_SPATIAL_POINT_IS_DOUBLE_ == 1)
+            double precision, dimension(OCTREE_DIMENSIONS) :: f
+#elif(_SPATIAL_POINT_IS_DOUBLE_ == 0)
+            real, dimension(OCTREE_DIMENSIONS) :: f
+#endif
+            integer(kind=COORDINATE_BINARY_BYTES), dimension(OCTREE_DIMENSIONS) :: coordinate_binary_xD
+            integer(kind=COORDINATE_BINARY_BYTES), dimension(OCTREE_DIMENSIONS) :: coordinate_binary_xD_ground_trouth
+
+            integer :: i
+
+#if (_FMM_DIMENSION_ == 2)
+            f(1) = 0.25
+            f(2) = 0.375
+            if (COORDINATE_BINARY_BYTES == 4) then
+                coordinate_binary_xD_ground_trouth(1) = 1073741824      ! |0100 0000|0000 0000| ... |0000 0000| byte 3-0
+                coordinate_binary_xD_ground_trouth(2) = 1610612736      ! |0110 0000|0000 0000| ... |0000 0000| byte 3-0
+            else if (COORDINATE_BINARY_BYTES == 8) then
+                coordinate_binary_xD_ground_trouth(1) = 2**62           ! |0100 0000|0000 0000| ... |0000 0000| byte 7-0
+                coordinate_binary_xD_ground_trouth(2) = 2**62 + 2**61   ! |0110 0000|0000 0000| ... |0000 0000| byte 7-0
+            end if
+#elif (_FMM_DIMENSION_ == 3)
+            f(1) = 0.25
+            f(2) = 0.375
+            f(3) = 0.4375
+            if (COORDINATE_BINARY_BYTES == 4) then
+                coordinate_binary_xD_ground_trouth(1) = 1073741824          ! |0100 0000|0000 0000| ... |0000 0000| byte 3-0
+                coordinate_binary_xD_ground_trouth(2) = 1610612736          ! |0110 0000|0000 0000| ... |0000 0000| byte 3-0
+                coordinate_binary_xD_ground_trouth(3) = 1879048192          ! |0111 0000|0000 0000| ... |0000 0000| byte 3-0
+            else if (COORDINATE_BINARY_BYTES == 8) then
+                coordinate_binary_xD_ground_trouth(1) = 2**62               ! |0100 0000|0000 0000| ... |0000 0000| byte 7-0
+                coordinate_binary_xD_ground_trouth(2) = 2**62+2**61         ! |0110 0000|0000 0000| ... |0000 0000| byte 7-0
+                coordinate_binary_xD_ground_trouth(3) = 2**62+2**61+2**60   ! |0111 0000|0000 0000| ... |0000 0000| byte 7-0
+            end if
+#else
+            print *, "test_lib_octree_hf_get_coordinate_binary_number_xD: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            coordinate_binary_xD = lib_octree_hf_get_coordinate_binary_number_xD(f)
+
+            rv = .true.
+            do i=1,OCTREE_DIMENSIONS
+                if (coordinate_binary_xD(i) == coordinate_binary_xD_ground_trouth(i)) then
+                    print *, "test_lib_octree_hf_get_coordinate_binary_number_xD (dim",i,"): ", "ok"
+                else
+                    print *, "test_lib_octree_hf_get_coordinate_binary_number_xD (dim",i,"): ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+
+        end function test_lib_octree_hf_get_coordinate_binary_number_xD
+
+        function test_lib_octree_hf_interleave_bits() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+
+            integer(kind=x_kind), dimension(OCTREE_DIMENSIONS) :: x
+            integer(kind=x_kind), dimension(size(x)) :: interleaved_bits
+
+            integer(kind=x_kind), dimension(size(x)) :: interleaved_bits_ground_trouth
+
+            integer :: i
+
+            x(1) = 4  ! 0100
+            x(2) = 1  ! 0001
+#if (_FMM_DIMENSION_ == 2)
+            interleaved_bits_ground_trouth(1) = 2**1 + 2**4 !           |0001 0010|
+            interleaved_bits_ground_trouth(2) = 0           ! |0000 0000|
+#elif (_FMM_DIMENSION_ == 3)
+            x(3) = 2  ! 0010
+            interleaved_bits_ground_trouth(1) = 2**1 + 2**5 + 2**6 !                     |0110 0010|
+            interleaved_bits_ground_trouth(2) = 0                  !           |0000 0000|
+            interleaved_bits_ground_trouth(3) = 0                  ! |0000 0000|
+#else
+            print *, "test_lib_octree_hf_interleave_bits: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            interleaved_bits = lib_octree_hf_interleave_bits(x)
+
+            rv = .true.
+            do i=1, OCTREE_DIMENSIONS
+                if (interleaved_bits(i) == interleaved_bits_ground_trouth(i)) then
+                    print *, "test_lib_octree_hf_interleave_bits (dim",i,"): ", "ok"
+                else
+                    print *, "test_lib_octree_hf_interleave_bits (dim",i,"): ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+
+        end function test_lib_octree_hf_interleave_bits
+
+        function test_lib_octree_hf_interleave_bits_2() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+
+            integer(kind=x_kind), dimension(OCTREE_DIMENSIONS) :: x
+            integer(kind=x_kind), dimension(size(x)) :: interleaved_bits
+
+            integer(kind=x_kind), dimension(size(x)) :: interleaved_bits_ground_trouth
+
+            integer :: i
+
+            x(1) = 20  ! 0001 0100
+            x(2) = 65  ! 0100 0001
+#if (_FMM_DIMENSION_ == 2)
+            interleaved_bits_ground_trouth(1) = 2**1 + 2**4  !           |0001 0010|
+            interleaved_bits_ground_trouth(2) = 2**0 + 2**5  ! |0010 0001|
+#elif (_FMM_DIMENSION_ == 3)
+            x(3) = 40   ! 0010 1000
+            interleaved_bits_ground_trouth(1) = 2**1 + 2**6  !                     |0100 0010|
+            interleaved_bits_ground_trouth(2) = 2**3 + 2**4  !           |0001 1000|
+            interleaved_bits_ground_trouth(3) = 2**1 + 2**3  ! |0000 1010|
+#else
+            print *, "test_lib_octree_hf_interleave_bits_2: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            interleaved_bits = lib_octree_hf_interleave_bits(x)
+
+            rv = .true.
+            do i=1, OCTREE_DIMENSIONS
+                if (interleaved_bits(i) == interleaved_bits_ground_trouth(i)) then
+                    print *, "test_lib_octree_hf_interleave_bits_2 (dim",i,"): ", "ok"
+                else
+                    print *, "test_lib_octree_hf_interleave_bits_2 (dim",i,"): ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+
+        end function test_lib_octree_hf_interleave_bits_2
+
+        function test_lib_octree_hf_deinterleave_bits() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+
+            ! dummy
+            integer(kind=x_kind), dimension(OCTREE_DIMENSIONS) :: x
+            integer(kind=x_kind), dimension(size(x)) :: deinterleaved_bits
+
+            integer(kind=x_kind), dimension(size(x)) :: deinterleaved_bits_ground_trouth
+
+            integer :: i
+
+            deinterleaved_bits_ground_trouth(1) = 4  ! 0100
+            deinterleaved_bits_ground_trouth(2) = 1  ! 0001
+
+#if (_FMM_DIMENSION_ == 2)
+            x(1) = 2**1 + 2**4 !           |0001 0010|
+            x(2) = 0           ! |0000 0000|
+#elif (_FMM_DIMENSION_ == 3)
+            deinterleaved_bits_ground_trouth(3) = 2  ! 0010
+            x(1) = 2**1 + 2**5 + 2**6 !                     |0110 0010|
+            x(2) = 0                  !           |0000 0000|
+            x(3) = 0                  ! |0000 0000|
+#else
+            print *, "test_lib_octree_hf_deinterleave_bits: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            deinterleaved_bits = lib_octree_hf_deinterleave_bits(x)
+
+            rv = .true.
+            do i=1, OCTREE_DIMENSIONS
+                if (deinterleaved_bits(i) == deinterleaved_bits_ground_trouth(i)) then
+                    print *, "test_lib_octree_hf_deinterleave_bits (dim",i,"): ", "ok"
+                else
+                    print *, "test_lib_octree_hf_deinterleave_bits (dim",i,"): ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+        end function test_lib_octree_hf_deinterleave_bits
+
+        function test_lib_octree_hf_deinterleave_bits_2() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+
+            ! dummy
+            integer(kind=x_kind), dimension(OCTREE_DIMENSIONS) :: x
+            integer(kind=x_kind), dimension(size(x)) :: deinterleaved_bits
+
+            integer(kind=x_kind), dimension(size(x)) :: deinterleaved_bits_ground_trouth
+
+            integer :: i
+
+            deinterleaved_bits_ground_trouth(1) = 2**2 + 2**6  ! 0100 0100
+            deinterleaved_bits_ground_trouth(2) = 2**0 + 2**5  ! 0010 0001
+
+#if (_FMM_DIMENSION_ == 2)
+            x(1) = 2**1 + 2**4 !           |0001 0010|
+            x(2) = 2**3 + 2**4 ! |0001 1000|
+#elif (_FMM_DIMENSION_ == 3)
+            deinterleaved_bits_ground_trouth(3) = 2**1 + 2**4  ! 0001 0010
+            x(1) = 2**1 + 2**5 + 2**6 !                     |0110 0010|
+            x(2) = 2**6               !           |0100 0000|
+            x(3) = 2**0 + 2**2        ! |0000 0101|
+#else
+            print *, "test_lib_octree_hf_deinterleave_bits_2: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            deinterleaved_bits = lib_octree_hf_deinterleave_bits(x)
+
+            rv = .true.
+            do i=1, OCTREE_DIMENSIONS
+                if (deinterleaved_bits(i) == deinterleaved_bits_ground_trouth(i)) then
+                    print *, "test_lib_octree_hf_deinterleave_bits_2 (dim",i,"): ", "ok"
+                else
+                    print *, "test_lib_octree_hf_deinterleave_bits_2 (dim",i,"): ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+        end function test_lib_octree_hf_deinterleave_bits_2
+
+    end subroutine lib_octree_hf_test_functions
+
+    subroutine lib_octree_hf_benchmark
+        implicit none
+
+        call benchmark_lib_octree_hf_interleave_bits_use_lut()
+
+        contains
 
         subroutine benchmark_lib_octree_hf_interleave_bits_use_lut()
             implicit none
 
-            integer(kind=1), dimension(3) :: x
-            integer(kind=1), dimension(3) :: buffer
+            integer(kind=1), dimension(OCTREE_DIMENSIONS) :: x
+            integer(kind=1), dimension(OCTREE_DIMENSIONS) :: buffer
 
-            integer :: number_of_runs = 1000000000
+            integer :: number_of_runs = 100000000
             integer :: i
             real :: start, finish
 
@@ -1365,6 +1827,6 @@ contains
             call cpu_time(finish)
             print *, "Interleave Time = ", (finish-start)/number_of_runs, " seconds."
         end subroutine benchmark_lib_octree_hf_interleave_bits_use_lut
-    end subroutine lib_octree_hf_test_functions
+    end subroutine
 
 end module lib_octree_helper_functions
