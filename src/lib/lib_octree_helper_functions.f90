@@ -18,10 +18,10 @@
 !
 
 ! spatial dimension, value = [2,3]
-#define _FMM_DIMENSION_ 2
+#define _FMM_DIMENSION_ 3
 
 ! 1: true, 0: false (-> spatial point is real)
-#define _SPATIAL_POINT_IS_DOUBLE_ 0
+#define _SPATIAL_POINT_IS_DOUBLE_ 1
 
 ! integer kind of the bit interleaving process, value = [1,2,4,8], default = 1
 ! a value of 8 is only possible if the spatial point variable is of type double
@@ -66,10 +66,18 @@ module lib_octree_helper_functions
     integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension (:,:,:) &
                                                 , allocatable :: lib_octree_interleave_bits_lut
     logical :: lib_octree_interleave_bits_lut_initialised = .false.
+
+    integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension (:,:,:) &
+                                                , allocatable :: lib_octree_deinterleave_bits_lut
+    logical :: lib_octree_deinterleave_bits_lut_initialised = .false.
 #elif (_FMM_DIMENSION_ == 3)
     integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension (:,:,:,:) &
                                                 , allocatable :: lib_octree_interleave_bits_lut
     logical :: lib_octree_interleave_bits_lut_initialised = .false.
+
+    integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension (:,:,:,:) &
+                                                , allocatable :: lib_octree_deinterleave_bits_lut
+    logical :: lib_octree_deinterleave_bits_lut_initialised = .false.
 #endif
     ! ~ module global variable ~
 
@@ -87,6 +95,7 @@ module lib_octree_helper_functions
 
     ! test
     public :: lib_octree_hf_test_functions
+    public :: lib_octree_hf_benchmark
 
 contains
 
@@ -97,11 +106,22 @@ contains
 
 #if (_FMM_DIMENSION_ == 2)
         if (lib_octree_interleave_bits_lut_initialised) then
+           lib_octree_interleave_bits_lut_initialised = .false.
            deallocate (lib_octree_interleave_bits_lut)
+        end if
+        if (lib_octree_deinterleave_bits_lut_initialised) then
+            lib_octree_deinterleave_bits_lut_initialised = .false.
+           deallocate (lib_octree_deinterleave_bits_lut)
         end if
 #elif (_FMM_DIMENSION_ == 3)
         if (lib_octree_interleave_bits_lut_initialised) then
+            lib_octree_interleave_bits_lut_initialised = .false.
             deallocate (lib_octree_interleave_bits_lut)
+        end if
+
+        if (lib_octree_deinterleave_bits_lut_initialised) then
+            lib_octree_deinterleave_bits_lut_initialised = .false.
+            deallocate (lib_octree_deinterleave_bits_lut)
         end if
 #endif
 
@@ -1033,7 +1053,7 @@ contains
     ! ----
     !   rv: integer, dimension(:,:,:[,,:])
     !       the look-up tabel
-    function lib_octree_hf_get_lut() result(rv)
+    function lib_octree_hf_get_interleave_bits_lut() result(rv)
         implicit none
         ! parameter
         integer(kind=1), parameter :: integer_kind = _INTERLEAVE_BITS_INTEGER_KIND_
@@ -1058,7 +1078,7 @@ contains
             READ(14) rv
             CLOSE(UNIT=14)
         else
-            rv = lib_octree_hf_creat_lut()
+            rv = lib_octree_hf_creat_interleave_bits_lut()
             OPEN(UNIT=13, FILE=file_lut, ACTION="write", STATUS="replace", &
                  FORM="unformatted")
             WRITE(13) rv
@@ -1083,7 +1103,7 @@ contains
             READ(14) rv
             CLOSE(UNIT=14)
         else
-            rv = lib_octree_hf_creat_lut()
+            rv = lib_octree_hf_creat_interleave_bits_lut()
             OPEN(UNIT=13, FILE=file_lut, ACTION="write", STATUS="replace", &
                  FORM="unformatted")
             WRITE(13) rv
@@ -1091,7 +1111,7 @@ contains
         end if
 #endif
 
-    end function lib_octree_hf_get_lut
+    end function lib_octree_hf_get_interleave_bits_lut
 
     ! Creates the look-up table (LUT) for the interleaved bits.
     !
@@ -1110,7 +1130,7 @@ contains
     !   rv: integer, dimension(:,:,:[,,:])
     !       the look-up tabel
     !
-    function lib_octree_hf_creat_lut() result(rv)
+    function lib_octree_hf_creat_interleave_bits_lut() result(rv)
         implicit none
         ! parameter
         integer(kind=1), parameter :: integer_kind = _INTERLEAVE_BITS_INTEGER_KIND_
@@ -1128,7 +1148,10 @@ contains
         integer(kind=integer_kind*2) :: ii
 
         integer(kind=integer_kind), dimension(2) :: buffer
+        integer(kind=1) :: p
+        integer(kind=1) :: p_old
 
+        p_old = 0
         do i = integer_range_low, integer_range_high
             do ii = integer_range_low, integer_range_high
                 buffer(1) = int(i,1)
@@ -1137,7 +1160,11 @@ contains
                 rv(i,ii, 1) = buffer(1)
                 rv(i,ii, 2) = buffer(2)
             end do
-            write(1, *) '(f3.2)',100.0*(i-integer_range_low)/(integer_range_high-integer_range_low)
+            p = int(100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), 1)
+            if (int(p/10, 1) .ne. int(p_old/10, 1)) then
+                print *, "Interleave bits: create LUT: ", p, "%"
+            end if
+            p_old = p
         end do
 
 #elif (_FMM_DIMENSION_ == 3)
@@ -1153,7 +1180,10 @@ contains
         integer(kind=integer_kind*2) :: iii
 
         integer(kind=integer_kind), dimension(3) :: buffer
+        integer(kind=1) :: p
+        integer(kind=1) :: p_old
 
+        p_old = 0
         do i = integer_range_low, integer_range_high
             do ii = integer_range_low, integer_range_high
                 do iii = integer_range_low, integer_range_high
@@ -1166,10 +1196,14 @@ contains
                     rv(i,ii, iii,3) = buffer(3)
                 end do
             end do
-            print *, "Interleave bits: create LUT: ", 100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), "%"
+            p = int(100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), 1)
+            if (int(p/10, 1) .ne. int(p_old/10, 1)) then
+                print *, "Interleave bits: create LUT: ", p, "%"
+            end if
+            p_old = p
         end do
 #endif
-    end function lib_octree_hf_creat_lut
+    end function lib_octree_hf_creat_interleave_bits_lut
 
     ! Calculates the bit interleaving of x-dimensional integers.
     ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
@@ -1265,7 +1299,7 @@ contains
             allocate( lib_octree_interleave_bits_lut(integer_range_low:integer_range_high, &
                                                      integer_range_low:integer_range_high, &
                                                      1:2) )
-            lib_octree_interleave_bits_lut = lib_octree_hf_creat_lut()
+            lib_octree_interleave_bits_lut = lib_octree_hf_creat_interleave_bits_lut()
 
             lib_octree_interleave_bits_lut_initialised = .true.
         end if
@@ -1278,7 +1312,7 @@ contains
                                                  integer_range_low:integer_range_high, &
                                                  integer_range_low:integer_range_high, &
                                                  1:3) )
-            lib_octree_interleave_bits_lut = lib_octree_hf_creat_lut()
+            lib_octree_interleave_bits_lut = lib_octree_hf_creat_interleave_bits_lut()
 
             lib_octree_interleave_bits_lut_initialised = .true.
         end if
@@ -1289,6 +1323,174 @@ contains
         rv = lib_octree_hf_interleave_bits(x)
 #endif
     end function lib_octree_hf_interleave_bits_use_lut
+
+    ! Returns the look-up table (LUT) for deinterleaved bits. If necessary, the LUT is recalculated.
+    !
+    ! *Hint*
+    !   This function has only global dependencies.
+    !
+    ! Dependences
+    ! ----
+    !   _FMM_DIMENSION_
+    !       number of dimensions
+    !   _INTERLEAVE_BITS_INTEGER_KIND_
+    !       number of bytes of the integer
+    !
+    ! Returns
+    ! ----
+    !   rv: integer, dimension(:,:,:[,,:])
+    !       the look-up tabel
+    function lib_octree_hf_get_deinterleave_bits_lut() result(rv)
+        implicit none
+        ! parameter
+        integer(kind=1), parameter :: integer_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+        integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
+        integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
+
+#if (_FMM_DIMENSION_ == 2)
+        ! parameter
+        character (len = *), parameter :: file_lut="pre_calc/bit_deinterleaving_LUT_2d.dat"
+
+        ! dummy
+        integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
+                                               integer_range_low:integer_range_high, &
+                                               1:2) :: rv
+
+        ! check if LUT is already calculated
+        ! if yes: load
+        ! if not: calculate
+        if (file_exists(file_lut)) then
+            OPEN(UNIT=14, FILE=file_lut, ACTION="read", STATUS="old", &
+                 FORM='unformatted')
+            READ(14) rv
+            CLOSE(UNIT=14)
+        else
+            rv = lib_octree_hf_creat_deinterleave_bits_lut()
+            OPEN(UNIT=13, FILE=file_lut, ACTION="write", STATUS="replace", &
+                 FORM="unformatted")
+            WRITE(13) rv
+            CLOSE(UNIT=13)
+        end if
+#elif (_FMM_DIMENSION_ == 3)
+        ! parameter
+        character (len = *), parameter :: file_lut="pre_calc/bit_deinterleaving_LUT_3d.dat"
+
+        ! dummy
+        integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
+                                           integer_range_low:integer_range_high, &
+                                           integer_range_low:integer_range_high, &
+                                           1:3) :: rv
+
+        ! check if LUT is already calculated
+        ! if yes: load
+        ! if not: calculate
+        if (file_exists(file_lut)) then
+            OPEN(UNIT=14, FILE=file_lut, ACTION="read", STATUS="old", &
+                 FORM='unformatted')
+            READ(14) rv
+            CLOSE(UNIT=14)
+        else
+            rv = lib_octree_hf_creat_deinterleave_bits_lut()
+            OPEN(UNIT=13, FILE=file_lut, ACTION="write", STATUS="replace", &
+                 FORM="unformatted")
+            WRITE(13) rv
+            CLOSE(UNIT=13)
+        end if
+#endif
+
+    end function lib_octree_hf_get_deinterleave_bits_lut
+
+    ! Creates the look-up table (LUT) for the deinterleaved bits.
+    !
+    ! *Hint*
+    !   This function has only global dependencies.
+    !
+    ! Dependences
+    ! ----
+    !   _FMM_DIMENSION_
+    !       number of dimensions
+    !   _INTERLEAVE_BITS_INTEGER_KIND_
+    !       number of bytes of the integer
+    !
+    ! Returns
+    ! ----
+    !   rv: integer, dimension(:,:,:[,,:])
+    !       the look-up tabel
+    !
+    function lib_octree_hf_creat_deinterleave_bits_lut() result(rv)
+        implicit none
+        ! parameter
+        integer(kind=1), parameter :: integer_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+        integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
+        integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
+
+#if (_FMM_DIMENSION_ == 2)
+        ! dummy
+        integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
+                                               integer_range_low:integer_range_high, &
+                                               1:2) :: rv
+
+        ! auxiliary
+        integer(kind=integer_kind*2) :: i
+        integer(kind=integer_kind*2) :: ii
+
+        integer(kind=integer_kind), dimension(2) :: buffer
+        integer(kind=1) :: p
+        integer(kind=1) :: p_old
+
+        p_old = 0
+        do i = integer_range_low, integer_range_high
+            do ii = integer_range_low, integer_range_high
+                buffer(1) = int(i,1)
+                buffer(2) = int(ii,1)
+                buffer = lib_octree_hf_deinterleave_bits(buffer)
+                rv(i,ii, 1) = buffer(1)
+                rv(i,ii, 2) = buffer(2)
+            end do
+            p = int(100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), 1)
+            if (int(p/10, 1) .ne. int(p_old/10, 1)) then
+                print *, "Deinterleave bits: create LUT: ", p, "%"
+            end if
+            p_old = p
+        end do
+
+#elif (_FMM_DIMENSION_ == 3)
+        ! dummy
+        integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
+                                               integer_range_low:integer_range_high, &
+                                               integer_range_low:integer_range_high, &
+                                               1:3) :: rv
+
+        ! auxiliary
+        integer(kind=integer_kind*2) :: i
+        integer(kind=integer_kind*2) :: ii
+        integer(kind=integer_kind*2) :: iii
+
+        integer(kind=integer_kind), dimension(2) :: buffer
+        integer(kind=1) :: p
+        integer(kind=1) :: p_old
+
+        p_old = 0
+        do i = integer_range_low, integer_range_high
+            do ii = integer_range_low, integer_range_high
+                do iii = integer_range_low, integer_range_high
+                    buffer(1) = int(i,1)
+                    buffer(2) = int(ii,1)
+                    buffer(3) = int(iii,1)
+                    buffer = lib_octree_hf_deinterleave_bits(buffer)
+                    rv(i,ii, iii,1) = buffer(1)
+                    rv(i,ii, iii,2) = buffer(2)
+                    rv(i,ii, iii,3) = buffer(3)
+                end do
+            end do
+            p = int(100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), 1)
+            if (int(p/10, 1) .ne. int(p_old/10, 1)) then
+                print *, "Deinterleave bits: create LUT: ", p, "%"
+            end if
+            p_old = p
+        end do
+#endif
+    end function lib_octree_hf_creat_deinterleave_bits_lut
 
     ! deinterleavs the
     ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
@@ -1347,6 +1549,70 @@ contains
         end do
     end function lib_octree_hf_deinterleave_bits
 
+    ! deinterleavs the
+    ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
+    ! The dafault value is 1 (1 byte);
+    !
+    ! Argument
+    ! ----
+    !   x:
+    !       counting system undependet value
+    !
+    !
+    ! Example
+    ! ----
+    !  x2D: 0.01|01|00
+    !  ------------------
+    !   x1: 0. 1| 0| 0
+    !   x2: 0.0 |1 |0
+    !
+    !   x1: 0.100   => 0.5   (base 10)
+    !   x2: 0.010   => 0.25  (base 10)
+    !
+    function lib_octree_hf_deinterleave_bits_use_lut(x) result(rv)
+        implicit none
+        ! parameter
+        integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+
+        integer(kind=x_kind), parameter :: integer_range_high = huge(integer_range_high)
+        integer(kind=x_kind), parameter :: integer_range_low = -integer_range_high-1
+
+        ! dummy
+        integer(kind=x_kind), dimension(OCTREE_DIMENSIONS), intent(in) :: x
+        integer(kind=x_kind), dimension(OCTREE_DIMENSIONS) :: rv
+
+#if (_FMM_DIMENSION_ == 2)
+        ! allocate memory
+        if (.NOT. lib_octree_deinterleave_bits_lut_initialised) then
+            allocate( lib_octree_deinterleave_bits_lut(integer_range_low:integer_range_high, &
+                                                       integer_range_low:integer_range_high, &
+                                                       1:2) )
+            lib_octree_deinterleave_bits_lut = lib_octree_hf_creat_deinterleave_bits_lut()
+
+            lib_octree_deinterleave_bits_lut_initialised = .true.
+        end if
+        rv(1) = lib_octree_deinterleave_bits_lut(x(2), x(1), 1)
+        rv(2) = lib_octree_deinterleave_bits_lut(x(2), x(1), 2)
+#elif (_FMM_DIMENSION_ == 3)
+        ! allocate memory
+        if (.NOT. lib_octree_deinterleave_bits_lut_initialised) then
+            allocate( lib_octree_deinterleave_bits_lut(integer_range_low:integer_range_high, &
+                                                   integer_range_low:integer_range_high, &
+                                                   integer_range_low:integer_range_high, &
+                                                   1:3) )
+            lib_octree_deinterleave_bits_lut = lib_octree_hf_creat_deinterleave_bits_lut()
+
+            lib_octree_deinterleave_bits_lut_initialised = .true.
+        end if
+        rv(1) = lib_octree_deinterleave_bits_lut(x(3), x(2), x(1), 1)
+        rv(2) = lib_octree_deinterleave_bits_lut(x(3), x(2), x(1), 2)
+        rv(3) = lib_octree_deinterleave_bits_lut(x(3), x(2), x(1), 3)
+#else
+        rv = lib_octree_hf_deinterleave_bits(x)
+#endif
+    end function lib_octree_hf_deinterleave_bits_use_lut
+
+! ----------------- test functions -----------------
     subroutine lib_octree_hf_test_functions()
         implicit none
 
@@ -1354,6 +1620,9 @@ contains
 
         error_counter = 0
 
+        if (.not. test_lib_octree_hf_get_universal_index()) then
+            error_counter = error_counter + 1
+        end if
         if (.not. test_lib_octree_hf_get_parent()) then
             error_counter = error_counter + 1
         end if
@@ -1376,9 +1645,6 @@ contains
             error_counter = error_counter + 1
         end if
         if (.not. test_lib_octree_hf_deinterleave_bits_2()) then
-            error_counter = error_counter + 1
-        end if
-        if (.not. test_lib_octree_hf_get_universal_index()) then
             error_counter = error_counter + 1
         end if
 
@@ -1789,6 +2055,7 @@ contains
         implicit none
 
         call benchmark_lib_octree_hf_interleave_bits_use_lut()
+        call benchmark_lib_octree_hf_deinterleave_bits_use_lut()
 
         contains
 
@@ -1827,6 +2094,43 @@ contains
             call cpu_time(finish)
             print *, "Interleave Time = ", (finish-start)/number_of_runs, " seconds."
         end subroutine benchmark_lib_octree_hf_interleave_bits_use_lut
+
+        subroutine benchmark_lib_octree_hf_deinterleave_bits_use_lut()
+            implicit none
+
+            integer(kind=1), dimension(OCTREE_DIMENSIONS) :: x
+            integer(kind=1), dimension(OCTREE_DIMENSIONS) :: buffer
+
+            integer :: number_of_runs = 100000000
+            integer :: i
+            real :: start, finish
+
+            x(1) = 2
+            x(2) = 0
+#if (_FMM_DIMENSION_ == 3)
+            x(3) = 0
+#endif
+            print *, "benchmark_lib_octree_hf_interleave_bits_use_lut"
+            call cpu_time(start)
+            buffer = lib_octree_hf_deinterleave_bits_use_lut(x)
+            call cpu_time(finish)
+            print *, "Deinterleave + LUT Time = ", finish-start, " seconds."
+
+            call cpu_time(start)
+            do i=1, number_of_runs
+                buffer = lib_octree_hf_deinterleave_bits_use_lut(x)
+            end do
+            call cpu_time(finish)
+            print *, "Deinterleave + LUT Time (second run) = ", (finish-start)/number_of_runs, " seconds."
+
+            call cpu_time(start)
+            do i=1, number_of_runs
+                buffer = lib_octree_hf_deinterleave_bits(x)
+            end do
+            call cpu_time(finish)
+            print *, "Deinterleave Time = ", (finish-start)/number_of_runs, " seconds."
+        end subroutine benchmark_lib_octree_hf_deinterleave_bits_use_lut
+
     end subroutine
 
 end module lib_octree_helper_functions

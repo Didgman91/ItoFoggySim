@@ -34,6 +34,7 @@ program main
 !!    point%x(3) = 0.5!2.0**(-9.0) + 2.0**(-8)
 !    universal_index = lib_octree_hf_get_universal_index(point, int(1,1))
 
+     call lib_octree_hf_benchmark()
      call lib_octree_hf_test_functions()
      call lib_octree_hf_destructor()
 
