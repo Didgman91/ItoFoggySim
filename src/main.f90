@@ -1,12 +1,12 @@
 program main
     use lib_data_types
-    use lib_octree
+    use lib_tree
     implicit none
 
-    type(lib_octree_element), dimension(2) :: test
-    type(lib_octree_universal_index) :: universal_index
-    type(lib_octree_universal_index), dimension(5) :: parent_index
-!    type(lib_octree_universal_index), dimension(2**fmm_dimensions,5) :: children_all_index
+    type(lib_tree_element), dimension(2) :: test
+    type(lib_tree_universal_index) :: universal_index
+    type(lib_tree_universal_index), dimension(5) :: parent_index
+!    type(lib_tree_universal_index), dimension(2**fmm_dimensions,5) :: children_all_index
     double precision, dimension(5) :: point_c
     integer(kind=4), dimension(2,5) :: neighbours
 
@@ -15,11 +15,11 @@ program main
 
     integer :: i
 
-!    type(lib_octree_spatial_point), dimension(fmm_dimensions) :: f
+!    type(lib_tree_spatial_point), dimension(fmm_dimensions) :: f
     integer(kind=16), dimension(5) :: coord
 
-    type(lib_octree_spatial_point) :: point
-    type(lib_octree_spatial_point) :: point_buffer
+    type(lib_tree_spatial_point) :: point
+    type(lib_tree_spatial_point) :: point_buffer
     real :: f_buffer
 
 
@@ -32,18 +32,18 @@ program main
 !    point%x(1) = 0.75
 !    point%x(2) = 0.5
 !!    point%x(3) = 0.5!2.0**(-9.0) + 2.0**(-8)
-!    universal_index = lib_octree_hf_get_universal_index(point, int(1,1))
+!    universal_index = lib_tree_hf_get_universal_index(point, int(1,1))
 
-     call lib_octree_hf_benchmark()
-     call lib_octree_hf_test_functions()
-     call lib_octree_hf_destructor()
+!     call lib_tree_hf_benchmark()
+     call lib_tree_hf_test_functions()
+     call lib_tree_hf_destructor()
 
 
 
 !    f(1) = 0.875
 !    f(2) = 0.875
 !    f(3) = 0.875
-!    coord = lib_octree_hf_get_coordinate_binary_number_3D_float(f)
+!    coord = lib_tree_hf_get_coordinate_binary_number_3D_float(f)
 
 
 !    test(1)%start = 34
@@ -82,15 +82,15 @@ program main
 !   point(5)%x = (/0.875/)
 
 !    do i = 1, 5
-!        universal_index(i) = lib_octree_hf_get_universal_index(point(i), l)
+!        universal_index(i) = lib_tree_hf_get_universal_index(point(i), l)
 !    end do
 
 !
 !    do i = 1, 5
-!        parent_index(i) = lib_octree_hf_get_parent(universal_index(i))
-!        children_all_index(:,i) = lib_octree_hf_get_children_all(universal_index(i))
-!        point(i) = lib_octree_hf_get_centre_of_box(universal_index(i), l)
-!        neighbours(:,i) = lib_octree_hf_get_neighbour_all_1D(k, universal_index(i), l)
+!        parent_index(i) = lib_tree_hf_get_parent(universal_index(i))
+!        children_all_index(:,i) = lib_tree_hf_get_children_all(universal_index(i))
+!        point(i) = lib_tree_hf_get_centre_of_box(universal_index(i), l)
+!        neighbours(:,i) = lib_tree_hf_get_neighbour_all_1D(k, universal_index(i), l)
 !    end do
 
 
