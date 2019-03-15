@@ -1222,10 +1222,10 @@ contains
     !   x1: 0.100   => 0.5   (base 10)
     !   x2: 0.010   => 0.25  (base 10)
     !
-    !   x1: 0. 1| 0| 0
-    !   x2: 0.0 |1 |0
+    !   x1: 0.1 |0 |0
+    !   x2: 0. 0| 1| 0
     !  ------------------
-    !  x2D: 0.01|01|00
+    !  x2D: 0.10|01|00
     function lib_tree_hf_interleave_bits(x) result(rv)
         implicit none
         ! parameter
@@ -1249,10 +1249,15 @@ contains
         end do
 
         do ii = 1, x_dimension
-            do i = 0, x_kind * NUMBER_OF_BITS_PER_BYTE - 1                                      ! e.g.: 16 bit =  2 byte * 8 bit / byte
-                bit_number = i*x_dimension+ii-int(1, 1)                                         ! calculates the "global" bit number; two element example (1 byte / element): bit_number=9; element 2: |15 ... 8| element 1: |7 ... 0|
-                x_element = int(bit_number / (x_kind * NUMBER_OF_BITS_PER_BYTE), 1) + int(1,1)  ! calculates the element; bit_number=9 => element=2
-                bit_number = bit_number - (x_element-int(1,1))*x_kind*NUMBER_OF_BITS_PER_BYTE   ! calculates the "local" bit_number; bit_number=9, element=2 => bit_number=1
+            do i = 0, x_kind * NUMBER_OF_BITS_PER_BYTE - 1
+                ! calculates the "global" bit number
+                ! two element example (1 byte / element):
+                ! bit_number=9; element 2: |15 ... 8| element 1: |7 ... 0|
+                bit_number = i*x_dimension+(x_dimension - ii)
+                ! calculates the element; bit_number=9 => element=2
+                x_element = int(bit_number / (x_kind * NUMBER_OF_BITS_PER_BYTE), 1) + int(1, 1)
+                ! calculates the "local" bit_number; bit_number=9, element=2 => bit_number=1
+                bit_number = bit_number - (x_element-int(1,1))*x_kind*NUMBER_OF_BITS_PER_BYTE
                 if (btest(x(ii), i)) then       ! first bit number = 0
                     rv(x_element) = ibset(rv(x_element), bit_number)
                 end if
@@ -1306,8 +1311,8 @@ contains
 
             lib_tree_interleave_bits_lut_initialised = .true.
         end if
-        rv(1) = lib_tree_interleave_bits_lut(x(2), x(1), 1)
-        rv(2) = lib_tree_interleave_bits_lut(x(2), x(1), 2)
+        rv(1) = lib_tree_interleave_bits_lut(x(1), x(2), 1)
+        rv(2) = lib_tree_interleave_bits_lut(x(1), x(2), 2)
 #elif (_FMM_DIMENSION_ == 3)
         ! allocate memory
         if (.NOT. lib_tree_interleave_bits_lut_initialised) then
@@ -1319,9 +1324,9 @@ contains
 
             lib_tree_interleave_bits_lut_initialised = .true.
         end if
-        rv(1) = lib_tree_interleave_bits_lut(x(3), x(2), x(1), 1)
-        rv(2) = lib_tree_interleave_bits_lut(x(3), x(2), x(1), 2)
-        rv(3) = lib_tree_interleave_bits_lut(x(3), x(2), x(1), 3)
+        rv(1) = lib_tree_interleave_bits_lut(x(1), x(2), x(3), 1)
+        rv(2) = lib_tree_interleave_bits_lut(x(1), x(2), x(3), 2)
+        rv(3) = lib_tree_interleave_bits_lut(x(1), x(2), x(3), 3)
 #else
         rv = lib_tree_hf_interleave_bits(x)
 #endif
@@ -1469,7 +1474,7 @@ contains
         integer(kind=integer_kind*2) :: ii
         integer(kind=integer_kind*2) :: iii
 
-        integer(kind=integer_kind), dimension(2) :: buffer
+        integer(kind=integer_kind), dimension(3) :: buffer
         integer(kind=1) :: p
         integer(kind=1) :: p_old
 
@@ -1507,10 +1512,10 @@ contains
     !
     ! Example
     ! ----
-    !  x2D: 0.01|01|00
+    !  x2D: 0.10|01|00
     !  ------------------
-    !   x1: 0. 1| 0| 0
-    !   x2: 0.0 |1 |0
+    !   x1: 0.1 |0 |0
+    !   x2: 0. 0| 1| 0
     !
     !   x1: 0.100   => 0.5   (base 10)
     !   x2: 0.010   => 0.25  (base 10)
@@ -1521,8 +1526,8 @@ contains
         integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
 
         ! dummy
-        integer(kind=x_kind), dimension(:), intent(in) :: x
-        integer(kind=x_kind), dimension(size(x)) :: rv
+        integer(kind=x_kind), dimension(TREE_DIMENSIONS), intent(in) :: x
+        integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: rv
 
         ! auxiliary
         integer(kind=1) :: i
@@ -1540,11 +1545,11 @@ contains
         do ii = 1, x_dimension
             do i = 0, x_kind * NUMBER_OF_BITS_PER_BYTE - 1                                      ! e.g.: 16 bit =  2 byte * 8 bit / byte
                 ! global bit number = (ii-1)*x_kind * NUMBER_OF_BITS_PER_BYTE + i
-                ! target_element = mod(gloabel bit number + 1, TREE_DIMENSIONS)
+                ! target_element = TREE_DIMENSIONS - mod(gloabel bit number, TREE_DIMENSIONS)
                 ! target local bit number = int(global bit number / TREE_DIMENSIONS)
                 target_element = int((ii-1)*x_kind * NUMBER_OF_BITS_PER_BYTE + i, 1)
                 bit_number = int(target_element / TREE_DIMENSIONS, 1)
-                target_element = int(mod(target_element, TREE_DIMENSIONS) + 1, 1)
+                target_element = int(TREE_DIMENSIONS - mod(target_element, TREE_DIMENSIONS), 1)
                 if (btest(x(ii), i)) then       ! first bit number = 0
                     rv(target_element) = ibset(rv(target_element), bit_number)
                 end if
@@ -1594,8 +1599,8 @@ contains
 
             lib_tree_deinterleave_bits_lut_initialised = .true.
         end if
-        rv(1) = lib_tree_deinterleave_bits_lut(x(2), x(1), 1)
-        rv(2) = lib_tree_deinterleave_bits_lut(x(2), x(1), 2)
+        rv(1) = lib_tree_deinterleave_bits_lut(x(1), x(2), 1)
+        rv(2) = lib_tree_deinterleave_bits_lut(x(1), x(2), 2)
 #elif (_FMM_DIMENSION_ == 3)
         ! allocate memory
         if (.NOT. lib_tree_deinterleave_bits_lut_initialised) then
@@ -1607,9 +1612,9 @@ contains
 
             lib_tree_deinterleave_bits_lut_initialised = .true.
         end if
-        rv(1) = lib_tree_deinterleave_bits_lut(x(3), x(2), x(1), 1)
-        rv(2) = lib_tree_deinterleave_bits_lut(x(3), x(2), x(1), 2)
-        rv(3) = lib_tree_deinterleave_bits_lut(x(3), x(2), x(1), 3)
+        rv(1) = lib_tree_deinterleave_bits_lut(x(1), x(2), x(3), 1)
+        rv(2) = lib_tree_deinterleave_bits_lut(x(1), x(2), x(3), 2)
+        rv(3) = lib_tree_deinterleave_bits_lut(x(1), x(2), x(3), 3)
 #else
         rv = lib_tree_hf_deinterleave_bits(x)
 #endif
@@ -1627,10 +1632,10 @@ contains
     !
     ! Example
     ! ----
-    !  x2D: 0.01|01|00
+    !  x1D: 0.10|01|00
     !  ------------------
-    !   x1: 0. 1| 0| 0
-    !   x2: 0.0 |1 |0
+    !   x1: 0.1 |0 |0
+    !   x2: 0. 0| 1| 0
     !
     !   x1: 0.100   => 0.5   (base 10)
     !   x2: 0.010   => 0.25  (base 10)
@@ -1654,7 +1659,7 @@ contains
 
         do i = 0, COORDINATE_BINARY_BYTES * NUMBER_OF_BITS_PER_BYTE - 1
             ! global bit number = i
-            ! target_element = mod(TREE_DIMENSIONS - gloabel bit number, TREE_DIMENSIONS)
+            ! target_element = TREE_DIMENSIONS - mod( gloabel bit number, TREE_DIMENSIONS)
             ! target local bit number = int(global bit number / TREE_DIMENSIONS)
             target_element = int(i, 1)
             bit_number = int(target_element / TREE_DIMENSIONS, 1)
@@ -1943,12 +1948,12 @@ contains
             x(1) = 4  ! 0100
             x(2) = 1  ! 0001
 #if (_FMM_DIMENSION_ == 2)
-            interleaved_bits_ground_trouth(1) = 2**1 + 2**4 !           |0001 0010|
+            interleaved_bits_ground_trouth(1) = 2**0 + 2**5 !           |0010 0001|
             interleaved_bits_ground_trouth(2) = 0           ! |0000 0000|
 #elif (_FMM_DIMENSION_ == 3)
             x(3) = 2  ! 0010
-            interleaved_bits_ground_trouth(1) = 2**1 + 2**5 + 2**6 !                     |0110 0010|
-            interleaved_bits_ground_trouth(2) = 0                  !           |0000 0000|
+            interleaved_bits_ground_trouth(1) = 2**1 + 2**3        !                     |0000 1010|
+            interleaved_bits_ground_trouth(2) = 2**0               !           |0000 0001|
             interleaved_bits_ground_trouth(3) = 0                  ! |0000 0000|
 #else
             print *, "test_lib_tree_hf_interleave_bits: Dimension not defines: ", _FMM_DIMENSION_
@@ -1987,13 +1992,13 @@ contains
             x(1) = 20  ! 0001 0100
             x(2) = 65  ! 0100 0001
 #if (_FMM_DIMENSION_ == 2)
-            interleaved_bits_ground_trouth(1) = 2**1 + 2**4  !           |0001 0010|
-            interleaved_bits_ground_trouth(2) = 2**0 + 2**5  ! |0010 0001|
+            interleaved_bits_ground_trouth(1) = 2**0 + 2**5  !           |0010 0001|
+            interleaved_bits_ground_trouth(2) = 2**1 + 2**4  ! |0001 0010|
 #elif (_FMM_DIMENSION_ == 3)
-            x(3) = 40   ! 0010 1000
-            interleaved_bits_ground_trouth(1) = 2**1 + 2**6  !                     |0100 0010|
-            interleaved_bits_ground_trouth(2) = 2**3 + 2**4  !           |0001 1000|
-            interleaved_bits_ground_trouth(3) = 2**1 + 2**3  ! |0000 1010|
+            x(3) = 40  ! 0010 1000
+            interleaved_bits_ground_trouth(1) = 2**1                       !                     |0000 0010|
+            interleaved_bits_ground_trouth(2) = 2**0 + 2**1 + 2**6 - 2**7  !           |1100 0011|
+            interleaved_bits_ground_trouth(3) = 2**3                       ! |0000 1000|
 #else
             print *, "test_lib_tree_hf_interleave_bits_2: Dimension not defines: ", _FMM_DIMENSION_
 #endif
@@ -2033,12 +2038,12 @@ contains
             deinterleaved_bits_ground_trouth(2) = 1  ! 0001
 
 #if (_FMM_DIMENSION_ == 2)
-            x(1) = 2**1 + 2**4 !           |0001 0010|
+            x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 0           ! |0000 0000|
 #elif (_FMM_DIMENSION_ == 3)
             deinterleaved_bits_ground_trouth(3) = 2  ! 0010
-            x(1) = 2**1 + 2**5 + 2**6 !                     |0110 0010|
-            x(2) = 0                  !           |0000 0000|
+            x(1) = 2**1 + 2**3        !                     |0000 1010|
+            x(2) = 2**0               !           |0000 0001|
             x(3) = 0                  ! |0000 0000|
 #else
             print *, "test_lib_tree_hf_deinterleave_bits: Dimension not defines: ", _FMM_DIMENSION_
@@ -2078,13 +2083,13 @@ contains
             deinterleaved_bits_ground_trouth(2) = 2**0 + 2**5  ! 0010 0001
 
 #if (_FMM_DIMENSION_ == 2)
-            x(1) = 2**1 + 2**4 !           |0001 0010|
-            x(2) = 2**3 + 2**4 ! |0001 1000|
+            x(1) = 2**0 + 2**5 !           |0010 0001|
+            x(2) = 2**2 + 2**5 ! |0010 0100|
 #elif (_FMM_DIMENSION_ == 3)
             deinterleaved_bits_ground_trouth(3) = 2**1 + 2**4  ! 0001 0010
-            x(1) = 2**1 + 2**5 + 2**6 !                     |0110 0010|
-            x(2) = 2**6               !           |0100 0000|
-            x(3) = 2**0 + 2**2        ! |0000 0101|
+            x(1) = 2**1 + 2**3        !                     |0000 1010|
+            x(2) = 2**0 + 2**4        !           |0001 0001|
+            x(3) = 2**0 + 2**4        ! |0001 0001|
 #else
             print *, "test_lib_tree_hf_deinterleave_bits_2: Dimension not defines: ", _FMM_DIMENSION_
 #endif
