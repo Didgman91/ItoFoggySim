@@ -29,35 +29,13 @@ program main
     integer(kind=1), dimension(3) :: buffer
     real :: start, finish
 
-    point%x(1) = 0.75
-    point%x(2) = 0.5
-!    point%x(3) = 0.5!2.0**(-9.0) + 2.0**(-8)
-    universal_index = lib_octree_hf_get_universal_index(point, int(1,1))
+!    point%x(1) = 0.75
+!    point%x(2) = 0.5
+!!    point%x(3) = 0.5!2.0**(-9.0) + 2.0**(-8)
+!    universal_index = lib_octree_hf_get_universal_index(point, int(1,1))
 
-!    x(1) = 2
-!    x(2) = 0
-!    x(3) = 0
-!
-!    call cpu_time(start)
-!    buffer = lib_octree_hf_interleave_bits_use_lut(x)
-!    call cpu_time(finish)
-!    print *, "Interleave + LUT Time = ", finish-start, " seconds."
-!
-!    call cpu_time(start)
-!    do i=1, number_of_runs
-!        buffer = lib_octree_hf_interleave_bits_use_lut(x)
-!    end do
-!    call cpu_time(finish)
-!    print *, "Interleave + LUT Time (second run) = ", (finish-start)/number_of_runs, " seconds."
-!
-!    call cpu_time(start)
-!    do i=1, number_of_runs
-!        buffer = lib_octree_hf_interleave_bits(x)
-!    end do
-!    call cpu_time(finish)
-!    print *, "Interleave Time = ", (finish-start)/number_of_runs, " seconds."
-
-
+     call lib_octree_hf_test_functions()
+     call lib_octree_hf_destructor()
 
 
 
@@ -114,5 +92,5 @@ program main
 !        neighbours(:,i) = lib_octree_hf_get_neighbour_all_1D(k, universal_index(i), l)
 !    end do
 
-    call lib_octree_hf_destructor()
+
 end program main

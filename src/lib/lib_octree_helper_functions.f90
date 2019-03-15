@@ -85,8 +85,7 @@ module lib_octree_helper_functions
     public :: lib_octree_hf_get_neighbour_all_1D
 
     ! test
-    public :: lib_octree_hf_interleave_bits_use_lut
-    public :: lib_octree_hf_interleave_bits
+    public :: lib_octree_hf_test_functions
 
 contains
 
@@ -1161,7 +1160,7 @@ contains
                     rv(i,ii, iii,3) = buffer(3)
                 end do
             end do
-            print *, "create LUT: ", 100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), "%"
+            print *, "Interleave bits: create LUT: ", 100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), "%"
         end do
 #endif
     end function lib_octree_hf_creat_lut
@@ -1286,5 +1285,86 @@ contains
 
 
     end function lib_octree_hf_interleave_bits_use_lut
+
+    subroutine lib_octree_hf_test_functions()
+        implicit none
+
+        call benchmark_lib_octree_hf_interleave_bits_use_lut()
+
+        call test_lib_octree_hf_get_universal_index()
+
+        contains
+
+        subroutine test_lib_octree_hf_get_universal_index()
+            implicit none
+
+            type(lib_octree_spatial_point) :: point
+            type(lib_octree_universal_index) :: universal_index
+
+            integer(kind=1) :: l
+            type(lib_octree_universal_index) :: universal_index_ground_trouth
+
+            l = 1
+            universal_index_ground_trouth%l = l
+
+            point%x(1) = 0.75
+            point%x(2) = 0.5
+
+            universal_index_ground_trouth%n_per_dimension(1) = 1
+            universal_index_ground_trouth%n_per_dimension(2) = 1
+#if (_FMM_DIMENSION_ == 2)
+            universal_index_ground_trouth%n = 3
+#elif (_FMM_DIMENSION_ == 3)
+            point%x(3) = 2.0**(-9.0) + 2.0**(-8)
+
+            universal_index_ground_trouth%n = 6
+            universal_index_ground_trouth%n_per_dimension(3) = 0
+#endif
+
+            universal_index = lib_octree_hf_get_universal_index(point, l)
+
+            if (universal_index%n == universal_index_ground_trouth%n) then
+                print *, "test_lib_octree_hf_get_universal_index: ", "OK"
+            else
+                print *, "test_lib_octree_hf_get_universal_index: ", "FAILED"
+            end if
+        end subroutine test_lib_octree_hf_get_universal_index
+
+        subroutine benchmark_lib_octree_hf_interleave_bits_use_lut()
+            implicit none
+
+            integer(kind=1), dimension(3) :: x
+            integer(kind=1), dimension(3) :: buffer
+
+            integer :: number_of_runs = 1000000000
+            integer :: i
+            real :: start, finish
+
+            x(1) = 2
+            x(2) = 0
+#if (_FMM_DIMENSION_ == 3)
+            x(3) = 0
+#endif
+            print *, "benchmark_lib_octree_hf_interleave_bits_use_lut"
+            call cpu_time(start)
+            buffer = lib_octree_hf_interleave_bits_use_lut(x)
+            call cpu_time(finish)
+            print *, "Interleave + LUT Time = ", finish-start, " seconds."
+
+            call cpu_time(start)
+            do i=1, number_of_runs
+                buffer = lib_octree_hf_interleave_bits_use_lut(x)
+            end do
+            call cpu_time(finish)
+            print *, "Interleave + LUT Time (second run) = ", (finish-start)/number_of_runs, " seconds."
+
+            call cpu_time(start)
+            do i=1, number_of_runs
+                buffer = lib_octree_hf_interleave_bits(x)
+            end do
+            call cpu_time(finish)
+            print *, "Interleave Time = ", (finish-start)/number_of_runs, " seconds."
+        end subroutine benchmark_lib_octree_hf_interleave_bits_use_lut
+    end subroutine lib_octree_hf_test_functions
 
 end module lib_octree_helper_functions
