@@ -18,13 +18,15 @@
 !
 
 ! spatial dimension, value = [2,3]
-#define _FMM_DIMENSION_ 3
+#define _FMM_DIMENSION_ 2
 
 ! 1: true, 0: false (-> spatial point is real)
 #define _SPATIAL_POINT_IS_DOUBLE_ 1
 
 ! integer kind of the bit interleaving process, value = [1,2,4,8], default = 1
 ! a value of 8 is only possible if the spatial point variable is of type double
+!
+! TODO: bug fix value > 1
 #define _INTERLEAVE_BITS_INTEGER_KIND_ 1
 
 module lib_tree_helper_functions
@@ -365,7 +367,11 @@ contains
             do ii=1, TREE_DIMENSIONS  ! get column entries
                 ob_buffer_DIM(ii) = cb_buffer(i + (ii-1)*COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_)
             end do
+#if (_INTERLEAVE_BITS_INTEGER_KIND_ == 1)
             ib_buffer = lib_tree_hf_interleave_bits_use_lut(ob_buffer_DIM)
+#else
+            ib_buffer = lib_tree_hf_interleave_bits(ob_buffer_DIM)
+#endif
 
             ! e.g.    12                4       (4..1)        3
             ! ii = total length - (total columns - i + 1) * length(ib_buffer) + 1
@@ -1802,6 +1808,8 @@ contains
             integer(kind=TREE_INTEGER_KIND), dimension(2**TREE_DIMENSIONS) :: children_n
             integer(kind=TREE_INTEGER_KIND), dimension(2**TREE_DIMENSIONS) :: children_n_ground_truth
 
+            integer(kind=1) :: i
+
             n = 1
 #if (_FMM_DIMENSION_ == 2)
             children_n_ground_truth(1) = 4
@@ -1822,13 +1830,17 @@ contains
 #endif
             children_n = lib_tree_hf_get_children_all(n)
 
-            if (sum(children_n) == sum(children_n_ground_truth)) then
-                print *, "test_lib_tree_hf_get_children_all: ", "ok"
-                rv = .true.
-            else
-                print *, "test_lib_tree_hf_get_children_all: ", "FAILED"
-                rv = .false.
-            end if
+            print *, "test_lib_tree_hf_get_children_all: "
+            rv = .true.
+            do i=1, 2**TREE_DIMENSIONS
+                if (children_n(i) == children_n_ground_truth(i)) then
+                    print *, " ", i, ": ok"
+
+                else
+                    print *, " ", i, ": FAILED"
+                    rv = .false.
+                end if
+            end do
 
         end function test_lib_tree_hf_get_children_all
 
@@ -1860,12 +1872,13 @@ contains
 #endif
             point = lib_tree_hf_get_centre_of_box(n,l)
 
+            print *, "test_lib_tree_hf_get_centre_of_box:"
             rv = .true.
             do i=1,TREE_DIMENSIONS
                 if (point%x(i) == point_ground_trouth%x(i)) then
-                    print *, "test_lib_tree_hf_get_centre_of_box (dim: ", i,"): ", "ok"
+                    print *, "  dim: ", i,": ", "ok"
                 else
-                    print *, "test_lib_tree_hf_get_centre_of_box (dim: ", i,"): ", "FAILED"
+                    print *, "  dim: ", i,": ", "FAILED"
                     rv = .false.
                 end if
             end do
@@ -1917,12 +1930,13 @@ contains
 
             coordinate_binary_xD = lib_tree_hf_get_coordinate_binary_number_xD(f)
 
+            print *, "test_lib_tree_hf_get_coordinate_binary_number_xD:"
             rv = .true.
             do i=1,TREE_DIMENSIONS
                 if (coordinate_binary_xD(i) == coordinate_binary_xD_ground_trouth(i)) then
-                    print *, "test_lib_tree_hf_get_coordinate_binary_number_xD (dim",i,"): ", "ok"
+                    print *, "  dim ",i,": ", "ok"
                 else
-                    print *, "test_lib_tree_hf_get_coordinate_binary_number_xD (dim",i,"): ", "FAILED"
+                    print *, "  dim ",i,": ", "FAILED"
                     rv = .false.
                 end if
             end do
@@ -1961,12 +1975,13 @@ contains
 
             interleaved_bits = lib_tree_hf_interleave_bits(x)
 
+            print *, "test_lib_tree_hf_interleave_bits:"
             rv = .true.
             do i=1, TREE_DIMENSIONS
                 if (interleaved_bits(i) == interleaved_bits_ground_trouth(i)) then
-                    print *, "test_lib_tree_hf_interleave_bits (dim",i,"): ", "ok"
+                    print *, "  dim ",i,": ", "ok"
                 else
-                    print *, "test_lib_tree_hf_interleave_bits (dim",i,"): ", "FAILED"
+                    print *, "  dim ",i,": ", "FAILED"
                     rv = .false.
                 end if
             end do
@@ -2005,12 +2020,13 @@ contains
 
             interleaved_bits = lib_tree_hf_interleave_bits(x)
 
+            print *, "test_lib_tree_hf_interleave_bits_2:"
             rv = .true.
             do i=1, TREE_DIMENSIONS
                 if (interleaved_bits(i) == interleaved_bits_ground_trouth(i)) then
-                    print *, "test_lib_tree_hf_interleave_bits_2 (dim",i,"): ", "ok"
+                     print *, "  dim ",i,": ", "ok"
                 else
-                    print *, "test_lib_tree_hf_interleave_bits_2 (dim",i,"): ", "FAILED"
+                    print *, "  dim ",i,": ", "FAILED"
                     rv = .false.
                 end if
             end do
@@ -2051,12 +2067,13 @@ contains
 
             deinterleaved_bits = lib_tree_hf_deinterleave_bits(x)
 
+            print *, "test_lib_tree_hf_deinterleave_bits:"
             rv = .true.
             do i=1, TREE_DIMENSIONS
                 if (deinterleaved_bits(i) == deinterleaved_bits_ground_trouth(i)) then
-                    print *, "test_lib_tree_hf_deinterleave_bits (dim",i,"): ", "ok"
+                    print *, "  dim ",i,": ", "ok"
                 else
-                    print *, "test_lib_tree_hf_deinterleave_bits (dim",i,"): ", "FAILED"
+                    print *, "  dim ",i,": ", "FAILED"
                     rv = .false.
                 end if
             end do
@@ -2096,12 +2113,13 @@ contains
 
             deinterleaved_bits = lib_tree_hf_deinterleave_bits(x)
 
+            print *, "test_lib_tree_hf_deinterleave_bits_2:"
             rv = .true.
             do i=1, TREE_DIMENSIONS
                 if (deinterleaved_bits(i) == deinterleaved_bits_ground_trouth(i)) then
-                    print *, "test_lib_tree_hf_deinterleave_bits_2 (dim",i,"): ", "ok"
+                    print *, "  dim ",i,": ", "ok"
                 else
-                    print *, "test_lib_tree_hf_deinterleave_bits_2 (dim",i,"): ", "FAILED"
+                    print *, "  dim ",i,": ", "FAILED"
                     rv = .false.
                 end if
             end do
@@ -2121,8 +2139,8 @@ contains
         subroutine benchmark_lib_tree_hf_interleave_bits_use_lut()
             implicit none
 
-            integer(kind=1), dimension(TREE_DIMENSIONS) :: x
-            integer(kind=1), dimension(TREE_DIMENSIONS) :: buffer
+            integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension(TREE_DIMENSIONS) :: buffer
 
             integer :: number_of_runs = 100000000
             integer :: i
@@ -2157,8 +2175,8 @@ contains
         subroutine benchmark_lib_tree_hf_deinterleave_bits_use_lut()
             implicit none
 
-            integer(kind=1), dimension(TREE_DIMENSIONS) :: x
-            integer(kind=1), dimension(TREE_DIMENSIONS) :: buffer
+            integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension(TREE_DIMENSIONS) :: buffer
 
             integer :: number_of_runs = 100000000
             integer :: i
