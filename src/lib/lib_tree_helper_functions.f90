@@ -954,31 +954,19 @@ contains
         type(lib_tree_spatial_point) :: point
 
         ! auxiliary variables
-        !
-        !
-        !
-        !
-        !
-        !
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: n_
-!        integer(kind=1), dimension(COORDINATE_BINARY_BYTES) :: cb_buffer
-!        equivalence (coordinate_binary, cb_buffer)
-!
-!        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: cb_buffer_pre_ib
-!        equivalence (cb_buffer(COORDINATE_BINARY_BYTES - _INTERLEAVE_BITS_INTEGER_KIND_), cb_buffer_pre_ib)
+        integer(kind=COORDINATE_BINARY_BYTES/2), dimension(TREE_DIMENSIONS) :: n_treeD
+        integer(kind=1) :: i
+        integer(kind=COORDINATE_BINARY_BYTES) :: buffer
 
-#if _SPATIAL_POINT_IS_DOUBLE_ == 1
-        double precision, dimension(TREE_DIMENSIONS) :: x_m
-#elif _SPATIAL_POINT_IS_DOUBLE_ == 0
-        real, dimension(TREE_DIMENSIONS) :: x_m
-#endif
+        buffer = n
 
-        x_m = 2**(-l) * (n + 0.5)
+        n_treeD = lib_tree_hf_deinterleave_bits_1d_to_treeD(buffer)
 
+        do i=1, TREE_DIMENSIONS
+            point%x(i) = 2.0**(-l) * (n_treeD(i) + 0.5)
+        end do
 
-
-
-    end function
+    end function lib_tree_hf_get_centre_of_box
 
     ! Calculates the universal index of all k-th neigbour's boxes
     !
@@ -1649,38 +1637,31 @@ contains
     !
     function lib_tree_hf_deinterleave_bits_1d_to_treeD(x) result(rv)
         implicit none
-        ! parameter
-        integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
 
         ! dummy
-        integer(kind=x_kind), dimension(:), intent(in) :: x
-        integer(kind=x_kind), dimension(size(x)) :: rv
+        integer(kind=COORDINATE_BINARY_BYTES), intent(in) :: x
+        integer(kind=COORDINATE_BINARY_BYTES/2), dimension(TREE_DIMENSIONS) :: rv
 
         ! auxiliary
         integer(kind=1) :: i
-        integer(kind=1) :: ii
-        integer(kind=1) :: x_dimension
         integer(kind=1) :: bit_number
         integer(kind=1) :: target_element
 
-        x_dimension = int(size(x), 1)
 
-        do ii = 1, x_dimension
-            rv(ii) = 0
+        do i = 1, TREE_DIMENSIONS
+            rv(i) = 0
         end do
 
-        do ii = 1, x_dimension
-            do i = 0, x_kind * NUMBER_OF_BITS_PER_BYTE - 1                                      ! e.g.: 16 bit =  2 byte * 8 bit / byte
-                ! global bit number = (ii-1)*x_kind * NUMBER_OF_BITS_PER_BYTE + i
-                ! target_element = mod(gloabel bit number + 1, TREE_DIMENSIONS)
-                ! target local bit number = int(global bit number / TREE_DIMENSIONS)
-                target_element = int((ii-1)*x_kind * NUMBER_OF_BITS_PER_BYTE + i, 1)
-                bit_number = int(target_element / TREE_DIMENSIONS, 1)
-                target_element = int(mod(target_element, TREE_DIMENSIONS) + 1, 1)
-                if (btest(x(ii), i)) then       ! first bit number = 0
-                    rv(target_element) = ibset(rv(target_element), bit_number)
-                end if
-            end do
+        do i = 0, COORDINATE_BINARY_BYTES * NUMBER_OF_BITS_PER_BYTE - 1
+            ! global bit number = i
+            ! target_element = mod(TREE_DIMENSIONS - gloabel bit number, TREE_DIMENSIONS)
+            ! target local bit number = int(global bit number / TREE_DIMENSIONS)
+            target_element = int(i, 1)
+            bit_number = int(target_element / TREE_DIMENSIONS, 1)
+            target_element = int(TREE_DIMENSIONS - (mod(target_element, TREE_DIMENSIONS)), 1)
+            if (btest(x, i)) then       ! first bit number = 0
+                rv(target_element) = ibset(rv(target_element), bit_number)
+            end if
         end do
     end function lib_tree_hf_deinterleave_bits_1d_to_treeD
 
