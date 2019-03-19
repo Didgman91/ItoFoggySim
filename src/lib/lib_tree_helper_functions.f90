@@ -18,7 +18,7 @@
 !
 
 ! spatial dimension, value = [2,3]
-#define _FMM_DIMENSION_ 2
+#define _FMM_DIMENSION_ 3
 
 ! 1: true, 0: false (-> spatial point is real)
 #define _SPATIAL_POINT_IS_DOUBLE_ 1
@@ -28,6 +28,10 @@
 !
 ! TODO: bug fix value > 1
 #define _INTERLEAVE_BITS_INTEGER_KIND_ 1
+
+! todo:
+! - interleave_bits_treeD_to_1D: LUT
+! - deinterleave_bits_1D_to_treeD: LUT
 
 module lib_tree_helper_functions
     use file_io
@@ -65,13 +69,13 @@ module lib_tree_helper_functions
 
     ! module global variable
 #if (_FMM_DIMENSION_ == 2)
+    logical :: lib_tree_interleave_bits_lut_initialised = .false.
     integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension (:,:,:) &
                                                 , allocatable :: lib_tree_interleave_bits_lut
-    logical :: lib_tree_interleave_bits_lut_initialised = .false.
 
+    logical :: lib_tree_deinterleave_bits_lut_initialised = .false.
     integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension (:,:,:) &
                                                 , allocatable :: lib_tree_deinterleave_bits_lut
-    logical :: lib_tree_deinterleave_bits_lut_initialised = .false.
 #elif (_FMM_DIMENSION_ == 3)
     integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension (:,:,:,:) &
                                                 , allocatable :: lib_tree_interleave_bits_lut
@@ -81,6 +85,10 @@ module lib_tree_helper_functions
                                                 , allocatable :: lib_tree_deinterleave_bits_lut
     logical :: lib_tree_deinterleave_bits_lut_initialised = .false.
 #endif
+
+    logical :: lib_tree_deinterleave_bits_1D_to_treeD_lut_initialised = .false.
+    integer(kind=COORDINATE_BINARY_BYTES), dimension (:,:) &
+                                         , allocatable :: lib_tree_deinterleave_bits_1D_to_treeD_lut
     ! ~ module global variable ~
 
     public :: lib_tree_hf_destructor
@@ -126,6 +134,11 @@ contains
             deallocate (lib_tree_deinterleave_bits_lut)
         end if
 #endif
+
+    if (lib_tree_deinterleave_bits_1D_to_treeD_lut_initialised) then
+        lib_tree_deinterleave_bits_1D_to_treeD_lut_initialised = .false.
+        deallocate (lib_tree_deinterleave_bits_1D_to_treeD_lut)
+    end if
 
     end subroutine lib_tree_hf_destructor
 
@@ -966,7 +979,7 @@ contains
 
         buffer = n
 
-        n_treeD = lib_tree_hf_deinterleave_bits_1d_to_treeD(buffer)
+        n_treeD = lib_tree_hf_deinterleave_bits_1D_to_treeD(buffer)
 
         do i=1, TREE_DIMENSIONS
             point%x(i) = 2.0**(-l) * (n_treeD(i) + 0.5)
@@ -1010,21 +1023,20 @@ contains
     !   the universal indexes of all neigbour boxes of the given box.
     !
     !   neighbour_all: Integer(kind=TREE_INTEGER_KIND), dimension(2^d)
-    function lib_tree_hf_get_neighbour_all_1D(k,n,l) result (neighbour_all)
+    function lib_tree_hf_get_neighbour_all_1D(k,n,l) result (neighbour_1d)
         implicit none
 
         ! dummy arguments
         integer(kind=1), intent (in) :: k
-        integer(kind=TREE_INTEGER_KIND), intent (in) :: n
+        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: n
         integer(kind=1), intent (in) :: l
-        !integer(kind=TREE_INTEGER_KIND), dimension(3**TREE_DIMENSIONS -1) :: neighbour_all
-        integer(kind=TREE_INTEGER_KIND), dimension(2) :: neighbour_all
+        integer(kind=COORDINATE_BINARY_BYTES), dimension(3) :: neighbour_1d
 
         ! auxiliary variables
         integer(kind=TREE_INTEGER_KIND), parameter :: ignore_entry = -1
         integer(kind=TREE_INTEGER_KIND), parameter :: lower_boundary = 0
-        integer(kind=TREE_INTEGER_KIND) :: upper_boundary
-        integer(kind=TREE_INTEGER_KIND) :: buffer_n
+        integer(kind=COORDINATE_BINARY_BYTES) :: upper_boundary
+        integer(kind=COORDINATE_BINARY_BYTES) :: buffer_n
 
         upper_boundary = 2**l - 1
 
@@ -1034,7 +1046,10 @@ contains
             buffer_n = ignore_entry
         end if
 
-        neighbour_all(1) = buffer_n
+        neighbour_1d(1) = buffer_n
+
+        ! own box
+        neighbour_1d(2) = n
 
         ! calculate right neigbour
         buffer_n = n+k
@@ -1042,7 +1057,81 @@ contains
             buffer_n = ignore_entry
         end if
 
-        neighbour_all(2) = buffer_n
+        neighbour_1d(3) = buffer_n
+
+    end function
+
+    ! Calculates the universal index of all k-th neigbour's boxes
+    !
+    !   N_(min)^(Neighbours)(d) = 2^d − 1                (19)
+    !   N_(max)^(Neighbours)(d) = 3^d − 1                (19)
+    !
+    !   NeighborAll^(k)(n, l) = {(n−k, l), (n+k, l)}     (74)
+    !
+    ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
+    !
+    ! example: one-dimensional tree
+    ! ----
+    !    l=1
+    !     |     0     |     1     |
+    !     -------------------------
+    !    l=2
+    !     |  0  |  1  |  2  |  3  |
+    !     -------------------------
+    !             -k <-- * --> +k
+    !
+    !      Box(n,l) = (2,2)
+    !      NeighbourAll(1,2,2) = {(1,2), (3,2)}
+    !
+    ! Arguments
+    ! ----
+    !   k: integer(kind=TREE_INTEGER_KIND)
+    !       k-th neighbour
+    !   n: integer(kind=TREE_INTEGER_KIND)
+    !       universal index of a box
+    !   l: integer(kind=TREE_INTEGER_KIND)
+    !       number of the level
+    !
+    ! Returns
+    ! ----
+    !   the universal indexes of all neigbour boxes of the given box.
+    !
+    !   neighbour_all: Integer(kind=TREE_INTEGER_KIND), dimension(2^d)
+    !
+    !
+    !
+    function lib_tree_hf_get_neighbour_all_xD(k,n,l) result (neighbour_all)
+        implicit none
+
+        ! dummy arguments
+        integer(kind=1), intent (in) :: k
+        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: n
+        integer(kind=1), intent (in) :: l
+        integer(kind=TREE_INTEGER_KIND), dimension(3**TREE_DIMENSIONS -1) :: neighbour_all
+
+        ! auxiliary variables
+        integer(kind=TREE_INTEGER_KIND), parameter :: ignore_entry = -1
+        integer(kind=TREE_INTEGER_KIND), parameter :: lower_boundary = 0
+        integer(kind=TREE_INTEGER_KIND) :: upper_boundary
+
+        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: n_deinterleaved
+
+        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS,3) :: buffer_n_1d
+
+        integer(kind=1) :: i
+        integer(kind=1) :: ii
+
+
+        upper_boundary = 2**l - 1
+
+        n_deinterleaved = lib_tree_hf_deinterleave_bits_1D_to_treeD(n)
+
+        do i=1, TREE_DIMENSIONS
+            buffer_n_1d(i, 1:3) = lib_tree_hf_get_neighbour_all_1D(k, n_deinterleaved(i), l)
+        end do
+!
+!
+!        neighbour_all(2) = buffer_n
 
     end function
 
@@ -1626,6 +1715,55 @@ contains
 #endif
     end function lib_tree_hf_deinterleave_bits_use_lut
 
+    ! interleavs the
+    ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
+    ! The dafault value is 1 (1 byte);
+    !
+    ! Argument
+    ! ----
+    !   x:
+    !       counting system undependet value
+    !
+    !
+    ! Example
+    ! ----
+    !   x1: 0.100   => 0.5   (base 10)
+    !   x2: 0.010   => 0.25  (base 10)
+    !
+    !   x1: 0.1 |0 |0
+    !   x2: 0. 0| 1| 0
+    !  ------------------
+    !  x1D: 0.10|01|00
+    !
+    function lib_tree_hf_interleave_bits_treeD_to_1D(n) result(rv)
+        implicit none
+
+        ! dummy
+        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS), intent(in) :: n
+        integer(kind=COORDINATE_BINARY_BYTES) :: rv
+
+        ! auxiliary
+        integer(kind=1) :: i
+        integer(kind=1) :: ii
+        integer(kind=1) :: bit_number
+
+        rv = 0
+        do i = 1, TREE_DIMENSIONS
+            do ii=0, COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE
+                ! gloabal bit number
+                bit_number = ii*TREE_DIMENSIONS+(TREE_DIMENSIONS - i)
+
+                if ( bit_number >= COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE ) then
+                    exit
+                end if
+
+                if (btest(n(i), ii)) then       ! first bit number = 0
+                    rv = ibset(rv, bit_number)
+                end if
+             end do
+        end do
+    end function lib_tree_hf_interleave_bits_treeD_to_1D
+
     ! deinterleavs the
     ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
     ! The dafault value is 1 (1 byte);
@@ -1646,12 +1784,12 @@ contains
     !   x1: 0.100   => 0.5   (base 10)
     !   x2: 0.010   => 0.25  (base 10)
     !
-    function lib_tree_hf_deinterleave_bits_1d_to_treeD(x) result(rv)
+    function lib_tree_hf_deinterleave_bits_1D_to_treeD(x) result(rv)
         implicit none
 
         ! dummy
         integer(kind=COORDINATE_BINARY_BYTES), intent(in) :: x
-        integer(kind=COORDINATE_BINARY_BYTES/2), dimension(TREE_DIMENSIONS) :: rv
+        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: rv
 
         ! auxiliary
         integer(kind=1) :: i
@@ -1674,7 +1812,155 @@ contains
                 rv(target_element) = ibset(rv(target_element), bit_number)
             end if
         end do
-    end function lib_tree_hf_deinterleave_bits_1d_to_treeD
+    end function lib_tree_hf_deinterleave_bits_1D_to_treeD
+
+    ! deinterleavs the
+    ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
+    ! The dafault value is 1 (1 byte);
+    !
+    ! Argument
+    ! ----
+    !   x:
+    !       counting system undependet value
+    !
+    !
+    ! Example
+    ! ----
+    !  x1D: 0.01|01|00
+    !  ------------------
+    !   x1: 0. 1| 0| 0
+    !   x2: 0.0 |1 |0
+    !
+    !   x1: 0.100   => 0.5   (base 10)
+    !   x2: 0.010   => 0.25  (base 10)
+    !
+    function lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut(x) result(rv)
+        implicit none
+        ! parameter
+        integer(kind=1), parameter :: x_kind = COORDINATE_BINARY_BYTES
+
+        integer(kind=x_kind), parameter :: integer_range_high = huge(integer_range_high)
+        integer(kind=x_kind), parameter :: integer_range_low = -integer_range_high-1
+
+        ! dummy
+        integer(kind=x_kind), intent(in) :: x
+        integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: rv
+
+#if (_FMM_DIMENSION_ == 2)
+        ! allocate memory
+        if (.NOT. lib_tree_deinterleave_bits_1D_to_treeD_lut_initialised) then
+            allocate( lib_tree_deinterleave_bits_1D_to_treeD_lut(integer_range_low:integer_range_high, &
+                                                                 1:2) )
+            lib_tree_deinterleave_bits_1D_to_treeD_lut = lib_tree_hf_creat_deinterleave_bits_1D_to_treeD_lut()
+
+            lib_tree_deinterleave_bits_1D_to_treeD_lut_initialised = .true.
+        end if
+!        rv(1) = lib_tree_deinterleave_bits_1D_to_treeD_lut(x, 1)
+!        rv(2) = lib_tree_deinterleave_bits_1D_to_treeD_lut(x, 2)
+        rv(:) = lib_tree_deinterleave_bits_1D_to_treeD_lut(x, :)
+#elif (_FMM_DIMENSION_ == 3)
+        ! allocate memory
+        if (.NOT. lib_tree_deinterleave_bits_1D_to_treeD_lut_initialised) then
+            allocate( lib_tree_deinterleave_bits_1D_to_treeD_lut(integer_range_low:integer_range_high, &
+                                                   1:3) )
+            lib_tree_deinterleave_bits_1D_to_treeD_lut = lib_tree_hf_creat_deinterleave_bits_1D_to_treeD_lut()
+
+            lib_tree_deinterleave_bits_1D_to_treeD_lut_initialised = .true.
+        end if
+        rv(1) = lib_tree_deinterleave_bits_1D_to_treeD_lut(x, 1)
+        rv(2) = lib_tree_deinterleave_bits_1D_to_treeD_lut(x, 2)
+        rv(3) = lib_tree_deinterleave_bits_1D_to_treeD_lut(x, 3)
+#else
+        rv = lib_tree_hf_deinterleave_bits_1D_to_treeD(x)
+#endif
+    end function lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut
+
+    ! TODO: bug fix: rv dimension is not correct!
+    !
+    ! Creates the look-up table (LUT) for the deinterleaved bits (1d to treeD).
+    !
+    ! *Hint*
+    !   This function has only global dependencies.
+    !
+    ! Dependences
+    ! ----
+    !   _FMM_DIMENSION_
+    !       number of dimensions
+    !   _INTERLEAVE_BITS_INTEGER_KIND_
+    !       number of bytes of the integer
+    !
+    ! Returns
+    ! ----
+    !   rv: integer, dimension(:,:)
+    !       the look-up tabel
+    !
+    !
+    function lib_tree_hf_creat_deinterleave_bits_1D_to_treeD_lut() result(rv)
+        implicit none
+        ! parameter
+        integer(kind=1), parameter :: integer_kind = COORDINATE_BINARY_BYTES
+        integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
+        integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
+
+#if (_FMM_DIMENSION_ == 2)
+        ! dummy
+        integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
+                                               1:2) :: rv
+
+        ! auxiliary
+        integer(kind=integer_kind) :: i
+
+        integer(kind=integer_kind/2), dimension(2) :: buffer
+        integer(kind=1) :: p
+        integer(kind=1) :: p_old
+
+        print *, "integer_range_low ", integer_range_low
+        print *, "integer_range_high ", integer_range_high
+
+        p_old = 0
+        do i = integer_range_low, integer_range_high-1
+            buffer = lib_tree_hf_deinterleave_bits_1D_to_treeD(int(i,integer_kind))
+            rv(i, 1) = buffer(1)
+            rv(i, 2) = buffer(2)
+
+            p = int(100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), 1)
+            if (int(p/10, 1) .ne. int(p_old/10, 1)) then
+                print *, "Deinterleave bits 1d to treeD: create LUT: ", p, "%"
+            end if
+            p_old = p
+        end do
+
+        buffer = lib_tree_hf_deinterleave_bits_1D_to_treeD(integer_range_high)
+        rv(integer_range_high, 1) = buffer(1)
+        rv(integer_range_high, 2) = buffer(2)
+
+#elif (_FMM_DIMENSION_ == 3)
+        ! dummy
+        integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
+                                               1:3) :: rv
+
+        ! auxiliary
+        integer(kind=integer_kind*2) :: i
+
+        integer(kind=integer_kind), dimension(3) :: buffer
+        integer(kind=1) :: p
+        integer(kind=1) :: p_old
+
+        p_old = 0
+        do i = integer_range_low, integer_range_high
+            buffer = lib_tree_hf_deinterleave_bits_1D_to_treeD(int(i,integer_kind))
+            rv(i, 1) = buffer(1)
+            rv(i, 2) = buffer(2)
+            rv(i, 3) = buffer(3)
+
+            p = int(100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), 1)
+            if (int(p/10, 1) .ne. int(p_old/10, 1)) then
+                print *, "Deinterleave bits 1d to treeD: create LUT: ", p, "%"
+            end if
+            p_old = p
+        end do
+#endif
+    end function lib_tree_hf_creat_deinterleave_bits_1D_to_treeD_lut
 
     ! ----------------- test functions -----------------
     subroutine lib_tree_hf_test_functions()
@@ -1705,10 +1991,28 @@ contains
         if (.not. test_lib_tree_hf_interleave_bits_2()) then
             error_counter = error_counter + 1
         end if
+        if (.not. test_lib_tree_hf_interleave_bits_use_lut()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_tree_hf_interleave_bits_use_lut_2()) then
+            error_counter = error_counter + 1
+        end if
         if (.not. test_lib_tree_hf_deinterleave_bits()) then
             error_counter = error_counter + 1
         end if
         if (.not. test_lib_tree_hf_deinterleave_bits_2()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_tree_hf_deinterleave_bits_use_lut()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_tree_hf_deinterleave_bits_use_lut_2()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_tree_hf_interleave_bits_treeD_to_1D()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_tree_hf_deinterleave_bits_1D_to_treeD()) then
             error_counter = error_counter + 1
         end if
 
@@ -1885,6 +2189,40 @@ contains
 
         end function test_lib_tree_hf_get_centre_of_box
 
+        function test_lib_tree_hf_get_neighbour_all_xD() result (rv)
+            implicit none
+            !dummy
+            logical :: rv
+
+            ! auxiliary
+!            integer(kind=1) :: k
+!            integer(kind=1) :: l
+!            integer(kind=COORDINATE_BINARY_BYTES) :: n
+!#if (_FMM_DIMENSION_ == 2)
+!
+!
+!#elif (_FMM_DIMENSION_ == 3)
+!
+!#else
+!            print *, "test_lib_tree_hf_get_neighbour_all_xD: Dimension not defines: ", _FMM_DIMENSION_
+!#endif
+!
+!            coordinate_binary_xD = lib_tree_hf_get_neighbour_all_xD(k, n, l)
+!
+!            print *, "test_lib_tree_hf_get_neighbour_all_xD:"
+!            rv = .true.
+!            do i=1,TREE_DIMENSIONS
+!                if (coordinate_binary_xD(i) == coordinate_binary_xD_ground_trouth(i)) then
+!                    print *, "  dim ",i,": ", "ok"
+!                else
+!                    print *, "  dim ",i,": ", "FAILED"
+!                    rv = .false.
+!                end if
+!            end do
+            rv = .false.
+
+        end function
+
         function test_lib_tree_hf_get_coordinate_binary_number_xD() result (rv)
             implicit none
 
@@ -2033,6 +2371,96 @@ contains
 
         end function test_lib_tree_hf_interleave_bits_2
 
+        function test_lib_tree_hf_interleave_bits_use_lut() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+
+            integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=x_kind), dimension(size(x)) :: interleaved_bits
+
+            integer(kind=x_kind), dimension(size(x)) :: interleaved_bits_ground_trouth
+
+            integer :: i
+
+            x(1) = 4  ! 0100
+            x(2) = 1  ! 0001
+#if (_FMM_DIMENSION_ == 2)
+            interleaved_bits_ground_trouth(1) = 2**0 + 2**5 !           |0010 0001|
+            interleaved_bits_ground_trouth(2) = 0           ! |0000 0000|
+#elif (_FMM_DIMENSION_ == 3)
+            x(3) = 2  ! 0010
+            interleaved_bits_ground_trouth(1) = 2**1 + 2**3        !                     |0000 1010|
+            interleaved_bits_ground_trouth(2) = 2**0               !           |0000 0001|
+            interleaved_bits_ground_trouth(3) = 0                  ! |0000 0000|
+#else
+            print *, "test_lib_tree_hf_interleave_bits_use_lut: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            interleaved_bits = lib_tree_hf_interleave_bits_use_lut(x)
+
+            print *, "test_lib_tree_hf_interleave_bits_use_lut:"
+            rv = .true.
+            do i=1, TREE_DIMENSIONS
+                if (interleaved_bits(i) == interleaved_bits_ground_trouth(i)) then
+                    print *, "  dim ",i,": ", "ok"
+                else
+                    print *, "  dim ",i,": ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+
+        end function test_lib_tree_hf_interleave_bits_use_lut
+
+        function test_lib_tree_hf_interleave_bits_use_lut_2() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+
+            integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=x_kind), dimension(size(x)) :: interleaved_bits
+
+            integer(kind=x_kind), dimension(size(x)) :: interleaved_bits_ground_trouth
+
+            integer :: i
+
+            x(1) = 20  ! 0001 0100
+            x(2) = 65  ! 0100 0001
+#if (_FMM_DIMENSION_ == 2)
+            interleaved_bits_ground_trouth(1) = 2**0 + 2**5  !           |0010 0001|
+            interleaved_bits_ground_trouth(2) = 2**1 + 2**4  ! |0001 0010|
+#elif (_FMM_DIMENSION_ == 3)
+            x(3) = 40  ! 0010 1000
+            interleaved_bits_ground_trouth(1) = 2**1                       !                     |0000 0010|
+            interleaved_bits_ground_trouth(2) = 2**0 + 2**1 + 2**6 - 2**7  !           |1100 0011|
+            interleaved_bits_ground_trouth(3) = 2**3                       ! |0000 1000|
+#else
+            print *, "test_lib_tree_hf_interleave_bits_use_lut_2: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            interleaved_bits = lib_tree_hf_interleave_bits_use_lut(x)
+
+            print *, "test_lib_tree_hf_interleave_bits_use_lut_2:"
+            rv = .true.
+            do i=1, TREE_DIMENSIONS
+                if (interleaved_bits(i) == interleaved_bits_ground_trouth(i)) then
+                     print *, "  dim ",i,": ", "ok"
+                else
+                    print *, "  dim ",i,": ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+
+        end function test_lib_tree_hf_interleave_bits_use_lut_2
+
         function test_lib_tree_hf_deinterleave_bits() result (rv)
             implicit none
 
@@ -2124,6 +2552,186 @@ contains
                 end if
             end do
         end function test_lib_tree_hf_deinterleave_bits_2
+
+        function test_lib_tree_hf_deinterleave_bits_use_lut() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+
+            ! dummy
+            integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=x_kind), dimension(size(x)) :: deinterleaved_bits
+
+            integer(kind=x_kind), dimension(size(x)) :: deinterleaved_bits_ground_trouth
+
+            integer :: i
+
+            deinterleaved_bits_ground_trouth(1) = 4  ! 0100
+            deinterleaved_bits_ground_trouth(2) = 1  ! 0001
+
+#if (_FMM_DIMENSION_ == 2)
+            x(1) = 2**0 + 2**5 !           |0010 0001|
+            x(2) = 0           ! |0000 0000|
+#elif (_FMM_DIMENSION_ == 3)
+            deinterleaved_bits_ground_trouth(3) = 2  ! 0010
+            x(1) = 2**1 + 2**3        !                     |0000 1010|
+            x(2) = 2**0               !           |0000 0001|
+            x(3) = 0                  ! |0000 0000|
+#else
+            print *, "test_lib_tree_hf_deinterleave_bits_use_lut: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            deinterleaved_bits = lib_tree_hf_deinterleave_bits_use_lut(x)
+
+            print *, "test_lib_tree_hf_deinterleave_bits_use_lut:"
+            rv = .true.
+            do i=1, TREE_DIMENSIONS
+                if (deinterleaved_bits(i) == deinterleaved_bits_ground_trouth(i)) then
+                    print *, "  dim ",i,": ", "ok"
+                else
+                    print *, "  dim ",i,": ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+        end function test_lib_tree_hf_deinterleave_bits_use_lut
+
+        function test_lib_tree_hf_deinterleave_bits_use_lut_2() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+
+            ! dummy
+            integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=x_kind), dimension(size(x)) :: deinterleaved_bits
+
+            integer(kind=x_kind), dimension(size(x)) :: deinterleaved_bits_ground_trouth
+
+            integer :: i
+
+            deinterleaved_bits_ground_trouth(1) = 2**2 + 2**6  ! 0100 0100
+            deinterleaved_bits_ground_trouth(2) = 2**0 + 2**5  ! 0010 0001
+
+#if (_FMM_DIMENSION_ == 2)
+            x(1) = 2**0 + 2**5 !           |0010 0001|
+            x(2) = 2**2 + 2**5 ! |0010 0100|
+#elif (_FMM_DIMENSION_ == 3)
+            deinterleaved_bits_ground_trouth(3) = 2**1 + 2**4  ! 0001 0010
+            x(1) = 2**1 + 2**3        !                     |0000 1010|
+            x(2) = 2**0 + 2**4        !           |0001 0001|
+            x(3) = 2**0 + 2**4        ! |0001 0001|
+#else
+            print *, "test_lib_tree_hf_deinterleave_bits_use_lut_2: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            deinterleaved_bits = lib_tree_hf_deinterleave_bits_use_lut(x)
+
+            print *, "test_lib_tree_hf_deinterleave_bits_use_lut_2:"
+            rv = .true.
+            do i=1, TREE_DIMENSIONS
+                if (deinterleaved_bits(i) == deinterleaved_bits_ground_trouth(i)) then
+                    print *, "  dim ",i,": ", "ok"
+                else
+                    print *, "  dim ",i,": ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+        end function test_lib_tree_hf_deinterleave_bits_use_lut_2
+
+        function test_lib_tree_hf_interleave_bits_treeD_to_1D() result (rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer(kind=1), parameter :: x_kind = COORDINATE_BINARY_BYTES
+
+            ! dummy
+            integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=x_kind) :: interleaved_bits
+
+            integer(kind=x_kind) :: interleaved_bits_ground_trouth
+
+            integer :: i
+
+#if (_FMM_DIMENSION_ == 2)
+            x(1) = 2**0 + 2**5                          ! |0000 0000|0010 0001|
+            x(2) = 2**2 + 2**4                          ! |0000 0000|0001 0100|
+            interleaved_bits_ground_trouth = 2**1 + 2**4 + 2**8 + 2**11 ! |0000 1001|0001 0010|
+#elif (_FMM_DIMENSION_ == 3)
+            x(1) = 2**0 + 2**5                          ! |0000 0000|0010 0001|
+            x(2) = 2**2 + 2**4                          ! |0000 0000|0001 0100|
+            x(3) = 2**1 + 2**6                          ! |0000 0000|0100 0010|
+            interleaved_bits_ground_trouth = 2**2 + 2**3 + 2**7 + 2**13 + 2**17 + 2**18   ! |0000 0110|0010 0000|1000 1100|
+#else
+            print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            interleaved_bits = lib_tree_hf_interleave_bits_treeD_to_1D(x)
+
+            print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD:"
+            rv = .true.
+            do i=1, TREE_DIMENSIONS
+                if (interleaved_bits == interleaved_bits_ground_trouth) then
+                    print *, "  dim ",i,": ", "ok"
+                else
+                    print *, "  dim ",i,": ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+
+        end function test_lib_tree_hf_interleave_bits_treeD_to_1D
+
+        function test_lib_tree_hf_deinterleave_bits_1D_to_treeD() result (rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer(kind=1), parameter :: x_kind = COORDINATE_BINARY_BYTES
+
+            ! dummy
+            integer(kind=x_kind) :: x
+            integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: deinterleaved_bits
+
+            integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: deinterleaved_bits_ground_trouth
+
+            integer :: i
+
+#if (_FMM_DIMENSION_ == 2)
+            x = 2**0 + 2**5 !           |0010 0001|
+            deinterleaved_bits_ground_trouth(1) = 2**2  ! 0000 0100
+            deinterleaved_bits_ground_trouth(2) = 2**0  ! 0000 0001
+#elif (_FMM_DIMENSION_ == 3)
+            x = 2**0 + 2**5 !           |0010 0001|
+            deinterleaved_bits_ground_trouth(1) = 2**1  ! 0000 0010
+            deinterleaved_bits_ground_trouth(2) = 0     ! 0000 0000
+            deinterleaved_bits_ground_trouth(3) = 2**0  ! 0000 0001
+#else
+            print *, "test_lib_tree_hf_deinterleave_bits_1D_to_treeD: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            deinterleaved_bits = lib_tree_hf_deinterleave_bits_1D_to_treeD(x)
+
+            print *, "test_lib_tree_hf_deinterleave_bits_1D_to_treeD:"
+            rv = .true.
+            do i=1, TREE_DIMENSIONS
+                if (deinterleaved_bits(i) == deinterleaved_bits_ground_trouth(i)) then
+                    print *, "  dim ",i,": ", "ok"
+                else
+                    print *, "  dim ",i,": ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+        end function test_lib_tree_hf_deinterleave_bits_1D_to_treeD
 
     end subroutine lib_tree_hf_test_functions
 
