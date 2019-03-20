@@ -43,6 +43,7 @@ module lib_tree_helper_functions
     integer(kind=1), public, parameter :: TREE_DIMENSIONS = _FMM_DIMENSION_ ! dimensions
     integer(kind=1), private, parameter :: TREE_INTEGER_KIND = 4
     integer(kind=1), private, parameter :: NUMBER_OF_BITS_PER_BYTE = 8
+    integer(kind=TREE_INTEGER_KIND), parameter :: TREE_BOX_IGNORE_ENTRY = -1
 
 #if(_SPATIAL_POINT_IS_DOUBLE_ == 1)
     integer(kind=1), parameter :: COORDINATE_BINARY_BYTES = 8
@@ -91,6 +92,10 @@ module lib_tree_helper_functions
                                          , allocatable :: lib_tree_deinterleave_bits_1D_to_treeD_lut
     ! ~ module global variable ~
 
+    ! public member variabels
+    public :: TREE_BOX_IGNORE_ENTRY
+
+    ! public member functions
     public :: lib_tree_hf_destructor
 
     public :: lib_tree_spatial_point
@@ -101,9 +106,9 @@ module lib_tree_helper_functions
 
     public :: lib_tree_hf_get_children_all
     public :: lib_tree_hf_get_centre_of_box
-    public :: lib_tree_hf_get_neighbour_all_1D
+    public :: lib_tree_hf_get_neighbour_all_xD
 
-    ! test
+    ! test functions
     public :: lib_tree_hf_test_functions
     public :: lib_tree_hf_benchmark
 
@@ -1103,23 +1108,32 @@ contains
     function lib_tree_hf_get_neighbour_all_xD(k,n,l) result (neighbour_all)
         implicit none
 
+        ! parameter
+        integer(kind=TREE_INTEGER_KIND), parameter :: lower_boundary = 0
+        integer(kind=1), parameter :: NUMBER_OF_1D_NEIGHBOURS = 3   ! includes its own box number
+        integer(kind=1), parameter :: NUMBER_OF_NEIGHBOURS = 3**TREE_DIMENSIONS-1
+
         ! dummy arguments
         integer(kind=1), intent (in) :: k
         integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: n
         integer(kind=1), intent (in) :: l
-        integer(kind=TREE_INTEGER_KIND), dimension(3**TREE_DIMENSIONS -1) :: neighbour_all
+        integer(kind=COORDINATE_BINARY_BYTES), dimension(NUMBER_OF_NEIGHBOURS) :: neighbour_all
 
         ! auxiliary variables
-        integer(kind=TREE_INTEGER_KIND), parameter :: ignore_entry = -1
-        integer(kind=TREE_INTEGER_KIND), parameter :: lower_boundary = 0
         integer(kind=TREE_INTEGER_KIND) :: upper_boundary
 
         integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: n_deinterleaved
 
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS,3) :: buffer_n_1d
+        integer(kind=COORDINATE_BINARY_BYTES), dimension(NUMBER_OF_1D_NEIGHBOURS, TREE_DIMENSIONS) :: buffer_n_1d
+        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: buffer_n
+        integer(kind=COORDINATE_BINARY_BYTES) :: buffer_neighbour
 
         integer(kind=1) :: i
         integer(kind=1) :: ii
+#if (_FMM_DIMENSION_ == 3)
+        integer(kind=1) :: iii
+#endif
+        integer(kind=1) :: neighbour_counter
 
 
         upper_boundary = 2**l - 1
@@ -1127,10 +1141,54 @@ contains
         n_deinterleaved = lib_tree_hf_deinterleave_bits_1D_to_treeD(n)
 
         do i=1, TREE_DIMENSIONS
-            buffer_n_1d(i, 1:3) = lib_tree_hf_get_neighbour_all_1D(k, n_deinterleaved(i), l)
+            buffer_n_1d(:,i) = lib_tree_hf_get_neighbour_all_1D(k, n_deinterleaved(i), l)
         end do
-!
-!
+
+        do i=1, NUMBER_OF_NEIGHBOURS
+            neighbour_all(i) = TREE_BOX_IGNORE_ENTRY
+        end do
+
+#if (_FMM_DIMENSION_ == 2)
+        neighbour_counter = 0
+        do i=1, NUMBER_OF_1D_NEIGHBOURS
+            buffer_n(1) = buffer_n_1d(i,1)
+            if ( buffer_n(1) .ne. TREE_BOX_IGNORE_ENTRY) then
+                do ii=1, NUMBER_OF_1D_NEIGHBOURS
+                    buffer_n(2) = buffer_n_1d(ii,2)
+                    if (buffer_n(2) .ne. TREE_BOX_IGNORE_ENTRY) then
+                        buffer_neighbour = lib_tree_hf_interleave_bits_treeD_to_1D(buffer_n)
+                        if (buffer_neighbour .ne. n) then
+                            neighbour_counter = neighbour_counter + int(1,1)
+                            neighbour_all(neighbour_counter) = buffer_neighbour
+                        end if
+                    end if
+                end do
+            end if
+        end do
+#elif (_FMM_DIMENSION_ == 3)
+        neighbour_counter = 0
+        do i=1, NUMBER_OF_1D_NEIGHBOURS
+            buffer_n(1) = buffer_n_1d(i,1)
+            if ( buffer_n(1) .ne. TREE_BOX_IGNORE_ENTRY) then
+                do ii=1, NUMBER_OF_1D_NEIGHBOURS
+                    buffer_n(2) = buffer_n_1d(ii,2)
+                    if (buffer_n(2) .ne. TREE_BOX_IGNORE_ENTRY) then
+                        do iii=1, NUMBER_OF_1D_NEIGHBOURS
+                            buffer_n(3) = buffer_n_1d(iii,3)
+                            if (buffer_n(3) .ne. TREE_BOX_IGNORE_ENTRY) then
+                                buffer_neighbour = lib_tree_hf_interleave_bits_treeD_to_1D(buffer_n)
+                                if (buffer_neighbour .ne. n) then
+                                    neighbour_counter = neighbour_counter + int(1,1)
+                                    neighbour_all(neighbour_counter) = buffer_neighbour
+                                end if
+                            end if
+                        end do
+                    end if
+                end do
+            end if
+        end do
+#endif
+
 !        neighbour_all(2) = buffer_n
 
     end function
@@ -1985,6 +2043,12 @@ contains
         if (.not. test_lib_tree_hf_get_coordinate_binary_number_xD()) then
             error_counter = error_counter + 1
         end if
+        if (.not. test_lib_tree_hf_get_neighbour_all_xD()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_tree_hf_get_neighbour_all_xD_2()) then
+            error_counter = error_counter + 1
+        end if
         if (.not. test_lib_tree_hf_interleave_bits()) then
             error_counter = error_counter + 1
         end if
@@ -2194,34 +2258,182 @@ contains
             !dummy
             logical :: rv
 
-            ! auxiliary
-!            integer(kind=1) :: k
-!            integer(kind=1) :: l
-!            integer(kind=COORDINATE_BINARY_BYTES) :: n
-!#if (_FMM_DIMENSION_ == 2)
-!
-!
-!#elif (_FMM_DIMENSION_ == 3)
-!
-!#else
-!            print *, "test_lib_tree_hf_get_neighbour_all_xD: Dimension not defines: ", _FMM_DIMENSION_
-!#endif
-!
-!            coordinate_binary_xD = lib_tree_hf_get_neighbour_all_xD(k, n, l)
-!
-!            print *, "test_lib_tree_hf_get_neighbour_all_xD:"
-!            rv = .true.
-!            do i=1,TREE_DIMENSIONS
-!                if (coordinate_binary_xD(i) == coordinate_binary_xD_ground_trouth(i)) then
-!                    print *, "  dim ",i,": ", "ok"
-!                else
-!                    print *, "  dim ",i,": ", "FAILED"
-!                    rv = .false.
-!                end if
-!            end do
-            rv = .false.
+            ! parameter
+            integer(kind=1), parameter :: number_of_neighbours = 3**TREE_DIMENSIONS-1
 
-        end function
+            ! auxiliary
+            integer(kind=1) :: k
+            integer(kind=1) :: l
+            integer(kind=COORDINATE_BINARY_BYTES) :: n
+            integer(kind=COORDINATE_BINARY_BYTES), dimension(number_of_neighbours) :: neighbour_all
+            integer(kind=COORDINATE_BINARY_BYTES), dimension(number_of_neighbours) :: neighbour_all_ground_truth
+
+            integer(kind=1) :: i
+
+#if (_FMM_DIMENSION_ == 2)
+            k = 1
+            l = 2
+            n = 3
+            ! ------------------
+            ! |   |   ||   |   |
+            ! | 5 | 7 || 13| 15|
+            ! |---1--------3----
+            ! |   |   ||   |   |
+            ! | 4 | 6 || 12| 14|
+            ! ==================
+            ! |   | X ||   |   |
+            ! | 1 | 3 || 9 | 11|
+            ! |---0--------2----
+            ! |   |   ||   |   |
+            ! | 0 | 2 || 8 | 10|
+            ! ------------------
+
+            neighbour_all_ground_truth = (/ 0,1,4, &
+                                            2, 6, &
+                                            8,9,12 /)
+
+#elif (_FMM_DIMENSION_ == 3)
+            k = 1
+            l = 2
+            n = 35
+            !      __________________
+            !     /   3    //   7   /|
+            !    /        //       / |
+            !   /--------//-------/  |
+            !  /    1   //   5   /|  |
+            ! /        //       / | 7|
+            ! ------------------  |  |
+            ! |   |   ||   |   | 5| /|
+            ! | 9 | 13|| 41| 45|  |//|
+            ! |---1--------5----  // |
+            ! |   |   ||   |   | //  |
+            ! | 8 | 12|| 40| 44|//| 6|
+            ! ==================/ |  |
+            ! |   |   ||   |   |  |  /
+            ! | 1 | 5 || 33| 37| 4| /
+            ! |---0--------4----  |/
+            ! |   |   ||   |   |  /
+            ! | 0 | 4 || 32| 36| /
+            ! ------------------/
+
+            neighbour_all_ground_truth = (/ 4,5,12, &
+                                            6,7,14, &
+                                            20,21,28, &
+                                            32,33,40, &
+                                            34, 42, &
+                                            48,49,56, &
+                                            36,37,44, &
+                                            38,39,46, &
+                                            52,53,60 /)
+#else
+            print *, "test_lib_tree_hf_get_neighbour_all_xD: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            neighbour_all = lib_tree_hf_get_neighbour_all_xD(k, n, l)
+
+            print *, "test_lib_tree_hf_get_neighbour_all_xD:"
+            rv = .true.
+            do i=1,number_of_neighbours
+                if (neighbour_all_ground_truth(i) == neighbour_all(i)) then
+                    print *, "  dim ",i,": ", "ok"
+                else
+                    print *, "  dim ",i,": ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+
+        end function test_lib_tree_hf_get_neighbour_all_xD
+
+        function test_lib_tree_hf_get_neighbour_all_xD_2() result (rv)
+            implicit none
+            !dummy
+            logical :: rv
+
+            ! parameter
+            integer(kind=1), parameter :: number_of_neighbours = 3**TREE_DIMENSIONS-1
+
+            ! auxiliary
+            integer(kind=1) :: k
+            integer(kind=1) :: l
+            integer(kind=COORDINATE_BINARY_BYTES) :: n
+            integer(kind=COORDINATE_BINARY_BYTES), dimension(number_of_neighbours) :: neighbour_all
+            integer(kind=COORDINATE_BINARY_BYTES), dimension(number_of_neighbours) :: neighbour_all_ground_truth
+
+            integer(kind=1) :: i
+
+#if (_FMM_DIMENSION_ == 2)
+            k = 1
+            l = 2
+            n = 11
+            ! ------------------
+            ! |   |   ||   |   |
+            ! | 5 | 7 || 13| 15|
+            ! |---1--------3----
+            ! |   |   ||   |   |
+            ! | 4 | 6 || 12| 14|
+            ! ==================
+            ! |   |   ||   | X |
+            ! | 1 | 3 || 9 | 11|
+            ! |---0--------2----
+            ! |   |   ||   |   |
+            ! | 0 | 2 || 8 | 10|
+            ! ------------------
+
+            neighbour_all_ground_truth = (/ 8,9,12, &
+                                            10, 14, &
+                                            -1,-1,-1 /)
+
+#elif (_FMM_DIMENSION_ == 3)
+            k = 1
+            l = 1
+            n = 5
+            !      __________________
+            !     /   3    //   7   /|
+            !    /        //       / |
+            !   /--------//-------/  |
+            !  /    1   //   5   /|  |
+            ! /        //       / | 7|
+            ! ------------------  |  |
+            ! |   |   ||   |   | 5| /|
+            ! | 9 | 13|| 41| 45|  |//|
+            ! |---1--------5----  // |
+            ! |   |   ||   |   | //  |
+            ! | 8 | 12|| 40| 44|//| 6|
+            ! ==================/ |  |
+            ! |   |   ||   |   |  |  /
+            ! | 1 | 5 || 33| 37| 4| /
+            ! |---0--------4----  |/
+            ! |   |   ||   |   |  /
+            ! | 0 | 4 || 32| 36| /
+            ! ------------------/
+
+            neighbour_all_ground_truth = (/ 0,1,2, &
+                                            3,4,6, &
+                                            7,-1,-1, &
+                                            -1,-1,-1, &
+                                            -1,-1,-1, &
+                                            -1,-1,-1, &
+                                            -1,-1,-1, &
+                                            -1,-1,-1, &
+                                            -1,-1 /)
+#else
+            print *, "test_lib_tree_hf_get_neighbour_all_xD_2: Dimension not defines: ", _FMM_DIMENSION_
+#endif
+
+            neighbour_all = lib_tree_hf_get_neighbour_all_xD(k, n, l)
+
+            print *, "test_lib_tree_hf_get_neighbour_all_xD_2:"
+            rv = .true.
+            do i=1,number_of_neighbours
+                if (neighbour_all_ground_truth(i) == neighbour_all(i)) then
+                    print *, "  dim ",i,": ", "ok"
+                else
+                    print *, "  dim ",i,": ", "FAILED"
+                    rv = .false.
+                end if
+            end do
+
+        end function test_lib_tree_hf_get_neighbour_all_xD_2
 
         function test_lib_tree_hf_get_coordinate_binary_number_xD() result (rv)
             implicit none
