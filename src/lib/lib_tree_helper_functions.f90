@@ -18,7 +18,7 @@
 !
 
 ! spatial dimension, value = [2,3]
-#define _FMM_DIMENSION_ 3
+#define _FMM_DIMENSION_ 2
 
 ! 1: true, 0: false (-> spatial point is real)
 #define _SPATIAL_POINT_IS_DOUBLE_ 1
@@ -41,14 +41,14 @@ module lib_tree_helper_functions
 
     ! parameter
     integer(kind=1), public, parameter :: TREE_DIMENSIONS = _FMM_DIMENSION_ ! dimensions
-    integer(kind=1), private, parameter :: TREE_INTEGER_KIND = 4
-    integer(kind=1), private, parameter :: NUMBER_OF_BITS_PER_BYTE = 8
-    integer(kind=TREE_INTEGER_KIND), parameter :: TREE_BOX_IGNORE_ENTRY = -1
+    integer(kind=1), public, parameter :: TREE_INTEGER_KIND = 4
+    integer(kind=1), public, parameter :: NUMBER_OF_BITS_PER_BYTE = 8
+    integer(kind=TREE_INTEGER_KIND), public, parameter :: TREE_BOX_IGNORE_ENTRY = -1
 
 #if(_SPATIAL_POINT_IS_DOUBLE_ == 1)
-    integer(kind=1), parameter :: COORDINATE_BINARY_BYTES = 8
+    integer(kind=1), public, parameter :: COORDINATE_BINARY_BYTES = 8
 #elif(_SPATIAL_POINT_IS_DOUBLE_ == 0)
-    integer(kind=1), parameter :: COORDINATE_BINARY_BYTES = 4
+    integer(kind=1), public, parameter :: COORDINATE_BINARY_BYTES = 4
 #endif
     ! ~ parameter ~
 
@@ -63,7 +63,6 @@ module lib_tree_helper_functions
 
     type lib_tree_universal_index
         integer(kind=COORDINATE_BINARY_BYTES) :: n
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: n_per_dimension
         integer(kind=1) :: l
     end type lib_tree_universal_index
     ! ~ type definitions ~
@@ -91,9 +90,6 @@ module lib_tree_helper_functions
     integer(kind=COORDINATE_BINARY_BYTES), dimension (:,:) &
                                          , allocatable :: lib_tree_deinterleave_bits_1D_to_treeD_lut
     ! ~ module global variable ~
-
-    ! public member variabels
-    public :: TREE_BOX_IGNORE_ENTRY
 
     ! public member functions
     public :: lib_tree_hf_destructor
@@ -405,10 +401,6 @@ contains
         uindex%n = ibits(interleaved_bits_dimension_0, &
                         COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE-l*TREE_DIMENSIONS, &
                         l*TREE_DIMENSIONS)
-
-        do i = 1, TREE_DIMENSIONS
-            uindex%n_per_dimension(i) = ibits(coordinate_binary(i), COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE-l, l)
-        end do
 
         uindex%l = l
 
@@ -895,15 +887,14 @@ contains
     !
     !   parent_uindex: type(lib_tree_universal_index)
     !
-    function lib_tree_hf_get_parent(uindex) result (parent_uindex)
+    function lib_tree_hf_get_parent(n) result (parent_n)
         implicit none
 
         ! dummy arguments
-        type(lib_tree_universal_index), intent (in) :: uindex
-        type(lib_tree_universal_index) :: parent_uindex
+        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: n
+        integer(kind=COORDINATE_BINARY_BYTES) :: parent_n
 
-        parent_uindex%n = uindex%n/(2**TREE_DIMENSIONS)
-        parent_uindex%l = uindex%l
+        parent_n = n/(2**TREE_DIMENSIONS)
 
     end function
 
@@ -940,8 +931,8 @@ contains
         implicit none
 
         ! dummy arguments
-        integer(kind=TREE_INTEGER_KIND), intent (in) :: n
-        integer(kind=TREE_INTEGER_KIND), dimension(2**TREE_DIMENSIONS) :: children_n
+        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: n
+        integer(kind=COORDINATE_BINARY_BYTES), dimension(2**TREE_DIMENSIONS) :: children_n
 
         ! auxiliary variables
         integer(kind=1) :: j
@@ -1032,7 +1023,7 @@ contains
         implicit none
 
         ! dummy arguments
-        integer(kind=1), intent (in) :: k
+        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: k
         integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: n
         integer(kind=1), intent (in) :: l
         integer(kind=COORDINATE_BINARY_BYTES), dimension(3) :: neighbour_1d
@@ -1092,16 +1083,16 @@ contains
     ! ----
     !   k: integer(kind=TREE_INTEGER_KIND)
     !       k-th neighbour
-    !   n: integer(kind=TREE_INTEGER_KIND)
+    !   n: integer(kind=COORDINATE_BINARY_BYTES)
     !       universal index of a box
-    !   l: integer(kind=TREE_INTEGER_KIND)
+    !   l: integer(kind=1)
     !       number of the level
     !
     ! Returns
     ! ----
     !   the universal indexes of all neigbour boxes of the given box.
     !
-    !   neighbour_all: Integer(kind=TREE_INTEGER_KIND), dimension(2^d)
+    !   neighbour_all: Integer(kind=COORDINATE_BINARY_BYTES), dimension(3**TREE_DIMENSIONS-1)
     !
     !
     !
@@ -1114,7 +1105,7 @@ contains
         integer(kind=1), parameter :: NUMBER_OF_NEIGHBOURS = 3**TREE_DIMENSIONS-1
 
         ! dummy arguments
-        integer(kind=1), intent (in) :: k
+        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: k
         integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: n
         integer(kind=1), intent (in) :: l
         integer(kind=COORDINATE_BINARY_BYTES), dimension(NUMBER_OF_NEIGHBOURS) :: neighbour_all
@@ -2106,16 +2097,12 @@ contains
 
             point%x(1) = 0.75
             point%x(2) = 0.5
-
-            universal_index_ground_trouth%n_per_dimension(1) = 1
-            universal_index_ground_trouth%n_per_dimension(2) = 1
 #if (_FMM_DIMENSION_ == 2)
             universal_index_ground_trouth%n = 3
 #elif (_FMM_DIMENSION_ == 3)
             point%x(3) = 2.0**(-9.0) + 2.0**(-8)
 
             universal_index_ground_trouth%n = 6
-            universal_index_ground_trouth%n_per_dimension(3) = 0
 #else
             print *, "test_lib_tree_hf_get_parent: Dimension not defines: ", _FMM_DIMENSION_
 #endif
@@ -2137,26 +2124,26 @@ contains
             ! dummy
             logical :: rv
 
-            type(lib_tree_universal_index) :: universal_index
-            type(lib_tree_universal_index) :: universal_index_parent
+            integer(kind=COORDINATE_BINARY_BYTES) :: n
+            integer(kind=COORDINATE_BINARY_BYTES) :: n_parent
 
             integer(kind=1) :: l
-            type(lib_tree_universal_index) :: universal_index_parent_ground_trouth
+            integer(kind=COORDINATE_BINARY_BYTES) :: n_parent_ground_trouth
 
             l = 1
 #if (_FMM_DIMENSION_ == 2)
-            universal_index%n = 2
-            universal_index_parent_ground_trouth%n = 0
+            n = 2
+            n_parent_ground_trouth = 0
 #elif (_FMM_DIMENSION_ == 3)
-            universal_index%n = 6
-            universal_index_parent_ground_trouth%n = 0
+            n = 6
+            n_parent_ground_trouth = 0
 #else
             print *, "test_lib_tree_hf_get_parent: Dimension not defines: ", _FMM_DIMENSION_
 #endif
 
-            universal_index_parent = lib_tree_hf_get_parent(universal_index)
+            n_parent = lib_tree_hf_get_parent(n)
 
-            if (universal_index_parent%n == universal_index_parent_ground_trouth%n) then
+            if (n_parent == n_parent_ground_trouth) then
                 print *, "test_lib_tree_hf_get_parent: ", "ok"
                 rv = .true.
             else
@@ -2172,9 +2159,9 @@ contains
             ! dummy
             logical :: rv
 
-            integer(kind=TREE_INTEGER_KIND) :: n
-            integer(kind=TREE_INTEGER_KIND), dimension(2**TREE_DIMENSIONS) :: children_n
-            integer(kind=TREE_INTEGER_KIND), dimension(2**TREE_DIMENSIONS) :: children_n_ground_truth
+            integer(kind=COORDINATE_BINARY_BYTES) :: n
+            integer(kind=COORDINATE_BINARY_BYTES), dimension(2**TREE_DIMENSIONS) :: children_n
+            integer(kind=COORDINATE_BINARY_BYTES), dimension(2**TREE_DIMENSIONS) :: children_n_ground_truth
 
             integer(kind=1) :: i
 
@@ -2262,7 +2249,7 @@ contains
             integer(kind=1), parameter :: number_of_neighbours = 3**TREE_DIMENSIONS-1
 
             ! auxiliary
-            integer(kind=1) :: k
+            integer(kind=COORDINATE_BINARY_BYTES) :: k
             integer(kind=1) :: l
             integer(kind=COORDINATE_BINARY_BYTES) :: n
             integer(kind=COORDINATE_BINARY_BYTES), dimension(number_of_neighbours) :: neighbour_all
@@ -2353,7 +2340,7 @@ contains
             integer(kind=1), parameter :: number_of_neighbours = 3**TREE_DIMENSIONS-1
 
             ! auxiliary
-            integer(kind=1) :: k
+            integer(kind=COORDINATE_BINARY_BYTES) :: k
             integer(kind=1) :: l
             integer(kind=COORDINATE_BINARY_BYTES) :: n
             integer(kind=COORDINATE_BINARY_BYTES), dimension(number_of_neighbours) :: neighbour_all
