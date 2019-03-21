@@ -23,12 +23,6 @@
 ! 1: true, 0: false (-> spatial point is real)
 #define _SPATIAL_POINT_IS_DOUBLE_ 1
 
-! integer kind of the bit interleaving process, value = [1,2,4,8], default = 1
-! a value of 8 is only possible if the spatial point variable is of type double
-!
-! TODO: bug fix value > 1
-#define _INTERLEAVE_BITS_INTEGER_KIND_ 1
-
 ! todo:
 ! - interleave_bits_treeD_to_1D: LUT
 ! - deinterleave_bits_1D_to_treeD: LUT
@@ -44,6 +38,12 @@ module lib_tree_helper_functions
     integer(kind=1), public, parameter :: TREE_INTEGER_KIND = 4
     integer(kind=1), public, parameter :: NUMBER_OF_BITS_PER_BYTE = 8
     integer(kind=TREE_INTEGER_KIND), public, parameter :: TREE_BOX_IGNORE_ENTRY = -1
+
+    ! integer kind of the bit interleaving process, value = [1,2,4,8], default = 1
+    ! a value of 8 is only possible if the spatial point variable is of type double
+    !
+    ! TODO: bug fix value > 1
+    integer(kind=1), private, parameter :: INTERLEAVE_BITS_INTEGER_KIND = 1
 
 #if(_SPATIAL_POINT_IS_DOUBLE_ == 1)
     integer(kind=1), public, parameter :: COORDINATE_BINARY_BYTES = 8
@@ -70,18 +70,18 @@ module lib_tree_helper_functions
     ! module global variable
 #if (_FMM_DIMENSION_ == 2)
     logical :: lib_tree_interleave_bits_lut_initialised = .false.
-    integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension (:,:,:) &
+    integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension (:,:,:) &
                                                 , allocatable :: lib_tree_interleave_bits_lut
 
     logical :: lib_tree_deinterleave_bits_lut_initialised = .false.
-    integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension (:,:,:) &
+    integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension (:,:,:) &
                                                 , allocatable :: lib_tree_deinterleave_bits_lut
 #elif (_FMM_DIMENSION_ == 3)
-    integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension (:,:,:,:) &
+    integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension (:,:,:,:) &
                                                 , allocatable :: lib_tree_interleave_bits_lut
     logical :: lib_tree_interleave_bits_lut_initialised = .false.
 
-    integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension (:,:,:,:) &
+    integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension (:,:,:,:) &
                                                 , allocatable :: lib_tree_deinterleave_bits_lut
     logical :: lib_tree_deinterleave_bits_lut_initialised = .false.
 #endif
@@ -327,8 +327,8 @@ contains
         ! ib_buffer = interleave(cb_buffer(12), cb_buffer(8), cb_buffer(4))
         ! interleaved_bits(10:12) = ib_buffer
         !
-        integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_) &
-            ,dimension(TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_) &
+        integer(kind=INTERLEAVE_BITS_INTEGER_KIND) &
+            ,dimension(TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
             :: interleaved_bits
         !
         ! doubel precision
@@ -356,19 +356,19 @@ contains
         !
         integer(kind=COORDINATE_BINARY_BYTES) :: interleaved_bits_dimension_0
 
-        !   TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_ - COORDINATE_BINARY_BYTES /_INTERLEAVE_BITS_INTEGER_KIND_ + 1
-        ! = COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_ * ( TREE_DIMENSIONS - 1) + 1
-        equivalence (interleaved_bits(COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_ * ( TREE_DIMENSIONS - 1) + 1), &
+        !   TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - COORDINATE_BINARY_BYTES /INTERLEAVE_BITS_INTEGER_KIND + 1
+        ! = COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND * ( TREE_DIMENSIONS - 1) + 1
+        equivalence (interleaved_bits(COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND * ( TREE_DIMENSIONS - 1) + 1), &
                      interleaved_bits_dimension_0)
 
-        integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_) &
-            ,dimension(TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_) &
+        integer(kind=INTERLEAVE_BITS_INTEGER_KIND) &
+            ,dimension(TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
             :: cb_buffer
 
         equivalence (coordinate_binary, cb_buffer)
 
-        integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension(TREE_DIMENSIONS) :: ob_buffer_DIM
-        integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension(TREE_DIMENSIONS) :: ib_buffer
+        integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: ob_buffer_DIM
+        integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: ib_buffer
 
         integer(kind=1) :: i
         integer(kind=1) :: ii
@@ -377,11 +377,11 @@ contains
         coordinate_binary = lib_tree_hf_get_coordinate_binary_number_xD(point_x%x)
 
         ! interleave bits
-        do i=COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_, 1, -1 ! interleave column wise
+        do i=COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND, 1, -1 ! interleave column wise
             do ii=1, TREE_DIMENSIONS  ! get column entries
-                ob_buffer_DIM(ii) = cb_buffer(i + (ii-1)*COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_)
+                ob_buffer_DIM(ii) = cb_buffer(i + (ii-1)*COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND)
             end do
-#if (_INTERLEAVE_BITS_INTEGER_KIND_ == 1)
+#if (INTERLEAVE_BITS_INTEGER_KIND == 1)
             ib_buffer = lib_tree_hf_interleave_bits_use_lut(ob_buffer_DIM)
 #else
             ib_buffer = lib_tree_hf_interleave_bits(ob_buffer_DIM)
@@ -389,8 +389,8 @@ contains
 
             ! e.g.    12                4       (4..1)        3
             ! ii = total length - (total columns - i + 1) * length(ib_buffer) + 1
-            ! ii = TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_ - (COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_ - i + 1) * TREE_DIMENSIONS + 1
-            ! ii = TREE_DIMENSIONS * (COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_ - COORDINATE_BINARY_BYTES/_INTERLEAVE_BITS_INTEGER_KIND_ + i - 1) + 1
+            ! ii = TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - (COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - i + 1) * TREE_DIMENSIONS + 1
+            ! ii = TREE_DIMENSIONS * (COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND + i - 1) + 1
             ! ii = TREE_DIMENSIONS * (i - 1) + 1
             ii = int(TREE_DIMENSIONS * (i-1) + 1, 1)
 
@@ -1193,7 +1193,7 @@ contains
     ! ----
     !   _FMM_DIMENSION_
     !       number of dimensions
-    !   _INTERLEAVE_BITS_INTEGER_KIND_
+    !   INTERLEAVE_BITS_INTEGER_KIND
     !       number of bytes of the integer
     !
     ! Returns
@@ -1203,7 +1203,7 @@ contains
     function lib_tree_hf_get_interleave_bits_lut() result(rv)
         implicit none
         ! parameter
-        integer(kind=1), parameter :: integer_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+        integer(kind=1), parameter :: integer_kind = INTERLEAVE_BITS_INTEGER_KIND
         integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
 
@@ -1269,7 +1269,7 @@ contains
     ! ----
     !   _FMM_DIMENSION_
     !       number of dimensions
-    !   _INTERLEAVE_BITS_INTEGER_KIND_
+    !   INTERLEAVE_BITS_INTEGER_KIND
     !       number of bytes of the integer
     !
     ! Returns
@@ -1280,7 +1280,7 @@ contains
     function lib_tree_hf_creat_interleave_bits_lut() result(rv)
         implicit none
         ! parameter
-        integer(kind=1), parameter :: integer_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+        integer(kind=1), parameter :: integer_kind = INTERLEAVE_BITS_INTEGER_KIND
         integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
 
@@ -1353,7 +1353,7 @@ contains
     end function lib_tree_hf_creat_interleave_bits_lut
 
     ! Calculates the bit interleaving of x-dimensional integers.
-    ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
+    ! The kind of the integer is defined with INTERLEAVE_BITS_INTEGER_KIND.
     ! The dafault value is 1 (1 byte);
     !
     ! Argument
@@ -1373,7 +1373,7 @@ contains
     function lib_tree_hf_interleave_bits(x) result(rv)
         implicit none
         ! parameter
-        integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+        integer(kind=1), parameter :: x_kind = INTERLEAVE_BITS_INTEGER_KIND
 
         ! dummy
         integer(kind=x_kind), dimension(:), intent(in) :: x
@@ -1436,7 +1436,7 @@ contains
     function lib_tree_hf_interleave_bits_use_lut(x) result(rv)
         implicit none
         ! parameter
-        integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+        integer(kind=1), parameter :: x_kind = INTERLEAVE_BITS_INTEGER_KIND
 
         integer(kind=x_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=x_kind), parameter :: integer_range_low = -integer_range_high-1
@@ -1485,7 +1485,7 @@ contains
     ! ----
     !   _FMM_DIMENSION_
     !       number of dimensions
-    !   _INTERLEAVE_BITS_INTEGER_KIND_
+    !   INTERLEAVE_BITS_INTEGER_KIND
     !       number of bytes of the integer
     !
     ! Returns
@@ -1495,7 +1495,7 @@ contains
     function lib_tree_hf_get_deinterleave_bits_lut() result(rv)
         implicit none
         ! parameter
-        integer(kind=1), parameter :: integer_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+        integer(kind=1), parameter :: integer_kind = INTERLEAVE_BITS_INTEGER_KIND
         integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
 
@@ -1561,7 +1561,7 @@ contains
     ! ----
     !   _FMM_DIMENSION_
     !       number of dimensions
-    !   _INTERLEAVE_BITS_INTEGER_KIND_
+    !   INTERLEAVE_BITS_INTEGER_KIND
     !       number of bytes of the integer
     !
     ! Returns
@@ -1572,7 +1572,7 @@ contains
     function lib_tree_hf_creat_deinterleave_bits_lut() result(rv)
         implicit none
         ! parameter
-        integer(kind=1), parameter :: integer_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+        integer(kind=1), parameter :: integer_kind = INTERLEAVE_BITS_INTEGER_KIND
         integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
 
@@ -1645,7 +1645,7 @@ contains
     end function lib_tree_hf_creat_deinterleave_bits_lut
 
     ! deinterleavs the
-    ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
+    ! The kind of the integer is defined with INTERLEAVE_BITS_INTEGER_KIND.
     ! The dafault value is 1 (1 byte);
     !
     ! Argument
@@ -1667,7 +1667,7 @@ contains
     function lib_tree_hf_deinterleave_bits(x) result(rv)
         implicit none
         ! parameter
-        integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+        integer(kind=1), parameter :: x_kind = INTERLEAVE_BITS_INTEGER_KIND
 
         ! dummy
         integer(kind=x_kind), dimension(TREE_DIMENSIONS), intent(in) :: x
@@ -1702,7 +1702,7 @@ contains
     end function lib_tree_hf_deinterleave_bits
 
     ! deinterleavs the
-    ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
+    ! The kind of the integer is defined with INTERLEAVE_BITS_INTEGER_KIND.
     ! The dafault value is 1 (1 byte);
     !
     ! Argument
@@ -1724,7 +1724,7 @@ contains
     function lib_tree_hf_deinterleave_bits_use_lut(x) result(rv)
         implicit none
         ! parameter
-        integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+        integer(kind=1), parameter :: x_kind = INTERLEAVE_BITS_INTEGER_KIND
 
         integer(kind=x_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=x_kind), parameter :: integer_range_low = -integer_range_high-1
@@ -1765,7 +1765,7 @@ contains
     end function lib_tree_hf_deinterleave_bits_use_lut
 
     ! interleavs the
-    ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
+    ! The kind of the integer is defined with INTERLEAVE_BITS_INTEGER_KIND.
     ! The dafault value is 1 (1 byte);
     !
     ! Argument
@@ -1814,7 +1814,7 @@ contains
     end function lib_tree_hf_interleave_bits_treeD_to_1D
 
     ! deinterleavs the
-    ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
+    ! The kind of the integer is defined with INTERLEAVE_BITS_INTEGER_KIND.
     ! The dafault value is 1 (1 byte);
     !
     ! Argument
@@ -1864,7 +1864,7 @@ contains
     end function lib_tree_hf_deinterleave_bits_1D_to_treeD
 
     ! deinterleavs the
-    ! The kind of the integer is defined with _INTERLEAVE_BITS_INTEGER_KIND_.
+    ! The kind of the integer is defined with INTERLEAVE_BITS_INTEGER_KIND.
     ! The dafault value is 1 (1 byte);
     !
     ! Argument
@@ -1935,7 +1935,7 @@ contains
     ! ----
     !   _FMM_DIMENSION_
     !       number of dimensions
-    !   _INTERLEAVE_BITS_INTEGER_KIND_
+    !   INTERLEAVE_BITS_INTEGER_KIND
     !       number of bytes of the integer
     !
     ! Returns
@@ -2487,7 +2487,7 @@ contains
             logical :: rv
 
             ! parameter
-            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+            integer(kind=1), parameter :: x_kind = INTERLEAVE_BITS_INTEGER_KIND
 
             integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
             integer(kind=x_kind), dimension(size(x)) :: interleaved_bits
@@ -2532,7 +2532,7 @@ contains
             logical :: rv
 
             ! parameter
-            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+            integer(kind=1), parameter :: x_kind = INTERLEAVE_BITS_INTEGER_KIND
 
             integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
             integer(kind=x_kind), dimension(size(x)) :: interleaved_bits
@@ -2577,7 +2577,7 @@ contains
             logical :: rv
 
             ! parameter
-            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+            integer(kind=1), parameter :: x_kind = INTERLEAVE_BITS_INTEGER_KIND
 
             integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
             integer(kind=x_kind), dimension(size(x)) :: interleaved_bits
@@ -2622,7 +2622,7 @@ contains
             logical :: rv
 
             ! parameter
-            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+            integer(kind=1), parameter :: x_kind = INTERLEAVE_BITS_INTEGER_KIND
 
             integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
             integer(kind=x_kind), dimension(size(x)) :: interleaved_bits
@@ -2667,7 +2667,7 @@ contains
             logical :: rv
 
             ! parameter
-            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+            integer(kind=1), parameter :: x_kind = INTERLEAVE_BITS_INTEGER_KIND
 
             ! dummy
             integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
@@ -2713,7 +2713,7 @@ contains
             logical :: rv
 
             ! parameter
-            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+            integer(kind=1), parameter :: x_kind = INTERLEAVE_BITS_INTEGER_KIND
 
             ! dummy
             integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
@@ -2759,7 +2759,7 @@ contains
             logical :: rv
 
             ! parameter
-            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+            integer(kind=1), parameter :: x_kind = INTERLEAVE_BITS_INTEGER_KIND
 
             ! dummy
             integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
@@ -2805,7 +2805,7 @@ contains
             logical :: rv
 
             ! parameter
-            integer(kind=1), parameter :: x_kind = _INTERLEAVE_BITS_INTEGER_KIND_
+            integer(kind=1), parameter :: x_kind = INTERLEAVE_BITS_INTEGER_KIND
 
             ! dummy
             integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
@@ -2946,8 +2946,8 @@ contains
         subroutine benchmark_lib_tree_hf_interleave_bits_use_lut()
             implicit none
 
-            integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension(TREE_DIMENSIONS) :: x
-            integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension(TREE_DIMENSIONS) :: buffer
+            integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: buffer
 
             integer :: number_of_runs = 100000000
             integer :: i
@@ -2982,8 +2982,8 @@ contains
         subroutine benchmark_lib_tree_hf_deinterleave_bits_use_lut()
             implicit none
 
-            integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension(TREE_DIMENSIONS) :: x
-            integer(kind=_INTERLEAVE_BITS_INTEGER_KIND_), dimension(TREE_DIMENSIONS) :: buffer
+            integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: buffer
 
             integer :: number_of_runs = 100000000
             integer :: i
