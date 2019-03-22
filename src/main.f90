@@ -5,6 +5,7 @@ program main
 
 !     call lib_tree_hf_benchmark()
      call lib_tree_hf_test_functions()
+     call lib_tree_hf_benchmark()
      call lib_tree_hf_destructor()
 
 

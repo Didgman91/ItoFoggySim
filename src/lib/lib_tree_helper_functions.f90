@@ -16,6 +16,20 @@
 ! ------
 !   Project properties -> Fortran General -> Paths and Symbols -> Symbols
 !
+! Limits
+! ----
+! Universal index
+! -----
+!   2D
+!   single precision:
+!    coordinate(kind=4) ->
+!
+!   3D
+!
+!
+!
+!
+
 
 ! spatial dimension, value = [2,3]
 #define _FMM_DIMENSION_ 3
@@ -2975,8 +2989,6 @@ contains
 
             integer(kind=x_kind) :: interleaved_bits_ground_trouth
 
-            integer :: i
-
 #if (_FMM_DIMENSION_ == 2)
             x(1) = 2**0 + 2**5                          ! |0000 0000|0010 0001|
             x(2) = 2**2 + 2**4                          ! |0000 0000|0001 0100|
@@ -2992,12 +3004,11 @@ contains
 
             interleaved_bits = lib_tree_hf_interleave_bits_treeD_to_1D(x)
 
-            print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD:"
             rv = .true.
             if (interleaved_bits == interleaved_bits_ground_trouth) then
-                print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD:", "ok"
+                print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD: ", "ok"
             else
-                print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD:", "FAILED"
+                print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD: ", "FAILED"
                 rv = .false.
             end if
 
@@ -3149,6 +3160,9 @@ contains
         call benchmark_lib_tree_hf_interleave_bits_use_lut()
         call benchmark_lib_tree_hf_deinterleave_bits_use_lut()
 
+        call benchmark_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut()
+        call benchmark_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut()
+
         contains
 
         subroutine benchmark_lib_tree_hf_interleave_bits_use_lut()
@@ -3157,9 +3171,10 @@ contains
             integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: x
             integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: buffer
 
-            integer :: number_of_runs = 100000000
-            integer :: i
+            integer(kind=8) :: number_of_runs = 10**10
+            integer(kind=8) :: i
             real :: start, finish
+            double precision :: delta
 
             x(1) = 2
             x(2) = 0
@@ -3170,21 +3185,25 @@ contains
             call cpu_time(start)
             buffer = lib_tree_hf_interleave_bits_use_lut(x)
             call cpu_time(finish)
-            print *, "Interleave + LUT Time = ", finish-start, " seconds."
+            print *, "  Interleave + LUT Time = ", finish-start, " seconds."
 
             call cpu_time(start)
             do i=1, number_of_runs
                 buffer = lib_tree_hf_interleave_bits_use_lut(x)
             end do
             call cpu_time(finish)
-            print *, "Interleave + LUT Time (second run) = ", (finish-start)/number_of_runs, " seconds."
+            delta = finish-start
+            print *, "  Interleave + LUT Time (second run) = ", delta/number_of_runs, " seconds."
 
+            number_of_runs = 10**17
             call cpu_time(start)
             do i=1, number_of_runs
                 buffer = lib_tree_hf_interleave_bits(x)
             end do
             call cpu_time(finish)
-            print *, "Interleave Time = ", (finish-start)/number_of_runs, " seconds."
+            delta = finish-start
+            print *, "  Interleave Time = ", delta/number_of_runs, " seconds."
+            print *, ""
         end subroutine benchmark_lib_tree_hf_interleave_bits_use_lut
 
         subroutine benchmark_lib_tree_hf_deinterleave_bits_use_lut()
@@ -3193,9 +3212,10 @@ contains
             integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: x
             integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: buffer
 
-            integer :: number_of_runs = 100000000
-            integer :: i
+            integer(kind=8) :: number_of_runs = 10**10
+            integer(kind=8) :: i
             real :: start, finish
+            double precision :: delta
 
             x(1) = 2
             x(2) = 0
@@ -3206,23 +3226,109 @@ contains
             call cpu_time(start)
             buffer = lib_tree_hf_deinterleave_bits_use_lut(x)
             call cpu_time(finish)
-            print *, "Deinterleave + LUT Time = ", finish-start, " seconds."
+            print *, "  Deinterleave + LUT Time = ", finish-start, " seconds."
 
             call cpu_time(start)
             do i=1, number_of_runs
                 buffer = lib_tree_hf_deinterleave_bits_use_lut(x)
             end do
             call cpu_time(finish)
-            print *, "Deinterleave + LUT Time (second run) = ", (finish-start)/number_of_runs, " seconds."
+            delta = finish-start
+            print *, "  Deinterleave + LUT Time (second run) = ", delta/number_of_runs, " seconds."
 
+            number_of_runs = 10**17
             call cpu_time(start)
             do i=1, number_of_runs
                 buffer = lib_tree_hf_deinterleave_bits(x)
             end do
             call cpu_time(finish)
-            print *, "Deinterleave Time = ", (finish-start)/number_of_runs, " seconds."
+            delta = finish-start
+            print *, "  Deinterleave Time = ", delta/number_of_runs, " seconds."
+            print *, ""
         end subroutine benchmark_lib_tree_hf_deinterleave_bits_use_lut
 
-    end subroutine
+        subroutine benchmark_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut()
+            implicit none
+
+            integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: buffer
+
+            integer(kind=8) :: number_of_runs = 10**10
+            integer(kind=8) :: i
+            real :: start, finish
+            DOUBLE PRECISION :: delta
+
+            x(1) = 2
+            x(2) = 0
+#if (_FMM_DIMENSION_ == 3)
+            x(3) = 0
+#endif
+            print *, "benchmark_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut"
+            call cpu_time(start)
+            buffer = lib_tree_hf_interleave_bits_treeD_to_1D_use_lut(x)
+            call cpu_time(finish)
+            print *, "  Interleave + LUT Time = ", finish-start, " seconds."
+
+            call cpu_time(start)
+            do i=1, number_of_runs
+                buffer = lib_tree_hf_interleave_bits_treeD_to_1D_use_lut(x)
+            end do
+            call cpu_time(finish)
+            delta = finish-start
+            print *, "  Interleave + LUT Time (second run) = ", delta/number_of_runs, " seconds."
+
+            number_of_runs = 10**18
+            call cpu_time(start)
+            do i=1, number_of_runs
+                buffer = lib_tree_hf_interleave_bits_treeD_to_1D(x)
+            end do
+            call cpu_time(finish)
+            delta = finish-start
+            print *, "  Interleave Time = ", delta/number_of_runs, " seconds."
+            print *, ""
+        end subroutine benchmark_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut
+
+        subroutine benchmark_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut()
+            implicit none
+
+            integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: buffer
+
+            integer(kind=8) :: number_of_runs = 10**10
+            integer(kind=8) :: i
+            real :: start, finish
+            DOUBLE PRECISION :: delta
+
+            x(1) = 2
+            x(2) = 0
+#if (_FMM_DIMENSION_ == 3)
+            x(3) = 0
+#endif
+            print *, "benchmark_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut"
+            call cpu_time(start)
+            buffer = lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut(x)
+            call cpu_time(finish)
+            print *, "  Deinterleave + LUT Time = ", finish-start, " seconds."
+
+            call cpu_time(start)
+            do i=1, number_of_runs
+                buffer = lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut(x)
+            end do
+            call cpu_time(finish)
+            delta = finish-start
+            print *, "  Deinterleave + LUT Time (second run) = ", delta/number_of_runs, " seconds."
+
+            number_of_runs = 10**18
+            call cpu_time(start)
+            do i=1, number_of_runs
+                buffer = lib_tree_hf_deinterleave_bits_1D_to_treeD(x(1))
+            end do
+            call cpu_time(finish)
+            delta = finish-start
+            print *, "  Deinterleave Time = ", delta/number_of_runs, " seconds."
+            print *, ""
+        end subroutine benchmark_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut
+
+    end subroutine lib_tree_hf_benchmark
 
 end module lib_tree_helper_functions
