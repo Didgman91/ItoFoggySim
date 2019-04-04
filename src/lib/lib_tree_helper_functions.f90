@@ -10,7 +10,7 @@
 !
 ! Preprocessor
 ! -----
-!   standard value: _FMM_DIMENSION_ = 3
+!   standard value: FMM_DIMENSION = 3
 !
 ! Eclipse settings
 ! ------
@@ -32,7 +32,7 @@
 
 
 ! spatial dimension, value = [2,3]
-#define _FMM_DIMENSION_ 3
+#define FMM_DIMENSION 2
 
 ! 1: true, 0: false (-> spatial point is real)
 #define _SPATIAL_POINT_IS_DOUBLE_ 1
@@ -48,7 +48,7 @@ module lib_tree_helper_functions
     private
 
     ! parameter
-    integer(kind=1), public, parameter :: TREE_DIMENSIONS = _FMM_DIMENSION_ ! dimensions
+    integer(kind=1), public, parameter :: TREE_DIMENSIONS = FMM_DIMENSION ! dimensions
     integer(kind=1), public, parameter :: TREE_INTEGER_KIND = 4
     integer(kind=1), public, parameter :: NUMBER_OF_BITS_PER_BYTE = 8
     integer(kind=TREE_INTEGER_KIND), public, parameter :: TREE_BOX_IGNORE_ENTRY = -1
@@ -81,7 +81,7 @@ module lib_tree_helper_functions
     ! ~ type definitions ~
 
     ! module global variable
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
     logical :: lib_tree_interleave_bits_lut_initialised = .false.
     integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension (:,:,:) &
                                                 , allocatable :: lib_tree_interleave_bits_lut
@@ -89,7 +89,7 @@ module lib_tree_helper_functions
     logical :: lib_tree_deinterleave_bits_lut_initialised = .false.
     integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension (:,:,:) &
                                                 , allocatable :: lib_tree_deinterleave_bits_lut
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
     integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension (:,:,:,:) &
                                                 , allocatable :: lib_tree_interleave_bits_lut
     logical :: lib_tree_interleave_bits_lut_initialised = .false.
@@ -123,7 +123,7 @@ contains
     subroutine lib_tree_hf_destructor()
         implicit none
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
         if (lib_tree_interleave_bits_lut_initialised) then
            lib_tree_interleave_bits_lut_initialised = .false.
            deallocate (lib_tree_interleave_bits_lut)
@@ -132,7 +132,7 @@ contains
             lib_tree_deinterleave_bits_lut_initialised = .false.
            deallocate (lib_tree_deinterleave_bits_lut)
         end if
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
         if (lib_tree_interleave_bits_lut_initialised) then
             lib_tree_interleave_bits_lut_initialised = .false.
             deallocate (lib_tree_interleave_bits_lut)
@@ -1120,7 +1120,7 @@ contains
 
         integer(kind=1) :: i
         integer(kind=1) :: ii
-#if (_FMM_DIMENSION_ == 3)
+#if (FMM_DIMENSION == 3)
         integer(kind=1) :: iii
 #endif
         integer(kind=1) :: neighbour_counter
@@ -1138,7 +1138,7 @@ contains
             neighbour_all(i) = TREE_BOX_IGNORE_ENTRY
         end do
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
         neighbour_counter = 0
         do i=1, NUMBER_OF_1D_NEIGHBOURS
             buffer_n(1) = buffer_n_1d(i,1)
@@ -1155,7 +1155,7 @@ contains
                 end do
             end if
         end do
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
         neighbour_counter = 0
         do i=1, NUMBER_OF_1D_NEIGHBOURS
             buffer_n(1) = buffer_n_1d(i,1)
@@ -1190,7 +1190,7 @@ contains
     !
     ! Dependences
     ! ----
-    !   _FMM_DIMENSION_
+    !   FMM_DIMENSION
     !       number of dimensions
     !   INTERLEAVE_BITS_INTEGER_KIND
     !       number of bytes of the integer
@@ -1206,7 +1206,7 @@ contains
         integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
         ! parameter
         character (len = *), parameter :: file_lut="pre_calc/bit_interleaving_LUT_2d.dat"
 
@@ -1230,7 +1230,7 @@ contains
             WRITE(13) rv
             CLOSE(UNIT=13)
         end if
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
         ! parameter
         character (len = *), parameter :: file_lut="pre_calc/bit_interleaving_LUT_3d.dat"
 
@@ -1266,7 +1266,7 @@ contains
     !
     ! Dependences
     ! ----
-    !   _FMM_DIMENSION_
+    !   FMM_DIMENSION
     !       number of dimensions
     !   INTERLEAVE_BITS_INTEGER_KIND
     !       number of bytes of the integer
@@ -1283,7 +1283,7 @@ contains
         integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
         ! dummy
         integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
                                                integer_range_low:integer_range_high, &
@@ -1313,7 +1313,7 @@ contains
             p_old = p
         end do
 
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
         ! dummy
         integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
                                                integer_range_low:integer_range_high, &
@@ -1444,7 +1444,7 @@ contains
         integer(kind=x_kind), dimension(TREE_DIMENSIONS), intent(in) :: x
         integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: rv
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
         ! allocate memory
         if (.NOT. lib_tree_interleave_bits_lut_initialised) then
             allocate( lib_tree_interleave_bits_lut(integer_range_low:integer_range_high, &
@@ -1456,7 +1456,7 @@ contains
         end if
         rv(1) = lib_tree_interleave_bits_lut(x(1), x(2), 1)
         rv(2) = lib_tree_interleave_bits_lut(x(1), x(2), 2)
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
         ! allocate memory
         if (.NOT. lib_tree_interleave_bits_lut_initialised) then
             allocate( lib_tree_interleave_bits_lut(integer_range_low:integer_range_high, &
@@ -1482,7 +1482,7 @@ contains
     !
     ! Dependences
     ! ----
-    !   _FMM_DIMENSION_
+    !   FMM_DIMENSION
     !       number of dimensions
     !   INTERLEAVE_BITS_INTEGER_KIND
     !       number of bytes of the integer
@@ -1498,7 +1498,7 @@ contains
         integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
         ! parameter
         character (len = *), parameter :: file_lut="pre_calc/bit_deinterleaving_LUT_2d.dat"
 
@@ -1522,7 +1522,7 @@ contains
             WRITE(13) rv
             CLOSE(UNIT=13)
         end if
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
         ! parameter
         character (len = *), parameter :: file_lut="pre_calc/bit_deinterleaving_LUT_3d.dat"
 
@@ -1558,7 +1558,7 @@ contains
     !
     ! Dependences
     ! ----
-    !   _FMM_DIMENSION_
+    !   FMM_DIMENSION
     !       number of dimensions
     !   INTERLEAVE_BITS_INTEGER_KIND
     !       number of bytes of the integer
@@ -1575,7 +1575,7 @@ contains
         integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
         ! dummy
         integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
                                                integer_range_low:integer_range_high, &
@@ -1605,7 +1605,7 @@ contains
             p_old = p
         end do
 
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
         ! dummy
         integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
                                                integer_range_low:integer_range_high, &
@@ -1732,7 +1732,7 @@ contains
         integer(kind=x_kind), dimension(TREE_DIMENSIONS), intent(in) :: x
         integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: rv
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
         ! allocate memory
         if (.NOT. lib_tree_deinterleave_bits_lut_initialised) then
             allocate( lib_tree_deinterleave_bits_lut(integer_range_low:integer_range_high, &
@@ -1744,7 +1744,7 @@ contains
         end if
         rv(1) = lib_tree_deinterleave_bits_lut(x(1), x(2), 1)
         rv(2) = lib_tree_deinterleave_bits_lut(x(1), x(2), 2)
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
         ! allocate memory
         if (.NOT. lib_tree_deinterleave_bits_lut_initialised) then
             allocate( lib_tree_deinterleave_bits_lut(integer_range_low:integer_range_high, &
@@ -2228,14 +2228,14 @@ contains
 
             point%x(1) = 0.75
             point%x(2) = 0.5
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             universal_index_ground_trouth%n = 3
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             point%x(3) = 2.0**(-9.0) + 2.0**(-8)
 
             universal_index_ground_trouth%n = 6
 #else
-            print *, "test_lib_tree_hf_get_parent: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_get_parent: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             universal_index = lib_tree_hf_get_universal_index(point, l)
@@ -2262,14 +2262,14 @@ contains
             integer(kind=COORDINATE_BINARY_BYTES) :: n_parent_ground_trouth
 
             l = 1
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             n = 2
             n_parent_ground_trouth = 0
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             n = 6
             n_parent_ground_trouth = 0
 #else
-            print *, "test_lib_tree_hf_get_parent: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_get_parent: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             n_parent = lib_tree_hf_get_parent(n)
@@ -2297,12 +2297,12 @@ contains
             integer(kind=1) :: i
 
             n = 1
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             children_n_ground_truth(1) = 4
             children_n_ground_truth(2) = 5
             children_n_ground_truth(3) = 6
             children_n_ground_truth(4) = 7
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             children_n_ground_truth(1) = 8
             children_n_ground_truth(2) = 9
             children_n_ground_truth(3) = 10
@@ -2312,7 +2312,7 @@ contains
             children_n_ground_truth(7) = 14
             children_n_ground_truth(8) = 15
 #else
-            print *, "test_lib_tree_hf_get_children_all: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_get_children_all: Dimension not defines: ", FMM_DIMENSION
 #endif
             children_n = lib_tree_hf_get_children_all(n)
 
@@ -2346,15 +2346,15 @@ contains
 
             l=1
             n=1
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             point_ground_trouth%x(1) = 0.25
             point_ground_trouth%x(2) = 0.75
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             point_ground_trouth%x(1) = 0.25
             point_ground_trouth%x(2) = 0.25
             point_ground_trouth%x(3) = 0.75
 #else
-            print *, "test_lib_tree_hf_get_centre_of_box: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_get_centre_of_box: Dimension not defines: ", FMM_DIMENSION
 #endif
             point = lib_tree_hf_get_centre_of_box(n,l)
 
@@ -2388,7 +2388,7 @@ contains
 
             integer(kind=1) :: i
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             k = 1
             l = 2
             n = 3
@@ -2410,7 +2410,7 @@ contains
                                             2, 6, &
                                             8,9,12 /)
 
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             k = 1
             l = 2
             n = 35
@@ -2444,7 +2444,7 @@ contains
                                             38,39,46, &
                                             52,53,60 /)
 #else
-            print *, "test_lib_tree_hf_get_neighbour_all_xD: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_get_neighbour_all_xD: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             neighbour_all = lib_tree_hf_get_neighbour_all_xD(k, n, l)
@@ -2479,7 +2479,7 @@ contains
 
             integer(kind=1) :: i
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             k = 1
             l = 2
             n = 11
@@ -2501,7 +2501,7 @@ contains
                                             10, 14, &
                                             -1,-1,-1 /)
 
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             k = 1
             l = 1
             n = 5
@@ -2535,7 +2535,7 @@ contains
                                             -1,-1,-1, &
                                             -1,-1 /)
 #else
-            print *, "test_lib_tree_hf_get_neighbour_all_xD_2: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_get_neighbour_all_xD_2: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             neighbour_all = lib_tree_hf_get_neighbour_all_xD(k, n, l)
@@ -2569,7 +2569,7 @@ contains
 
             integer :: i
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             f(1) = 0.25
             f(2) = 0.375
             if (COORDINATE_BINARY_BYTES == 4) then
@@ -2579,7 +2579,7 @@ contains
                 coordinate_binary_xD_ground_trouth(1) = 2**62           ! |0100 0000|0000 0000| ... |0000 0000| byte 7-0
                 coordinate_binary_xD_ground_trouth(2) = 2**62 + 2**61   ! |0110 0000|0000 0000| ... |0000 0000| byte 7-0
             end if
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             f(1) = 0.25
             f(2) = 0.375
             f(3) = 0.4375
@@ -2593,7 +2593,7 @@ contains
                 coordinate_binary_xD_ground_trouth(3) = 2**62+2**61+2**60   ! |0111 0000|0000 0000| ... |0000 0000| byte 7-0
             end if
 #else
-            print *, "test_lib_tree_hf_get_coordinate_binary_number_xD: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_get_coordinate_binary_number_xD: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             coordinate_binary_xD = lib_tree_hf_get_coordinate_binary_number_xD(f)
@@ -2629,16 +2629,16 @@ contains
 
             x(1) = 4  ! 0100
             x(2) = 1  ! 0001
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             interleaved_bits_ground_trouth(1) = 2**0 + 2**5 !           |0010 0001|
             interleaved_bits_ground_trouth(2) = 0           ! |0000 0000|
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             x(3) = 2  ! 0010
             interleaved_bits_ground_trouth(1) = 2**1 + 2**3        !                     |0000 1010|
             interleaved_bits_ground_trouth(2) = 2**0               !           |0000 0001|
             interleaved_bits_ground_trouth(3) = 0                  ! |0000 0000|
 #else
-            print *, "test_lib_tree_hf_interleave_bits: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_interleave_bits: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             interleaved_bits = lib_tree_hf_interleave_bits(x)
@@ -2674,16 +2674,16 @@ contains
 
             x(1) = 20  ! 0001 0100
             x(2) = 65  ! 0100 0001
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             interleaved_bits_ground_trouth(1) = 2**0 + 2**5  !           |0010 0001|
             interleaved_bits_ground_trouth(2) = 2**1 + 2**4  ! |0001 0010|
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             x(3) = 40  ! 0010 1000
             interleaved_bits_ground_trouth(1) = 2**1                       !                     |0000 0010|
             interleaved_bits_ground_trouth(2) = 2**0 + 2**1 + 2**6 - 2**7  !           |1100 0011|
             interleaved_bits_ground_trouth(3) = 2**3                       ! |0000 1000|
 #else
-            print *, "test_lib_tree_hf_interleave_bits_2: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_interleave_bits_2: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             interleaved_bits = lib_tree_hf_interleave_bits(x)
@@ -2719,16 +2719,16 @@ contains
 
             x(1) = 4  ! 0100
             x(2) = 1  ! 0001
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             interleaved_bits_ground_trouth(1) = 2**0 + 2**5 !           |0010 0001|
             interleaved_bits_ground_trouth(2) = 0           ! |0000 0000|
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             x(3) = 2  ! 0010
             interleaved_bits_ground_trouth(1) = 2**1 + 2**3        !                     |0000 1010|
             interleaved_bits_ground_trouth(2) = 2**0               !           |0000 0001|
             interleaved_bits_ground_trouth(3) = 0                  ! |0000 0000|
 #else
-            print *, "test_lib_tree_hf_interleave_bits_use_lut: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_interleave_bits_use_lut: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             interleaved_bits = lib_tree_hf_interleave_bits_use_lut(x)
@@ -2764,16 +2764,16 @@ contains
 
             x(1) = 20  ! 0001 0100
             x(2) = 65  ! 0100 0001
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             interleaved_bits_ground_trouth(1) = 2**0 + 2**5  !           |0010 0001|
             interleaved_bits_ground_trouth(2) = 2**1 + 2**4  ! |0001 0010|
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             x(3) = 40  ! 0010 1000
             interleaved_bits_ground_trouth(1) = 2**1                       !                     |0000 0010|
             interleaved_bits_ground_trouth(2) = 2**0 + 2**1 + 2**6 - 2**7  !           |1100 0011|
             interleaved_bits_ground_trouth(3) = 2**3                       ! |0000 1000|
 #else
-            print *, "test_lib_tree_hf_interleave_bits_use_lut_2: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_interleave_bits_use_lut_2: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             interleaved_bits = lib_tree_hf_interleave_bits_use_lut(x)
@@ -2811,16 +2811,16 @@ contains
             deinterleaved_bits_ground_trouth(1) = 4  ! 0100
             deinterleaved_bits_ground_trouth(2) = 1  ! 0001
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 0           ! |0000 0000|
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             deinterleaved_bits_ground_trouth(3) = 2  ! 0010
             x(1) = 2**1 + 2**3        !                     |0000 1010|
             x(2) = 2**0               !           |0000 0001|
             x(3) = 0                  ! |0000 0000|
 #else
-            print *, "test_lib_tree_hf_deinterleave_bits: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_deinterleave_bits: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             deinterleaved_bits = lib_tree_hf_deinterleave_bits(x)
@@ -2857,16 +2857,16 @@ contains
             deinterleaved_bits_ground_trouth(1) = 2**2 + 2**6  ! 0100 0100
             deinterleaved_bits_ground_trouth(2) = 2**0 + 2**5  ! 0010 0001
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 2**2 + 2**5 ! |0010 0100|
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             deinterleaved_bits_ground_trouth(3) = 2**1 + 2**4  ! 0001 0010
             x(1) = 2**1 + 2**3        !                     |0000 1010|
             x(2) = 2**0 + 2**4        !           |0001 0001|
             x(3) = 2**0 + 2**4        ! |0001 0001|
 #else
-            print *, "test_lib_tree_hf_deinterleave_bits_2: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_deinterleave_bits_2: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             deinterleaved_bits = lib_tree_hf_deinterleave_bits(x)
@@ -2903,16 +2903,16 @@ contains
             deinterleaved_bits_ground_trouth(1) = 4  ! 0100
             deinterleaved_bits_ground_trouth(2) = 1  ! 0001
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 0           ! |0000 0000|
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             deinterleaved_bits_ground_trouth(3) = 2  ! 0010
             x(1) = 2**1 + 2**3        !                     |0000 1010|
             x(2) = 2**0               !           |0000 0001|
             x(3) = 0                  ! |0000 0000|
 #else
-            print *, "test_lib_tree_hf_deinterleave_bits_use_lut: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_deinterleave_bits_use_lut: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             deinterleaved_bits = lib_tree_hf_deinterleave_bits_use_lut(x)
@@ -2949,16 +2949,16 @@ contains
             deinterleaved_bits_ground_trouth(1) = 2**2 + 2**6  ! 0100 0100
             deinterleaved_bits_ground_trouth(2) = 2**0 + 2**5  ! 0010 0001
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 2**2 + 2**5 ! |0010 0100|
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             deinterleaved_bits_ground_trouth(3) = 2**1 + 2**4  ! 0001 0010
             x(1) = 2**1 + 2**3        !                     |0000 1010|
             x(2) = 2**0 + 2**4        !           |0001 0001|
             x(3) = 2**0 + 2**4        ! |0001 0001|
 #else
-            print *, "test_lib_tree_hf_deinterleave_bits_use_lut_2: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_deinterleave_bits_use_lut_2: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             deinterleaved_bits = lib_tree_hf_deinterleave_bits_use_lut(x)
@@ -2989,17 +2989,17 @@ contains
 
             integer(kind=x_kind) :: interleaved_bits_ground_trouth
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             x(1) = 2**0 + 2**5                          ! |0000 0000|0010 0001|
             x(2) = 2**2 + 2**4                          ! |0000 0000|0001 0100|
             interleaved_bits_ground_trouth = 2**1 + 2**4 + 2**8 + 2**11 ! |0000 1001|0001 0010|
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             x(1) = 2**0 + 2**5                          ! |0000 0000|0010 0001|
             x(2) = 2**2 + 2**4                          ! |0000 0000|0001 0100|
             x(3) = 2**1 + 2**6                          ! |0000 0000|0100 0010|
             interleaved_bits_ground_trouth = 2**2 + 2**3 + 2**7 + 2**13 + 2**17 + 2**18   ! |0000 0110|0010 0000|1000 1100|
 #else
-            print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             interleaved_bits = lib_tree_hf_interleave_bits_treeD_to_1D(x)
@@ -3026,13 +3026,13 @@ contains
 
             integer(kind=1) :: i
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             x(1) = 2**2 + 2**5  ! |0010 0100|
             x(2) = 2**0 + 2**7  ! |1000 0001|
 
             interleaved_x_ground_truth(1) = 2**0 + 2**5 + 2**11 + 2**14 !             .. |0100 1000|0010 0001|
             interleaved_x_ground_truth(2) = 0                           ! |0000 0000|
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             x(1) = 2**2 + 2**5  ! |0010 0100|
             x(2) = 2**0 + 2**7  ! |1000 0001|
             x(3) = 2**1 + 2**6  ! |0100 0010|
@@ -3042,7 +3042,7 @@ contains
             interleaved_x_ground_truth(2) = 0                           ! |0000 0000|
             interleaved_x_ground_truth(3) = 0                           ! |0000 0000|
 #else
-            print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD_use_lut: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD_use_lut: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             interleaved_x = lib_tree_hf_interleave_bits_treeD_to_1D_use_lut(x)
@@ -3077,17 +3077,17 @@ contains
 
             integer :: i
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             x = 2**0 + 2**5 !           |0010 0001|
             deinterleaved_bits_ground_trouth(1) = 2**2  ! 0000 0100
             deinterleaved_bits_ground_trouth(2) = 2**0  ! 0000 0001
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             x = 2**0 + 2**5 !           |0010 0001|
             deinterleaved_bits_ground_trouth(1) = 2**1  ! 0000 0010
             deinterleaved_bits_ground_trouth(2) = 0     ! 0000 0000
             deinterleaved_bits_ground_trouth(3) = 2**0  ! 0000 0001
 #else
-            print *, "test_lib_tree_hf_deinterleave_bits_1D_to_treeD: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_deinterleave_bits_1D_to_treeD: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             deinterleaved_bits = lib_tree_hf_deinterleave_bits_1D_to_treeD(x)
@@ -3120,12 +3120,12 @@ contains
 
             integer :: i
 
-#if (_FMM_DIMENSION_ == 2)
+#if (FMM_DIMENSION == 2)
             x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 0
             deinterleaved_bits_ground_trouth(1) = 2**2  ! 0000 0100
             deinterleaved_bits_ground_trouth(2) = 2**0  ! 0000 0001
-#elif (_FMM_DIMENSION_ == 3)
+#elif (FMM_DIMENSION == 3)
             x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 0
             x(3) = 0
@@ -3133,7 +3133,7 @@ contains
             deinterleaved_bits_ground_trouth(2) = 0     ! 0000 0000
             deinterleaved_bits_ground_trouth(3) = 2**0  ! 0000 0001
 #else
-            print *, "test_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut: Dimension not defines: ", _FMM_DIMENSION_
+            print *, "test_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             deinterleaved_bits = lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut(x)
@@ -3178,7 +3178,7 @@ contains
 
             x(1) = 2
             x(2) = 0
-#if (_FMM_DIMENSION_ == 3)
+#if (FMM_DIMENSION == 3)
             x(3) = 0
 #endif
             print *, "benchmark_lib_tree_hf_interleave_bits_use_lut"
@@ -3219,7 +3219,7 @@ contains
 
             x(1) = 2
             x(2) = 0
-#if (_FMM_DIMENSION_ == 3)
+#if (FMM_DIMENSION == 3)
             x(3) = 0
 #endif
             print *, "benchmark_lib_tree_hf_interleave_bits_use_lut"
@@ -3260,7 +3260,7 @@ contains
 
             x(1) = 2
             x(2) = 0
-#if (_FMM_DIMENSION_ == 3)
+#if (FMM_DIMENSION == 3)
             x(3) = 0
 #endif
             print *, "benchmark_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut"
@@ -3301,7 +3301,7 @@ contains
 
             x(1) = 2
             x(2) = 0
-#if (_FMM_DIMENSION_ == 3)
+#if (FMM_DIMENSION == 3)
             x(3) = 0
 #endif
             print *, "benchmark_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut"
