@@ -52,6 +52,7 @@ module lib_tree_helper_functions
     integer(kind=1), public, parameter :: TREE_INTEGER_KIND = 4
     integer(kind=1), public, parameter :: NUMBER_OF_BITS_PER_BYTE = 8
     integer(kind=TREE_INTEGER_KIND), public, parameter :: TREE_BOX_IGNORE_ENTRY = -1
+    integer(kind=1), public, parameter :: UNIVERSAL_INDEX_OVERFLOW = 0
 
     ! integer kind of the bit interleaving process, default = 1
     !
@@ -76,6 +77,9 @@ module lib_tree_helper_functions
 
     type lib_tree_universal_index
         integer(kind=COORDINATE_BINARY_BYTES) :: n
+!        integer(kind=INTERLEAVE_BITS_INTEGER_KIND), &
+!            dimension(TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
+!            :: interleaved_bits
         integer(kind=1) :: l
     end type lib_tree_universal_index
     ! ~ type definitions ~
@@ -397,9 +401,18 @@ contains
         end do
 
         ! calculate the universal index n
-        uindex%n = ibits(interleaved_bits_dimension_0, &
-                        COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE-l*TREE_DIMENSIONS, &
-                        l*TREE_DIMENSIONS)
+        if (l*TREE_DIMENSIONS .lt. COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE) then
+            uindex%n = ibits(interleaved_bits_dimension_0, &
+                            COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE-l*TREE_DIMENSIONS, &
+                            l*TREE_DIMENSIONS)
+        else if (l*TREE_DIMENSIONS .eq. COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE) then
+            uindex%n = interleaved_bits_dimension_0
+        else
+            uindex%n = UNIVERSAL_INDEX_OVERFLOW
+            print *, "lib_tree_hf_get_universal_index ERROR: universal index overflow"
+            print *, "  l*TREE_DIMENSIONS = ", l*TREE_DIMENSIONS
+        end if
+!        uindex%interleaved_bits = interleaved_bits
 
         uindex%l = l
 
@@ -2147,6 +2160,9 @@ contains
         if (.not. test_lib_tree_hf_get_universal_index()) then
             error_counter = error_counter + 1
         end if
+        if (.not. test_lib_tree_hf_get_universal_index_l_max()) then
+            error_counter = error_counter + 1
+        end if
         if (.not. test_lib_tree_hf_get_parent()) then
             error_counter = error_counter + 1
         end if
@@ -2235,7 +2251,7 @@ contains
 
             universal_index_ground_trouth%n = 6
 #else
-            print *, "test_lib_tree_hf_get_parent: Dimension not defines: ", FMM_DIMENSION
+            print *, "test_lib_tree_hf_get_universal_index: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             universal_index = lib_tree_hf_get_universal_index(point, l)
@@ -2248,6 +2264,60 @@ contains
                 print *, "test_lib_tree_hf_get_universal_index: ", "FAILED"
             end if
         end function test_lib_tree_hf_get_universal_index
+
+        function test_lib_tree_hf_get_universal_index_l_max() result(rv)
+            implicit none
+
+            ! dummy
+            logical :: rv
+
+            type(lib_tree_spatial_point) :: point
+            type(lib_tree_universal_index) :: universal_index
+
+            integer(kind=1) :: l
+            type(lib_tree_universal_index) :: universal_index_ground_trouth
+
+#if (FMM_DIMENSION == 2)
+            l = int(COORDINATE_BINARY_BYTES * 1.0*NUMBER_OF_BITS_PER_BYTE / TREE_DIMENSIONS)
+#if (_SPATIAL_POINT_IS_DOUBLE_ == 0)
+            point%x(1) = 1.0-2.0**(-l)
+            point%x(2) = 1.0-2.0**(-l)
+#elif (_SPATIAL_POINT_IS_DOUBLE_ == 1)
+            point%x(1) = 1.0d+0-2.0d+0**(-l)
+            point%x(2) = 1.0d+0-2.0d+0**(-l)
+#endif
+            universal_index_ground_trouth%l = l
+            universal_index_ground_trouth%n = -1
+#elif (FMM_DIMENSION == 3)
+            l = int(COORDINATE_BINARY_BYTES * 1.0*NUMBER_OF_BITS_PER_BYTE / TREE_DIMENSIONS)
+            universal_index_ground_trouth%l = l
+#if (_SPATIAL_POINT_IS_DOUBLE_ == 0)
+            point%x(1) = 1.0-2.0**(-l-1)
+            point%x(2) = 1.0-2.0**(-l-1)
+            point%x(3) = 1.0-2.0**(-l-1)
+#elif (_SPATIAL_POINT_IS_DOUBLE_ == 1)
+            point%x(1) = 1.0d+0-2.0d+0**(-l)
+            point%x(2) = 1.0d+0-2.0d+0**(-l)
+            point%x(3) = 1.0d+0-2.0d+0**(-l)
+#endif
+
+            universal_index_ground_trouth%n = 1073741824-1 ! 2**(dl)-1
+#else
+            print *, "test_lib_tree_hf_get_universal_index_l_max: Dimension not defines: ", FMM_DIMENSION
+#endif
+
+            universal_index = lib_tree_hf_get_universal_index(point, l)
+
+            if (universal_index%n == universal_index_ground_trouth%n) then
+                rv = .true.
+                print *, "test_lib_tree_hf_get_universal_index_l_max: ", "OK"
+            else
+                rv = .false.
+                print *, "test_lib_tree_hf_get_universal_index_l_max: ", "FAILED"
+                print *, "  universal_index%l = ", universal_index%l
+                print *, "  universal_index%n = ", universal_index%n
+            end if
+        end function test_lib_tree_hf_get_universal_index_l_max
 
         function test_lib_tree_hf_get_parent() result (rv)
             implicit none
