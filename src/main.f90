@@ -7,7 +7,7 @@ program main
 !    call lib_test_hash_function()
 
     call lib_tree_test_functions()
-
+!    call lib_tree_benchmark()
     call lib_tree_destructor()
 
 !     call lib_tree_hf_benchmark()

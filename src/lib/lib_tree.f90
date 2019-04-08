@@ -24,7 +24,10 @@ use lib_hash_function
 
 
     ! member
-    integer(kind=1), parameter :: CORRESPONDENCE_VECTOR_KIND = 8
+    integer(kind=1), parameter :: CORRESPONDENCE_VECTOR_KIND = 4
+    integer(kind=4), parameter :: LIB_TREE_MAX_HASH_RUNS = 200
+    integer(kind=8), parameter :: LIB_TREE_HASH_I= 10
+
 
 
     ! type definition
@@ -42,6 +45,9 @@ use lib_hash_function
     ! module global
     type(lib_tree_data_element), dimension (:), allocatable :: lib_tree_data_element_list
     type(lib_tree_correspondece_vector_element), dimension(:), allocatable :: lib_tree_correspondence_vector
+    integer(kind=1) :: lib_tree_l_th    ! threshold level
+    integer(kind=8) :: hash_max
+    integer(kind=2) :: lib_tree_max_number_of_hash_runs
 
     contains
 
@@ -327,19 +333,27 @@ use lib_hash_function
         ! auxiliary
         integer(kind=4) :: correspondence_vector_dimension
         integer(kind=1) :: number_of_bits
-        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: hashed_uindex
+        integer(kind=4) :: hashed_uindex
         type(lib_tree_universal_index) :: uindex
-        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: i
-        integer(kind=1) :: ii
-        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: hash_max
-        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: hash_idum
-        integer(kind=2) :: hash_i
+        integer(kind=4) :: i
+        integer(kind=2) :: ii
+        integer(kind=8) :: hash_max
+        integer(kind=8) :: hash_idum
+        integer(kind=4) :: hash_overflow_counter
+        logical :: element_saved
 
         ! copy element list to the module global *lib_tree_data_element_list* list.
-        if (allocated (lib_tree_data_element_list)) then
-            deallocate (lib_tree_data_element_list)
+
+        if ( .not. allocated(lib_tree_data_element_list) ) then
+            allocate( lib_tree_data_element_list(size(element_list)) )
+        else
+            if ( size(lib_tree_data_element_list) .ne. size(element_list)) then
+                deallocate (lib_tree_data_element_list)
+                allocate( lib_tree_data_element_list(size(element_list)) )
+            end if
         end if
         lib_tree_data_element_list = element_list
+        lib_tree_l_th = threshold_level
 
         ! check if the significant bits doesn't exceed the number of bits of the universal index
         number_of_bits = threshold_level * TREE_DIMENSIONS
@@ -349,36 +363,59 @@ use lib_hash_function
             hash_max = correspondence_vector_dimension
 
             ! initiate lib_tree_correspondence_vector
-            if (allocated (lib_tree_correspondence_vector)) then
-                deallocate (lib_tree_correspondence_vector)
+            if (.not. allocated (lib_tree_correspondence_vector)) then
+                allocate( lib_tree_correspondence_vector(correspondence_vector_dimension) )
+            else
+                if (size(lib_tree_correspondence_vector) .ne. correspondence_vector_dimension) then
+                    deallocate (lib_tree_correspondence_vector)
+                    allocate( lib_tree_correspondence_vector(correspondence_vector_dimension) )
+                end if
             end if
-            allocate( lib_tree_correspondence_vector(correspondence_vector_dimension) )
             lib_tree_correspondence_vector(:)%number_of_hash_runs = 0
 
+            ii = 0
+            do i=1, correspondence_vector_dimension
+                if (lib_tree_correspondence_vector(i)%number_of_hash_runs .ne. 0) then
+                    ii = ii + int(1,2)
+                end if
+            end do
+
             ! iterate element_list
+            lib_tree_max_number_of_hash_runs = 0
+            hash_overflow_counter = 0
             do i=1, size(lib_tree_data_element_list)
                 uindex = lib_tree_hf_get_universal_index(element_list(i)%point_x, threshold_level)
 
-                hash_idum = uindex%n
-                do ii=1,1+2,1  !2=Offset zum einschwingen !
-                    hash_idum=int(modulo(real(16807.0D0*hash_idum,kind=16),2147483647.0D0),kind=8)
-                end do
-                hashed_uindex=hashpp(hash_max, hash_idum)+1  ! no zero
                 ! find unique hashed universal index
-                do ii=1, huge(lib_tree_correspondence_vector(1)%number_of_hash_runs)-1
+                hashed_uindex = hash_kf(int(uindex%n,8),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum)
+
+                element_saved = .false.
+                do ii=1, LIB_TREE_MAX_HASH_RUNS !huge(lib_tree_correspondence_vector(1)%number_of_hash_runs)-1
                     ! save
                     if (lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs .eq. 0) then
-                        lib_tree_correspondence_vector(hashed_uindex)%data_element_number = i
-                        lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs = ii
-                        ! unique hash found -> terminate the inner do loop immediatly
-                        exit
+                        if ((hashed_uindex .gt. 0) .or. (hashed_uindex .le. hash_max)) then
+                            lib_tree_correspondence_vector(hashed_uindex)%data_element_number = i
+                            lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs = ii
+
+                            if (lib_tree_max_number_of_hash_runs .lt. ii) then
+                                lib_tree_max_number_of_hash_runs = ii
+                            end if
+                            ! unique hash found -> terminate the inner do loop immediatly
+                            element_saved = .true.
+                            exit
+                        end if
                     end if
-                    do hash_i=int(1,2), ii*int(5, 2)
-                        hash_idum=int(modulo(real(16807.0D0*hash_idum,kind=16),2147483647.0D0),kind=8)
-                    end do
-                    hashed_uindex=hashpp(hash_max, hash_idum)+1  ! no zero
+
+                    hashed_uindex = hashpp_kf(hash_max, hash_idum)
                 end do
+                if (.not. element_saved) then
+                    hash_overflow_counter = hash_overflow_counter + 1
+                end if
             end do
+            if (hash_overflow_counter .ne. 0) then
+                print *, "lib_tree_create_correspondence_vector  ..ERROR"
+                print *, "    number of hash overflows : ", hash_overflow_counter
+            end if
         else
             print *, "lib_tree_create_correspondence_vector: tree is too deep"
             print *, "   the biggest universal index would exceed (tree_dimension * threshold level * number_of_bits_per_byte)"
@@ -386,6 +423,43 @@ use lib_hash_function
         end if
 
     end subroutine lib_tree_create_correspondence_vector
+
+    function lib_tree_get_element_from_correspondence_vector(n) result(rv)
+        implicit none
+        !dummy
+        integer(kind=COORDINATE_BINARY_BYTES), intent(in) :: n
+        type(lib_tree_data_element) :: rv
+
+        ! auxiliary
+        integer(kind=8) :: hash_idum
+        integer(kind=4) :: hashed_uindex
+        integer(kind=2) :: i
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: element_number
+        logical :: element_found
+
+        if (allocated(lib_tree_correspondence_vector)) then
+            hashed_uindex = hash_kf(int(n,8),int(4,8),int(size(lib_tree_correspondence_vector),8),LIB_TREE_HASH_I,hash_idum)
+
+            element_found = .false.
+            do i=1, lib_tree_max_number_of_hash_runs
+                if (lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs .eq. i) then
+                    element_number = lib_tree_correspondence_vector(hashed_uindex)%data_element_number
+                    rv = lib_tree_data_element_list(element_number)
+
+                    element_found = .true.
+                else
+                    hashed_uindex = hashpp_kf(hash_max, hash_idum)
+                end if
+
+            end do
+            if (.not. element_found) then
+                print *, "Element could not be found ..ERROR"
+            end if
+
+        end if
+
+
+    end function lib_tree_get_element_from_correspondence_vector
 
 
     ! ----------------- test functions -----------------
@@ -397,6 +471,9 @@ use lib_hash_function
         error_counter = 0
 
         if (.not. test_lib_tree_create_correspondence_vector()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_tree_get_element_from_correspondence_vector()) then
             error_counter = error_counter + 1
         end if
 
@@ -413,28 +490,111 @@ use lib_hash_function
             ! dummy
             logical :: rv
 
+            integer(kind=4), parameter :: list_length = 10**5
 
-            integer(kind=1), parameter :: l_th = 3 ! threshold level
-            type(lib_tree_data_element), dimension(3) :: element_list
+            integer(kind=1), parameter :: l_th = 16 ! threshold level
+            type(lib_tree_data_element), dimension(list_length) :: element_list
             integer(kind=2) :: margin
+
+            integer(kind=4) :: i
+            integer(kind=4) :: number
 
             margin = 125
 
 
 #if (FMM_DIMENSION == 2)
-            element_list(1)%point_x%x(1) = 0.1
-            element_list(1)%point_x%x(2) = 0.256
-
-            element_list(2)%point_x%x(1) = 0.4
-            element_list(2)%point_x%x(2) = 0.256
-
-            element_list(3)%point_x%x(1) = 0.7
-            element_list(3)%point_x%x(2) = 0.56
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = 0.999 + (-0.999 * i)/(1.0*list_length)
+            end do
+#elif (FMM_DIMENSION == 3)
+!            do i=1, list_length
+!                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
+!                element_list(i)%point_x%x(2) = 0.9 + (-0.9 * i)/list_length
+!                element_list(i)%point_x%x(3) = 0.9 + (-0.9 * i)/list_length
+!            end do
 #endif
             call lib_tree_create_correspondence_vector(element_list, l_th, margin)
 
-            rv = .true.
+            number = 0
+            do i=1, size(lib_tree_correspondence_vector)
+                if (lib_tree_correspondence_vector(i)%number_of_hash_runs .ne. 0) then
+                    number = number + 1
+                end if
+            end do
+
+
+            print *, "test_lib_tree_create_correspondece_vector"
+            print *, "  number of data points: ", list_length
+            print *, "  max number of hash runs: ", lib_tree_max_number_of_hash_runs
+
+            if (number .eq. list_length) then
+                rv = .true.
+            else
+                rv = .false.
+                print *, "  number is NOT equal to list_length "
+                print *, "  number: ", number
+                print *, "  list_length: ", list_length
+                print *, "    -> ", 1.0*number / list_length, "%"
+            end if
+
         end function test_lib_tree_create_correspondence_vector
+
+        function test_lib_tree_get_element_from_correspondence_vector() result (rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            type(lib_tree_universal_index) :: uindex
+            type(lib_tree_data_element) :: data_element
+
+            ! generate dataset
+            integer(kind=4), parameter :: list_length = 10**5
+
+            integer(kind=1), parameter :: l_th = 16 ! threshold level
+            type(lib_tree_data_element), dimension(list_length) :: element_list
+            integer(kind=2) :: margin
+
+            integer(kind=4) :: i
+            integer(kind=4) :: number
+
+            margin = 400
+
+
+#if (FMM_DIMENSION == 2)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = 0.999 + (-0.999 * i)/(1.0*list_length)
+            end do
+#elif (FMM_DIMENSION == 3)
+!            do i=1, list_length
+!                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
+!                element_list(i)%point_x%x(2) = 0.9 + (-0.9 * i)/list_length
+!                element_list(i)%point_x%x(3) = 0.9 + (-0.9 * i)/list_length
+!            end do
+#endif
+            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+
+
+            ! test dataset
+            uindex = lib_tree_hf_get_universal_index(element_list(1)%point_x, lib_tree_l_th)
+            data_element = lib_tree_get_element_from_correspondence_vector(uindex%n)
+
+            if (element_list(1)%point_x%x(1) .eq. data_element%point_x%x(1)) then
+                if (element_list(1)%point_x%x(2) .eq. data_element%point_x%x(2)) then
+                    print *, "test_lib_tree_get_element_from_correspondence_vector: ", "OK"
+                    rv = .true.
+                else
+                    print *, "test_lib_tree_get_element_from_correspondence_vector: ", "FAILED"
+                    rv = .false.
+                end if
+            else
+                print *, "test_lib_tree_get_element_from_correspondence_vector: ", "FAILED"
+                rv = .false.
+            end if
+
+        end function test_lib_tree_get_element_from_correspondence_vector
 
     end subroutine lib_tree_test_functions
 
@@ -460,25 +620,31 @@ use lib_hash_function
             integer(kind=4) :: i
             integer(kind=4) :: number
 
-            margin = 110
+            margin = 125
 
 
 #if (FMM_DIMENSION == 2)
-
             do i=1, list_length
-                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
-                element_list(i)%point_x%x(2) = 0.9 + (-0.9 * i)/list_length
+                element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = 0.999 + (-0.999 * i)/(1.0*list_length)
             end do
+#elif (FMM_DIMENSION == 3)
+!            do i=1, list_length
+!                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
+!                element_list(i)%point_x%x(2) = 0.9 + (-0.9 * i)/list_length
+!                element_list(i)%point_x%x(3) = 0.9 + (-0.9 * i)/list_length
+!            end do
 #endif
 
-            print *, "benchmark_lib_tree_create_correspondece_vector"
+
             call cpu_time(start)
             call lib_tree_create_correspondence_vector(element_list, l_th, margin)
             call cpu_time(finish)
-            print *, "  Time = ", finish-start, " seconds."
+            print *, "benchmark_lib_tree_create_correspondece_vector:"
+            print *, " create correspondence_vector time: ", finish-start, " seconds."
 
             number = 0
-            do i=1, list_length
+            do i=1, size(lib_tree_correspondence_vector)
                 if (lib_tree_correspondence_vector(i)%number_of_hash_runs .ne. 0) then
                     number = number + 1
                 end if
