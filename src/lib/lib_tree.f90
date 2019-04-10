@@ -1,3 +1,8 @@
+#define _FMM_DIMENSION_ 3
+
+! number of bytes of the universal index, value = [4,8,16]
+! standard value: 8
+#define _UINDEX_BYTES_ 8
 
 module lib_tree
 use lib_tree_helper_functions
@@ -24,8 +29,8 @@ use lib_hash_function
 
 
     ! member
-    integer(kind=1), parameter :: CORRESPONDENCE_VECTOR_KIND = 4
-    integer(kind=4), parameter :: LIB_TREE_MAX_HASH_RUNS = 200
+    integer(kind=1), parameter :: CORRESPONDENCE_VECTOR_KIND = 4    ! limited by the total number of elements -> 2**(8*4) = 4,294,967,296 elements
+    integer(kind=4), parameter :: LIB_TREE_MAX_HASH_RUNS = 400
     integer(kind=8), parameter :: LIB_TREE_HASH_I= 10
 
 
@@ -122,8 +127,8 @@ use lib_hash_function
     implicit none
         ! dummy arguments
         type(lib_tree_universal_index), intent (in) :: uindex
-        integer(kind=COORDINATE_BINARY_BYTES) :: k
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(3**TREE_DIMENSIONS-1) :: rv
+        integer(kind=UINDEX_BYTES) :: k
+        integer(kind=UINDEX_BYTES), dimension(3**TREE_DIMENSIONS-1) :: rv
 
         rv = lib_tree_hf_get_neighbour_all_xD(k, uindex%n, uindex%l)
 
@@ -171,16 +176,16 @@ use lib_hash_function
     function lib_tree_get_domain_e2(k,uindex) result (rv)
     implicit none
         ! dummy arguments
-        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: k
+        integer(kind=UINDEX_BYTES), intent (in) :: k
         type(lib_tree_universal_index), intent(in) :: uindex
         type(lib_tree_spatial_point) :: rv
 
         ! auxiliar
 !        type(lib_tree_universal_index), dimension(:), allocatable :: domain_box
-        integer(kind=COORDINATE_BINARY_BYTES) :: number_of_boxes
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(3**TREE_DIMENSIONS-1, k) :: buffer
+        integer(kind=UINDEX_BYTES) :: number_of_boxes
+        integer(kind=UINDEX_BYTES), dimension(3**TREE_DIMENSIONS-1, k) :: buffer
 
-        integer(kind=COORDINATE_BINARY_BYTES) :: i
+        integer(kind=UINDEX_BYTES) :: i
 
         do i=1, k
             buffer(:, i) = lib_tree_hf_get_neighbour_all_xD(k, uindex%n, uindex%l)
@@ -332,13 +337,18 @@ use lib_hash_function
 
         ! auxiliary
         integer(kind=4) :: correspondence_vector_dimension
-        integer(kind=1) :: number_of_bits
         integer(kind=4) :: hashed_uindex
         type(lib_tree_universal_index) :: uindex
         integer(kind=4) :: i
         integer(kind=2) :: ii
         integer(kind=8) :: hash_max
+#if (_UINDEX_BYTES_ == 16)
+        integer(kind=8), dimension(2) :: hash_idum
+        integer(kind=2) :: number_of_bits
+#else
         integer(kind=8) :: hash_idum
+        integer(kind=1) :: number_of_bits
+#endif
         integer(kind=4) :: hash_overflow_counter
         logical :: element_saved
 
@@ -357,7 +367,11 @@ use lib_hash_function
 
         ! check if the significant bits doesn't exceed the number of bits of the universal index
         number_of_bits = threshold_level * TREE_DIMENSIONS
-        if (number_of_bits .le. (COORDINATE_BINARY_BYTES * NUMBER_OF_BITS_PER_BYTE)) then
+#if (_UINDEX_BYTES_ == 16)
+        if (number_of_bits .le. (int(UINDEX_BYTES,2) * int(NUMBER_OF_BITS_PER_BYTE,2))) then
+#else
+        if (number_of_bits .le. (UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE)) then
+#endif
             correspondence_vector_dimension = ceiling(size(element_list) * margin / 100.0)
 
             hash_max = correspondence_vector_dimension
@@ -387,7 +401,11 @@ use lib_hash_function
                 uindex = lib_tree_hf_get_universal_index(element_list(i)%point_x, threshold_level)
 
                 ! find unique hashed universal index
+#if (_UINDEX_BYTES_ == 16)
+                hashed_uindex = hash_kf_16_byte(int(uindex%n,16),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum)
+#else
                 hashed_uindex = hash_kf(int(uindex%n,8),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum)
+#endif
 
                 element_saved = .false.
                 do ii=1, LIB_TREE_MAX_HASH_RUNS !huge(lib_tree_correspondence_vector(1)%number_of_hash_runs)-1
@@ -405,8 +423,11 @@ use lib_hash_function
                             exit
                         end if
                     end if
-
+#if (_UINDEX_BYTES_ == 16)
+                    hashed_uindex = hashpp_kf_16_byte(hash_max, hash_idum)
+#else
                     hashed_uindex = hashpp_kf(hash_max, hash_idum)
+#endif
                 end do
                 if (.not. element_saved) then
                     hash_overflow_counter = hash_overflow_counter + 1
@@ -427,7 +448,7 @@ use lib_hash_function
     function lib_tree_get_element_from_correspondence_vector(n) result(rv)
         implicit none
         !dummy
-        integer(kind=COORDINATE_BINARY_BYTES), intent(in) :: n
+        integer(kind=UINDEX_BYTES), intent(in) :: n
         type(lib_tree_data_element) :: rv
 
         ! auxiliary
@@ -463,7 +484,7 @@ use lib_hash_function
 
 
     ! ----------------- test functions -----------------
-    subroutine lib_tree_test_functions()
+    function lib_tree_test_functions() result(error_counter)
         implicit none
 
         integer :: error_counter
@@ -477,11 +498,13 @@ use lib_hash_function
             error_counter = error_counter + 1
         end if
 
+        print *, "-------------lib_tree_test_functions----------------"
         if (error_counter == 0) then
-            print *, "All tests: OK"
+            print *, "lib_tree_test_functions tests: OK"
         else
-            print *, error_counter,"test(s) FAILED"
+            print *, error_counter,"lib_tree_test_functions test(s) FAILED"
         end if
+        print *, "----------------------------------------------------"
 
         contains
 
@@ -499,20 +522,20 @@ use lib_hash_function
             integer(kind=4) :: i
             integer(kind=4) :: number
 
-            margin = 125
+            margin = 400
 
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             do i=1, list_length
                 element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
                 element_list(i)%point_x%x(2) = 0.999 + (-0.999 * i)/(1.0*list_length)
             end do
-#elif (FMM_DIMENSION == 3)
-!            do i=1, list_length
-!                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
-!                element_list(i)%point_x%x(2) = 0.9 + (-0.9 * i)/list_length
-!                element_list(i)%point_x%x(3) = 0.9 + (-0.9 * i)/list_length
-!            end do
+#elif (_FMM_DIMENSION_ == 3)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = 0.9 + (-0.9 * i)/list_length
+                element_list(i)%point_x%x(3) = 0.9 + (-0.9 * i)/list_length
+            end do
 #endif
             call lib_tree_create_correspondence_vector(element_list, l_th, margin)
 
@@ -562,17 +585,17 @@ use lib_hash_function
             margin = 400
 
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             do i=1, list_length
                 element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
                 element_list(i)%point_x%x(2) = 0.999 + (-0.999 * i)/(1.0*list_length)
             end do
-#elif (FMM_DIMENSION == 3)
-!            do i=1, list_length
-!                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
-!                element_list(i)%point_x%x(2) = 0.9 + (-0.9 * i)/list_length
-!                element_list(i)%point_x%x(3) = 0.9 + (-0.9 * i)/list_length
-!            end do
+#elif (_FMM_DIMENSION_ == 3)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = 0.9 + (-0.9 * i)/list_length
+                element_list(i)%point_x%x(3) = 0.9 + (-0.9 * i)/list_length
+            end do
 #endif
             call lib_tree_create_correspondence_vector(element_list, l_th, margin)
 
@@ -596,7 +619,7 @@ use lib_hash_function
 
         end function test_lib_tree_get_element_from_correspondence_vector
 
-    end subroutine lib_tree_test_functions
+    end function lib_tree_test_functions
 
     subroutine lib_tree_benchmark
         implicit none
@@ -623,17 +646,17 @@ use lib_hash_function
             margin = 125
 
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             do i=1, list_length
                 element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
                 element_list(i)%point_x%x(2) = 0.999 + (-0.999 * i)/(1.0*list_length)
             end do
-#elif (FMM_DIMENSION == 3)
-!            do i=1, list_length
-!                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
-!                element_list(i)%point_x%x(2) = 0.9 + (-0.9 * i)/list_length
-!                element_list(i)%point_x%x(3) = 0.9 + (-0.9 * i)/list_length
-!            end do
+#elif (_FMM_DIMENSION_ == 3)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = 0.9 + (-0.9 * i)/list_length
+                element_list(i)%point_x%x(3) = 0.9 + (-0.9 * i)/list_length
+            end do
 #endif
 
 

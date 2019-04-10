@@ -5,6 +5,8 @@ module lib_hash_function
     public :: hash_fnv1a
     public :: hashpp_kf
     public :: hash_kf
+    public :: hashpp_kf_16_byte
+    public :: hash_kf_16_byte
 
     ! test functions
     public :: lib_test_hash_function
@@ -223,6 +225,52 @@ module lib_hash_function
     integer(kind=8),intent(in)::max
       idum=int(modulo(real(16807.0D0*idum,kind=16),2147483647.0D0),kind=8)
       hashpp=int(real(idum,kind=8)/2147483647.0D0*real(max-1,kind=8),kind=8)
+    end function
+
+    ! ********************************************************* hash
+    !berechnet ndigit-Hash wert der Koordinaten Matrix a,b,max,n ,versuch i
+    integer(kind=8) function hash_kf_16_byte(a,b,max,i,idum) result(hash)
+    implicit none
+        integer(kind=16), intent(in) :: a
+        integer(kind=8),intent(in)::b,max,i
+        integer(kind=8), dimension(2), intent(inout):: idum
+        integer(kind=8) i2
+
+        ! auxiliary
+        integer(kind=16) :: aa
+        integer(kind=8), dimension(2) :: buffer_a
+        real(kind=8) :: buffer
+
+        equivalence(aa, buffer_a)
+
+        aa = a
+
+        idum(1)=int(buffer_a(1)+int(b,kind=8)*int(max,kind=8),kind=8) !als start
+        idum(2)=int(buffer_a(2)+int(b,kind=8)*int(max,kind=8),kind=8) !als start
+        do i2=1,i+2,1  !2=Offset zum einschwingen !
+            idum(1)=int(modulo(real(16807.0D0*idum(1),kind=16),2147483647.0D0),kind=8)
+            idum(2)=int(modulo(real(16807.0D0*idum(2),kind=16),2147483647.0D0),kind=8)
+        end do
+        buffer = real(idum(1),kind=8)/2147483647.0D0
+        buffer = buffer * real(idum(2),kind=8)/2147483647.0D0
+        hash=int(buffer*real(max-1,kind=8),kind=8)
+    end function
+
+    ! ********************************************************* hashpp
+    !beschleunigte Fkt
+    integer(kind=8) function hashpp_kf_16_byte(max,idum) result (hashpp)
+    implicit none
+        integer(kind=8), dimension(2),intent(inout):: idum
+        integer(kind=8), intent(in)::max
+
+        !auxiliary
+        real(kind=8) :: buffer
+        idum(1)=int(modulo(real(16807.0D0*idum(1),kind=16),2147483647.0D0),kind=8)
+        idum(2)=int(modulo(real(16807.0D0*idum(2),kind=16),2147483647.0D0),kind=8)
+
+        buffer = real(idum(1),kind=8)/2147483647.0D0
+        buffer = buffer * real(idum(2),kind=8)/2147483647.0D0
+        hashpp=int(buffer*real(max-1,kind=8),kind=8)
     end function
 
 

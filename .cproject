@@ -103,13 +103,25 @@
                         					
                     </fileInfo>
                     					
+                    <fileInfo id="photran.managedbuild.config.gnu.fortran.exe.debug.826557009.1668149338" name="lib_tree.f90" rcbsApplicability="disable" resourcePath="src/lib/lib_tree.f90" toolsToInvoke="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140.1204626295">
+                        						
+                        <tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140.1204626295" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140">
+                            							
+                            <option id="gnu.fortran.compiler.option.misc.other.401321010" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -cpp" valueType="string"/>
+                            							
+                            <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.847489272" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
+                            						
+                        </tool>
+                        					
+                    </fileInfo>
+                    					
                     <sourceEntries>
                         						
                         <entry excluding="lib|data_types|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
                         						
                         <entry excluding="lib|data_types" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
                         						
-                        <entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="src/lib"/>
+                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
                         					
                     </sourceEntries>
                     				

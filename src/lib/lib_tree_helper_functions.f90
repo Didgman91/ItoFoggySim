@@ -10,7 +10,7 @@
 !
 ! Preprocessor
 ! -----
-!   standard value: FMM_DIMENSION = 3
+!   standard value: _FMM_DIMENSION_ = 3
 !
 ! Eclipse settings
 ! ------
@@ -32,14 +32,23 @@
 
 
 ! spatial dimension, value = [2,3]
-#define FMM_DIMENSION 2
+#define _FMM_DIMENSION_ 3
 
 ! 1: true, 0: false (-> spatial point is real)
 #define _SPATIAL_POINT_IS_DOUBLE_ 1
 
-! todo:
-! - interleave_bits_treeD_to_1D: LUT
-! - deinterleave_bits_1D_to_treeD: LUT
+! number of bytes of the universal index, value = [4,8,16]
+! standard value: 8
+! constraint
+! ----
+!          |  _FMM_DIMENSION_  |
+!   value  |    2     |   3    |
+!   -----------------------------
+!   single | [4,8,16] | [8,16] |
+!   double | [8,16]   | [8,16] |
+!
+#define _UINDEX_BYTES_ 8
+
 
 module lib_tree_helper_functions
     use file_io
@@ -48,7 +57,7 @@ module lib_tree_helper_functions
     private
 
     ! parameter
-    integer(kind=1), public, parameter :: TREE_DIMENSIONS = FMM_DIMENSION ! dimensions
+    integer(kind=1), public, parameter :: TREE_DIMENSIONS = _FMM_DIMENSION_ ! dimensions
     integer(kind=1), public, parameter :: TREE_INTEGER_KIND = 4
     integer(kind=1), public, parameter :: NUMBER_OF_BITS_PER_BYTE = 8
     integer(kind=TREE_INTEGER_KIND), public, parameter :: TREE_BOX_IGNORE_ENTRY = -1
@@ -64,6 +73,8 @@ module lib_tree_helper_functions
 #elif(_SPATIAL_POINT_IS_DOUBLE_ == 0)
     integer(kind=1), public, parameter :: COORDINATE_BINARY_BYTES = 4
 #endif
+
+    integer(kind=1), public, parameter :: UINDEX_BYTES = _UINDEX_BYTES_
     ! ~ parameter ~
 
     ! type definitions
@@ -76,7 +87,7 @@ module lib_tree_helper_functions
     end type lib_tree_spatial_point
 
     type lib_tree_universal_index
-        integer(kind=COORDINATE_BINARY_BYTES) :: n
+        integer(kind=UINDEX_BYTES) :: n
 !        integer(kind=INTERLEAVE_BITS_INTEGER_KIND), &
 !            dimension(TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
 !            :: interleaved_bits
@@ -85,7 +96,7 @@ module lib_tree_helper_functions
     ! ~ type definitions ~
 
     ! module global variable
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
     logical :: lib_tree_interleave_bits_lut_initialised = .false.
     integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension (:,:,:) &
                                                 , allocatable :: lib_tree_interleave_bits_lut
@@ -93,7 +104,7 @@ module lib_tree_helper_functions
     logical :: lib_tree_deinterleave_bits_lut_initialised = .false.
     integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension (:,:,:) &
                                                 , allocatable :: lib_tree_deinterleave_bits_lut
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
     integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension (:,:,:,:) &
                                                 , allocatable :: lib_tree_interleave_bits_lut
     logical :: lib_tree_interleave_bits_lut_initialised = .false.
@@ -127,7 +138,7 @@ contains
     subroutine lib_tree_hf_destructor()
         implicit none
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
         if (lib_tree_interleave_bits_lut_initialised) then
            lib_tree_interleave_bits_lut_initialised = .false.
            deallocate (lib_tree_interleave_bits_lut)
@@ -136,7 +147,7 @@ contains
             lib_tree_deinterleave_bits_lut_initialised = .false.
            deallocate (lib_tree_deinterleave_bits_lut)
         end if
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
         if (lib_tree_interleave_bits_lut_initialised) then
             lib_tree_interleave_bits_lut_initialised = .false.
             deallocate (lib_tree_interleave_bits_lut)
@@ -361,11 +372,12 @@ contains
         ! 64 bit word range: −(2**63) to 2**63 − 1
         !
         !
-        integer(kind=COORDINATE_BINARY_BYTES) :: interleaved_bits_dimension_0
+        integer(kind=UINDEX_BYTES) :: interleaved_bits_dimension_0
 
-        !   TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - COORDINATE_BINARY_BYTES /INTERLEAVE_BITS_INTEGER_KIND + 1
-        ! = COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND * ( TREE_DIMENSIONS - 1) + 1
-        equivalence (interleaved_bits(COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND * ( TREE_DIMENSIONS - 1) + 1), &
+        !        interleaved_bits number of bytes/INTERLEAVE_BITS_INTEGER_KIND     -   output number of bytes/INTERLEAVE_BITS_INTEGER_KIND + 1
+        !   TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - UINDEX_BYTES /INTERLEAVE_BITS_INTEGER_KIND + 1
+        ! = ( TREE_DIMENSIONS*COORDINATE_BINARY_BYTES - UINDEX_BYTES)/INTERLEAVE_BITS_INTEGER_KIND + 1
+        equivalence (interleaved_bits(( TREE_DIMENSIONS*COORDINATE_BINARY_BYTES - UINDEX_BYTES)/INTERLEAVE_BITS_INTEGER_KIND + 1), &
                      interleaved_bits_dimension_0)
 
         integer(kind=INTERLEAVE_BITS_INTEGER_KIND) &
@@ -379,6 +391,13 @@ contains
 
         integer(kind=1) :: i
         integer(kind=1) :: ii
+#if (_UINDEX_BYTES_ == 16)
+        integer(kind=16) :: buffer_diff
+        integer(kind=8), dimension(2) :: buffer_diff_a
+        equivalence(buffer_diff, buffer_diff_a)
+#else
+        integer(kind=8) :: buffer_diff
+#endif
 
         ! calculate the x-dimensional binary coordinate
         coordinate_binary = lib_tree_hf_get_coordinate_binary_number_xD(point_x%x)
@@ -401,17 +420,34 @@ contains
         end do
 
         ! calculate the universal index n
-        if (l*TREE_DIMENSIONS .lt. COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE) then
+#if (_UINDEX_BYTES_ == 16)
+        buffer_diff = int(UINDEX_BYTES,16)*int(NUMBER_OF_BITS_PER_BYTE,16) - int(l,16)*int(TREE_DIMENSIONS,16)
+        i = int(ishft(buffer_diff,-15),1)
+        if ( i .eq. 0 ) then ! not a negativ number
             uindex%n = ibits(interleaved_bits_dimension_0, &
-                            COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE-l*TREE_DIMENSIONS, &
+                            UINDEX_BYTES*NUMBER_OF_BITS_PER_BYTE-l*TREE_DIMENSIONS, &
                             l*TREE_DIMENSIONS)
-        else if (l*TREE_DIMENSIONS .eq. COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE) then
+        else if ( buffer_diff_a(1) .eq. 0)  then
             uindex%n = interleaved_bits_dimension_0
         else
             uindex%n = UNIVERSAL_INDEX_OVERFLOW
             print *, "lib_tree_hf_get_universal_index ERROR: universal index overflow"
             print *, "  l*TREE_DIMENSIONS = ", l*TREE_DIMENSIONS
         end if
+#else
+        buffer_diff = UINDEX_BYTES*NUMBER_OF_BITS_PER_BYTE - l*TREE_DIMENSIONS
+        if (buffer_diff .gt. 0) then
+            uindex%n = ibits(interleaved_bits_dimension_0, &
+                            UINDEX_BYTES*NUMBER_OF_BITS_PER_BYTE-l*TREE_DIMENSIONS, &
+                            l*TREE_DIMENSIONS)
+        else if (buffer_diff .eq. 0) then
+            uindex%n = interleaved_bits_dimension_0
+        else
+            uindex%n = UNIVERSAL_INDEX_OVERFLOW
+            print *, "lib_tree_hf_get_universal_index ERROR: universal index overflow"
+            print *, "  l*TREE_DIMENSIONS = ", l*TREE_DIMENSIONS
+        end if
+#endif
 !        uindex%interleaved_bits = interleaved_bits
 
         uindex%l = l
@@ -903,10 +939,10 @@ contains
         implicit none
 
         ! dummy arguments
-        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: n
-        integer(kind=COORDINATE_BINARY_BYTES) :: parent_n
+        integer(kind=UINDEX_BYTES), intent (in) :: n
+        integer(kind=UINDEX_BYTES) :: parent_n
 
-        parent_n = n/(2**TREE_DIMENSIONS)
+        parent_n = ishft(n,-TREE_DIMENSIONS)
 
     end function
 
@@ -943,14 +979,14 @@ contains
         implicit none
 
         ! dummy arguments
-        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: n
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(2**TREE_DIMENSIONS) :: children_n
+        integer(kind=UINDEX_BYTES), intent (in) :: n
+        integer(kind=UINDEX_BYTES), dimension(2**TREE_DIMENSIONS) :: children_n
 
         ! auxiliary variables
         integer(kind=1) :: j
 
         do j = 0, 2**TREE_DIMENSIONS - 1
-            children_n(j+1) = 2**TREE_DIMENSIONS * n + j
+            children_n(j+1) = ishft(n,TREE_DIMENSIONS) + j
         end  do
 
     end function
@@ -976,14 +1012,14 @@ contains
         implicit none
 
         ! dummy arguments
-        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: n
+        integer(kind=UINDEX_BYTES), intent (in) :: n
         integer(kind=1), intent (in) :: l
         type(lib_tree_spatial_point) :: point
 
         ! auxiliary variables
-        integer(kind=COORDINATE_BINARY_BYTES/2), dimension(TREE_DIMENSIONS) :: n_treeD
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: n_treeD
         integer(kind=1) :: i
-        integer(kind=COORDINATE_BINARY_BYTES) :: buffer
+        integer(kind=UINDEX_BYTES) :: buffer
 
         buffer = n
 
@@ -1035,16 +1071,16 @@ contains
         implicit none
 
         ! dummy arguments
-        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: k
-        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: n
+        integer(kind=UINDEX_BYTES), intent (in) :: k
+        integer(kind=UINDEX_BYTES), intent (in) :: n
         integer(kind=1), intent (in) :: l
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(3) :: neighbour_1d
+        integer(kind=UINDEX_BYTES), dimension(3) :: neighbour_1d
 
         ! auxiliary variables
         integer(kind=TREE_INTEGER_KIND), parameter :: ignore_entry = -1
         integer(kind=TREE_INTEGER_KIND), parameter :: lower_boundary = 0
-        integer(kind=COORDINATE_BINARY_BYTES) :: upper_boundary
-        integer(kind=COORDINATE_BINARY_BYTES) :: buffer_n
+        integer(kind=UINDEX_BYTES) :: upper_boundary
+        integer(kind=UINDEX_BYTES) :: buffer_n
 
         upper_boundary = 2**l - 1
 
@@ -1117,23 +1153,23 @@ contains
         integer(kind=1), parameter :: NUMBER_OF_NEIGHBOURS = 3**TREE_DIMENSIONS-1
 
         ! dummy arguments
-        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: k
-        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: n
+        integer(kind=UINDEX_BYTES), intent (in) :: k
+        integer(kind=UINDEX_BYTES), intent (in) :: n
         integer(kind=1), intent (in) :: l
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(NUMBER_OF_NEIGHBOURS) :: neighbour_all
+        integer(kind=UINDEX_BYTES), dimension(NUMBER_OF_NEIGHBOURS) :: neighbour_all
 
         ! auxiliary variables
         integer(kind=TREE_INTEGER_KIND) :: upper_boundary
 
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: n_deinterleaved
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: n_deinterleaved
 
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(NUMBER_OF_1D_NEIGHBOURS, TREE_DIMENSIONS) :: buffer_n_1d
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: buffer_n
-        integer(kind=COORDINATE_BINARY_BYTES) :: buffer_neighbour
+        integer(kind=UINDEX_BYTES), dimension(NUMBER_OF_1D_NEIGHBOURS, TREE_DIMENSIONS) :: buffer_n_1d
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: buffer_n
+        integer(kind=UINDEX_BYTES) :: buffer_neighbour
 
         integer(kind=1) :: i
         integer(kind=1) :: ii
-#if (FMM_DIMENSION == 3)
+#if (_FMM_DIMENSION_ == 3)
         integer(kind=1) :: iii
 #endif
         integer(kind=1) :: neighbour_counter
@@ -1151,7 +1187,7 @@ contains
             neighbour_all(i) = TREE_BOX_IGNORE_ENTRY
         end do
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
         neighbour_counter = 0
         do i=1, NUMBER_OF_1D_NEIGHBOURS
             buffer_n(1) = buffer_n_1d(i,1)
@@ -1168,7 +1204,7 @@ contains
                 end do
             end if
         end do
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
         neighbour_counter = 0
         do i=1, NUMBER_OF_1D_NEIGHBOURS
             buffer_n(1) = buffer_n_1d(i,1)
@@ -1219,7 +1255,7 @@ contains
         integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
         ! parameter
         character (len = *), parameter :: file_lut="pre_calc/bit_interleaving_LUT_2d.dat"
 
@@ -1243,7 +1279,7 @@ contains
             WRITE(13) rv
             CLOSE(UNIT=13)
         end if
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
         ! parameter
         character (len = *), parameter :: file_lut="pre_calc/bit_interleaving_LUT_3d.dat"
 
@@ -1296,7 +1332,7 @@ contains
         integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
         ! dummy
         integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
                                                integer_range_low:integer_range_high, &
@@ -1326,7 +1362,7 @@ contains
             p_old = p
         end do
 
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
         ! dummy
         integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
                                                integer_range_low:integer_range_high, &
@@ -1457,7 +1493,7 @@ contains
         integer(kind=x_kind), dimension(TREE_DIMENSIONS), intent(in) :: x
         integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: rv
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
         ! allocate memory
         if (.NOT. lib_tree_interleave_bits_lut_initialised) then
             allocate( lib_tree_interleave_bits_lut(integer_range_low:integer_range_high, &
@@ -1469,7 +1505,7 @@ contains
         end if
         rv(1) = lib_tree_interleave_bits_lut(x(1), x(2), 1)
         rv(2) = lib_tree_interleave_bits_lut(x(1), x(2), 2)
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
         ! allocate memory
         if (.NOT. lib_tree_interleave_bits_lut_initialised) then
             allocate( lib_tree_interleave_bits_lut(integer_range_low:integer_range_high, &
@@ -1511,7 +1547,7 @@ contains
         integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
         ! parameter
         character (len = *), parameter :: file_lut="pre_calc/bit_deinterleaving_LUT_2d.dat"
 
@@ -1535,7 +1571,7 @@ contains
             WRITE(13) rv
             CLOSE(UNIT=13)
         end if
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
         ! parameter
         character (len = *), parameter :: file_lut="pre_calc/bit_deinterleaving_LUT_3d.dat"
 
@@ -1588,7 +1624,7 @@ contains
         integer(kind=integer_kind), parameter :: integer_range_high = huge(integer_range_high)
         integer(kind=integer_kind), parameter :: integer_range_low = -integer_range_high-1
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
         ! dummy
         integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
                                                integer_range_low:integer_range_high, &
@@ -1618,7 +1654,7 @@ contains
             p_old = p
         end do
 
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
         ! dummy
         integer(kind=integer_kind), dimension (integer_range_low:integer_range_high, &
                                                integer_range_low:integer_range_high, &
@@ -1745,7 +1781,7 @@ contains
         integer(kind=x_kind), dimension(TREE_DIMENSIONS), intent(in) :: x
         integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: rv
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
         ! allocate memory
         if (.NOT. lib_tree_deinterleave_bits_lut_initialised) then
             allocate( lib_tree_deinterleave_bits_lut(integer_range_low:integer_range_high, &
@@ -1757,7 +1793,7 @@ contains
         end if
         rv(1) = lib_tree_deinterleave_bits_lut(x(1), x(2), 1)
         rv(2) = lib_tree_deinterleave_bits_lut(x(1), x(2), 2)
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
         ! allocate memory
         if (.NOT. lib_tree_deinterleave_bits_lut_initialised) then
             allocate( lib_tree_deinterleave_bits_lut(integer_range_low:integer_range_high, &
@@ -1800,8 +1836,8 @@ contains
         implicit none
 
         ! dummy
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS), intent(in) :: n
-        integer(kind=COORDINATE_BINARY_BYTES) :: rv
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS), intent(in) :: n
+        integer(kind=UINDEX_BYTES) :: rv
 
         ! auxiliary
         integer(kind=1) :: i
@@ -1810,11 +1846,11 @@ contains
 
         rv = 0
         do i = 1, TREE_DIMENSIONS
-            do ii=0, COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE
+            do ii=0, UINDEX_BYTES*NUMBER_OF_BITS_PER_BYTE
                 ! gloabal bit number
                 bit_number = ii*TREE_DIMENSIONS+(TREE_DIMENSIONS - i)
 
-                if ( bit_number >= COORDINATE_BINARY_BYTES*NUMBER_OF_BITS_PER_BYTE ) then
+                if ( bit_number >= UINDEX_BYTES*NUMBER_OF_BITS_PER_BYTE ) then
                     exit
                 end if
 
@@ -1828,12 +1864,12 @@ contains
     function lib_tree_hf_interleave_bits_treeD_to_1D_use_lut(x) result(rv)
         implicit none
         ! dummy
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS), intent(in) :: x
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: rv
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS), intent(in) :: x
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: rv
 
         ! auxiliar
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: coordinate_binary
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: interleaved_coordinate_binary
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: coordinate_binary
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: interleaved_coordinate_binary
 
         ! Example
         ! ----
@@ -1879,7 +1915,7 @@ contains
         ! interleaved_bits(10:12) = ib_buffer
         !
         integer(kind=INTERLEAVE_BITS_INTEGER_KIND) &
-            ,dimension(TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
+            ,dimension(TREE_DIMENSIONS * UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
             :: interleaved_bits
 
         equivalence (interleaved_bits, interleaved_coordinate_binary)
@@ -1908,15 +1944,15 @@ contains
         ! 64 bit word range: −(2**63) to 2**63 − 1
         !
         !
-        integer(kind=COORDINATE_BINARY_BYTES) :: interleaved_bits_dimension_0
+        integer(kind=UINDEX_BYTES) :: interleaved_bits_dimension_0
 
-        !   TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - COORDINATE_BINARY_BYTES /INTERLEAVE_BITS_INTEGER_KIND + 1
-        ! = COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND * ( TREE_DIMENSIONS - 1) + 1
-        equivalence (interleaved_bits(COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND * ( TREE_DIMENSIONS - 1) + 1), &
+        !   TREE_DIMENSIONS * UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND - UINDEX_BYTES /INTERLEAVE_BITS_INTEGER_KIND + 1
+        ! = UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND * ( TREE_DIMENSIONS - 1) + 1
+        equivalence (interleaved_bits(UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND * ( TREE_DIMENSIONS - 1) + 1), &
                      interleaved_bits_dimension_0)
 
         integer(kind=INTERLEAVE_BITS_INTEGER_KIND) &
-            ,dimension(TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
+            ,dimension(TREE_DIMENSIONS * UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
             :: cb_buffer
 
         equivalence (coordinate_binary, cb_buffer)
@@ -1930,16 +1966,16 @@ contains
         coordinate_binary = x
 
         ! interleave bits
-        do i=COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND, 1, -1 ! interleave column wise
+        do i=UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND, 1, -1 ! interleave column wise
             do ii=1, TREE_DIMENSIONS  ! get column entries
-                ob_buffer_DIM(ii) = cb_buffer(i + (ii-1)*COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND)
+                ob_buffer_DIM(ii) = cb_buffer(i + (ii-1)*UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND)
             end do
             ib_buffer = lib_tree_hf_interleave_bits_use_lut(ob_buffer_DIM)
 
             ! e.g.    12                4       (4..1)        3
             ! ii = total length - (total columns - i + 1) * length(ib_buffer) + 1
-            ! ii = TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - (COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - i + 1) * TREE_DIMENSIONS + 1
-            ! ii = TREE_DIMENSIONS * (COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND + i - 1) + 1
+            ! ii = TREE_DIMENSIONS * UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND - (UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND - i + 1) * TREE_DIMENSIONS + 1
+            ! ii = TREE_DIMENSIONS * (UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND - UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND + i - 1) + 1
             ! ii = TREE_DIMENSIONS * (i - 1) + 1
             ii = int(TREE_DIMENSIONS * (i-1) + 1, 1)
 
@@ -1974,8 +2010,8 @@ contains
         implicit none
 
         ! dummy
-        integer(kind=COORDINATE_BINARY_BYTES), intent(in) :: x
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: rv
+        integer(kind=UINDEX_BYTES), intent(in) :: x
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: rv
 
         ! auxiliary
         integer(kind=1) :: i
@@ -1987,7 +2023,7 @@ contains
             rv(i) = 0
         end do
 
-        do i = 0, COORDINATE_BINARY_BYTES * NUMBER_OF_BITS_PER_BYTE - 1
+        do i = 0, UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE - 1
             ! global bit number = i
             ! target_element = TREE_DIMENSIONS - mod( gloabel bit number, TREE_DIMENSIONS)
             ! target local bit number = int(global bit number / TREE_DIMENSIONS)
@@ -2023,12 +2059,12 @@ contains
     function lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut(x) result(rv)
         implicit none
         ! dummy
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS), intent(in) :: x
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: rv
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS), intent(in) :: x
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: rv
 
         ! auxiliar
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: coordinate_binary
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: deinterleaved_coordinate_binary
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: coordinate_binary
+        integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: deinterleaved_coordinate_binary
 
         ! Example
         ! ----
@@ -2078,7 +2114,7 @@ contains
         ! deiterleaved_bits(9) = dib_buffer(3)
         !
         integer(kind=INTERLEAVE_BITS_INTEGER_KIND) &
-            ,dimension(TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
+            ,dimension(TREE_DIMENSIONS * UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
             :: deinterleaved_bits
 
         equivalence (deinterleaved_bits, deinterleaved_coordinate_binary)
@@ -2107,15 +2143,15 @@ contains
         ! 64 bit word range: −(2**63) to 2**63 − 1
         !
         !
-        integer(kind=COORDINATE_BINARY_BYTES) :: deinterleaved_bits_dimension_0
+        integer(kind=UINDEX_BYTES) :: deinterleaved_bits_dimension_0
 
-        !   TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - COORDINATE_BINARY_BYTES /INTERLEAVE_BITS_INTEGER_KIND + 1
-        ! = COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND * ( TREE_DIMENSIONS - 1) + 1
-        equivalence (deinterleaved_bits(COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND * ( TREE_DIMENSIONS - 1) + 1), &
+        !   TREE_DIMENSIONS * UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND - UINDEX_BYTES /INTERLEAVE_BITS_INTEGER_KIND + 1
+        ! = UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND * ( TREE_DIMENSIONS - 1) + 1
+        equivalence (deinterleaved_bits(UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND * ( TREE_DIMENSIONS - 1) + 1), &
                      deinterleaved_bits_dimension_0)
 
         integer(kind=INTERLEAVE_BITS_INTEGER_KIND) &
-            ,dimension(TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
+            ,dimension(TREE_DIMENSIONS * UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
             :: cb_buffer
 
         equivalence (coordinate_binary, cb_buffer)
@@ -2129,12 +2165,12 @@ contains
         coordinate_binary = x
 
         ! deinterleave bits
-        do i=COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND, 1, -1 ! interleave element wise
+        do i=UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND, 1, -1 ! interleave element wise
             ! get entries
             ! e.g.    12                4       (4..1)        3
             ! ii = total length - (total columns - i + 1) * length(ib_buffer) + 1
-            ! ii = TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - (COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - i + 1) * TREE_DIMENSIONS + 1
-            ! ii = TREE_DIMENSIONS * (COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND - COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND + i - 1) + 1
+            ! ii = TREE_DIMENSIONS * UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND - (UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND - i + 1) * TREE_DIMENSIONS + 1
+            ! ii = TREE_DIMENSIONS * (UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND - UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND + i - 1) + 1
             ! ii = TREE_DIMENSIONS * (i - 1) + 1
             ii = int(TREE_DIMENSIONS * (i-1) + 1, 1)
             ob_buffer_DIM(:) = cb_buffer(ii:ii+TREE_DIMENSIONS+1)
@@ -2142,7 +2178,7 @@ contains
             dib_buffer = lib_tree_hf_deinterleave_bits_use_lut(ob_buffer_DIM)
 
             do ii=1, TREE_DIMENSIONS  ! set column entries
-                deinterleaved_bits(i + (ii-1)*COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND) = dib_buffer(ii)
+                deinterleaved_bits(i + (ii-1)*UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND) = dib_buffer(ii)
             end do
         end do
 
@@ -2150,7 +2186,7 @@ contains
     end function lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut
 
     ! ----------------- test functions -----------------
-    subroutine lib_tree_hf_test_functions()
+    function lib_tree_hf_test_functions() result(error_counter)
         implicit none
 
         integer :: error_counter
@@ -2208,7 +2244,7 @@ contains
         if (.not. test_lib_tree_hf_interleave_bits_treeD_to_1D()) then
             error_counter = error_counter + 1
         end if
-        if (.not. test_lib_tree_hf_interleave_bits_1D_to_treeD_use_lut()) then
+        if (.not. test_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut()) then
             error_counter = error_counter + 1
         end if
         if (.not. test_lib_tree_hf_deinterleave_bits_1D_to_treeD()) then
@@ -2219,11 +2255,13 @@ contains
         end if
 
 
+        print *, "-------------lib_tree_hf_test_functions-------------"
         if (error_counter == 0) then
-            print *, "All tests: OK"
+            print *, "lib_tree_hf_test_functions tests: OK"
         else
-            print *, error_counter,"test(s) FAILED"
+            print *, error_counter,"lib_tree_hf_test_functions test(s) FAILED"
         end if
+        print *, "----------------------------------------------------"
 
         contains
 
@@ -2244,9 +2282,9 @@ contains
 
             point%x(1) = 0.75
             point%x(2) = 0.5
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             universal_index_ground_trouth%n = 3
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             point%x(3) = 2.0**(-9.0) + 2.0**(-8)
 
             universal_index_ground_trouth%n = 6
@@ -2277,31 +2315,40 @@ contains
             integer(kind=1) :: l
             type(lib_tree_universal_index) :: universal_index_ground_trouth
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             l = int(COORDINATE_BINARY_BYTES * 1.0*NUMBER_OF_BITS_PER_BYTE / TREE_DIMENSIONS)
+            universal_index_ground_trouth%l = l
 #if (_SPATIAL_POINT_IS_DOUBLE_ == 0)
             point%x(1) = 1.0-2.0**(-l)
             point%x(2) = 1.0-2.0**(-l)
+#if (_UINDEX_BYTES_ == 4)
+            universal_index_ground_trouth%n = -1            ! 2**(dl)-1: 4294967295
+#elif (_UINDEX_BYTES_ == 8)
+            universal_index_ground_trouth%n = X'FFFFFFFF'   ! 2**(dl)-1: 4294967295
+#endif
+
 #elif (_SPATIAL_POINT_IS_DOUBLE_ == 1)
             point%x(1) = 1.0d+0-2.0d+0**(-l)
             point%x(2) = 1.0d+0-2.0d+0**(-l)
-#endif
-            universal_index_ground_trouth%l = l
             universal_index_ground_trouth%n = -1
-#elif (FMM_DIMENSION == 3)
+#endif
+
+#elif (_FMM_DIMENSION_ == 3)
             l = int(COORDINATE_BINARY_BYTES * 1.0*NUMBER_OF_BITS_PER_BYTE / TREE_DIMENSIONS)
             universal_index_ground_trouth%l = l
 #if (_SPATIAL_POINT_IS_DOUBLE_ == 0)
             point%x(1) = 1.0-2.0**(-l-1)
             point%x(2) = 1.0-2.0**(-l-1)
             point%x(3) = 1.0-2.0**(-l-1)
+            universal_index_ground_trouth%n = X'3FFFFFFF' ! 2**(dl)-1
 #elif (_SPATIAL_POINT_IS_DOUBLE_ == 1)
             point%x(1) = 1.0d+0-2.0d+0**(-l)
             point%x(2) = 1.0d+0-2.0d+0**(-l)
             point%x(3) = 1.0d+0-2.0d+0**(-l)
+            universal_index_ground_trouth%n = X'7FFFFFFFFFFFFFFF' ! 2**(dl)-1   ! todo: 9223372036854775807
 #endif
 
-            universal_index_ground_trouth%n = 1073741824-1 ! 2**(dl)-1
+
 #else
             print *, "test_lib_tree_hf_get_universal_index_l_max: Dimension not defines: ", FMM_DIMENSION
 #endif
@@ -2325,17 +2372,17 @@ contains
             ! dummy
             logical :: rv
 
-            integer(kind=COORDINATE_BINARY_BYTES) :: n
-            integer(kind=COORDINATE_BINARY_BYTES) :: n_parent
+            integer(kind=UINDEX_BYTES) :: n
+            integer(kind=UINDEX_BYTES) :: n_parent
 
             integer(kind=1) :: l
-            integer(kind=COORDINATE_BINARY_BYTES) :: n_parent_ground_trouth
+            integer(kind=UINDEX_BYTES) :: n_parent_ground_trouth
 
             l = 1
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             n = 2
             n_parent_ground_trouth = 0
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             n = 6
             n_parent_ground_trouth = 0
 #else
@@ -2360,19 +2407,19 @@ contains
             ! dummy
             logical :: rv
 
-            integer(kind=COORDINATE_BINARY_BYTES) :: n
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(2**TREE_DIMENSIONS) :: children_n
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(2**TREE_DIMENSIONS) :: children_n_ground_truth
+            integer(kind=UINDEX_BYTES) :: n
+            integer(kind=UINDEX_BYTES), dimension(2**TREE_DIMENSIONS) :: children_n
+            integer(kind=UINDEX_BYTES), dimension(2**TREE_DIMENSIONS) :: children_n_ground_truth
 
             integer(kind=1) :: i
 
             n = 1
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             children_n_ground_truth(1) = 4
             children_n_ground_truth(2) = 5
             children_n_ground_truth(3) = 6
             children_n_ground_truth(4) = 7
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             children_n_ground_truth(1) = 8
             children_n_ground_truth(2) = 9
             children_n_ground_truth(3) = 10
@@ -2406,7 +2453,7 @@ contains
             ! dummy
             logical :: rv
 
-            integer(kind=COORDINATE_BINARY_BYTES) :: n
+            integer(kind=UINDEX_BYTES) :: n
             integer(kind=1) :: l
             type(lib_tree_spatial_point) :: point
 
@@ -2416,10 +2463,10 @@ contains
 
             l=1
             n=1
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             point_ground_trouth%x(1) = 0.25
             point_ground_trouth%x(2) = 0.75
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             point_ground_trouth%x(1) = 0.25
             point_ground_trouth%x(2) = 0.25
             point_ground_trouth%x(3) = 0.75
@@ -2450,15 +2497,15 @@ contains
             integer(kind=1), parameter :: number_of_neighbours = 3**TREE_DIMENSIONS-1
 
             ! auxiliary
-            integer(kind=COORDINATE_BINARY_BYTES) :: k
+            integer(kind=UINDEX_BYTES) :: k
             integer(kind=1) :: l
-            integer(kind=COORDINATE_BINARY_BYTES) :: n
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(number_of_neighbours) :: neighbour_all
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(number_of_neighbours) :: neighbour_all_ground_truth
+            integer(kind=UINDEX_BYTES) :: n
+            integer(kind=UINDEX_BYTES), dimension(number_of_neighbours) :: neighbour_all
+            integer(kind=UINDEX_BYTES), dimension(number_of_neighbours) :: neighbour_all_ground_truth
 
             integer(kind=1) :: i
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             k = 1
             l = 2
             n = 3
@@ -2480,7 +2527,7 @@ contains
                                             2, 6, &
                                             8,9,12 /)
 
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             k = 1
             l = 2
             n = 35
@@ -2541,15 +2588,15 @@ contains
             integer(kind=1), parameter :: number_of_neighbours = 3**TREE_DIMENSIONS-1
 
             ! auxiliary
-            integer(kind=COORDINATE_BINARY_BYTES) :: k
+            integer(kind=UINDEX_BYTES) :: k
             integer(kind=1) :: l
-            integer(kind=COORDINATE_BINARY_BYTES) :: n
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(number_of_neighbours) :: neighbour_all
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(number_of_neighbours) :: neighbour_all_ground_truth
+            integer(kind=UINDEX_BYTES) :: n
+            integer(kind=UINDEX_BYTES), dimension(number_of_neighbours) :: neighbour_all
+            integer(kind=UINDEX_BYTES), dimension(number_of_neighbours) :: neighbour_all_ground_truth
 
             integer(kind=1) :: i
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             k = 1
             l = 2
             n = 11
@@ -2571,7 +2618,7 @@ contains
                                             10, 14, &
                                             -1,-1,-1 /)
 
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             k = 1
             l = 1
             n = 5
@@ -2639,7 +2686,7 @@ contains
 
             integer :: i
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             f(1) = 0.25
             f(2) = 0.375
             if (COORDINATE_BINARY_BYTES == 4) then
@@ -2649,7 +2696,7 @@ contains
                 coordinate_binary_xD_ground_trouth(1) = 2**62           ! |0100 0000|0000 0000| ... |0000 0000| byte 7-0
                 coordinate_binary_xD_ground_trouth(2) = 2**62 + 2**61   ! |0110 0000|0000 0000| ... |0000 0000| byte 7-0
             end if
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             f(1) = 0.25
             f(2) = 0.375
             f(3) = 0.4375
@@ -2699,10 +2746,10 @@ contains
 
             x(1) = 4  ! 0100
             x(2) = 1  ! 0001
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             interleaved_bits_ground_trouth(1) = 2**0 + 2**5 !           |0010 0001|
             interleaved_bits_ground_trouth(2) = 0           ! |0000 0000|
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             x(3) = 2  ! 0010
             interleaved_bits_ground_trouth(1) = 2**1 + 2**3        !                     |0000 1010|
             interleaved_bits_ground_trouth(2) = 2**0               !           |0000 0001|
@@ -2744,10 +2791,10 @@ contains
 
             x(1) = 20  ! 0001 0100
             x(2) = 65  ! 0100 0001
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             interleaved_bits_ground_trouth(1) = 2**0 + 2**5  !           |0010 0001|
             interleaved_bits_ground_trouth(2) = 2**1 + 2**4  ! |0001 0010|
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             x(3) = 40  ! 0010 1000
             interleaved_bits_ground_trouth(1) = 2**1                       !                     |0000 0010|
             interleaved_bits_ground_trouth(2) = 2**0 + 2**1 + 2**6 - 2**7  !           |1100 0011|
@@ -2789,10 +2836,10 @@ contains
 
             x(1) = 4  ! 0100
             x(2) = 1  ! 0001
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             interleaved_bits_ground_trouth(1) = 2**0 + 2**5 !           |0010 0001|
             interleaved_bits_ground_trouth(2) = 0           ! |0000 0000|
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             x(3) = 2  ! 0010
             interleaved_bits_ground_trouth(1) = 2**1 + 2**3        !                     |0000 1010|
             interleaved_bits_ground_trouth(2) = 2**0               !           |0000 0001|
@@ -2834,10 +2881,10 @@ contains
 
             x(1) = 20  ! 0001 0100
             x(2) = 65  ! 0100 0001
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             interleaved_bits_ground_trouth(1) = 2**0 + 2**5  !           |0010 0001|
             interleaved_bits_ground_trouth(2) = 2**1 + 2**4  ! |0001 0010|
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             x(3) = 40  ! 0010 1000
             interleaved_bits_ground_trouth(1) = 2**1                       !                     |0000 0010|
             interleaved_bits_ground_trouth(2) = 2**0 + 2**1 + 2**6 - 2**7  !           |1100 0011|
@@ -2881,10 +2928,10 @@ contains
             deinterleaved_bits_ground_trouth(1) = 4  ! 0100
             deinterleaved_bits_ground_trouth(2) = 1  ! 0001
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 0           ! |0000 0000|
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             deinterleaved_bits_ground_trouth(3) = 2  ! 0010
             x(1) = 2**1 + 2**3        !                     |0000 1010|
             x(2) = 2**0               !           |0000 0001|
@@ -2927,10 +2974,10 @@ contains
             deinterleaved_bits_ground_trouth(1) = 2**2 + 2**6  ! 0100 0100
             deinterleaved_bits_ground_trouth(2) = 2**0 + 2**5  ! 0010 0001
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 2**2 + 2**5 ! |0010 0100|
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             deinterleaved_bits_ground_trouth(3) = 2**1 + 2**4  ! 0001 0010
             x(1) = 2**1 + 2**3        !                     |0000 1010|
             x(2) = 2**0 + 2**4        !           |0001 0001|
@@ -2973,10 +3020,10 @@ contains
             deinterleaved_bits_ground_trouth(1) = 4  ! 0100
             deinterleaved_bits_ground_trouth(2) = 1  ! 0001
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 0           ! |0000 0000|
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             deinterleaved_bits_ground_trouth(3) = 2  ! 0010
             x(1) = 2**1 + 2**3        !                     |0000 1010|
             x(2) = 2**0               !           |0000 0001|
@@ -3019,10 +3066,10 @@ contains
             deinterleaved_bits_ground_trouth(1) = 2**2 + 2**6  ! 0100 0100
             deinterleaved_bits_ground_trouth(2) = 2**0 + 2**5  ! 0010 0001
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 2**2 + 2**5 ! |0010 0100|
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             deinterleaved_bits_ground_trouth(3) = 2**1 + 2**4  ! 0001 0010
             x(1) = 2**1 + 2**3        !                     |0000 1010|
             x(2) = 2**0 + 2**4        !           |0001 0001|
@@ -3051,7 +3098,7 @@ contains
             logical :: rv
 
             ! parameter
-            integer(kind=1), parameter :: x_kind = COORDINATE_BINARY_BYTES
+            integer(kind=1), parameter :: x_kind = UINDEX_BYTES
 
             ! dummy
             integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
@@ -3059,11 +3106,11 @@ contains
 
             integer(kind=x_kind) :: interleaved_bits_ground_trouth
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             x(1) = 2**0 + 2**5                          ! |0000 0000|0010 0001|
             x(2) = 2**2 + 2**4                          ! |0000 0000|0001 0100|
             interleaved_bits_ground_trouth = 2**1 + 2**4 + 2**8 + 2**11 ! |0000 1001|0001 0010|
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             x(1) = 2**0 + 2**5                          ! |0000 0000|0010 0001|
             x(2) = 2**2 + 2**4                          ! |0000 0000|0001 0100|
             x(3) = 2**1 + 2**6                          ! |0000 0000|0100 0010|
@@ -3084,25 +3131,25 @@ contains
 
         end function test_lib_tree_hf_interleave_bits_treeD_to_1D
 
-        function test_lib_tree_hf_interleave_bits_1D_to_treeD_use_lut() result (rv)
+        function test_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut() result (rv)
             implicit none
             ! dummy
             logical :: rv
 
             ! auxiliar
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: x
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: interleaved_x
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: interleaved_x_ground_truth
+            integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: interleaved_x
+            integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: interleaved_x_ground_truth
 
             integer(kind=1) :: i
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             x(1) = 2**2 + 2**5  ! |0010 0100|
             x(2) = 2**0 + 2**7  ! |1000 0001|
 
             interleaved_x_ground_truth(1) = 2**0 + 2**5 + 2**11 + 2**14 !             .. |0100 1000|0010 0001|
             interleaved_x_ground_truth(2) = 0                           ! |0000 0000|
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             x(1) = 2**2 + 2**5  ! |0010 0100|
             x(2) = 2**0 + 2**7  ! |1000 0001|
             x(3) = 2**1 + 2**6  ! |0100 0010|
@@ -3112,12 +3159,12 @@ contains
             interleaved_x_ground_truth(2) = 0                           ! |0000 0000|
             interleaved_x_ground_truth(3) = 0                           ! |0000 0000|
 #else
-            print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD_use_lut: Dimension not defines: ", FMM_DIMENSION
+            print *, "lib_tree_hf_interleave_bits_treeD_to_1D_use_lut: Dimension not defines: ", FMM_DIMENSION
 #endif
 
             interleaved_x = lib_tree_hf_interleave_bits_treeD_to_1D_use_lut(x)
 
-            print *, "test_lib_tree_hf_interleave_bits_1D_to_treeD_use_lut:"
+            print *, "lib_tree_hf_interleave_bits_treeD_to_1D_use_lut:"
             rv = .true.
             do i=1, TREE_DIMENSIONS
                 if (interleaved_x(i) == interleaved_x_ground_truth(i)) then
@@ -3128,7 +3175,7 @@ contains
                 end if
             end do
 
-        end function test_lib_tree_hf_interleave_bits_1D_to_treeD_use_lut
+        end function test_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut
 
         function test_lib_tree_hf_deinterleave_bits_1D_to_treeD() result (rv)
             implicit none
@@ -3137,7 +3184,7 @@ contains
             logical :: rv
 
             ! parameter
-            integer(kind=1), parameter :: x_kind = COORDINATE_BINARY_BYTES
+            integer(kind=1), parameter :: x_kind = UINDEX_BYTES
 
             ! dummy
             integer(kind=x_kind) :: x
@@ -3147,11 +3194,11 @@ contains
 
             integer :: i
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             x = 2**0 + 2**5 !           |0010 0001|
             deinterleaved_bits_ground_trouth(1) = 2**2  ! 0000 0100
             deinterleaved_bits_ground_trouth(2) = 2**0  ! 0000 0001
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             x = 2**0 + 2**5 !           |0010 0001|
             deinterleaved_bits_ground_trouth(1) = 2**1  ! 0000 0010
             deinterleaved_bits_ground_trouth(2) = 0     ! 0000 0000
@@ -3180,7 +3227,7 @@ contains
             logical :: rv
 
             ! parameter
-            integer(kind=1), parameter :: x_kind = COORDINATE_BINARY_BYTES
+            integer(kind=1), parameter :: x_kind = UINDEX_BYTES
 
             ! dummy
             integer(kind=x_kind), dimension(TREE_DIMENSIONS) :: x
@@ -3190,12 +3237,12 @@ contains
 
             integer :: i
 
-#if (FMM_DIMENSION == 2)
+#if (_FMM_DIMENSION_ == 2)
             x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 0
             deinterleaved_bits_ground_trouth(1) = 2**2  ! 0000 0100
             deinterleaved_bits_ground_trouth(2) = 2**0  ! 0000 0001
-#elif (FMM_DIMENSION == 3)
+#elif (_FMM_DIMENSION_ == 3)
             x(1) = 2**0 + 2**5 !           |0010 0001|
             x(2) = 0
             x(3) = 0
@@ -3221,7 +3268,7 @@ contains
 
         end function test_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut
 
-    end subroutine lib_tree_hf_test_functions
+    end function lib_tree_hf_test_functions
 
     ! ----------------- benchmark functions -----------------
     subroutine lib_tree_hf_benchmark
@@ -3248,7 +3295,7 @@ contains
 
             x(1) = 2
             x(2) = 0
-#if (FMM_DIMENSION == 3)
+#if (_FMM_DIMENSION_ == 3)
             x(3) = 0
 #endif
             print *, "benchmark_lib_tree_hf_interleave_bits_use_lut"
@@ -3289,7 +3336,7 @@ contains
 
             x(1) = 2
             x(2) = 0
-#if (FMM_DIMENSION == 3)
+#if (_FMM_DIMENSION_ == 3)
             x(3) = 0
 #endif
             print *, "benchmark_lib_tree_hf_interleave_bits_use_lut"
@@ -3320,8 +3367,8 @@ contains
         subroutine benchmark_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut()
             implicit none
 
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: x
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: buffer
+            integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: buffer
 
             integer(kind=8) :: number_of_runs = 10**10
             integer(kind=8) :: i
@@ -3330,7 +3377,7 @@ contains
 
             x(1) = 2
             x(2) = 0
-#if (FMM_DIMENSION == 3)
+#if (_FMM_DIMENSION_ == 3)
             x(3) = 0
 #endif
             print *, "benchmark_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut"
@@ -3361,8 +3408,8 @@ contains
         subroutine benchmark_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut()
             implicit none
 
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: x
-            integer(kind=COORDINATE_BINARY_BYTES), dimension(TREE_DIMENSIONS) :: buffer
+            integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: x
+            integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: buffer
 
             integer(kind=8) :: number_of_runs = 10**10
             integer(kind=8) :: i
@@ -3371,7 +3418,7 @@ contains
 
             x(1) = 2
             x(2) = 0
-#if (FMM_DIMENSION == 3)
+#if (_FMM_DIMENSION_ == 3)
             x(3) = 0
 #endif
             print *, "benchmark_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut"
