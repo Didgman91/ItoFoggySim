@@ -59,7 +59,7 @@
                             							
                             <tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug">
                                 								
-                                <option id="gnu.fortran.compiler.option.misc.other.1881149699" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0" valueType="string"/>
+                                <option id="gnu.fortran.compiler.option.misc.other.1881149699" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fopenmp" valueType="string"/>
                                 								
                                 <option id="gnu.fortran.compiler.option.misc.verbose.1638748952" name="Verbose (-v)" superClass="gnu.fortran.compiler.option.misc.verbose" useByScannerDiscovery="false" value="false" valueType="boolean"/>
                                 								
@@ -68,6 +68,8 @@
                             </tool>
                             							
                             <tool id="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.844012393" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.debug">
+                                								
+                                <option id="gnu.fortran.link.option.ldflags.48812646" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-fopenmp" valueType="string"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.linker.input.972629953" superClass="photran.managedbuild.tool.gnu.fortran.linker.input">
                                     									
@@ -107,7 +109,7 @@
                         						
                         <tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140.1204626295" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140">
                             							
-                            <option id="gnu.fortran.compiler.option.misc.other.401321010" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -cpp" valueType="string"/>
+                            <option id="gnu.fortran.compiler.option.misc.other.401321010" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -cpp -fopenmp" valueType="string"/>
                             							
                             <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.847489272" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                             						

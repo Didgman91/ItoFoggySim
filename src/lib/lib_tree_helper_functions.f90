@@ -32,7 +32,7 @@
 
 
 ! spatial dimension, value = [2,3]
-#define _FMM_DIMENSION_ 2
+#define _FMM_DIMENSION_ 3
 
 ! 1: true, 0: false (-> spatial point is real)
 #define _SPATIAL_POINT_IS_DOUBLE_ 1
@@ -47,11 +47,12 @@
 !   single | [4,8,16] | [8,16] |
 !   double | [8,16]   | [8,16] |
 !
-#define _UINDEX_BYTES_ 16
+#define _UINDEX_BYTES_ 8
 
 
 
 module lib_tree_helper_functions
+    use omp_lib
     use file_io
     implicit none
 
@@ -139,6 +140,7 @@ contains
     subroutine lib_tree_hf_destructor()
         implicit none
 
+!        !$OMP SINGLE
 #if (_FMM_DIMENSION_ == 2)
         if (lib_tree_interleave_bits_lut_initialised) then
            lib_tree_interleave_bits_lut_initialised = .false.
@@ -1347,14 +1349,29 @@ contains
         integer(kind=1) :: p
         integer(kind=1) :: p_old
 
+        ! ---- OMP semaphore ----
+        !$  logical :: mutex_rv
+        !$  mutex_rv = .true.
+        ! ~~~~ OMP semaphore ~~~~
+
         p_old = 0
+!        !$OMP PARALLEL DO PRIVATE(i, ii, buffer)
         do i = integer_range_low, integer_range_high
             do ii = integer_range_low, integer_range_high
                 buffer(1) = int(i,1)
                 buffer(2) = int(ii,1)
                 buffer = lib_tree_hf_interleave_bits(buffer)
+                !$  if (mutex_rv .eqv. .false.) then
+                !$      do
+                !$          if (mutex_rv .eqv. .true.) then
+                !$              exit
+                !$          end if
+                !$      end do
+                !$  end if
+                !$  mutex_rv = .false.
                 rv(i,ii, 1) = buffer(1)
                 rv(i,ii, 2) = buffer(2)
+                !$  mutex_rv = .true.
             end do
             p = int(100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), 1)
             if (int(p/10, 1) .ne. int(p_old/10, 1)) then
@@ -1362,6 +1379,7 @@ contains
             end if
             p_old = p
         end do
+!        !$OMP END PARALLEL DO
 
 #elif (_FMM_DIMENSION_ == 3)
         ! dummy
@@ -1378,8 +1396,13 @@ contains
         integer(kind=integer_kind), dimension(3) :: buffer
         integer(kind=1) :: p
         integer(kind=1) :: p_old
+        ! ---- OMP semaphore ----
+        !$  logical :: mutex_rv
+        !$  mutex_rv = .true.
+        ! ~~~~ OMP semaphore ~~~~
 
         p_old = 0
+!        !$OMP PARALLEL DO PRIVATE(i, ii, iii, buffer)
         do i = integer_range_low, integer_range_high
             do ii = integer_range_low, integer_range_high
                 do iii = integer_range_low, integer_range_high
@@ -1387,9 +1410,18 @@ contains
                     buffer(2) = int(ii,1)
                     buffer(3) = int(iii,1)
                     buffer = lib_tree_hf_interleave_bits(buffer)
+                    !$  if (mutex_rv .eqv. .false.) then
+                    !$      do
+                    !$          if (mutex_rv .eqv. .true.) then
+                    !$              exit
+                    !$          end if
+                    !$      end do
+                    !$  end if
+                    !$  mutex_rv = .false.
                     rv(i,ii, iii,1) = buffer(1)
                     rv(i,ii, iii,2) = buffer(2)
                     rv(i,ii, iii,3) = buffer(3)
+                    !$  mutex_rv = .true.
                 end do
             end do
             p = int(100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), 1)
@@ -1398,6 +1430,7 @@ contains
             end if
             p_old = p
         end do
+!        !$OMP END PARALLEL DO
 #endif
     end function lib_tree_hf_creat_interleave_bits_lut
 
@@ -1496,27 +1529,30 @@ contains
 
 #if (_FMM_DIMENSION_ == 2)
         ! allocate memory
+!        !$OMP SINGLE
         if (.NOT. lib_tree_interleave_bits_lut_initialised) then
             allocate( lib_tree_interleave_bits_lut(integer_range_low:integer_range_high, &
                                                      integer_range_low:integer_range_high, &
                                                      1:2) )
             lib_tree_interleave_bits_lut = lib_tree_hf_creat_interleave_bits_lut()
-
             lib_tree_interleave_bits_lut_initialised = .true.
         end if
+!        !$OMP END SINGLE
         rv(1) = lib_tree_interleave_bits_lut(x(1), x(2), 1)
         rv(2) = lib_tree_interleave_bits_lut(x(1), x(2), 2)
 #elif (_FMM_DIMENSION_ == 3)
         ! allocate memory
+!        !$OMP SINGLE
         if (.NOT. lib_tree_interleave_bits_lut_initialised) then
             allocate( lib_tree_interleave_bits_lut(integer_range_low:integer_range_high, &
                                                  integer_range_low:integer_range_high, &
                                                  integer_range_low:integer_range_high, &
                                                  1:3) )
-            lib_tree_interleave_bits_lut = lib_tree_hf_creat_interleave_bits_lut()
 
+            lib_tree_interleave_bits_lut = lib_tree_hf_creat_interleave_bits_lut()
             lib_tree_interleave_bits_lut_initialised = .true.
         end if
+!        !$OMP END SINGLE
         rv(1) = lib_tree_interleave_bits_lut(x(1), x(2), x(3), 1)
         rv(2) = lib_tree_interleave_bits_lut(x(1), x(2), x(3), 2)
         rv(3) = lib_tree_interleave_bits_lut(x(1), x(2), x(3), 3)
@@ -1784,6 +1820,7 @@ contains
 
 #if (_FMM_DIMENSION_ == 2)
         ! allocate memory
+!        !$OMP SINGLE
         if (.NOT. lib_tree_deinterleave_bits_lut_initialised) then
             allocate( lib_tree_deinterleave_bits_lut(integer_range_low:integer_range_high, &
                                                        integer_range_low:integer_range_high, &
@@ -1792,10 +1829,12 @@ contains
 
             lib_tree_deinterleave_bits_lut_initialised = .true.
         end if
+!        !$OMP END SINGLE
         rv(1) = lib_tree_deinterleave_bits_lut(x(1), x(2), 1)
         rv(2) = lib_tree_deinterleave_bits_lut(x(1), x(2), 2)
 #elif (_FMM_DIMENSION_ == 3)
         ! allocate memory
+!        !$OMP SINGLE
         if (.NOT. lib_tree_deinterleave_bits_lut_initialised) then
             allocate( lib_tree_deinterleave_bits_lut(integer_range_low:integer_range_high, &
                                                    integer_range_low:integer_range_high, &
@@ -1805,6 +1844,7 @@ contains
 
             lib_tree_deinterleave_bits_lut_initialised = .true.
         end if
+!        !$OMP END SINGLE
         rv(1) = lib_tree_deinterleave_bits_lut(x(1), x(2), x(3), 1)
         rv(2) = lib_tree_deinterleave_bits_lut(x(1), x(2), x(3), 2)
         rv(3) = lib_tree_deinterleave_bits_lut(x(1), x(2), x(3), 3)
