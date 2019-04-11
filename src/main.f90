@@ -14,7 +14,7 @@ program main
 !    call lib_tree_destructor()
 
 !     call lib_tree_hf_benchmark()
-    error_counter = error_counter + lib_tree_hf_test_functions()
+!    error_counter = error_counter + lib_tree_hf_test_functions()
 !     call lib_tree_hf_benchmark()
 !     call lib_tree_hf_destructor()
 

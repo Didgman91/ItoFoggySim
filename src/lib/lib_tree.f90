@@ -1,8 +1,8 @@
-#define _FMM_DIMENSION_ 3
+#define _FMM_DIMENSION_ 2
 
 ! number of bytes of the universal index, value = [4,8,16]
 ! standard value: 8
-#define _UINDEX_BYTES_ 8
+#define _UINDEX_BYTES_ 16
 
 module lib_tree
 use lib_tree_helper_functions
@@ -43,7 +43,7 @@ use lib_hash_function
 
     type lib_tree_correspondece_vector_element
         integer(kind=CORRESPONDENCE_VECTOR_KIND) :: data_element_number
-        integer(kind=1) :: number_of_hash_runs
+        integer(kind=2) :: number_of_hash_runs
     end type lib_tree_correspondece_vector_element
 
 
@@ -402,9 +402,9 @@ use lib_hash_function
 
                 ! find unique hashed universal index
 #if (_UINDEX_BYTES_ == 16)
-                hashed_uindex = hash_kf_16_byte(int(uindex%n,16),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum)
+                hashed_uindex = 1 + hash_kf_16_byte(int(uindex%n,16),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum)
 #else
-                hashed_uindex = hash_kf(int(uindex%n,8),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum)
+                hashed_uindex = 1 + hash_kf(int(uindex%n,8),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum)
 #endif
 
                 element_saved = .false.
@@ -424,9 +424,9 @@ use lib_hash_function
                         end if
                     end if
 #if (_UINDEX_BYTES_ == 16)
-                    hashed_uindex = hashpp_kf_16_byte(hash_max, hash_idum)
+                    hashed_uindex = 1 + hashpp_kf_16_byte(hash_max, hash_idum)
 #else
-                    hashed_uindex = hashpp_kf(hash_max, hash_idum)
+                    hashed_uindex = 1 + hashpp_kf(hash_max, hash_idum)
 #endif
                 end do
                 if (.not. element_saved) then
@@ -452,14 +452,25 @@ use lib_hash_function
         type(lib_tree_data_element) :: rv
 
         ! auxiliary
+#if (_UINDEX_BYTES_ == 16)
+        integer(kind=8), dimension(2) :: hash_idum
+#else
         integer(kind=8) :: hash_idum
+#endif
         integer(kind=4) :: hashed_uindex
         integer(kind=2) :: i
         integer(kind=CORRESPONDENCE_VECTOR_KIND) :: element_number
         logical :: element_found
 
         if (allocated(lib_tree_correspondence_vector)) then
-            hashed_uindex = hash_kf(int(n,8),int(4,8),int(size(lib_tree_correspondence_vector),8),LIB_TREE_HASH_I,hash_idum)
+#if (_UINDEX_BYTES_ == 16)
+            hashed_uindex = 1 + hash_kf_16_byte(int(n,16),int(4,8), &
+                                            int(size(lib_tree_correspondence_vector),8), &
+                                            LIB_TREE_HASH_I,hash_idum)
+#else
+            hashed_uindex = 1 + hash_kf(int(n,8),int(4,8),int(size(lib_tree_correspondence_vector),8),LIB_TREE_HASH_I,hash_idum)
+#endif
+
 
             element_found = .false.
             do i=1, lib_tree_max_number_of_hash_runs
@@ -469,7 +480,11 @@ use lib_hash_function
 
                     element_found = .true.
                 else
-                    hashed_uindex = hashpp_kf(hash_max, hash_idum)
+#if (_UINDEX_BYTES_ == 16)
+                    hashed_uindex = 1 + hashpp_kf_16_byte(hash_max, hash_idum)
+#else
+                    hashed_uindex = 1 + hashpp_kf(hash_max, hash_idum)
+#endif
                 end if
 
             end do
@@ -513,7 +528,7 @@ use lib_hash_function
             ! dummy
             logical :: rv
 
-            integer(kind=4), parameter :: list_length = 10**5
+            integer(kind=4), parameter :: list_length = 10**1
 
             integer(kind=1), parameter :: l_th = 16 ! threshold level
             type(lib_tree_data_element), dimension(list_length) :: element_list

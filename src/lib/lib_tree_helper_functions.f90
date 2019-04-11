@@ -32,7 +32,7 @@
 
 
 ! spatial dimension, value = [2,3]
-#define _FMM_DIMENSION_ 3
+#define _FMM_DIMENSION_ 2
 
 ! 1: true, 0: false (-> spatial point is real)
 #define _SPATIAL_POINT_IS_DOUBLE_ 1
@@ -47,7 +47,8 @@
 !   single | [4,8,16] | [8,16] |
 !   double | [8,16]   | [8,16] |
 !
-#define _UINDEX_BYTES_ 8
+#define _UINDEX_BYTES_ 16
+
 
 
 module lib_tree_helper_functions
@@ -986,7 +987,7 @@ contains
         integer(kind=1) :: j
 
         do j = 0, 2**TREE_DIMENSIONS - 1
-            children_n(j+1) = ishft(n,TREE_DIMENSIONS) + j
+            children_n(j+1) = ishft(1,TREE_DIMENSIONS) * n + j
         end  do
 
     end function
@@ -1841,8 +1842,13 @@ contains
 
         ! auxiliary
         integer(kind=1) :: i
+#if (_UINDEX_BYTES_ == 16)
+        integer(kind=2) :: ii
+        integer(kind=2) :: bit_number
+#else
         integer(kind=1) :: ii
         integer(kind=1) :: bit_number
+#endif
 
         rv = 0
         do i = 1, TREE_DIMENSIONS
@@ -2014,7 +2020,11 @@ contains
         integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: rv
 
         ! auxiliary
+#if (_UINDEX_BYTES_ == 16)
+        integer(kind=2) :: i
+#else
         integer(kind=1) :: i
+#endif
         integer(kind=1) :: bit_number
         integer(kind=1) :: target_element
 
@@ -2322,15 +2332,25 @@ contains
             point%x(1) = 1.0-2.0**(-l)
             point%x(2) = 1.0-2.0**(-l)
 #if (_UINDEX_BYTES_ == 4)
-            universal_index_ground_trouth%n = -1            ! 2**(dl)-1: 4294967295
+            universal_index_ground_trouth%n = -1            ! 2**(dl)-1:
 #elif (_UINDEX_BYTES_ == 8)
             universal_index_ground_trouth%n = X'FFFFFFFF'   ! 2**(dl)-1: 4294967295
+#elif (_UINDEX_BYTES_ == 16)
+            universal_index_ground_trouth%n = X'FFFFFFFFFFFFFFFF'   ! 2**(dl)-1:
 #endif
 
 #elif (_SPATIAL_POINT_IS_DOUBLE_ == 1)
             point%x(1) = 1.0d+0-2.0d+0**(-l)
             point%x(2) = 1.0d+0-2.0d+0**(-l)
             universal_index_ground_trouth%n = -1
+#if (_UINDEX_BYTES_ == 4)
+            universal_index_ground_trouth%n = -1            ! 2**(dl)-1:
+#elif (_UINDEX_BYTES_ == 8)
+            universal_index_ground_trouth%n = -1   ! 2**(dl)-1:
+#elif (_UINDEX_BYTES_ == 16)
+            universal_index_ground_trouth%n = X'FFFFFFFFFFFFFFFF'   ! 2**(dl)-1:
+#endif
+
 #endif
 
 #elif (_FMM_DIMENSION_ == 3)
