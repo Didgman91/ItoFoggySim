@@ -1,8 +1,11 @@
-#define _FMM_DIMENSION_ 3
+#define _FMM_DIMENSION_ 2
 
 ! number of bytes of the universal index, value = [4,8,16]
 ! standard value: 8
 #define _UINDEX_BYTES_ 8
+
+! 1: true, 0: false (-> spatial point is real)
+#define _SPATIAL_POINT_IS_DOUBLE_ 1
 
 module lib_tree
     !$  use omp_lib
@@ -34,11 +37,13 @@ module lib_tree
     integer(kind=4), parameter :: LIB_TREE_MAX_HASH_RUNS = 400
     integer(kind=8), parameter :: LIB_TREE_HASH_I= 10
 
+    integer(kind=1), parameter :: LIB_TREE_ELEMENT_TYPE_EMPTY = -1
 
 
     ! type definition
     type lib_tree_data_element
         type(lib_tree_spatial_point) :: point_x
+        type(lib_tree_universal_index) :: uindex
         integer(kind=1) :: element_type
     end type lib_tree_data_element
 
@@ -72,16 +77,72 @@ contains
         !$OMP END SINGLE
     end subroutine lib_tree_destructor
 
+    !
+    ! D = max_d D_d                        (59)
+    !
+    ! \overline{x} = (x − x_min) / D       (61)
+    !
+    ! Modification of equation (59) to avoid ones as a result for the
+    ! normalised coordinates \overline{x}:
+    !
+    ! \overline{x} = ((x − x_min) / D) * (1 + 2**(-BITS_MANTISSA))
+    !
+    ! BITS_MANTISSA
+    !   number of bits of the Mantissa (floating point number)
+    !
+    function lib_tree_get_scaled_element_list(element_list) result(rv)
+        implicit none
+        ! dummy
+        type(lib_tree_data_element), dimension(:), intent(in) :: element_list
+        type(lib_tree_data_element), dimension(size(element_list)) :: rv
+
+        ! auxiliary
+        type(lib_tree_spatial_point) :: D
+        type(lib_tree_spatial_point) :: D_max_buffer
+        type(lib_tree_spatial_point) :: x_min
+        type(lib_tree_spatial_point) :: x_max
+
+        integer(kind=COORDINATE_BINARY_BYTES) :: i
+        integer(kind=1) :: ii
+
+        x_max%x(:) = 0
+        x_min%x(:) = 1
+
+        do ii=1, TREE_DIMENSIONS
+            x_max%x(ii) = maxval(element_list(:)%point_x%x(ii))
+            x_min%x(ii) = minval(element_list(:)%point_x%x(ii))
+#if (_SPATIAL_POINT_IS_DOUBLE_ == 1)
+            D%x(ii) = (x_max%x(ii) - x_min%x(ii)) * (1 + 2D0**(-52))    ! double: BITS_MANTISSA = 52
+#else
+            D%x(ii) = (x_max%x(ii) - x_min%x(ii)) * (1 + 2.0**(-23))    ! single: BITS_MANTISSA = 23
+#endif
+        end do
+
+        D_max_buffer%x(1) = maxval(D%x)
+
+        !$OMP PARALLEL DO PRIVATE(i, ii)
+        do i=1, size(element_list)
+            do ii=1, TREE_DIMENSIONS
+                rv(i)%point_x%x(ii) = (element_list(i)%point_x%x(ii) - x_min%x(ii)) / D_max_buffer%x(1)
+            end do
+        end do
+        !$OMP END PARALLEL DO
+
+        rv(:)%element_type = element_list(:)%element_type
+
+    end function lib_tree_get_scaled_element_list
+
     ! Arguments
     ! ----
-    !   n
-    !       number of the node, with n ranging form 0 to 2^(3*l) in a three-dimensional space
-    !   l
-    !       number of the level
+    !   uindex: type(lib_tree_universal_index)
+    !       uindex%n
+    !           number of the box, with n ranging form 0 to 2^(3*l) in a three-dimensional space
+    !       uindex%l
+    !           number of the level
     !
     ! Returns
     ! ----
-    !   the index of the parent box
+    !   the universal index of the parent box
     function lib_tree_get_parent(uindex) result (rv)
         implicit none
 
@@ -96,21 +157,23 @@ contains
 
     ! Arguments
     ! ----
-    !   n
-    !       number of the node, with n ranging form 0 to 2^(3*l) in a three-dimensional space
-    !   l
-    !       number of the level
+    !   uindex: type(lib_tree_universal_index)
+    !       uindex%n
+    !           number of the box, with n ranging form 0 to 2^(3*l) in a three-dimensional space
+    !       uindex%l
+    !           number of the level
     !
     ! Returns
     ! ----
-    !   the index of the parent box
+    !   all the univerval indeces of the children's boxes.
     function lib_tree_get_children(uindex) result (rv)
         implicit none
         ! dummy arguments
         type(lib_tree_universal_index), intent (in) :: uindex
-        integer(kind=COORDINATE_BINARY_BYTES), dimension(2**TREE_DIMENSIONS):: rv
+        type(lib_tree_universal_index), dimension(2**TREE_DIMENSIONS) :: rv
 
-        rv = lib_tree_hf_get_children_all(uindex%n)
+        rv(:)%n = lib_tree_hf_get_children_all(uindex%n)
+        rv(:)%l = uindex%l + int(1,1)
 
     end function lib_tree_get_children
 
@@ -118,22 +181,21 @@ contains
     ! ----
     !   k
     !       k-neighbour of the box (n,l)
-    !   n
-    !       number of the node, with n ranging form 0 to 2^(3*l) in a three-dimensional space
-    !   l
-    !       number of the level
+    !   uindex
+    !       universal index of the box
     !
     ! Returns
     ! ----
-    !   the indeces of the k-neighours
+    !   all the universal indeces of the k-neighours.
     function lib_tree_get_neighbours(k,uindex) result (rv)
         implicit none
         ! dummy arguments
         type(lib_tree_universal_index), intent (in) :: uindex
         integer(kind=UINDEX_BYTES) :: k
-        integer(kind=UINDEX_BYTES), dimension(3**TREE_DIMENSIONS-1) :: rv
+        type(lib_tree_universal_index), dimension(3**TREE_DIMENSIONS-1) :: rv
 
-        rv = lib_tree_hf_get_neighbour_all_xD(k, uindex%n, uindex%l)
+        rv(:)%n = lib_tree_hf_get_neighbour_all_xD(k, uindex%n, uindex%l)
+        rv(:)%l = uindex%l
 
     end function lib_tree_get_neighbours
 
@@ -141,7 +203,7 @@ contains
     ! ----
     !   uindex: type(lib_tree_universal_index)
     !       uindex%n
-    !           number of the node, with n ranging form 0 to 2^(3*l) in a three-dimensional space
+    !           number of the box, with n ranging form 0 to 2^(3*l) in a three-dimensional space
     !       uindex%l
     !           number of the level
     !
@@ -152,23 +214,42 @@ contains
         implicit none
         ! dummy arguments
         type(lib_tree_universal_index) :: uindex
-        type(lib_tree_spatial_point) :: rv
+        type(lib_tree_data_element), dimension(:), allocatable :: rv
 
         ! auxiliar
-        type(lib_tree_universal_index), dimension(1) :: domain_box
+        type(lib_tree_universal_index), dimension(:), allocatable :: buffer_1
+        type(lib_tree_universal_index), dimension(:), allocatable :: buffer_2
         integer(kind=1) :: l_diff
-        integer(kind=1) :: i
+        integer(kind=UINDEX_BYTES) :: i
+        integer(kind=UINDEX_BYTES) :: ii
+        integer(kind=UINDEX_BYTES) :: index_start
+        integer(kind=UINDEX_BYTES) :: index_end
 
         l_diff = lib_tree_l_th - uindex%l
+
+        allocate (rv(2**(l_diff*TREE_DIMENSIONS)))
+        allocate (buffer_1(2**(l_diff*TREE_DIMENSIONS)))
+        allocate (buffer_2(2**(l_diff*TREE_DIMENSIONS)))
+
         ! get all universal indices at the threshold level
-!        do i=1, l_diff
-!            lib_tree_get_children(uindex)
-!        end do
+        buffer_1(1) = uindex
+        do i=1, l_diff
+            do ii=1, 2**((i-1)*TREE_DIMENSIONS)
+                index_start = (ii-1)*2**TREE_DIMENSIONS+1
+                index_end = index_start + 2**TREE_DIMENSIONS-1
+                buffer_2(index_start:index_end) = lib_tree_get_children(buffer_1(ii))
+            end do
+            buffer_1 = buffer_2
+        end do
+        deallocate (buffer_2)
 
+        ! get all elements
+        do i=1, size(buffer_1)
+            rv(i) = lib_tree_get_element_from_correspondence_vector(buffer_1(i))
+        end do
 
-!
-!        lib_tree_get_element_from_correspondence_vector(n)
-        domain_box = uindex
+        deallocate (buffer_1)
+
 
     end function lib_tree_get_domain_e1
 
@@ -190,7 +271,7 @@ contains
         ! dummy arguments
         integer(kind=UINDEX_BYTES), intent (in) :: k
         type(lib_tree_universal_index), intent(in) :: uindex
-        type(lib_tree_spatial_point) :: rv
+        type(lib_tree_data_element) :: rv
 
         ! auxiliar
         !        type(lib_tree_universal_index), dimension(:), allocatable :: domain_box
@@ -298,7 +379,7 @@ contains
     !   element_list
     !       list of data elements
     !
-    !   treshold_level
+    !   threshold_level
     !       Threshold value (l_max) at which two adjacent elements can still be distinguished.
     !
     !   margin
@@ -349,7 +430,7 @@ contains
 
         ! auxiliary
         integer(kind=4) :: correspondence_vector_dimension
-        integer(kind=4) :: hashed_uindex
+        integer(kind=8) :: hashed_uindex
         type(lib_tree_universal_index) :: uindex
         integer(kind=4) :: i
         integer(kind=2) :: ii
@@ -415,13 +496,16 @@ contains
             hash_overflow_counter = 0
             !$OMP PARALLEL DO PRIVATE(uindex, hashed_uindex, element_saved, hash_idum , i, ii)
             do i=1, size(lib_tree_data_element_list)
-                uindex = lib_tree_hf_get_universal_index(element_list(i)%point_x, threshold_level)
-
+                uindex = lib_tree_hf_get_universal_index(lib_tree_data_element_list(i)%point_x, threshold_level)
+                lib_tree_data_element_list(i)%uindex = uindex
                 ! find unique hashed universal index
 #if (_UINDEX_BYTES_ == 16)
                 hashed_uindex = int(1 + hash_kf_16_byte(int(uindex%n,16),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum),4)
 #else
-                hashed_uindex = int(1 + hash_kf(int(uindex%n,8),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum),4)
+                hashed_uindex = 1 + hash_kf(int(uindex%n,8),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum)
+!                hashed_uindex = int(1 + hash_kf_8_byte(int(uindex%n,8),int(4,4),hash_max,LIB_TREE_HASH_I,hash_idum),4)
+!                hashed_uindex = hash_fnv1a_8_byte(uindex%n)
+!                hashed_uindex = 1+mod(hashed_uindex, hash_max/2)
 #endif
 
                 element_saved = .false.
@@ -456,7 +540,10 @@ contains
 #if (_UINDEX_BYTES_ == 16)
                     hashed_uindex = int(1 + hashpp_kf_16_byte(hash_max, hash_idum),4)
 #else
-                    hashed_uindex = int(1 + hashpp_kf(hash_max, hash_idum),4)
+                    hashed_uindex = 1 + hashpp_kf(hash_max, hash_idum)
+!                    hashed_uindex = int(1 + hashpp_kf_8_byte(hash_max, hash_idum),4)
+!                    hashed_uindex = hash_fnv1a(hashed_uindex)
+!                    hashed_uindex = 1+mod(hashed_uindex, hash_max/2)
 #endif
                 end do
                 if (.not. element_saved) then
@@ -476,10 +563,18 @@ contains
 
     end subroutine lib_tree_create_correspondence_vector
 
-    function lib_tree_get_element_from_correspondence_vector(n) result(rv)
+    ! Arguments
+    ! ----
+    !   uindex: type(lib_tree_universal_index)
+    !       uindex%n
+    !           number of the box, with n ranging form 0 to 2^(3*l) in a three-dimensional space
+    !       uindex%l
+    !           number of the level, has to be equal to the threshold level (*lib_tree_l_th*)
+    !
+    function lib_tree_get_element_from_correspondence_vector(uindex) result(rv)
         implicit none
         !dummy
-        integer(kind=UINDEX_BYTES), intent(in) :: n
+        type(lib_tree_universal_index), intent(in) :: uindex
         type(lib_tree_data_element) :: rv
 
         ! auxiliary
@@ -495,15 +590,29 @@ contains
 
         !$  logical :: opm_end_do_loop
 
+        if (uindex%l .ne. lib_tree_l_th) then
+            print *, "lib_tree_get_element_from_correspondence_vector:"
+            print *, "    level is NOT equal to the threshold level"
+            print *, "    l: ", uindex%l
+            print *, "    l_th: ", lib_tree_l_th
+
+            return
+        end if
+
         if (allocated(lib_tree_correspondence_vector)) then
 #if (_UINDEX_BYTES_ == 16)
-            hashed_uindex = int(1 + hash_kf_16_byte(int(n,16),int(4,8), &
+            hashed_uindex = int(1 + hash_kf_16_byte(int(uindex%n,16),int(4,8), &
                 int(size(lib_tree_correspondence_vector),8), &
                 LIB_TREE_HASH_I,hash_idum), 4)
 #else
-            hashed_uindex = int(1 + hash_kf(int(n,8),int(4,8), &
-                                            int(size(lib_tree_correspondence_vector),8), &
-                                            LIB_TREE_HASH_I,hash_idum),4)
+             hashed_uindex = 1 + hash_kf(int(uindex%n,8),int(4,8), &
+                                         int(size(lib_tree_correspondence_vector),8), &
+                                         LIB_TREE_HASH_I,hash_idum)
+!            hashed_uindex = int(1 + hash_kf_8_byte(int(uindex%n,8),int(4,4), &
+!                                            int(size(lib_tree_correspondence_vector),4), &
+!                                            LIB_TREE_HASH_I,hash_idum),4)
+!            hashed_uindex = hash_fnv1a_8_byte(uindex%n)
+!            hashed_uindex = 1+mod(hashed_uindex, hash_max/2)
 #endif
 
 
@@ -525,7 +634,10 @@ contains
 #if (_UINDEX_BYTES_ == 16)
                     hashed_uindex = int(1 + hashpp_kf_16_byte(hash_max, hash_idum), 4)
 #else
-                    hashed_uindex = int(1 + hashpp_kf(hash_max, hash_idum), 4)
+                    hashed_uindex = 1 + hashpp_kf(hash_max, hash_idum)
+!                    hashed_uindex = int(1 + hashpp_kf_8_byte(hash_max, hash_idum), 4)
+!                    hashed_uindex = hash_fnv1a(hashed_uindex)
+!                    hashed_uindex = 1+mod(hashed_uindex, hash_max/2)
 #endif
                 end if
 !                !$  end if
@@ -533,7 +645,8 @@ contains
             end do
 !            !   $   OMP END PARALLEL DO
             if (.not. element_found) then
-                print *, "Element could not be found: n=", n," ..ERROR"
+                rv%element_type = LIB_TREE_ELEMENT_TYPE_EMPTY
+!                print *, "Element could not be found: n=", n," ..warning"
             end if
 
         end if
@@ -548,12 +661,21 @@ contains
 
         integer :: error_counter
 
+        !$  print *, "number of threads: ", omp_get_num_threads()
+        !$  print *, "max number of threads: ", omp_get_max_threads()
+
         error_counter = 0
 
         if (.not. test_lib_tree_create_correspondence_vector()) then
             error_counter = error_counter + 1
         end if
         if (.not. test_lib_tree_get_element_from_correspondence_vector()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_tree_get_domain_e1()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_tree_get_scaled_element_list()) then
             error_counter = error_counter + 1
         end if
 
@@ -567,12 +689,122 @@ contains
 
     contains
 
-        function test_lib_tree_create_correspondence_vector() result(rv)
+        function test_lib_tree_get_scaled_element_list() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            integer(kind=4), parameter :: list_length = 10**7
+
+            integer(kind=1), parameter :: l_th = 4 ! threshold level
+            type(lib_tree_data_element), dimension(list_length) :: element_list
+            type(lib_tree_data_element), dimension(list_length) :: element_list_rv
+
+            integer(kind=4) :: i
+
+            ! create test data
+#if (_FMM_DIMENSION_ == 2)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = i
+                element_list(i)%point_x%x(2) = i
+            end do
+#elif (_FMM_DIMENSION_ == 3)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = i
+                element_list(i)%point_x%x(2) = i
+                element_list(i)%point_x%x(3) = i
+            end do
+#endif
+            element_list(:)%element_type = 1
+
+            ! normalise element data point
+
+            element_list_rv = lib_tree_get_scaled_element_list(element_list)
+
+            print *, "test_lib_tree_get_scaled_element_list"
+            print *, "  last x-value: ", element_list_rv(list_length)%point_x%x(1)
+
+            ! todo: evaluate element_list_rv
+
+            rv = .true.
+
+        end function test_lib_tree_get_scaled_element_list
+
+        function test_lib_tree_get_domain_e1() result(rv)
             implicit none
             ! dummy
             logical :: rv
 
             integer(kind=4), parameter :: list_length = 10**1
+
+            integer(kind=1), parameter :: l_th = 4 ! threshold level
+            type(lib_tree_data_element), dimension(list_length) :: element_list
+            integer(kind=2) :: margin
+
+            integer(kind=4) :: i
+            integer(kind=4) :: number
+
+            type(lib_tree_universal_index) :: uindex
+            type(lib_tree_data_element), dimension(:), allocatable :: domain_element_list
+
+            ! ---- create correspondece vector ----
+
+            margin = 300
+
+
+#if (_FMM_DIMENSION_ == 2)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = (0.999 * i)/(1.0*list_length)
+            end do
+#elif (_FMM_DIMENSION_ == 3)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = (0.9 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(3) = (0.9 * i)/(1.0*list_length)
+            end do
+#endif
+            element_list(:)%element_type = 1
+            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+
+            number = 0
+            do i=1, size(lib_tree_correspondence_vector)
+                if (lib_tree_correspondence_vector(i)%number_of_hash_runs .ne. 0) then
+                    number = number + 1
+                end if
+            end do
+
+            if (number .eq. list_length) then
+                rv = .true.
+            else
+                rv = .false.
+                print *, "test_lib_tree_get_domain_e1_create_correspondence_vector"
+                print *, "  number of data points: ", list_length
+                print *, "  max number of hash runs: ", lib_tree_max_number_of_hash_runs
+                print *, "  number is NOT equal to list_length "
+                print *, "  number: ", number
+                print *, "  list_length: ", list_length
+                print *, "    -> ", 1.0*number / list_length, "%"
+            end if
+
+            ! ---- test get_domain_e1 ----
+
+            uindex%n = 0
+            uindex%l = 2
+
+            domain_element_list = lib_tree_get_domain_e1(uindex)
+
+            deallocate (domain_element_list)
+
+        end function test_lib_tree_get_domain_e1
+
+        function test_lib_tree_create_correspondence_vector() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            integer(kind=4), parameter :: list_length = 10**4
 
             integer(kind=1), parameter :: l_th = 16 ! threshold level
             type(lib_tree_data_element), dimension(list_length) :: element_list
@@ -581,7 +813,7 @@ contains
             integer(kind=4) :: i
             integer(kind=4) :: number
 
-            margin = 400
+            margin = 300
 
 
 #if (_FMM_DIMENSION_ == 2)
@@ -606,14 +838,16 @@ contains
             end do
 
 
-            print *, "test_lib_tree_create_correspondece_vector"
-            print *, "  number of data points: ", list_length
-            print *, "  max number of hash runs: ", lib_tree_max_number_of_hash_runs
-
             if (number .eq. list_length) then
                 rv = .true.
+                print *, "test_lib_tree_create_correspondece_vector: OK"
+                print *, "  number of data points: ", list_length
+                print *, "  max number of hash runs: ", lib_tree_max_number_of_hash_runs
             else
                 rv = .false.
+                print *, "test_lib_tree_create_correspondece_vector: FAILED"
+                print *, "  number of data points: ", list_length
+                print *, "  max number of hash runs: ", lib_tree_max_number_of_hash_runs
                 print *, "  number is NOT equal to list_length "
                 print *, "  number: ", number
                 print *, "  list_length: ", list_length
@@ -632,16 +866,16 @@ contains
             type(lib_tree_data_element) :: data_element
 
             ! generate dataset
-            integer(kind=4), parameter :: list_length = 10**5
+            integer(kind=4), parameter :: list_length = 10**1
 
             integer(kind=1), parameter :: l_th = 16 ! threshold level
             type(lib_tree_data_element), dimension(list_length) :: element_list
             integer(kind=2) :: margin
 
             integer(kind=4) :: i
-            integer(kind=4) :: number
+            integer(kind=4) :: wrong
 
-            margin = 400
+            margin = 300
 
 
 #if (_FMM_DIMENSION_ == 2)
@@ -660,19 +894,23 @@ contains
 
 
             ! test dataset
-            uindex = lib_tree_hf_get_universal_index(element_list(1)%point_x, lib_tree_l_th)
-            data_element = lib_tree_get_element_from_correspondence_vector(uindex%n)
-
-            if (element_list(1)%point_x%x(1) .eq. data_element%point_x%x(1)) then
-                if (element_list(1)%point_x%x(2) .eq. data_element%point_x%x(2)) then
-                    print *, "test_lib_tree_get_element_from_correspondence_vector: ", "OK"
-                    rv = .true.
-                else
-                    print *, "test_lib_tree_get_element_from_correspondence_vector: ", "FAILED"
-                    rv = .false.
+            wrong = 0
+            do i=1, list_length
+                uindex = lib_tree_hf_get_universal_index(element_list(i)%point_x, lib_tree_l_th)
+                data_element = lib_tree_get_element_from_correspondence_vector(uindex)
+                if ((element_list(i)%point_x%x(1) .ne. data_element%point_x%x(1)) .or. &
+                    (element_list(i)%point_x%x(2) .ne. data_element%point_x%x(2))) then
+                   wrong = wrong + 1
                 end if
+            end do
+
+            if (wrong .eq. 0) then
+                print *, "test_lib_tree_get_element_from_correspondence_vector: ", "OK"
+                rv = .true.
             else
                 print *, "test_lib_tree_get_element_from_correspondence_vector: ", "FAILED"
+                print *, "  wrong elements: ", wrong
+                print *, "  wrong elements [%]: ", 100.0 * wrong / list_length
                 rv = .false.
             end if
 
@@ -770,7 +1008,7 @@ contains
 
             call cpu_time(start)
             do i=1, number_of_runs
-                data_element = lib_tree_get_element_from_correspondence_vector(uindex%n)
+                data_element = lib_tree_get_element_from_correspondence_vector(uindex)
             end do
             call cpu_time(finish)
             print *, "benchmark_lib_tree_get_element_from_correspondence_vector:"
