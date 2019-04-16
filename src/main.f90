@@ -2,13 +2,13 @@ program main
     use lib_data_types
     use lib_tree
     use lib_tree_helper_functions
-!    use lib_hash_function
+    use lib_hash_function
     implicit none
 
     integer :: error_counter
-!    call lib_test_hash_function()
 
     error_counter = 0
+    error_counter = error_counter + lib_test_hash_function()
     error_counter = error_counter + lib_tree_hf_test_functions()
     error_counter = error_counter + lib_tree_test_functions()
 

@@ -35,7 +35,7 @@ module lib_tree
     ! member
     integer(kind=1), parameter :: CORRESPONDENCE_VECTOR_KIND = 4    ! limited by the total number of elements -> 2**(8*4) = 4,294,967,296 elements
     integer(kind=4), parameter :: LIB_TREE_MAX_HASH_RUNS = 400
-    integer(kind=8), parameter :: LIB_TREE_HASH_I= 10
+    integer(kind=4), parameter :: LIB_TREE_HASH_I= 10
 
     integer(kind=1), parameter :: LIB_TREE_ELEMENT_TYPE_EMPTY = -1
 
@@ -57,7 +57,7 @@ module lib_tree
     type(lib_tree_data_element), dimension (:), allocatable :: lib_tree_data_element_list
     type(lib_tree_correspondece_vector_element), dimension(:), allocatable :: lib_tree_correspondence_vector
     integer(kind=1) :: lib_tree_l_th    ! threshold level
-    integer(kind=8) :: hash_max
+    integer(kind=4) :: hash_max
     integer(kind=2) :: lib_tree_max_number_of_hash_runs
 
 contains
@@ -430,13 +430,13 @@ contains
 
         ! auxiliary
         integer(kind=4) :: correspondence_vector_dimension
-        integer(kind=8) :: hashed_uindex
+        integer(kind=4) :: hashed_uindex
         type(lib_tree_universal_index) :: uindex
         integer(kind=4) :: i
         integer(kind=2) :: ii
-        integer(kind=8) :: hash_max
+!        integer(kind=4) :: hash_max
         integer(kind=2) :: number_of_hash_runs
-#if (_UINDEX_BYTES_ == 16)
+#if (_UINDEX_BYTES_ == 8)
         integer(kind=8), dimension(2) :: hash_idum
         integer(kind=2) :: number_of_bits
 #else
@@ -502,10 +502,9 @@ contains
 #if (_UINDEX_BYTES_ == 16)
                 hashed_uindex = int(1 + hash_kf_16_byte(int(uindex%n,16),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum),4)
 #else
-                hashed_uindex = 1 + hash_kf(int(uindex%n,8),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum)
-!                hashed_uindex = int(1 + hash_kf_8_byte(int(uindex%n,8),int(4,4),hash_max,LIB_TREE_HASH_I,hash_idum),4)
-!                hashed_uindex = hash_fnv1a_8_byte(uindex%n)
-!                hashed_uindex = 1+mod(hashed_uindex, hash_max/2)
+!                hashed_uindex = 1 + hash_kf(int(uindex%n,8),int(4,8),hash_max,LIB_TREE_HASH_I,hash_idum)
+!                hashed_uindex = 1 + hash_kf_8_byte(int(uindex%n,8),hash_max,LIB_TREE_HASH_I,hash_idum)
+                hashed_uindex = 1 + hash_fnv1a_8_byte(uindex%n, hash_max)
 #endif
 
                 element_saved = .false.
@@ -540,10 +539,9 @@ contains
 #if (_UINDEX_BYTES_ == 16)
                     hashed_uindex = int(1 + hashpp_kf_16_byte(hash_max, hash_idum),4)
 #else
-                    hashed_uindex = 1 + hashpp_kf(hash_max, hash_idum)
-!                    hashed_uindex = int(1 + hashpp_kf_8_byte(hash_max, hash_idum),4)
-!                    hashed_uindex = hash_fnv1a(hashed_uindex)
-!                    hashed_uindex = 1+mod(hashed_uindex, hash_max/2)
+!                    hashed_uindex = 1 + hashpp_kf(hash_max, hash_idum)
+!                    hashed_uindex = 1 + hashpp_kf_8_byte(hash_max, hash_idum)
+                    hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), hash_max)
 #endif
                 end do
                 if (.not. element_saved) then
@@ -578,7 +576,7 @@ contains
         type(lib_tree_data_element) :: rv
 
         ! auxiliary
-#if (_UINDEX_BYTES_ == 16)
+#if (_UINDEX_BYTES_ == 8)
         integer(kind=8), dimension(2) :: hash_idum
 #else
         integer(kind=8) :: hash_idum
@@ -601,18 +599,17 @@ contains
 
         if (allocated(lib_tree_correspondence_vector)) then
 #if (_UINDEX_BYTES_ == 16)
-            hashed_uindex = int(1 + hash_kf_16_byte(int(uindex%n,16),int(4,8), &
-                int(size(lib_tree_correspondence_vector),8), &
-                LIB_TREE_HASH_I,hash_idum), 4)
+            hashed_uindex = 1 + hash_kf_16_byte(int(uindex%n,16),int(4,8), &
+                                            int(size(lib_tree_correspondence_vector),8), &
+                                            LIB_TREE_HASH_I,hash_idum)
 #else
-             hashed_uindex = 1 + hash_kf(int(uindex%n,8),int(4,8), &
-                                         int(size(lib_tree_correspondence_vector),8), &
-                                         LIB_TREE_HASH_I,hash_idum)
-!            hashed_uindex = int(1 + hash_kf_8_byte(int(uindex%n,8),int(4,4), &
+!             hashed_uindex = 1 + hash_kf(int(uindex%n,8),int(4,8), &
+!                                         int(size(lib_tree_correspondence_vector),8), &
+!                                         LIB_TREE_HASH_I,hash_idum)
+!            hashed_uindex = 1 + hash_kf_8_byte(int(uindex%n,8), &
 !                                            int(size(lib_tree_correspondence_vector),4), &
-!                                            LIB_TREE_HASH_I,hash_idum),4)
-!            hashed_uindex = hash_fnv1a_8_byte(uindex%n)
-!            hashed_uindex = 1+mod(hashed_uindex, hash_max/2)
+!                                            LIB_TREE_HASH_I,hash_idum)
+            hashed_uindex = 1 + hash_fnv1a_8_byte(uindex%n, hash_max)
 #endif
 
 
@@ -624,20 +621,24 @@ contains
                 if (lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs .eq. i) then
 !                    !$  opm_end_do_loop = .true.
 !                    print *, "element found"
-                    element_found = .true.
 
                     element_number = lib_tree_correspondence_vector(hashed_uindex)%data_element_number
-                    rv = lib_tree_data_element_list(element_number)
+                    if (lib_tree_data_element_list(element_number)%uindex%n .eq. uindex%n) then
+                        element_found = .true.
+                        rv = lib_tree_data_element_list(element_number)
 
-                    exit
+                        exit
+                    else
+!                        hashed_uindex = 1 + hashpp_kf_8_byte(hash_max, hash_idum)
+                        hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), hash_max)
+                    end if
                 else
 #if (_UINDEX_BYTES_ == 16)
                     hashed_uindex = int(1 + hashpp_kf_16_byte(hash_max, hash_idum), 4)
 #else
-                    hashed_uindex = 1 + hashpp_kf(hash_max, hash_idum)
-!                    hashed_uindex = int(1 + hashpp_kf_8_byte(hash_max, hash_idum), 4)
-!                    hashed_uindex = hash_fnv1a(hashed_uindex)
-!                    hashed_uindex = 1+mod(hashed_uindex, hash_max/2)
+!                    hashed_uindex = 1 + hashpp_kf(hash_max, hash_idum)
+!                    hashed_uindex = 1 + hashpp_kf_8_byte(hash_max, hash_idum)
+                    hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), hash_max)
 #endif
                 end if
 !                !$  end if
@@ -646,7 +647,9 @@ contains
 !            !   $   OMP END PARALLEL DO
             if (.not. element_found) then
                 rv%element_type = LIB_TREE_ELEMENT_TYPE_EMPTY
-!                print *, "Element could not be found: n=", n," ..warning"
+!#ifdef DEBUG
+!                print *, "Element could not be found: n=", uindex%n," ..warning"
+!#endif
             end if
 
         end if
@@ -675,9 +678,9 @@ contains
         if (.not. test_lib_tree_get_domain_e1()) then
             error_counter = error_counter + 1
         end if
-        if (.not. test_lib_tree_get_scaled_element_list()) then
-            error_counter = error_counter + 1
-        end if
+!        if (.not. test_lib_tree_get_scaled_element_list()) then
+!            error_counter = error_counter + 1
+!        end if
 
         print *, "-------------lib_tree_test_functions----------------"
         if (error_counter == 0) then
@@ -775,17 +778,17 @@ contains
                 end if
             end do
 
-            if (number .eq. list_length) then
-                rv = .true.
-            else
+            if (number .ne. list_length) then
                 rv = .false.
-                print *, "test_lib_tree_get_domain_e1_create_correspondence_vector"
+                print *, "test_lib_tree_get_domain_e1_create_correspondence_vector: FAILD"
                 print *, "  number of data points: ", list_length
                 print *, "  max number of hash runs: ", lib_tree_max_number_of_hash_runs
                 print *, "  number is NOT equal to list_length "
                 print *, "  number: ", number
                 print *, "  list_length: ", list_length
                 print *, "    -> ", 1.0*number / list_length, "%"
+
+                return
             end if
 
             ! ---- test get_domain_e1 ----
@@ -813,7 +816,7 @@ contains
             integer(kind=4) :: i
             integer(kind=4) :: number
 
-            margin = 300
+            margin = 200
 
 
 #if (_FMM_DIMENSION_ == 2)
@@ -866,7 +869,7 @@ contains
             type(lib_tree_data_element) :: data_element
 
             ! generate dataset
-            integer(kind=4), parameter :: list_length = 10**1
+            integer(kind=4), parameter :: list_length = 10**4
 
             integer(kind=1), parameter :: l_th = 16 ! threshold level
             type(lib_tree_data_element), dimension(list_length) :: element_list
@@ -875,7 +878,7 @@ contains
             integer(kind=4) :: i
             integer(kind=4) :: wrong
 
-            margin = 300
+            margin = 200
 
 
 #if (_FMM_DIMENSION_ == 2)

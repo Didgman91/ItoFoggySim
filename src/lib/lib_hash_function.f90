@@ -143,6 +143,44 @@ module lib_hash_function
 
           END !############## of file fnv32.f ##############################
 
+    !
+    !
+    SUBROUTINE FNV32_my (BUFFER, LENGTH, HASH)
+           IMPLICIT NONE
+           INTEGER LENGTH, HASH
+           INTEGER*1 BUFFER
+           DIMENSION BUFFER(LENGTH)
+
+           INTEGER PRIME ; PARAMETER (PRIME = 16777619)
+           INTEGER I, J, K
+           integer(kind=1), dimension(4) :: K_buffer
+           INTEGER*1 B
+
+           equivalence (K, K_buffer)
+           equivalence (B, K_buffer(1))
+
+    !    *#######################################################################
+    !    *                begin
+    !    *#######################################################################
+    !    *          FNV-1a hash each octet in the buffer
+           DO 90 J = 1, LENGTH
+             B = BUFFER(J)
+             K_buffer(2:4) = 0
+!             K = 0
+!             DO 80 I = 0, 7           ! copy each bit from B to K
+!               IF (BTEST(B, I)) K = IBSET(K, I)
+!      80     CONTINUE ! next i
+
+    !    *          xor the bottom with the current octet
+             HASH = IEOR(HASH, K)
+
+    !    *          multiply by the 32 bit FNV magic prime mod 2^32
+             HASH = HASH * PRIME
+             HASH = IAND(HASH, X'FFFFFFFF')      ! discard > 32 bits
+      90   CONTINUE ! next j
+
+      END !############## of file fnv32.f ##############################
+
     function hash_fnv1a(buffer) result(hash)
         ! dummy
         integer(kind=4), intent(in) :: buffer
@@ -161,13 +199,14 @@ module lib_hash_function
 
     end function hash_fnv1a
 
-    function hash_fnv1a_8_byte(buffer) result(hash)
+    function hash_fnv1a_8_byte(buffer, max_value) result(hash)
         ! dummy
         integer(kind=8), intent(in) :: buffer
+        integer(kind=4) :: max_value
         integer(kind=4) :: hash
 
         ! auxiliary
-        integer(kind=4) :: buffer_buffer
+        integer(kind=8) :: buffer_buffer
         integer(kind=1), dimension(8) :: buffer_list
 
         equivalence (buffer_buffer, buffer_list)
@@ -175,9 +214,32 @@ module lib_hash_function
         buffer_buffer = buffer
 
         hash = -2128831035
-        call FNV32(buffer_list, size(buffer_list), hash)
+        call FNV32_my(buffer_list, size(buffer_list), hash)
+
+        hash = int(real(hash,8) /  4294967296.0D0 * int(max_value-1,8) + max_value/2,4)
 
     end function hash_fnv1a_8_byte
+
+    function hash_fnv1a_16_byte(buffer, max_value) result(hash)
+        ! dummy
+        integer(kind=16), intent(in) :: buffer
+        integer(kind=4) :: max_value
+        integer(kind=4) :: hash
+
+        ! auxiliary
+        integer(kind=16) :: buffer_buffer
+        integer(kind=1), dimension(16) :: buffer_list
+
+        equivalence (buffer_buffer, buffer_list)
+
+        buffer_buffer = buffer
+
+        hash = -2128831035
+        call FNV32_my(buffer_list, size(buffer_list), hash)
+
+        hash = int(real(hash,16) / 4294967296.0D0 * int(max_value-1,16) + max_value/2, 4)
+
+    end function hash_fnv1a_16_byte
 
 !    ! ********************************************************* hash
 !    !berechnet ndigit-Hash wert der Koordinaten Matrix a,b,max,n ,versuch i
@@ -229,8 +291,7 @@ module lib_hash_function
     integer(kind=8),intent(in)::a,b,max,i
     integer(kind=8),intent(inout):: idum
       integer i2
-!      idum=int(a+int(b,kind=8)*int(max,kind=8),kind=8) !als start
-      idum=int(a, 8)
+      idum=int(a+int(b,kind=8)*int(max,kind=8),kind=8) !als start
       do i2=1,i+2,1  !2=Offset zum einschwingen !
         idum=int(modulo(real(16807.0D0*idum,kind=16),2147483647.0D0),kind=8)
       end do
@@ -249,51 +310,85 @@ module lib_hash_function
 
     ! ********************************************************* hash
     !berechnet ndigit-Hash wert der Koordinaten Matrix a,b,max,n ,versuch i
-    integer(kind=8) function hash_kf_8_byte(a,b,max,i,idum) result(hash)
+    integer(kind=8) function hash_kf_8_byte(a,max,i,idum) result(hash)
     implicit none
+        ! parameter
+        integer(kind=1), parameter :: HASH_DIMENSION = 4
+
+        ! dummy
         integer(kind=8), intent(in) :: a
-        integer(kind=4), intent(in)::b,max,i
-        integer(kind=8), dimension(2), intent(inout):: idum
-        integer(kind=4) i2
+        integer(kind=4), intent(in)::i, max
+        integer(kind=8), dimension(HASH_DIMENSION), intent(inout):: idum
 
         ! auxiliary
+        integer(kind=4) i2
         integer(kind=8) :: aa
-        integer(kind=4), dimension(2) :: buffer_a
+        integer(kind=2), dimension(HASH_DIMENSION) :: buffer_a
         real(kind=8) :: buffer
+        integer(kind=1) :: ii
 
         equivalence(aa, buffer_a)
 
         aa = a
 
-        idum(1)=int(buffer_a(1)+int(b,kind=8)*int(max,kind=8),kind=8) !als start
-        idum(2)=int(buffer_a(2)+int(b,kind=8)*int(max,kind=8),kind=8) !als start
-        do i2=1,i+2,1  !2=Offset zum einschwingen !
-            idum(1)=int(modulo(real(16807.0D0*idum(1),kind=16),2147483647.0D0),kind=8)
-            idum(2)=int(modulo(real(16807.0D0*idum(2),kind=16),2147483647.0D0),kind=8)
-        end do
-        buffer = real(idum(1),kind=8)/2147483647.0D0
-        buffer = buffer * real(idum(2),kind=8)/2147483647.0D0
+        if (a .lt. 0) then
+            print *, "hash_kf_8_byte: a < 0"
+            print *, "  ", a
+        end if
 
-        hash=int(buffer*real(max-1,kind=8),kind=8)
+        do ii=1, HASH_DIMENSION
+            idum(ii)=int(ishft(int(buffer_a(ii), kind=8),-8)+int(4,kind=8)*int(max,kind=8),kind=8) !als start
+        end do
+        do i2=1,i+2,1  !2=Offset zum einschwingen !
+            do ii=1, HASH_DIMENSION
+                idum(ii)=int(modulo(real(16807.0D0*idum(ii),kind=16),2147483647.0D0),kind=8)
+            end do
+        end do
+        buffer=1.0
+        do ii=1, HASH_DIMENSION
+            buffer = buffer * real(idum(i),kind=16)/2147483647.0D0
+        end do
+        hash=int(buffer*real(max-1,kind=16),kind=8)
+
+        if (hash .lt. 0) then
+            print *, "hash_kf_8_byte: hash < 0"
+            print *, "  ", hash
+        end if
     end function
 
     ! ********************************************************* hashpp
     !beschleunigte Fkt
     integer(kind=8) function hashpp_kf_8_byte(max,idum) result (hashpp)
     implicit none
+        ! parameter
+        integer(kind=1), parameter :: HASH_DIMENSION = 4
+
         integer(kind=8), dimension(2), intent(inout):: idum
         integer(kind=4), intent(in)::max
 
         !auxiliary
         real(kind=8) :: buffer
+        integer(kind=1) :: i
 
-        idum(1)=int(modulo(real(16807.0D0*idum(1),kind=16),2147483647.0D0),kind=8)
-        idum(2)=int(modulo(real(16807.0D0*idum(2),kind=16),2147483647.0D0),kind=8)
+        if (idum(1) .lt. 0) then
+            print *, "hashpp_kf_8_byte: idum(1) <= 0"
+            print *, "  ", idum
+        end if
 
-        buffer = real(idum(1),kind=8)/2147483647.0D0
-        buffer = buffer * real(idum(2),kind=8)/2147483647.0D0
+        do i=1, HASH_DIMENSION
+            idum(i)=int(modulo(real(16807.0D0*idum(i),kind=16),2147483647.0D0),kind=8)
+        end do
 
-        hashpp=int(buffer*real(max-1,kind=8),kind=8)
+        buffer=1.0
+        do i=1, HASH_DIMENSION
+            buffer = buffer * real(idum(i),kind=16)/2147483647.0D0
+        end do
+        hashpp=int(buffer*real(max-1,kind=16),kind=8)
+
+        if (hashpp .lt. 0) then
+            print *, "hashpp_kf_8_byte: hashpp < 0"
+            print *, "  ", hashpp
+        end if
     end function
 
     ! ********************************************************* hash
@@ -342,15 +437,68 @@ module lib_hash_function
         hashpp=int(buffer*real(max-1,kind=8),kind=8)
     end function
 
+    function hash_8_byte(a, max) result(hash)
+        implicit none
+        ! dummy
+        integer(kind=8) :: a
+        integer(kind=4) :: max
+        integer(kind=4) :: hash
+
+        ! auxiliary
+        integer(kind=8) :: idum
+        idum = a
+
+        hash = int(ran(idum) * real((max-1)), 4)
+
+    end function hash_8_byte
+
+    ! Numerical Recipes in F90
+    ! p. 1142
+    FUNCTION ran(idum)
+        IMPLICIT NONE
+        INTEGER, PARAMETER :: K4B=8!selected_int_kind(9)
+        INTEGER(K4B), INTENT(INOUT) :: idum
+        REAL :: ran
+        INTEGER(K4B), PARAMETER :: IA=16807,IM=2147483647,IQ=127773,IR=2836
+        REAL :: am
+        INTEGER(K4B):: ix=-1,iy=-1,k
+        if (idum <= 0 .or. iy < 0) then
+            am=nearest(1.0,-1.0)/IM
+            iy=ior(ieor(888889999,abs(idum)),1)
+            ix=ieor(777755555,abs(idum))
+            idum=abs(idum)+1
+        end if
+        ix=ieor(ix,ishft(ix,13))
+        ix=ieor(ix,ishft(ix,-17))
+        ix=ieor(ix,ishft(ix,5))
+        k=iy/IQ
+        iy=IA*(iy-k*IQ)-IR*k
+        if (iy < 0) iy=iy+IM
+        ran=am*ior(iand(IM,ieor(ix,iy)),1)
+    END FUNCTION ran
+
 
     ! ----------- test functions -----------
-    subroutine lib_test_hash_function
+    function lib_test_hash_function() result(error_counter)
         implicit none
+        ! dummy
+        integer :: error_counter
 
-!        if (.not. test_hash()) then
-!            print *, "test_hash: error"
+        error_counter = 0
+
+        if (.not. test_hash_fnv1a_8_byte()) then
+            error_counter = error_counter + 1
+        end if
+!        if (.not. test_hash_8_byte()) then
+!            error_counter = error_counter + 1
 !        end if
-!
+!        if (.not. test_hash_kf_8_byte()) then
+!            error_counter = error_counter + 1
+!        end if
+!        if (.not. test_hashpp_kf_8_byte()) then
+!            error_counter = error_counter + 1
+!        end if
+
 !        if (.not. test_hashpp()) then
 !            print *, "test_hashpp: error"
 !        end if
@@ -407,5 +555,170 @@ module lib_hash_function
 !
 !        end function test_hashpp
 
-    end subroutine lib_test_hash_function
+        function test_hash_kf_8_byte() result (rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            integer(kind=8), dimension(3) :: a
+            integer(kind=4) :: max
+            integer(kind=8), dimension(2) :: idum
+            integer(kind=4) :: hash_i
+
+            integer(kind=8), dimension(3) :: hash
+
+            integer :: i
+
+            integer,parameter :: seed = 86456
+            call srand(seed)
+
+            max = 10
+            hash_i = 10
+            a(2) = int(rand()*1D7, kind=8)
+            a(1) = a(2) - 1
+            a(3) = a(2) + 1
+
+            do i=1, 3
+                hash(i) = hash_kf_8_byte(a(i), max, i, idum)
+            end do
+
+            if ((hash(1) .ne. hash(2)) .and. &
+                (hash(1) .ne. hash(3)) .and. &
+                (hash(2) .ne. hash(3))) then
+                print *, "test_hash_kf_8_byte: OK"
+                rv = .true.
+            else
+                print *, "test_hash_kf_8_byte: FAILED"
+                print *, "     a:", a(1), a(2), a(3)
+                print *, "  hash:", hash(1), hash(2), hash(3)
+                rv = .false.
+            end if
+
+        end function test_hash_kf_8_byte
+
+        function test_hashpp_kf_8_byte() result (rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            integer(kind=8), dimension(3) :: a
+            integer(kind=4) :: max
+            integer(kind=8), dimension(2) :: idum
+            integer(kind=4) :: hash_i
+
+            integer(kind=8), dimension(3) :: hash
+
+            integer :: i
+            integer :: ii
+
+            integer,parameter :: seed = 86456
+            call srand(seed)
+
+            max = 10
+            hash_i = 10
+            a(2) = int(rand()*1D7, kind=8)
+            a(1) = a(2) - 1
+            a(3) = a(2) + 1
+
+            do i=1, 3
+                hash(i) = hash_kf_8_byte(a(i), max, i, idum)
+                do ii=1, 5
+                    hash(i) = hashpp_kf_8_byte(max, idum)
+                end do
+            end do
+
+            if ((hash(1) .ne. hash(2)) .and. &
+                (hash(1) .ne. hash(3)) .and. &
+                (hash(2) .ne. hash(3))) then
+                print *, "test_hashpp_kf_8_byte: OK"
+                rv = .true.
+            else
+                print *, "test_hashpp_kf_8_byte: FAILED"
+                print *, "     a:", a(1), a(2), a(3)
+                print *, "  hash:", hash(1), hash(2), hash(3)
+                rv = .false.
+            end if
+
+        end function test_hashpp_kf_8_byte
+
+        function test_hash_8_byte() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            integer(kind=4) :: max
+            integer(kind=8) :: n
+            integer(kind=4) :: hash
+
+            max = 10
+            n = 74
+            hash = hash_8_byte(n,max)
+
+            n = -74
+            hash = hash_8_byte(n,max)
+
+!            n = 0
+!            hash = hash_8_byte(n,max)
+
+            n = 7
+            hash = hash_8_byte(int(-7,8),max)
+            hash = hash_8_byte(n,max)
+            n = 7
+            hash = hash_8_byte(int(-7,8),max)
+            hash = hash_8_byte(n,max)
+
+            n = 6
+            hash = hash_8_byte(int(-6,8),max)
+            hash = hash_8_byte(n,max)
+
+            n = 70
+            hash = hash_8_byte(n,max)
+
+            n = 7
+            hash = hash_8_byte(n,max)
+
+
+            rv = .true.
+        end function test_hash_8_byte
+
+        function test_hash_fnv1a_8_byte() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            integer(kind=4) :: max
+            integer(kind=8) :: n
+            integer(kind=4) :: hash
+
+            max = 10
+            n = 74
+            hash = hash_fnv1a_8_byte(n,max)
+
+            n = -74
+            hash = hash_fnv1a_8_byte(n,max)
+
+!            n = 0
+!            hash = hash_8_byte(n,max)
+
+            n = 7
+            hash = hash_fnv1a_8_byte(n,max)
+            hash = hash_fnv1a_8_byte(n,max)
+
+            n = 6
+            hash = hash_fnv1a_8_byte(n,max)
+
+            n = 70
+            hash = hash_fnv1a_8_byte(n,max)
+            hash = hash_fnv1a_8_byte(int(hash,8),max)
+
+            n = 7
+            hash = hash_fnv1a_8_byte(n,max)
+
+
+            rv = .true.
+        end function test_hash_fnv1a_8_byte
+
+    end function lib_test_hash_function
 end module lib_hash_function
