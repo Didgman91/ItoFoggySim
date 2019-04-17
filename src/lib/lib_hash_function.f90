@@ -25,6 +25,10 @@ module lib_hash_function
     !         hash = hash * FNV_prime
     ! return hash
     !
+    ! NOTE
+    ! ----
+    !   Replaced the bitwise copy process with a equivalence (performance reason).
+    !
     ! Source code source:
     !   http://www.isthe.com/chongo/tech/comp/fnv/fnv32.f
     !
@@ -120,44 +124,11 @@ module lib_hash_function
 
            INTEGER PRIME ; PARAMETER (PRIME = 16777619)
            INTEGER I, J, K
-           INTEGER*1 B
-
-    !    *#######################################################################
-    !    *                begin
-    !    *#######################################################################
-    !    *          FNV-1a hash each octet in the buffer
-           DO 90 J = 1, LENGTH
-             B = BUFFER(J)
-             K = 0
-             DO 80 I = 0, 7           ! copy each bit from B to K
-               IF (BTEST(B, I)) K = IBSET(K, I)
-      80     CONTINUE ! next i
-
-    !    *          xor the bottom with the current octet
-             HASH = IEOR(HASH, K)
-
-    !    *          multiply by the 32 bit FNV magic prime mod 2^32
-             HASH = HASH * PRIME
-             HASH = IAND(HASH, X'FFFFFFFF')      ! discard > 32 bits
-      90   CONTINUE ! next j
-
-          END !############## of file fnv32.f ##############################
-
-    !
-    !
-    SUBROUTINE FNV32_my (BUFFER, LENGTH, HASH)
-           IMPLICIT NONE
-           INTEGER LENGTH, HASH
-           INTEGER*1 BUFFER
-           DIMENSION BUFFER(LENGTH)
-
-           INTEGER PRIME ; PARAMETER (PRIME = 16777619)
-           INTEGER I, J, K
            integer(kind=1), dimension(4) :: K_buffer
            INTEGER*1 B
 
-           equivalence (K, K_buffer)
-           equivalence (B, K_buffer(1))
+           equivalence (K, K_buffer)                                    ! 190417 itodaiber: bitwise copy process replaced by the equivalence
+           equivalence (B, K_buffer(1))                                 ! 190417 itodaiber: bitwise copy process replaced by the equivalence
 
     !    *#######################################################################
     !    *                begin
@@ -165,11 +136,11 @@ module lib_hash_function
     !    *          FNV-1a hash each octet in the buffer
            DO 90 J = 1, LENGTH
              B = BUFFER(J)
-             K_buffer(2:4) = 0
-!             K = 0
-!             DO 80 I = 0, 7           ! copy each bit from B to K
-!               IF (BTEST(B, I)) K = IBSET(K, I)
-!      80     CONTINUE ! next i
+             K_buffer(2:4) = 0                                          ! 190417 itodaiber: bitwise copy process replaced by the equivalence
+!             K = 0                                                     ! 190417 itodaiber: bitwise copy process replaced by the equivalence
+!             DO 80 I = 0, 7           ! copy each bit from B to K      ! 190417 itodaiber: bitwise copy process replaced by the equivalence
+!               IF (BTEST(B, I)) K = IBSET(K, I)                        ! 190417 itodaiber: bitwise copy process replaced by the equivalence
+!      80     CONTINUE ! next i                                         ! 190417 itodaiber: bitwise copy process replaced by the equivalence
 
     !    *          xor the bottom with the current octet
              HASH = IEOR(HASH, K)
@@ -199,6 +170,53 @@ module lib_hash_function
 
     end function hash_fnv1a
 
+    ! fnv1a hash function
+    !
+    ! Arguments
+    ! ----
+    !   buffer: integer(kind=4)
+    !       data to be hashed
+    !   max_value: integer(kind=4)
+    !       maximum value of the hash
+    !
+    ! Returns
+    ! ----
+    !   a 32-bit hash value
+    !
+    function hash_fnv1a_4_byte(buffer, max_value) result(hash)
+        ! dummy
+        integer(kind=4), intent(in) :: buffer
+        integer(kind=4) :: max_value
+        integer(kind=4) :: hash
+
+        ! auxiliary
+        integer(kind=4) :: buffer_buffer
+        integer(kind=1), dimension(4) :: buffer_list
+
+        equivalence (buffer_buffer, buffer_list)
+
+        buffer_buffer = buffer
+
+        hash = -2128831035
+        call FNV32(buffer_list, size(buffer_list), hash)
+
+        hash = int(real(hash,8) /  4294967296.0D0 * int(max_value-1,8) + max_value/2,4)
+
+    end function hash_fnv1a_4_byte
+
+    ! fnv1a hash function
+    !
+    ! Arguments
+    ! ----
+    !   buffer: integer(kind=8)
+    !       data to be hashed
+    !   max_value: integer(kind=4)
+    !       maximum value of the hash
+    !
+    ! Returns
+    ! ----
+    !   a 32-bit hash value
+    !
     function hash_fnv1a_8_byte(buffer, max_value) result(hash)
         ! dummy
         integer(kind=8), intent(in) :: buffer
@@ -214,12 +232,25 @@ module lib_hash_function
         buffer_buffer = buffer
 
         hash = -2128831035
-        call FNV32_my(buffer_list, size(buffer_list), hash)
+        call FNV32(buffer_list, size(buffer_list), hash)
 
         hash = int(real(hash,8) /  4294967296.0D0 * int(max_value-1,8) + max_value/2,4)
 
     end function hash_fnv1a_8_byte
 
+    ! fnv1a hash function
+    !
+    ! Arguments
+    ! ----
+    !   buffer: integer(kind=16)
+    !       data to be hashed
+    !   max_value: integer(kind=4)
+    !       maximum value of the hash
+    !
+    ! Returns
+    ! ----
+    !   a 32-bit hash value
+    !
     function hash_fnv1a_16_byte(buffer, max_value) result(hash)
         ! dummy
         integer(kind=16), intent(in) :: buffer
@@ -235,7 +266,7 @@ module lib_hash_function
         buffer_buffer = buffer
 
         hash = -2128831035
-        call FNV32_my(buffer_list, size(buffer_list), hash)
+        call FNV32(buffer_list, size(buffer_list), hash)
 
         hash = int(real(hash,16) / 4294967296.0D0 * int(max_value-1,16) + max_value/2, 4)
 
