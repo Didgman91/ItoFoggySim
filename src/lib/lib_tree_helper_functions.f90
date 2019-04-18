@@ -39,12 +39,13 @@
 
 ! number of bytes of the universal index, value = [4,8,16]
 ! standard value: 8
-! constraint
+!
+! Constraint
 ! ----
 !          |  _FMM_DIMENSION_  |
 !   value  |    2     |   3    |
 !   -----------------------------
-!   single | [4,8,16] | [8,16] |
+!   single | [4,8]    | [8]    |
 !   double | [8,16]   | [8,16] |
 !
 #define _UINDEX_BYTES_ 8
@@ -430,7 +431,7 @@ contains
             uindex%n = ibits(interleaved_bits_dimension_0, &
                             UINDEX_BYTES*NUMBER_OF_BITS_PER_BYTE-l*TREE_DIMENSIONS, &
                             l*TREE_DIMENSIONS)
-        else if ( buffer_diff_a(1) .eq. 0)  then
+        else if ( (buffer_diff_a(1) .eq. 0) .and. (buffer_diff_a(2) .eq. 0))  then
             uindex%n = interleaved_bits_dimension_0
         else
             uindex%n = UNIVERSAL_INDEX_OVERFLOW
@@ -1230,9 +1231,6 @@ contains
             end if
         end do
 #endif
-
-!        neighbour_all(2) = buffer_n
-
     end function
 
     ! Returns the look-up table (LUT) for interleaved bits. If necessary, the LUT is recalculated.

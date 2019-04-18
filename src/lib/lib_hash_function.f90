@@ -2,14 +2,9 @@ module lib_hash_function
     implicit none
     private
 
-    public :: hash_fnv1a
+    public :: hash_fnv1a_4_byte
     public :: hash_fnv1a_8_byte
-    public :: hashpp_kf
-    public :: hash_kf
-    public :: hashpp_kf_8_byte
-    public :: hash_kf_8_byte
-    public :: hashpp_kf_16_byte
-    public :: hash_kf_16_byte
+    public :: hash_fnv1a_16_byte
 
     ! test functions
     public :: lib_test_hash_function
@@ -123,7 +118,7 @@ module lib_hash_function
            DIMENSION BUFFER(LENGTH)
 
            INTEGER PRIME ; PARAMETER (PRIME = 16777619)
-           INTEGER I, J, K
+           INTEGER J, K
            integer(kind=1), dimension(4) :: K_buffer
            INTEGER*1 B
 
@@ -184,6 +179,7 @@ module lib_hash_function
     !   a 32-bit hash value
     !
     function hash_fnv1a_4_byte(buffer, max_value) result(hash)
+        implicit none
         ! dummy
         integer(kind=4), intent(in) :: buffer
         integer(kind=4) :: max_value
@@ -218,6 +214,7 @@ module lib_hash_function
     !   a 32-bit hash value
     !
     function hash_fnv1a_8_byte(buffer, max_value) result(hash)
+        implicit none
         ! dummy
         integer(kind=8), intent(in) :: buffer
         integer(kind=4) :: max_value
@@ -252,6 +249,7 @@ module lib_hash_function
     !   a 32-bit hash value
     !
     function hash_fnv1a_16_byte(buffer, max_value) result(hash)
+        implicit none
         ! dummy
         integer(kind=16), intent(in) :: buffer
         integer(kind=4) :: max_value

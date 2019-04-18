@@ -109,7 +109,7 @@
                         						
                         <tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140.1204626295" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140">
                             							
-                            <option id="gnu.fortran.compiler.option.misc.other.401321010" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -cpp -fopenmp" valueType="string"/>
+                            <option id="gnu.fortran.compiler.option.misc.other.401321010" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -cpp" valueType="string"/>
                             							
                             <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.847489272" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                             						
