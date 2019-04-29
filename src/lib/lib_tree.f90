@@ -701,6 +701,10 @@ module lib_tree
     !   l_max: integer
     !       maximum tree level
     !
+    ! Dependency
+    ! ----
+    !    this function has to be called first: lib_tree_create_correspondece_vector_sorted_data_elements()
+    !
     function lib_tree_get_level_max(s) result(l_max)
         implicit none
         ! dummy
