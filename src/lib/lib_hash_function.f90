@@ -591,7 +591,7 @@ module lib_hash_function
 
             integer(kind=8), dimension(3) :: a
             integer(kind=4) :: max
-            integer(kind=8), dimension(2) :: idum
+            integer(kind=8), dimension(4) :: idum
             integer(kind=4) :: hash_i
 
             integer(kind=8), dimension(3) :: hash
@@ -632,7 +632,7 @@ module lib_hash_function
 
             integer(kind=8), dimension(3) :: a
             integer(kind=4) :: max
-            integer(kind=8), dimension(2) :: idum
+            integer(kind=8), dimension(4) :: idum
             integer(kind=4) :: hash_i
 
             integer(kind=8), dimension(3) :: hash
