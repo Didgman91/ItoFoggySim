@@ -932,6 +932,9 @@ contains
     ! ----
     !   uindex: type(lib_tree_universal_index)
     !       universal index of a box
+    !   step: integer, optional (standard value: 1)
+    !       value = 1 : function returns the universal index of the parent box
+    !       value >= 1: function returns the universal index of the (grand*step)parent box
     !
     ! Returns
     ! ----
@@ -939,14 +942,21 @@ contains
     !
     !   parent_uindex: type(lib_tree_universal_index)
     !
-    function lib_tree_hf_get_parent(n) result (parent_n)
+    function lib_tree_hf_get_parent(n, step) result (parent_n)
         implicit none
 
         ! dummy arguments
         integer(kind=UINDEX_BYTES), intent (in) :: n
+        integer(kind=UINDEX_BYTES), intent (in), optional :: step
         integer(kind=UINDEX_BYTES) :: parent_n
 
-        parent_n = ishft(n,-TREE_DIMENSIONS)
+        ! auxiliary
+        integer(kind=UINDEX_BYTES) :: m_step
+
+        m_step = 1
+        if(present(step))m_step=step
+
+        parent_n = ishft(n,-(TREE_DIMENSIONS*m_step))
 
     end function
 

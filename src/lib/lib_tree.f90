@@ -7,12 +7,22 @@
 
 ! number of bytes of the universal index, value = [4,8,16]
 ! standard value: 8
+!
+! Constraint
+! ----
+!          |  _FMM_DIMENSION_  |
+!   value  |    2     |   3    |
+!   -----------------------------
+!   single | [4,8]    | [8]    |
+!   double | [8,16]   | [8,16] |
+!
 #define _UINDEX_BYTES_ 8
 
 module lib_tree
     !$  use omp_lib
     use lib_tree_helper_functions
     use lib_hash_function
+    use lib_sort
     implicit none
     ! Data Structures, Optimal Choice of Parameters, and Complexity Results for Generalized Multilevel Fast Multipole Methods in d Dimensions
 
@@ -58,11 +68,17 @@ module lib_tree
     ! module global
     type(lib_tree_data_element), dimension (:), allocatable :: lib_tree_data_element_list
     type(lib_tree_correspondece_vector_element), dimension(:), allocatable :: lib_tree_correspondence_vector
+    integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: lib_tree_correspondence_vector_sorted_data_elements
     integer(kind=1) :: lib_tree_l_th    ! threshold level
     integer(kind=4) :: hash_max
     integer(kind=2) :: lib_tree_max_number_of_hash_runs
 
 contains
+
+    subroutine lib_tree_constructor()
+        implicit none
+
+    end subroutine lib_tree_constructor
 
     ! cleans up the memory
     subroutine lib_tree_destructor()
@@ -73,6 +89,10 @@ contains
 
         if (allocated (lib_tree_data_element_list)) then
             deallocate (lib_tree_data_element_list)
+        end if
+
+        if (allocated (lib_tree_correspondence_vector_sorted_data_elements)) then
+            deallocate (lib_tree_correspondence_vector_sorted_data_elements)
         end if
 
         call lib_tree_hf_destructor()
@@ -141,20 +161,39 @@ contains
     !           number of the box, with n ranging form 0 to 2^(3*l) in a three-dimensional space
     !       uindex%l
     !           number of the level
+    !   step: integer, optional (standard value: 1)
+    !       value = 1 : function returns the universal index of the parent box
+    !       value >= 1: function returns the universal index of the (grand*step)parent box
     !
     ! Returns
     ! ----
     !   the universal index of the parent box
-    function lib_tree_get_parent(uindex) result (rv)
+    function lib_tree_get_parent(uindex, step) result (rv)
         implicit none
-
 
         ! dummy arguments
         type(lib_tree_universal_index), intent (in) :: uindex
+        integer(kind=UINDEX_BYTES), intent (in), optional :: step
         type(lib_tree_universal_index) :: rv
 
-        rv%n = lib_tree_hf_get_parent(uindex%n)
-        rv%l = uindex%l - int(1,1)
+        ! auxiliary
+        integer(kind=UINDEX_BYTES) :: m_step
+
+        m_step = 1
+        if(present(step))m_step=step
+
+        ! check
+        if (uindex%l .lt. m_step) then
+            print *, "lib_tree_get_parent: ERROR"
+            print *, "  (grand..)parent overflow: step > uindex%l"
+            print *, "  step: ", step
+            print *, "  uindex%l: ", uindex%l
+        end if
+
+        ! calc
+        rv%n = lib_tree_hf_get_parent(uindex%n, m_step)
+        rv%l = uindex%l - int(m_step,1)
+
     end function lib_tree_get_parent
 
     ! Arguments
@@ -331,8 +370,9 @@ contains
         ! get all neighbours
         allocate(buffer_uindex(k, 3**TREE_DIMENSIONS-1))
         do i=1, k
-            buffer_uindex(i, :)%n = lib_tree_hf_get_neighbour_all_xD(k, uindex%n, uindex%l)
-            buffer_uindex(i, :)%l = uindex%l
+            buffer_uindex(i, :) = lib_tree_get_neighbours(k, uindex)
+!            buffer_uindex(i, :)%n = lib_tree_hf_get_neighbour_all_xD(k, uindex%n, uindex%l)
+!            buffer_uindex(i, :)%l = uindex%l
         end do
 
         ! reduce neigbours list (remove invalide universal indices)
@@ -598,43 +638,105 @@ contains
 
     end function
 
-    function lib_tree_get_level_max() result(l_max)
+    ! Calculates the maximum tree level, where a box contains a maximum of s elements
+    !
+    ! Arguments
+    ! ----
+    !   s: integer
+    !       number of data elements with the same universal index at *l_max*
+    !
+    ! Returns
+    ! ----
+    !   l_max: integer
+    !       maximum tree level
+    !
+    function lib_tree_get_level_max(s) result(l_max)
         implicit none
+        ! dummy
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: s
+        integer(kind=1) :: l_max
 
+        ! auxiliary
         integer :: i, j
-        integer :: s
         integer :: m
-        integer :: Bit_max
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: Bit_max
         integer :: N
-        integer :: l_max
+
         type(lib_tree_universal_index) :: a
         type(lib_tree_universal_index) :: b
+
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: buffer_index
+
+        N = size(lib_tree_data_element_list)
+        l_max = 1
+!        if (UINDEX_BYTES .ge. (COORDINATE_BINARY_BYTES * TREE_DIMENSIONS)) then
+            Bit_max = lib_tree_l_th! COORDINATE_BINARY_BYTES * NUMBER_OF_BITS_PER_BYTE / TREE_DIMENSIONS
+!        else
+!            ! floor(UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE / TREE_DIMENSIONS) * TREE_DIMENSION * NUMBER_OF_BITS_PER_BYTE
+!            Bit_max = int(floor(UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE * 1.0 / TREE_DIMENSIONS) &
+!                        * TREE_DIMENSIONS * NUMBER_OF_BITS_PER_BYTE, CORRESPONDENCE_VECTOR_KIND)
+!        end if
+
 
         i = 0
         m = s
         do
             i = i + 1
             m = m + 1
+
+            if (m > N) then
+                exit
+            end if
+
             !            a = Interleaved(v(ind(i))
             !            b = Interleaved(v(ind(m))
+            buffer_index = lib_tree_correspondence_vector_sorted_data_elements(i)
+            a = lib_tree_data_element_list(buffer_index)%uindex
+
+            buffer_index = lib_tree_correspondence_vector_sorted_data_elements(m)
+            b = lib_tree_data_element_list(buffer_index)%uindex
+
             j = Bit_max + 1
 
             do
                 j = j - 1
                 a = lib_tree_get_parent(a)
                 b = lib_tree_get_parent(b)
-                l_max = max(l_max , j)
                 if (a%n .eq. b%n) then
+                    l_max = max(l_max , j)
                     exit
                 end if
             end do
-
-            if (m > N) then
-                exit
-            end if
         end do
 
-    end function lib_tree_get_threshold_level
+    end function lib_tree_get_level_max
+
+    subroutine lib_tree_create_correspondece_vector_sorted_data_elements()
+        implicit none
+
+        ! auxiliray
+        integer(kind=UINDEX_BYTES), dimension(:), allocatable :: uindex_list
+        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: uindex_old_position_list
+        integer(kind=UINDEX_BYTES) :: i
+
+        if (allocated(lib_tree_data_element_list) .and. allocated(lib_tree_correspondence_vector)) then
+            i = size(lib_tree_data_element_list)
+            allocate (lib_tree_correspondence_vector_sorted_data_elements(i))
+
+            allocate (uindex_list(i))
+            allocate (uindex_old_position_list(i))
+
+            ! get uindex list
+            uindex_list(:) = lib_tree_data_element_list(:)%uindex%n
+
+            call lib_sort_hpsort_integer(i, uindex_list, uindex_old_position_list)
+
+            call move_alloc(uindex_old_position_list, lib_tree_correspondence_vector_sorted_data_elements)
+            ! clean up
+            deallocate (uindex_list)
+        end if
+
+    end subroutine lib_tree_create_correspondece_vector_sorted_data_elements
 
     ! Sorting data and saving in the module globally variable *lib_tree_data*
     !
@@ -648,7 +750,7 @@ contains
     !
     !   margin
     !       length of the correspondece vector compared with the length of the element_list
-    !       recommented values: 110-125
+    !       recommented values: 110-200
     !
     ! Returns
     ! ----
@@ -845,7 +947,7 @@ contains
     !       uindex%l
     !           number of the level, has to be equal to the threshold level (*lib_tree_l_th*)
     !
-    !   element_number: integer, optional
+    !   element_number: integer
     !       location of the element in the lib_tree_data_element_list
     !
     function lib_tree_get_element_from_correspondence_vector(uindex, element_number) result(rv)
@@ -978,6 +1080,9 @@ contains
         if (.not. test_lib_tree_get_element_from_correspondence_vector()) then
             error_counter = error_counter + 1
         end if
+        if (.not. test_lib_tree_create_correspondece_vector_sorted_data_elements()) then
+            error_counter = error_counter + 1
+        end if
         if (.not. test_lib_tree_get_domain_e1()) then
             error_counter = error_counter + 1
         end if
@@ -991,6 +1096,9 @@ contains
             error_counter = error_counter + 1
         end if
         if (.not. test_lib_tree_get_level_min()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_tree_get_level_max()) then
             error_counter = error_counter + 1
         end if
 
@@ -1552,6 +1660,145 @@ contains
                 rv = .false.
             end if
         end function test_lib_tree_get_level_min
+
+        function test_lib_tree_get_level_max() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            integer(kind=4), parameter :: list_length = 5
+
+            integer(kind=1), parameter :: l_th = 16 ! threshold level
+            type(lib_tree_data_element), dimension(list_length) :: element_list
+            integer(kind=2) :: margin
+
+            integer(kind=4) :: i
+            integer(kind=4) :: number
+
+            integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(list_length) &
+                :: gt_correspondence_vector_sorted_data_elements ! gt: ground truth
+
+            integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(3) :: s
+            integer(kind=1), dimension(3) :: ground_truth_l_max
+            integer(kind=1) :: l_max
+            ! set up the environment
+            margin = 200
+
+            call lib_tree_destructor()
+
+#if (_FMM_DIMENSION_ == 2)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = 1.0 - (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = 1.0 - (0.999 * i)/(1.0*list_length)
+            end do
+#elif (_FMM_DIMENSION_ == 3)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = 1.0 - (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = 1.0 - (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(3) = 1.0 - (0.999 * i)/(1.0*list_length)
+            end do
+#endif
+            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+
+            gt_correspondence_vector_sorted_data_elements = (/5,4,3,2,1/)
+
+            call lib_tree_create_correspondece_vector_sorted_data_elements()
+
+            rv = .true.
+            do i=1, list_length
+                if (lib_tree_correspondence_vector_sorted_data_elements(i) .ne. &
+                    gt_correspondence_vector_sorted_data_elements(i)) then
+                    rv = .false.
+                end if
+            end do
+            if (rv .eqv. .false.) then
+                print *, "test_lib_tree_get_level_max: FAILED"
+                print *, "  test_lib_tree_create_correspondece_vector: FAILED"
+                return
+            end if
+
+            ! begin of the test of the test_lib_tree_get_level_max function
+
+            !
+            ! |-------------------0 <- level
+            ! |         1         |
+            ! |         |      *  |
+            ! |         |         |
+            ! |         |  *      |
+            ! |         |         |
+            ! |---------|---------|
+            ! |    2   *|         |
+            ! |    |    |         |
+            ! |----|----|         |
+            ! |   *|    |         |
+            ! |*   |    |         |
+            ! --------------------|
+            print *, "test_lib_tree_get_level_max:"
+            s = (/1, 2, 3/)
+            ground_truth_l_max = (/int(3,1), int(2,1), int(1,1)/)
+            do i=1, 3
+                l_max = lib_tree_get_level_max(s(i))
+                if (l_max .eq. ground_truth_l_max(i)) then
+                    print *, "  s = ",s(i) , " : OK"
+                else
+                    print *, "  s = ",s(i) , " : FAILED"
+                end if
+            end do
+
+        end function test_lib_tree_get_level_max
+
+        function test_lib_tree_create_correspondece_vector_sorted_data_elements() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            integer(kind=4), parameter :: list_length = 5
+
+            integer(kind=1), parameter :: l_th = 8 ! threshold level
+            type(lib_tree_data_element), dimension(list_length) :: element_list
+            integer(kind=2) :: margin
+
+            integer(kind=4) :: i
+            integer(kind=4) :: number
+
+            integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(list_length) &
+                :: gt_correspondence_vector_sorted_data_elements ! gt: ground truth
+
+            ! set up the environment
+            margin = 200
+
+#if (_FMM_DIMENSION_ == 2)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = 1.0 - (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = 1.0 - (0.999 * i)/(1.0*list_length)
+            end do
+#elif (_FMM_DIMENSION_ == 3)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = 1.0 - (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = 1.0 - (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(3) = 1.0 - (0.999 * i)/(1.0*list_length)
+            end do
+#endif
+            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+
+            ! begin of the test of the lib_tree_create_correspondece_vector_sorted_data_elements function
+            gt_correspondence_vector_sorted_data_elements = (/5,4,3,2,1/)
+
+            call lib_tree_create_correspondece_vector_sorted_data_elements()
+
+
+            print *, "test_lib_tree_create_correspondece_vector:"
+            rv = .true.
+            do i=1, list_length
+                if (lib_tree_correspondence_vector_sorted_data_elements(i) .eq. &
+                    gt_correspondence_vector_sorted_data_elements(i)) then
+                    print *, "  ", i, ": OK"
+                else
+                    rv = .false.
+                    print *, "  ", i, ": FAILED"
+                end if
+            end do
+        end function test_lib_tree_create_correspondece_vector_sorted_data_elements
 
         function test_lib_tree_create_correspondence_vector() result(rv)
             implicit none
