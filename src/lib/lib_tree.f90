@@ -365,20 +365,24 @@ contains
         do i=1, number_of_boxes
             buffer_data_element_list = lib_tree_get_domain_e1(buffer_uindex_reduced(i), buffer_element_number)
             if (allocated(buffer_rv)) then
-                index_number = size(buffer_rv) + 1
-                call lib_tree_reallocate_1d_data_element_list(buffer_rv, size(buffer_data_element_list))
-                buffer_rv(index_number:) = buffer_data_element_list
+                if ((allocated(buffer_data_element_list)) .and. (size(buffer_data_element_list).gt. 0)) then
+                    index_number = size(buffer_rv) + 1
+                    call lib_tree_reallocate_1d_data_element_list(buffer_rv, size(buffer_data_element_list))
+                    buffer_rv(index_number:) = buffer_data_element_list
+                end if
 
-                ! copy buffer_element_number into buffer_element_number
-                allocate(element_number_temp(size(element_number)))
-                element_number_temp = element_number
+                ! copy buffer_element_number into element_number
+                if ((allocated(buffer_element_number)) .and. (size(buffer_element_number).gt. 0)) then
+                    allocate(element_number_temp(size(element_number)))
+                    element_number_temp = element_number
 
-                ii = size(buffer_element_number) + size(element_number)
-                deallocate(element_number)
-                allocate(element_number(ii))
-                ii = size(element_number)
-                element_number(:ii) = element_number_temp
-                element_number(ii+1:) = buffer_element_number
+                    ii = size(buffer_element_number) + size(element_number)
+                    deallocate(element_number)
+                    allocate(element_number(ii))
+                    ii = size(element_number_temp)
+                    element_number(:ii) = element_number_temp
+                    element_number(ii+1:) = buffer_element_number
+                end if
 
                 if (allocated(buffer_element_number)) then
                     deallocate (buffer_element_number)
@@ -414,7 +418,7 @@ contains
     !
     ! Returns
     ! ----
-    !   the spatial points outside the k-neighorhood of box (n,l)
+    !   the spatial points outside the k-neighorhood of tree element (n,l)
     function lib_tree_get_domain_e3(k,uindex, element_number) result (rv)
         implicit none
         ! dummy arguments
@@ -469,7 +473,7 @@ contains
             if (allocated(data_element_list_regard)) then
                 deallocate (data_element_list_regard)
             end if
-        else
+        else if (ii .eq. 0) then
             rv = lib_tree_data_element_list
         end if
     end function lib_tree_get_domain_e3
@@ -567,7 +571,34 @@ contains
         end if
     end function lib_tree_get_domain_e4
 
-    function lib_tree_get_threshold_level() result(l_max)
+    ! Calculates the minimum tree level
+    !
+    ! Equation
+    !   l_min = [1 + log_2(k + 1)]    (21)
+    !
+    ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
+    !
+    ! Arguments
+    ! ----
+    !   k: integer
+    !       number of neighbours
+    !
+    ! Returns
+    ! ----
+    !   l_min: integer
+    !       minimum tree level
+    !
+    function lib_tree_get_level_min(k) result(l_min)
+        implicit none
+        ! dummy
+        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: k
+        integer(kind=UINDEX_BYTES) :: l_min
+
+        l_min = int(1 + floor(log(real(k+1)) / log(2.0), UINDEX_BYTES))
+
+    end function
+
+    function lib_tree_get_level_max() result(l_max)
         implicit none
 
         integer :: i, j
@@ -959,10 +990,13 @@ contains
         if (.not. test_lib_tree_get_domain_e4()) then
             error_counter = error_counter + 1
         end if
+        if (.not. test_lib_tree_get_level_min()) then
+            error_counter = error_counter + 1
+        end if
 
-!        if (.not. test_lib_tree_get_scaled_element_list()) then
-!            error_counter = error_counter + 1
-!        end if
+        if (.not. test_lib_tree_get_scaled_element_list()) then
+            error_counter = error_counter + 1
+        end if
 
         print *, "-------------lib_tree_test_functions----------------"
         if (error_counter == 0) then
@@ -1287,10 +1321,10 @@ contains
                 element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
                 element_list(i)%point_x%x(2) = (0.999 * i)/(1.0*list_length)
             end do
-            ground_truth_number_of_elements = 7
+            ground_truth_number_of_elements = 5
             allocate(ground_truth_element_list(ground_truth_number_of_elements))
             do i=1, ground_truth_number_of_elements
-                ground_truth_element_list(i) = element_list(i+ground_truth_number_of_elements+3)
+                ground_truth_element_list(i) = element_list(i+ground_truth_number_of_elements)
             end do
 #elif (_FMM_DIMENSION_ == 3)
             do i=1, list_length
@@ -1298,10 +1332,10 @@ contains
                 element_list(i)%point_x%x(2) = (0.9 * i)/(1.0*list_length)
                 element_list(i)%point_x%x(3) = (0.9 * i)/(1.0*list_length)
             end do
-            ground_truth_number_of_elements = 7
+            ground_truth_number_of_elements = 5
             allocate(ground_truth_element_list(ground_truth_number_of_elements))
             do i=1, ground_truth_number_of_elements
-                ground_truth_element_list(i) = element_list(i+ground_truth_number_of_elements+3)
+                ground_truth_element_list(i) = element_list(i+ground_truth_number_of_elements)
             end do
 #endif
             element_list(:)%element_type = 1
@@ -1495,6 +1529,30 @@ contains
             end if
         end function test_lib_tree_get_domain_e4
 
+        function test_lib_tree_get_level_min() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            integer(kind=COORDINATE_BINARY_BYTES) :: k
+            integer(kind=UINDEX_BYTES) :: l_min
+            integer(kind=UINDEX_BYTES) :: ground_truth_l_min
+
+            k = 1
+            ground_truth_l_min = 2
+
+            l_min = lib_tree_get_level_min(k)
+
+            if (l_min .eq. ground_truth_l_min) then
+                print *, "test_lib_tree_get_level_min: ", "OK"
+                rv = .true.
+            else
+                print *, "test_lib_tree_get_level_min: ", "FAILED"
+                rv = .false.
+            end if
+        end function test_lib_tree_get_level_min
+
         function test_lib_tree_create_correspondence_vector() result(rv)
             implicit none
             ! dummy
@@ -1602,8 +1660,8 @@ contains
             end do
 
             if (wrong .eq. 0) then
-                print *, "test_lib_tree_get_element_from_correspondence_vector: ", "OK"
                 rv = .true.
+                print *, "test_lib_tree_get_element_from_correspondence_vector: ", "OK"
             else
                 print *, "test_lib_tree_get_element_from_correspondence_vector: ", "FAILED"
                 print *, "  wrong elements: ", wrong
