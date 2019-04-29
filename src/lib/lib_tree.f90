@@ -73,10 +73,57 @@ module lib_tree
     integer(kind=4) :: hash_max
     integer(kind=2) :: lib_tree_max_number_of_hash_runs
 
-contains
+    ! scaling
+    type(lib_tree_spatial_point) :: lib_tree_scaling_D
+    type(lib_tree_spatial_point) :: lib_tree_scaling_x_min
+    type(lib_tree_spatial_point) :: lib_tree_scaling_x_max
 
-    subroutine lib_tree_constructor()
+    contains
+
+    subroutine lib_tree_constructor(element_list)
         implicit none
+        ! dummy
+        type(lib_tree_data_element), dimension(:), intent(in) :: element_list
+
+        ! auxiliary
+        type(lib_tree_data_element), dimension(size(element_list)) :: element_list_scaled
+
+        ! auxiliary: create_correspondece_vector
+        integer(kind=1) :: threshold_level
+        integer(kind=2) :: margin
+
+        ! auxiliary: get_level_max
+        integer(kind=CORRESPONDENCE_VECTOR_KIND), parameter :: s = 1    ! "optimisation value"
+        integer(kind=1) :: l_max
+
+        ! scaling
+        element_list_scaled = lib_tree_get_scaled_element_list(element_list)
+
+        margin = 200
+#if (_UINDEX_BYTES_ == 16)
+        threshold_level = int(int(UINDEX_BYTES,2) * int(NUMBER_OF_BITS_PER_BYTE,2) * 1.0 / TREE_DIMENSIONS, 1)
+#else
+        threshold_level = int(UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE * 1.0 / TREE_DIMENSIONS, 1)
+#endif
+        call lib_tree_create_correspondence_vector(element_list_scaled, threshold_level, margin)
+
+
+        ! optimise threshold level
+        call lib_tree_create_correspondece_vector_sorted_data_elements()
+        l_max = lib_tree_get_level_max(s)
+
+        ! clean up for optimisation
+        if (allocated(lib_tree_correspondence_vector_sorted_data_elements)) then
+            deallocate (lib_tree_correspondence_vector_sorted_data_elements)
+        end if
+        if (allocated(lib_tree_correspondence_vector)) then
+            deallocate (lib_tree_correspondence_vector)
+        end if
+
+        call lib_tree_create_correspondence_vector(element_list_scaled, l_max, margin)
+        call lib_tree_create_correspondece_vector_sorted_data_elements()
+        ! todo: optimise correspondence vector (if size(elements) ~~ size(correspondence vector), then without hash  algorithm)
+        ! ~~~ end: optimization ~~~
 
     end subroutine lib_tree_constructor
 
@@ -120,7 +167,6 @@ contains
 
         ! auxiliary
         type(lib_tree_spatial_point) :: D
-        type(lib_tree_spatial_point) :: D_max_buffer
         type(lib_tree_spatial_point) :: x_min
         type(lib_tree_spatial_point) :: x_max
 
@@ -138,17 +184,24 @@ contains
 #else
             D%x(ii) = (x_max%x(ii) - x_min%x(ii)) * (1 + 2.0**(-23))    ! single: BITS_MANTISSA = 23
 #endif
+!            D%x(ii) = (x_max%x(ii) - x_min%x(ii)) * nearest(1.0, -1.0)
         end do
 
-        D_max_buffer%x(1) = maxval(D%x)
+        ! use for all dimension the same scaling factor
+        D%x(:) = maxval(D%x)
 
         !$OMP PARALLEL DO PRIVATE(i, ii)
         do i=1, size(element_list)
             do ii=1, TREE_DIMENSIONS
-                rv(i)%point_x%x(ii) = (element_list(i)%point_x%x(ii) - x_min%x(ii)) / D_max_buffer%x(1)
+                rv(i)%point_x%x(ii) = (element_list(i)%point_x%x(ii) - x_min%x(ii)) / D%x(ii)
             end do
         end do
         !$OMP END PARALLEL DO
+
+        ! store for rescaling
+        lib_tree_scaling_D = D
+        lib_tree_scaling_x_min = x_min
+        lib_tree_scaling_x_max = x_max
 
         rv(:)%element_type = element_list(:)%element_type
 
@@ -371,8 +424,6 @@ contains
         allocate(buffer_uindex(k, 3**TREE_DIMENSIONS-1))
         do i=1, k
             buffer_uindex(i, :) = lib_tree_get_neighbours(k, uindex)
-!            buffer_uindex(i, :)%n = lib_tree_hf_get_neighbour_all_xD(k, uindex%n, uindex%l)
-!            buffer_uindex(i, :)%l = uindex%l
         end do
 
         ! reduce neigbours list (remove invalide universal indices)
@@ -657,57 +708,52 @@ contains
         integer(kind=1) :: l_max
 
         ! auxiliary
-        integer :: i, j
-        integer :: m
-        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: Bit_max
-        integer :: N
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: i
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: m
+        integer(kind=1) :: Bit_max, j
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: N
 
         type(lib_tree_universal_index) :: a
         type(lib_tree_universal_index) :: b
 
         integer(kind=CORRESPONDENCE_VECTOR_KIND) :: buffer_index
 
-        N = size(lib_tree_data_element_list)
-        l_max = 1
-!        if (UINDEX_BYTES .ge. (COORDINATE_BINARY_BYTES * TREE_DIMENSIONS)) then
-            Bit_max = lib_tree_l_th! COORDINATE_BINARY_BYTES * NUMBER_OF_BITS_PER_BYTE / TREE_DIMENSIONS
-!        else
-!            ! floor(UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE / TREE_DIMENSIONS) * TREE_DIMENSION * NUMBER_OF_BITS_PER_BYTE
-!            Bit_max = int(floor(UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE * 1.0 / TREE_DIMENSIONS) &
-!                        * TREE_DIMENSIONS * NUMBER_OF_BITS_PER_BYTE, CORRESPONDENCE_VECTOR_KIND)
-!        end if
+        if (allocated(lib_tree_correspondence_vector_sorted_data_elements)) then
+            N = size(lib_tree_data_element_list)
+            l_max = 1
+            Bit_max = lib_tree_l_th
 
-
-        i = 0
-        m = s
-        do
-            i = i + 1
-            m = m + 1
-
-            if (m > N) then
-                exit
-            end if
-
-            !            a = Interleaved(v(ind(i))
-            !            b = Interleaved(v(ind(m))
-            buffer_index = lib_tree_correspondence_vector_sorted_data_elements(i)
-            a = lib_tree_data_element_list(buffer_index)%uindex
-
-            buffer_index = lib_tree_correspondence_vector_sorted_data_elements(m)
-            b = lib_tree_data_element_list(buffer_index)%uindex
-
-            j = Bit_max + 1
-
+            i = 0
+            m = s
             do
-                j = j - 1
-                a = lib_tree_get_parent(a)
-                b = lib_tree_get_parent(b)
-                if (a%n .eq. b%n) then
-                    l_max = max(l_max , j)
+                i = i + 1
+                m = m + 1
+
+                if (m > N) then
                     exit
                 end if
+
+                !            a = Interleaved(v(ind(i))
+                !            b = Interleaved(v(ind(m))
+                buffer_index = lib_tree_correspondence_vector_sorted_data_elements(i)
+                a = lib_tree_data_element_list(buffer_index)%uindex
+
+                buffer_index = lib_tree_correspondence_vector_sorted_data_elements(m)
+                b = lib_tree_data_element_list(buffer_index)%uindex
+
+                j = Bit_max + int(1,1)
+
+                do
+                    j = j - int(1,1)
+                    a = lib_tree_get_parent(a)
+                    b = lib_tree_get_parent(b)
+                    if (a%n .eq. b%n) then
+                        l_max = max(l_max , j)
+                        exit
+                    end if
+                end do
             end do
-        end do
+        end if
 
     end function lib_tree_get_level_max
 
@@ -1106,6 +1152,10 @@ contains
             error_counter = error_counter + 1
         end if
 
+        if (.not. test_lib_tree_constructor()) then
+            error_counter = error_counter + 1
+        end if
+
         print *, "-------------lib_tree_test_functions----------------"
         if (error_counter == 0) then
             print *, "lib_tree_test_functions tests: OK"
@@ -1115,6 +1165,40 @@ contains
         print *, "----------------------------------------------------"
 
     contains
+
+        function test_lib_tree_constructor() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            integer(kind=4), parameter :: list_length = 10**1
+            type(lib_tree_data_element), dimension(list_length) :: element_list
+
+            integer(kind=4) :: i
+
+            integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(list_length) &
+                :: gt_correspondence_vector_sorted_data_elements ! gt: ground truth
+
+            ! set up the environment
+            call lib_tree_destructor()
+#if (_FMM_DIMENSION_ == 2)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = 1.0 - (0.999 * i)
+                element_list(i)%point_x%x(2) = 1.0 - (0.999 * i)
+            end do
+#elif (_FMM_DIMENSION_ == 3)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = 1.0 - (0.999 * i)
+                element_list(i)%point_x%x(2) = 1.0 - (0.999 * i)
+                element_list(i)%point_x%x(3) = 1.0 - (0.999 * i)
+            end do
+#endif
+
+            call lib_tree_constructor(element_list)
+
+
+        end function test_lib_tree_constructor
 
         function test_lib_tree_get_scaled_element_list() result(rv)
             implicit none
@@ -1673,7 +1757,6 @@ contains
             integer(kind=2) :: margin
 
             integer(kind=4) :: i
-            integer(kind=4) :: number
 
             integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(list_length) &
                 :: gt_correspondence_vector_sorted_data_elements ! gt: ground truth
@@ -1759,7 +1842,6 @@ contains
             integer(kind=2) :: margin
 
             integer(kind=4) :: i
-            integer(kind=4) :: number
 
             integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(list_length) &
                 :: gt_correspondence_vector_sorted_data_elements ! gt: ground truth
