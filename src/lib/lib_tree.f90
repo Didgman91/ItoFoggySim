@@ -116,21 +116,63 @@ module lib_tree
         integer(kind=CORRESPONDENCE_VECTOR_KIND), parameter :: s = 1    ! "optimisation value"
         integer(kind=1) :: l_max
 
+#ifdef _DEBUG_
+        ! debug
+        integer(kind=1) :: i
+        real :: start, finish
+        integer(kind=1), parameter :: length = 6
+        double precision, dimension(length) :: cpu_time_delta
+        character(len=75), dimension(length) :: note_string
+#endif
+
         ! scaling
+#ifdef _DEBUG_
+        call cpu_time(start)
+#endif
         element_list_scaled = lib_tree_get_scaled_element_list(element_list)
+#ifdef _DEBUG_
+        call cpu_time(finish)
+        cpu_time_delta(1) = finish - start
+        note_string(1) = "lib_tree_get_scaled_element_list"
+#endif
 
         margin = 200
 #if (_UINDEX_BYTES_ == 16)
-        threshold_level = int(int(UINDEX_BYTES,2) * int(NUMBER_OF_BITS_PER_BYTE,2) * 1.0 / TREE_DIMENSIONS, 1)
+        threshold_level = int(int(UINDEX_BYTES,2) * int(NUMBER_OF_BITS_PER_BYTE,2) * 1.0 / TREE_DIMENSIONS, 1) - 1
 #else
         threshold_level = int(UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE * 1.0 / TREE_DIMENSIONS, 1)
 #endif
+#ifdef _DEBUG_
+        print *, "threshold_level = ", threshold_level
+        call cpu_time(start)
+#endif
         call lib_tree_create_correspondence_vector(element_list_scaled, threshold_level, margin)
+#ifdef _DEBUG_
+        call cpu_time(finish)
+        cpu_time_delta(2) = finish - start
+        note_string(2) = "lib_tree_create_correspondence_vector"
+#endif
 
 
         ! optimise threshold level
+#ifdef _DEBUG_
+        call cpu_time(start)
+#endif
         call lib_tree_create_correspondece_vector_sorted_data_elements()
+#ifdef _DEBUG_
+        call cpu_time(finish)
+        cpu_time_delta(3) = finish - start
+        note_string(3) = "lib_tree_create_correspondece_vector_sorted_data_elements"
+#endif
+#ifdef _DEBUG_
+        call cpu_time(start)
+#endif
         l_max = lib_tree_get_level_max(s)
+#ifdef _DEBUG_
+        call cpu_time(finish)
+        cpu_time_delta(4) = finish - start
+        note_string(4) = "lib_tree_get_level_max"
+#endif
 
         ! clean up for optimisation
         if (allocated(lib_tree_correspondence_vector_sorted_data_elements)) then
@@ -139,11 +181,35 @@ module lib_tree
         if (allocated(lib_tree_correspondence_vector)) then
             deallocate (lib_tree_correspondence_vector)
         end if
-
+#ifdef _DEBUG_
+        print *, "threshold_level = ", l_max
+        call cpu_time(start)
+#endif
         call lib_tree_create_correspondence_vector(element_list_scaled, l_max, margin)
+#ifdef _DEBUG_
+        call cpu_time(finish)
+        cpu_time_delta(5) = finish - start
+        note_string(5) = "lib_tree_create_correspondence_vector"
+#endif
+#ifdef _DEBUG_
+        call cpu_time(start)
+#endif
         call lib_tree_create_correspondece_vector_sorted_data_elements()
+#ifdef _DEBUG_
+        call cpu_time(finish)
+        cpu_time_delta(6) = finish - start
+        note_string(6) = "lib_tree_create_correspondece_vector_sorted_data_elements"
+#endif
         ! todo: optimise correspondence vector (if size(elements) ~~ size(correspondence vector), then without hash  algorithm)
         ! ~~~ end: optimization ~~~
+
+#ifdef _DEBUG_
+        print *, " ------- DEBUG: lib_tree_constructor -------"
+        do i=1, length
+            print *, note_string(i), cpu_time_delta(i), " seconds"
+        end do
+        print *, " -------------------------------------------"
+#endif
 
     end subroutine lib_tree_constructor
 
@@ -608,7 +674,7 @@ module lib_tree
     function lib_tree_get_domain_e4(k, uindex, element_number) result (rv)
         implicit none
         ! dummy arguments
-        integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: k
+        integer(kind=UINDEX_BYTES), intent (in) :: k
         type(lib_tree_universal_index), intent(in) :: uindex
         integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable, intent(out) :: element_number
         type(lib_tree_data_element), dimension(:), allocatable :: rv
@@ -789,7 +855,7 @@ module lib_tree
         ! auxiliray
         integer(kind=UINDEX_BYTES), dimension(:), allocatable :: uindex_list
         integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: uindex_old_position_list
-        integer(kind=UINDEX_BYTES) :: i
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: i
 
         if (allocated(lib_tree_data_element_list) .and. allocated(lib_tree_correspondence_vector)) then
             i = size(lib_tree_data_element_list)
@@ -870,11 +936,11 @@ module lib_tree
         integer(kind=4) :: correspondence_vector_dimension
         integer(kind=4) :: hashed_uindex
 #ifdef _DEBUG_
-        integer(kind=4) :: hashed_uindex_old
+        integer(kind=4) :: hashed_uindex_old = -1
 #endif
         type(lib_tree_universal_index) :: uindex
         integer(kind=4) :: i
-        integer(kind=2) :: ii
+        integer(kind=4) :: ii
 #if (_UINDEX_BYTES_ == 16)
         integer(kind=2) :: number_of_bits
 #else
@@ -959,7 +1025,7 @@ module lib_tree
                     ! save
                     if (lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs .eq. 0) then
                         !$  semaphore_write_correspondence_vector = .false.
-                        if ((hashed_uindex .gt. 0) .or. (hashed_uindex .le. lib_tree_hash_max)) then
+                        if ((hashed_uindex .gt. 0) .and. (hashed_uindex .le. lib_tree_hash_max)) then
                             lib_tree_correspondence_vector(hashed_uindex)%data_element_number = i
                             lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs = ii
 
@@ -976,18 +1042,19 @@ module lib_tree
                         end if
                         !$  semaphore_write_correspondence_vector = .true.
                     end if
-#if (_UINDEX_BYTES_ == 16)
-#ifdef _DEBUG_
-                    hashed_uindex_old = hashed_uindex
-#endif
-                    hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), hash_max)
+
 #ifdef _DEBUG_
                     if (hashed_uindex_old .eq. hashed_uindex) then
                         print *, "lib_tree_create_correspondence_vector .. WARNING"
                         print *, "  hashed uindex doesn't changed"
                         print *, "  run: ", ii, " data element: ", i
                     end if
+
+                    hashed_uindex_old = hashed_uindex
 #endif
+
+#if (_UINDEX_BYTES_ == 16)
+                    hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), lib_tree_hash_max)
 #elif (_UINDEX_BYTES_ == 8)
                     hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
 #elif (_UINDEX_BYTES_ == 4)
@@ -1198,13 +1265,10 @@ module lib_tree
             logical :: rv
 
             ! auxiliary
-            integer(kind=4), parameter :: list_length = 10**1
+            integer(kind=4), parameter :: list_length = 10**5
             type(lib_tree_data_element), dimension(list_length) :: element_list
 
             integer(kind=4) :: i
-
-            integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(list_length) &
-                :: gt_correspondence_vector_sorted_data_elements ! gt: ground truth
 
             ! set up the environment
             call lib_tree_destructor()
@@ -1223,7 +1287,8 @@ module lib_tree
 
             call lib_tree_constructor(element_list)
 
-
+            rv = .true.
+            print *, "test_lib_tree_constructor: OK, but there are no tests"
         end function test_lib_tree_constructor
 
         function test_lib_tree_get_scaled_element_list() result(rv)
@@ -1232,7 +1297,7 @@ module lib_tree
             logical :: rv
 
             ! auxiliary
-            integer(kind=4), parameter :: list_length = 10**7
+            integer(kind=4), parameter :: list_length = 10**5
 
             integer(kind=1), parameter :: l_th = 4 ! threshold level
             type(lib_tree_data_element), dimension(list_length) :: element_list
@@ -1275,7 +1340,7 @@ module lib_tree
 
             integer(kind=4), parameter :: list_length = 10
 
-            integer(kind=1), parameter :: l_th = 4 ! threshold level
+            integer(kind=1), parameter :: l_th = 5 ! threshold level
             type(lib_tree_data_element), dimension(list_length) :: element_list
             type(lib_tree_data_element), dimension(:), allocatable :: ground_truth_element_list
             integer(kind=2) :: margin
@@ -1843,6 +1908,7 @@ module lib_tree
             ! |*   |    |         |
             ! --------------------|
             print *, "test_lib_tree_get_level_max:"
+            rv = .true.
             s = (/1, 2, 3/)
             ground_truth_l_max = (/int(3,1), int(2,1), int(1,1)/)
             do i=1, 3
@@ -1851,6 +1917,7 @@ module lib_tree
                     print *, "  s = ",s(i) , " : OK"
                 else
                     print *, "  s = ",s(i) , " : FAILED"
+                    rv = .false.
                 end if
             end do
 

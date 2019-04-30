@@ -11,19 +11,20 @@ module lib_sort
     public :: lib_sort_test_functions
 
     integer(kind=1), parameter, public :: LIB_HPSORT_INTEGER_KIND = _UINDEX_BYTES_
+    integer(kind=1), parameter, public :: LIB_HPSORT_OLD_POS_INTEGER_KIND = 4
 
     contains
 
     subroutine lib_sort_hpsort_integer(n, ra, ra_old_position)
-        INTEGER(kind=LIB_HPSORT_INTEGER_KIND) n
+        INTEGER(kind=LIB_HPSORT_OLD_POS_INTEGER_KIND) n
         integer(kind=LIB_HPSORT_INTEGER_KIND), intent(inout) :: ra(n)
-        integer(kind=4), intent(inout) :: ra_old_position(n)
+        integer(kind=LIB_HPSORT_OLD_POS_INTEGER_KIND), intent(inout) :: ra_old_position(n)
         !Sorts an array ra(1:n) into ascending numerical order using the Heapsort algorithm. n is
         !input; ra is replaced on output by its sorted rearrangement.
         INTEGER(kind=LIB_HPSORT_INTEGER_KIND) i,ir,j,l
         integer(kind=LIB_HPSORT_INTEGER_KIND) rra
 
-        integer(kind=4) :: buffer_old_position
+        integer(kind=LIB_HPSORT_OLD_POS_INTEGER_KIND) :: buffer_old_position
 
         do i=1, n
             ra_old_position(i) = i
@@ -212,9 +213,9 @@ module lib_sort
             ! dummy
             logical :: rv
 
-            integer(kind=LIB_HPSORT_INTEGER_KIND), parameter :: n = 5
+            integer(kind=LIB_HPSORT_OLD_POS_INTEGER_KIND), parameter :: n = 5
             integer(kind=LIB_HPSORT_INTEGER_KIND), dimension(n) :: array
-            integer(kind=4), dimension(n) :: array_old_position
+            integer(kind=LIB_HPSORT_OLD_POS_INTEGER_KIND), dimension(n) :: array_old_position
             integer(kind=LIB_HPSORT_INTEGER_KIND), dimension(n) :: ground_truth_array_sorted
 
             integer :: wrong_elements

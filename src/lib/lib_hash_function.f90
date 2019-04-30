@@ -147,6 +147,43 @@ module lib_hash_function
 
       END !############## of file fnv32.f ##############################
 
+      SUBROUTINE FNV64 (BUFFER, LENGTH, HASH)
+           IMPLICIT NONE
+           INTEGER(kind=4) LENGTH
+           INTEGER(kind=8) HASH
+           INTEGER*1 BUFFER
+           DIMENSION BUFFER(LENGTH)
+
+           INTEGER(kind=8), parameter :: PRIME = x'100000001b3'
+           INTEGER(kind=8) J, K
+           integer(kind=1), dimension(8) :: K_buffer
+           INTEGER*1 B
+
+           equivalence (K, K_buffer)                                    ! 190417 itodaiber: bitwise copy process replaced by the equivalence
+           equivalence (B, K_buffer(1))                                 ! 190417 itodaiber: bitwise copy process replaced by the equivalence
+
+    !    *#######################################################################
+    !    *                begin
+    !    *#######################################################################
+    !    *          FNV-1a hash each octet in the buffer
+           DO 90 J = 1, LENGTH
+             B = BUFFER(J)
+             K_buffer(2:8) = 0                                          ! 190417 itodaiber: bitwise copy process replaced by the equivalence
+!             K = 0                                                     ! 190417 itodaiber: bitwise copy process replaced by the equivalence
+!             DO 80 I = 0, 7           ! copy each bit from B to K      ! 190417 itodaiber: bitwise copy process replaced by the equivalence
+!               IF (BTEST(B, I)) K = IBSET(K, I)                        ! 190417 itodaiber: bitwise copy process replaced by the equivalence
+!      80     CONTINUE ! next i                                         ! 190417 itodaiber: bitwise copy process replaced by the equivalence
+
+    !    *          xor the bottom with the current octet
+             HASH = IEOR(HASH, K)
+
+    !    *          multiply by the 64 bit FNV magic prime mod 2^64
+             HASH = HASH * PRIME
+             HASH = IAND(HASH, X'FFFFFFFFFFFFFFFF')      ! discard > 64 bits
+      90   CONTINUE ! next j
+
+      END !############## of file fnv32.f ##############################
+
     function hash_fnv1a(buffer) result(hash)
         ! dummy
         integer(kind=4), intent(in) :: buffer
@@ -221,6 +258,7 @@ module lib_hash_function
         integer(kind=4) :: hash
 
         ! auxiliary
+!        integer(kind=4) :: m_hash
         integer(kind=8) :: buffer_buffer
         integer(kind=1), dimension(8) :: buffer_list
 
@@ -266,7 +304,7 @@ module lib_hash_function
         hash = -2128831035
         call FNV32(buffer_list, size(buffer_list), hash)
 
-        hash = int(real(hash,16) / 4294967296.0D0 * int(max_value-1,16) + max_value/2, 4)
+        hash = int(real(hash,8) /  4294967296.0D0 * int(max_value-1,8) + max_value/2,4)
 
     end function hash_fnv1a_16_byte
 
