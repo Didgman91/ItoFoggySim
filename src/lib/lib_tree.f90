@@ -44,15 +44,14 @@ module lib_tree
 
 
 
-    ! member
+    ! --- member---
     integer(kind=1), parameter :: CORRESPONDENCE_VECTOR_KIND = 4    ! limited by the total number of elements -> 2**(8*4) = 4,294,967,296 elements
     integer(kind=4), parameter :: LIB_TREE_MAX_HASH_RUNS = 400
-    integer(kind=4), parameter :: LIB_TREE_HASH_I= 10
 
     integer(kind=1), parameter :: LIB_TREE_ELEMENT_TYPE_EMPTY = -1
 
 
-    ! type definition
+    ! --- type definition ---
     type lib_tree_data_element
         type(lib_tree_spatial_point) :: point_x
         type(lib_tree_universal_index) :: uindex
@@ -65,12 +64,21 @@ module lib_tree
     end type lib_tree_correspondece_vector_element
 
 
-    ! module global
+    ! --- module global ---
     type(lib_tree_data_element), dimension (:), allocatable :: lib_tree_data_element_list
+    ! List of references of data elements at the lib_tree_data_element_list array.
+    ! The access is granted by the hashed universal index instead by the universal index directly.
     type(lib_tree_correspondece_vector_element), dimension(:), allocatable :: lib_tree_correspondence_vector
+    ! List of data_element positions at the lib_tree_data_element_list..
+    ! These references (positions) are sorted into ascending numerical order of the universal index.
     integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: lib_tree_correspondence_vector_sorted_data_elements
-    integer(kind=1) :: lib_tree_l_th    ! threshold level
-    integer(kind=4) :: hash_max
+
+    ! threshold level: At this level of the tree the correspondence vector and the data element list are working.
+    integer(kind=1) :: lib_tree_l_th
+    ! maximum hash value (correspondence with the length of the lib_tree_data_element_list * margin)
+    integer(kind=4) :: lib_tree_hash_max
+    ! Maximum number of hash runs to access a data element from the lib_tree_correspondence_vector array.
+    ! If the hash runs exceed this number, there is no data element with the wanted universal index.
     integer(kind=2) :: lib_tree_max_number_of_hash_runs
 
     ! scaling
@@ -761,6 +769,8 @@ module lib_tree
 
     end function lib_tree_get_level_max
 
+    ! This routine stores references (list entries) of the lib_tree_data_element_list array.
+    ! These references are sorted into ascending numerical order of the universal index.
     subroutine lib_tree_create_correspondece_vector_sorted_data_elements()
         implicit none
 
@@ -893,7 +903,7 @@ module lib_tree
 #endif
             correspondence_vector_dimension = ceiling(size(element_list) * margin / 100.0)
 
-            hash_max = correspondence_vector_dimension
+            lib_tree_hash_max = correspondence_vector_dimension
 
             ! initiate lib_tree_correspondence_vector
             if (.not. allocated (lib_tree_correspondence_vector)) then
@@ -915,11 +925,11 @@ module lib_tree
                 lib_tree_data_element_list(i)%uindex = uindex
                 ! find unique hashed universal index
 #if (_UINDEX_BYTES_ == 16)
-                hashed_uindex = 1 + hash_fnv1a_16_byte(uindex%n, hash_max)
+                hashed_uindex = 1 + hash_fnv1a_16_byte(uindex%n, lib_tree_hash_max)
 #elif (_UINDEX_BYTES_ == 8)
-                hashed_uindex = 1 + hash_fnv1a_8_byte(uindex%n, hash_max)
+                hashed_uindex = 1 + hash_fnv1a_8_byte(uindex%n, lib_tree_hash_max)
 #elif (_UINDEX_BYTES_ == 4)
-                hashed_uindex = 1 + hash_fnv1a_4_byte(uindex%n, hash_max)
+                hashed_uindex = 1 + hash_fnv1a_4_byte(uindex%n, lib_tree_hash_max)
 #endif
 
                 element_saved = .false.
@@ -937,7 +947,7 @@ module lib_tree
                     ! save
                     if (lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs .eq. 0) then
                         !$  semaphore_write_correspondence_vector = .false.
-                        if ((hashed_uindex .gt. 0) .or. (hashed_uindex .le. hash_max)) then
+                        if ((hashed_uindex .gt. 0) .or. (hashed_uindex .le. lib_tree_hash_max)) then
                             lib_tree_correspondence_vector(hashed_uindex)%data_element_number = i
                             lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs = ii
 
@@ -967,9 +977,9 @@ module lib_tree
                     end if
 #endif
 #elif (_UINDEX_BYTES_ == 8)
-                    hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), hash_max)
+                    hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
 #elif (_UINDEX_BYTES_ == 4)
-                    hashed_uindex = 1 + hash_fnv1a_4_byte(int(hashed_uindex,4), hash_max)
+                    hashed_uindex = 1 + hash_fnv1a_4_byte(int(hashed_uindex,4), lib_tree_hash_max)
 #endif
                 end do
                 if (.not. element_saved) then
@@ -1027,11 +1037,11 @@ module lib_tree
 
         if (allocated(lib_tree_correspondence_vector)) then
 #if (_UINDEX_BYTES_ == 16)
-            hashed_uindex = 1 + hash_fnv1a_16_byte(uindex%n, hash_max)
+            hashed_uindex = 1 + hash_fnv1a_16_byte(uindex%n, lib_tree_hash_max)
 #elif (_UINDEX_BYTES_ == 8)
-            hashed_uindex = 1 + hash_fnv1a_8_byte(uindex%n, hash_max)
+            hashed_uindex = 1 + hash_fnv1a_8_byte(uindex%n, lib_tree_hash_max)
 #elif (_UINDEX_BYTES_ == 4)
-            hashed_uindex = 1 + hash_fnv1a_4_byte(uindex%n, hash_max)
+            hashed_uindex = 1 + hash_fnv1a_4_byte(uindex%n, lib_tree_hash_max)
 #endif
 
             element_found = .false.
@@ -1051,20 +1061,20 @@ module lib_tree
                         exit
                     else
 #if (_UINDEX_BYTES_ == 16)
-                        hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), hash_max)
+                        hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), lib_tree_hash_max)
 #elif (_UINDEX_BYTES_ == 8)
-                        hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), hash_max)
+                        hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
 #elif (_UINDEX_BYTES_ == 4)
-                        hashed_uindex = 1 + hash_fnv1a_4_byte(int(hashed_uindex,4), hash_max)
+                        hashed_uindex = 1 + hash_fnv1a_4_byte(int(hashed_uindex,4), lib_tree_hash_max)
 #endif
                     end if
                 else
 #if (_UINDEX_BYTES_ == 16)
-                    hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), hash_max)
+                    hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), lib_tree_hash_max)
 #elif (_UINDEX_BYTES_ == 8)
-                    hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), hash_max)
+                    hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
 #elif (_UINDEX_BYTES_ == 4)
-                    hashed_uindex = 1 + hash_fnv1a_4_byte(int(hashed_uindex,4), hash_max)
+                    hashed_uindex = 1 + hash_fnv1a_4_byte(int(hashed_uindex,4), lib_tree_hash_max)
 #endif
                 end if
 !                !$  end if
