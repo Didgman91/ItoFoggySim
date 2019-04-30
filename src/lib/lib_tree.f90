@@ -28,20 +28,32 @@ module lib_tree
 
     private
 
-    ! parameter
+    ! --- public parameter ---
     public :: TREE_DIMENSIONS
 
+    ! --- public functions ---
+    public :: lib_tree_constructor
     public :: lib_tree_destructor
 
-    ! test functions
+    public :: lib_tree_get_domain_e1
+    public :: lib_tree_get_domain_e2
+    public :: lib_tree_get_domain_e3
+    public :: lib_tree_get_domain_e4
+
+    public :: lib_tree_get_level_min
+    public :: lib_tree_get_level_max
+
     public :: lib_tree_test_functions
     public :: lib_tree_benchmark
 
     public :: lib_tree_hf_test_functions
     public :: lib_tree_hf_benchmark
-    public :: lib_tree_hf_destructor
+!    public :: lib_tree_hf_destructor       ! only for debugging purpose
 
-
+    ! --- public member variables ---
+    public :: lib_tree_scaling_D
+    public :: lib_tree_scaling_x_min
+    public :: lib_tree_scaling_x_max
 
 
     ! --- member---

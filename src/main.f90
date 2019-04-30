@@ -18,7 +18,7 @@ program main
 !     call lib_tree_hf_benchmark()
 
     call lib_tree_destructor()
-    call lib_tree_hf_destructor()
+!    call lib_tree_hf_destructor()
 
     print *, "-------------MAIN------------------"
     if (error_counter == 0) then

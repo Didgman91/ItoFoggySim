@@ -131,6 +131,8 @@ module lib_tree_helper_functions
     public :: lib_tree_hf_get_centre_of_box
     public :: lib_tree_hf_get_neighbour_all_xD
 
+    public :: lib_tree_hf_get_neighbourhood_size
+
     ! test functions
     public :: lib_tree_hf_test_functions
     public :: lib_tree_hf_benchmark
