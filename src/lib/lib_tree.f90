@@ -414,6 +414,14 @@ module lib_tree
         integer(kind=UINDEX_BYTES) :: index_start
         integer(kind=UINDEX_BYTES) :: index_end
 
+        ! ---- OMP ----
+        ! simple implementation of a semaphore
+        ! multiple read, single write
+        !$  logical :: semaphore_write_number_of_data_elements
+        ! read and write is initially possilble
+        !$  semaphore_write_number_of_data_elements = .true.
+        ! ~~~~ OMP ~~~~
+
         if (uindex%n .ne. TREE_BOX_IGNORE_ENTRY) then
             l_diff = lib_tree_l_th - uindex%l
 
@@ -424,11 +432,13 @@ module lib_tree
             ! get all universal indices at the threshold level
             buffer_1(1) = uindex
             do i=1, l_diff
+                !$OMP PARALLEL DO PRIVATE(index_start, index_end, i)
                 do ii=1, 2**((i-1)*TREE_DIMENSIONS)
                     index_start = (ii-1)*2**TREE_DIMENSIONS+1
                     index_end = index_start + 2**TREE_DIMENSIONS-1
                     buffer_2(index_start:index_end) = lib_tree_get_children(buffer_1(ii))
                 end do
+                !$OMP END PARALLEL DO
                 buffer_1 = buffer_2
             end do
             deallocate (buffer_2)
@@ -436,13 +446,27 @@ module lib_tree
             ! get all elements
             number_of_data_elements = 0
             allocate(element_number_buffer_list(size(buffer_1)))
+            !$OMP PARALLEL DO PRIVATE(buffer_element_number, i)
             do i=1, size(buffer_1)
                 buffer_rv(i) = lib_tree_get_element_from_correspondence_vector(buffer_1(i), buffer_element_number)
                 element_number_buffer_list(i) = buffer_element_number
+                ! ---- OMP semaphore ----
+                !$  if (semaphore_write_number_of_data_elements .eqv. .false.) then
+                !$      ! wait until write process is finished
+                !$      do
+                !$          if (semaphore_write_number_of_data_elements .eqv. .true.) then
+                !$              exit
+                !$          end if
+                !$      end do
+                !$  end if
+                ! ~~~~ OMP semaphore ~~~~
                 if (buffer_rv(i)%element_type .ne. LIB_TREE_ELEMENT_TYPE_EMPTY) then
+                    !$  semaphore_write_number_of_data_elements = .false.
                     number_of_data_elements = number_of_data_elements + 1
+                    !$  semaphore_write_number_of_data_elements = .true.
                 end if
             end do
+            !$OMP END PARALLEL DO
 
             deallocate (buffer_1)
 
@@ -508,9 +532,12 @@ module lib_tree
 
         ! get all neighbours
         allocate(buffer_uindex(k, 3**TREE_DIMENSIONS-1))
+        !$OMP PARALLEL DO PRIVATE(i)
         do i=1, k
-            buffer_uindex(i, :) = lib_tree_get_neighbours(k, uindex)
+            buffer_uindex(i, :) = lib_tree_get_neighbours(i, uindex)
         end do
+        !$OMP END PARALLEL DO
+
 
         ! reduce neigbours list (remove invalide universal indices)
         allocate(buffer_uindex_reduced_temp(k*(3**TREE_DIMENSIONS-1) + 1))

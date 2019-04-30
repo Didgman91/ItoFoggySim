@@ -143,7 +143,7 @@ contains
     subroutine lib_tree_hf_destructor()
         implicit none
 
-!        !$OMP SINGLE
+        !$OMP SINGLE
 #if (_FMM_DIMENSION_ == 2)
         if (lib_tree_interleave_bits_lut_initialised) then
            lib_tree_interleave_bits_lut_initialised = .false.
@@ -164,6 +164,7 @@ contains
             deallocate (lib_tree_deinterleave_bits_lut)
         end if
 #endif
+        !$OMP END SINGLE
 
     end subroutine lib_tree_hf_destructor
 
