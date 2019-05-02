@@ -20,6 +20,7 @@
 
 module lib_tree
     !$  use omp_lib
+    use lib_tree_type
     use lib_tree_helper_functions
     use lib_hash_function
     use lib_sort
@@ -55,6 +56,9 @@ module lib_tree
     public :: lib_tree_scaling_x_min
     public :: lib_tree_scaling_x_max
 
+    ! --- public type definitions ---
+    public :: lib_tree_spatial_point
+
 
     ! --- member---
     integer(kind=1), parameter :: CORRESPONDENCE_VECTOR_KIND = 4    ! limited by the total number of elements -> 2**(8*4) = 4,294,967,296 elements
@@ -64,12 +68,6 @@ module lib_tree
 
 
     ! --- type definition ---
-    type lib_tree_data_element
-        type(lib_tree_spatial_point) :: point_x
-        type(lib_tree_universal_index) :: uindex
-        integer(kind=1) :: element_type
-    end type lib_tree_data_element
-
     type lib_tree_correspondece_vector_element
         integer(kind=CORRESPONDENCE_VECTOR_KIND) :: data_element_number
         integer(kind=2) :: number_of_hash_runs
@@ -873,6 +871,16 @@ module lib_tree
         end if
 
     end function lib_tree_get_level_max
+
+    ! Returns the threshold level of the Tree.
+    ! Each datapoint has a unique universal index at this level.
+    function lib_tree_get_level_threshold() result(rv)
+        implicit none
+        integer(kind=1) :: rv
+
+        rv = lib_tree_l_th
+
+    end function lib_tree_get_level_threshold
 
     ! This routine stores references (list entries) of the lib_tree_data_element_list array.
     ! These references are sorted into ascending numerical order of the universal index.

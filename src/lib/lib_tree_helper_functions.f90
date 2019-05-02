@@ -53,14 +53,14 @@
 
 
 module lib_tree_helper_functions
-    use omp_lib
+    !$  use omp_lib
+    use lib_tree_type
     use file_io
     implicit none
 
     private
 
     ! parameter
-    integer(kind=1), public, parameter :: TREE_DIMENSIONS = _FMM_DIMENSION_ ! dimensions
     integer(kind=1), public, parameter :: TREE_INTEGER_KIND = 4
     integer(kind=1), public, parameter :: NUMBER_OF_BITS_PER_BYTE = 8
     integer(kind=TREE_INTEGER_KIND), public, parameter :: TREE_BOX_IGNORE_ENTRY = -1
@@ -70,33 +70,6 @@ module lib_tree_helper_functions
     !
     ! TODO: bug fix value > 1
     integer(kind=1), private, parameter :: INTERLEAVE_BITS_INTEGER_KIND = 1
-
-#if(_SPATIAL_POINT_IS_DOUBLE_ == 1)
-    integer(kind=1), public, parameter :: COORDINATE_BINARY_BYTES = 8
-#elif(_SPATIAL_POINT_IS_DOUBLE_ == 0)
-    integer(kind=1), public, parameter :: COORDINATE_BINARY_BYTES = 4
-#endif
-
-    integer(kind=1), public, parameter :: UINDEX_BYTES = _UINDEX_BYTES_
-    ! ~ parameter ~
-
-    ! type definitions
-    type lib_tree_spatial_point
-#if (_SPATIAL_POINT_IS_DOUBLE_ == 1)
-        double precision, dimension(TREE_DIMENSIONS) :: x
-#elif (_SPATIAL_POINT_IS_DOUBLE_ == 0)
-        real, dimension(TREE_DIMENSIONS) :: x
-#endif
-    end type lib_tree_spatial_point
-
-    type lib_tree_universal_index
-        integer(kind=UINDEX_BYTES) :: n
-!        integer(kind=INTERLEAVE_BITS_INTEGER_KIND), &
-!            dimension(TREE_DIMENSIONS * COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND) &
-!            :: interleaved_bits
-        integer(kind=1) :: l
-    end type lib_tree_universal_index
-    ! ~ type definitions ~
 
     ! module global variable
 #if (_FMM_DIMENSION_ == 2)
