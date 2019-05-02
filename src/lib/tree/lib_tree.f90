@@ -975,7 +975,7 @@ module lib_tree
 #endif
         type(lib_tree_universal_index) :: uindex
         integer(kind=4) :: i
-        integer(kind=4) :: ii
+        integer(kind=2) :: ii
 #if (_UINDEX_BYTES_ == 16)
         integer(kind=2) :: number_of_bits
 #else
@@ -1082,19 +1082,20 @@ module lib_tree
                     if (hashed_uindex_old .eq. hashed_uindex) then
                         print *, "lib_tree_create_correspondence_vector .. WARNING"
                         print *, "  hashed uindex doesn't changed"
-                        print *, "  run: ", ii, " data element: ", i
+                        print *, "  run: ", ii, " data element: ", i, " hashed_uindex", hashed_uindex
                     end if
 
                     hashed_uindex_old = hashed_uindex
 #endif
 
-#if (_UINDEX_BYTES_ == 16)
-                    hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), lib_tree_hash_max)
-#elif (_UINDEX_BYTES_ == 8)
-                    hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
-#elif (_UINDEX_BYTES_ == 4)
-                    hashed_uindex = 1 + hash_fnv1a_4_byte(int(hashed_uindex,4), lib_tree_hash_max)
-#endif
+!#if (_UINDEX_BYTES_ == 16)
+!                    hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), lib_tree_hash_max)
+!#elif (_UINDEX_BYTES_ == 8)
+!                    hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
+!#elif (_UINDEX_BYTES_ == 4)
+                    hashed_uindex =  IEOR(hashed_uindex, ii)
+                    hashed_uindex = 1 + hash_fnv1a_4_byte(hashed_uindex, lib_tree_hash_max)
+!#endif
                 end do
                 if (.not. element_saved) then
                     hash_overflow_counter = hash_overflow_counter + 1
@@ -1174,22 +1175,24 @@ module lib_tree
 
                         exit
                     else
-#if (_UINDEX_BYTES_ == 16)
-                        hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), lib_tree_hash_max)
-#elif (_UINDEX_BYTES_ == 8)
-                        hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
-#elif (_UINDEX_BYTES_ == 4)
+!#if (_UINDEX_BYTES_ == 16)
+!                        hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), lib_tree_hash_max)
+!#elif (_UINDEX_BYTES_ == 8)
+!                        hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
+!#elif (_UINDEX_BYTES_ == 4)
+                        hashed_uindex = IEOR(hashed_uindex, i)
                         hashed_uindex = 1 + hash_fnv1a_4_byte(int(hashed_uindex,4), lib_tree_hash_max)
-#endif
+!#endif
                     end if
                 else
-#if (_UINDEX_BYTES_ == 16)
-                    hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), lib_tree_hash_max)
-#elif (_UINDEX_BYTES_ == 8)
-                    hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
-#elif (_UINDEX_BYTES_ == 4)
+!#if (_UINDEX_BYTES_ == 16)
+!                    hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), lib_tree_hash_max)
+!#elif (_UINDEX_BYTES_ == 8)
+!                    hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
+!#elif (_UINDEX_BYTES_ == 4)
+                    hashed_uindex = IEOR(hashed_uindex, i)
                     hashed_uindex = 1 + hash_fnv1a_4_byte(int(hashed_uindex,4), lib_tree_hash_max)
-#endif
+!#endif
                 end if
 !                !$  end if
 
@@ -1300,23 +1303,23 @@ module lib_tree
             logical :: rv
 
             ! auxiliary
-            integer(kind=4), parameter :: list_length = 10**5
+            integer(kind=8), parameter :: list_length = 10**6
             type(lib_tree_data_element), dimension(list_length) :: element_list
 
-            integer(kind=4) :: i
+            integer(kind=8) :: i
 
             ! set up the environment
             call lib_tree_destructor()
 #if (_FMM_DIMENSION_ == 2)
             do i=1, list_length
-                element_list(i)%point_x%x(1) = 1.0 - (0.999 * i)
-                element_list(i)%point_x%x(2) = 1.0 - (0.999 * i)
+                element_list(i)%point_x%x(1) = 1.0D0 - (0.999D0 * i)
+                element_list(i)%point_x%x(2) = 1.0D0 - (0.999D0 * i)
             end do
 #elif (_FMM_DIMENSION_ == 3)
             do i=1, list_length
-                element_list(i)%point_x%x(1) = 1.0 - (0.999 * i)
-                element_list(i)%point_x%x(2) = 1.0 - (0.999 * i)
-                element_list(i)%point_x%x(3) = 1.0 - (0.999 * i)
+                element_list(i)%point_x%x(1) = 1.0D0 - (0.999D0 * i)
+                element_list(i)%point_x%x(2) = 1.0D0 - (0.999D0 * i)
+                element_list(i)%point_x%x(3) = 1.0D0 - (0.999D0 * i)
             end do
 #endif
 
