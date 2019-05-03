@@ -2,12 +2,17 @@ module lib_hash_function
     implicit none
     private
 
-    public :: hash_fnv1a_4_byte
-    public :: hash_fnv1a_8_byte
-    public :: hash_fnv1a_16_byte
+    public :: hash_fnv1a
 
     ! test functions
     public :: lib_test_hash_function
+
+    ! interface
+    interface hash_fnv1a
+        module procedure hash_fnv1a_4_byte
+        module procedure hash_fnv1a_8_byte
+        module procedure hash_fnv1a_16_byte
+    end interface
 
     contains
 
@@ -184,23 +189,23 @@ module lib_hash_function
 
       END !############## of file fnv32.f ##############################
 
-    function hash_fnv1a(buffer) result(hash)
-        ! dummy
-        integer(kind=4), intent(in) :: buffer
-        integer(kind=4) :: hash
-
-        ! auxiliary
-        integer(kind=4) :: buffer_buffer
-        integer(kind=1), dimension(4) :: buffer_list
-
-        equivalence (buffer_buffer, buffer_list)
-
-        buffer_buffer = buffer
-
-        hash = -2128831035
-        call FNV32(buffer_list, size(buffer_list), hash)
-
-    end function hash_fnv1a
+!    function hash_fnv1a(buffer) result(hash)
+!        ! dummy
+!        integer(kind=4), intent(in) :: buffer
+!        integer(kind=4) :: hash
+!
+!        ! auxiliary
+!        integer(kind=4) :: buffer_buffer
+!        integer(kind=1), dimension(4) :: buffer_list
+!
+!        equivalence (buffer_buffer, buffer_list)
+!
+!        buffer_buffer = buffer
+!
+!        hash = -2128831035
+!        call FNV32(buffer_list, size(buffer_list), hash)
+!
+!    end function hash_fnv1a
 
     ! fnv1a hash function
     !
