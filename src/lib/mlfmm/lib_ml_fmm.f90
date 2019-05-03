@@ -2,11 +2,16 @@
 !
 module lib_ml_fmm
     use lib_tree
+    use lib_tree_type
     use lib_ml_fmm_type
+    use lib_ml_fmm_type_operator
     use lib_ml_fmm_helper_functions
     implicit none
 
     private
+
+    ! --- public functions ---
+    public :: lib_ml_fmm_test_functions
 
     interface
 !        ! Basis function: A
@@ -27,7 +32,7 @@ module lib_ml_fmm
             ! dummy
             type(lib_tree_spatial_point), intent(in) :: x
             type(lib_tree_data_element) :: data_element
-            type(lib_ml_fmm_A_i) :: A_i
+            type(lib_ml_fmm_coefficient) :: A_i
         end function
 
 !        ! Basis function: B
@@ -48,7 +53,7 @@ module lib_ml_fmm
             ! dummy
             type(lib_tree_spatial_point), intent(in) :: x
             type(lib_tree_data_element) :: data_element
-            type(lib_ml_fmm_B_i) :: B_i
+            type(lib_ml_fmm_coefficient) :: B_i
         end function
 
         ! Basis function: S
@@ -158,10 +163,10 @@ module lib_ml_fmm
             use lib_ml_fmm_type
             implicit none
             ! dummy
-            type(lib_ml_fmm_A_i), intent(in) :: A_i_1
+            type(lib_ml_fmm_coefficient), intent(in) :: A_i_1
             type(lib_tree_spatial_point), intent(in) :: x_1
             type(lib_tree_spatial_point), intent(in) :: x_2
-            type(lib_ml_fmm_A_i) :: A_i_2
+            type(lib_ml_fmm_coefficient) :: A_i_2
         end function
 
         ! Translation: far-to-local (Singular-to-Regular)
@@ -185,10 +190,10 @@ module lib_ml_fmm
             use lib_ml_fmm_type
             implicit none
             ! dummy
-            type(lib_ml_fmm_B_i), intent(in) :: B_i_1
+            type(lib_ml_fmm_coefficient), intent(in) :: B_i_1
             type(lib_tree_spatial_point), intent(in) :: x_1
             type(lib_tree_spatial_point), intent(in) :: x_2
-            type(lib_ml_fmm_A_i) :: A_i_2
+            type(lib_ml_fmm_coefficient) :: A_i_2
         end function
 
         ! Translation: far-to-far (Singular-to-Singular)
@@ -212,14 +217,36 @@ module lib_ml_fmm
             use lib_ml_fmm_type
             implicit none
             ! dummy
-            type(lib_ml_fmm_B_i), intent(in) :: B_i_1
+            type(lib_ml_fmm_coefficient), intent(in) :: B_i_1
             type(lib_tree_spatial_point), intent(in) :: x_1
             type(lib_tree_spatial_point), intent(in) :: x_2
-            type(lib_ml_fmm_B_i) :: B_i_2
+            type(lib_ml_fmm_coefficient) :: B_i_2
         end function
     end interface
 
 
+    type lib_ml_fmm_procedure_handles
+        procedure(lib_ml_fmm_get_A_i), pointer, nopass :: get_A_i => null()
+        procedure(lib_ml_fmm_get_B_i), pointer, nopass :: get_B_i => null()
+        procedure(lib_ml_fmm_get_S), pointer, nopass :: get_S => null()
+        procedure(lib_ml_fmm_get_R), pointer, nopass :: get_R => null()
+        procedure(lib_ml_fmm_expansion_R), pointer, nopass :: expansion_R => null()
+        procedure(lib_ml_fmm_expansion_S), pointer, nopass :: expansion_S => null()
+        procedure(lib_ml_fmm_translation_RR), pointer, nopass :: get_translation_RR => null()
+        procedure(lib_ml_fmm_translation_SR), pointer, nopass :: get_translation_SR => null()
+        procedure(lib_ml_fmm_translation_SS), pointer, nopass :: get_translation_SS => null()
+    end type lib_ml_fmm_procedure_handles
+
+    ! --- member ---
+    type(lib_ml_fmm_procedure_handles) :: ml_fmm_handles
+    integer(kind=2) :: m_p_truncation
+
+    ! e.g. matrix vector product v = u*phi
+    type(lib_ml_fmm_v), dimension(:), allocatable :: m_u
+
+    ! Tree parameters
+    integer(kind=UINDEX_BYTES) :: m_neighbourhodd_size_k
+    integer(kind=4) :: m_s_opt
 
     contains
 
@@ -264,22 +291,76 @@ module lib_ml_fmm
     !   h_get_B_i: function handle
     !
     !
-    function lib_ml_fmm_calculate_upward_pass_step_1(h_get_B_i) result(C)
+    function lib_ml_fmm_calculate_upward_pass_step_1() result(C)
+        use lib_tree
         implicit none
         ! dummy
-        procedure(lib_ml_fmm_get_B_i) :: h_get_B_i
-        type(lib_ml_fmm_C) :: C
+        type(lib_ml_fmm_coefficient), dimension(:), allocatable :: C
 
         ! auxiliaray
-        type(lib_tree_spatial_point) :: x_c
-        type(lib_ml_fmm_B_i) :: B_i
-        type(lib_tree_data_element) :: data_element
+        integer(kind=UINDEX_BYTES) :: number_of_boxes
+        integer(kind=1) :: l_max
 
-        B_i = h_get_B_i(x_c, data_element)
+        integer(kind=uindex_bytes) :: number_of_elements
+
+        type(lib_tree_universal_index) :: uindex
+
+        integer(kind=UINDEX_BYTES) :: i
+
+        l_max = lib_tree_get_level_max(m_s_opt)
+        number_of_boxes = lib_tree_get_number_of_boxes(l_max)
+
+        allocate (C(number_of_boxes))
+
+        uindex%l = l_max
+        do i=1, number_of_boxes
+            uindex%n = i
+
+            C(i) = lib_ml_fmm_get_C_i_from_box(uindex)
+        end do
 
 
 
     end function lib_ml_fmm_calculate_upward_pass_step_1
+
+    !
+    ! Arguments
+    ! ----
+    !   uindex: type(lib_tree_universal_index)
+    !       universal index of the a Tree-box
+    !
+    ! Returns
+    ! ----
+    !   C_i: type(lib_ml_fmm_coefficient)
+    !       C coefficient of the Tree-box
+    function lib_ml_fmm_get_C_i_from_box(uindex) result(C_i)
+        implicit none
+        ! dummy
+        type(lib_tree_universal_index) :: uindex
+        type(lib_ml_fmm_coefficient) :: C_i
+
+        ! auxiliary
+        type(lib_ml_fmm_coefficient) :: buffer_C_i
+
+        type(lib_tree_data_element), dimension(:), allocatable :: data_element
+        integer(kind=4), dimension(:), allocatable :: element_number
+
+        type(lib_tree_spatial_point) :: x_c
+
+        integer(kind=UINDEX_BYTES) :: i
+
+        call m_coefficient_set_zero(C_i)
+
+        data_element = lib_tree_get_domain_e1(uindex, element_number)
+        if ((allocated (data_element)) &
+            .and. (size(data_element) .gt. 0)) then
+            x_c = lib_tree_get_centre_of_box(uindex)
+            do i=1, size(data_element)
+                buffer_C_i = m_u(element_number(i)) * ml_fmm_handles%get_B_i(x_c, data_element(i))
+                C_i = C_i + buffer_C_i
+            end do
+        end if
+    end function
 
     ! Upward pass - step 2
     !
@@ -294,8 +375,18 @@ module lib_ml_fmm
     function lib_ml_fmm_calculate_upward_pass_step_2(C_l_plus_1) result(C_l)
         implicit none
         ! dummy
-        type(lib_ml_fmm_C), intent(in) :: C_l_plus_1
-        type(lib_ml_fmm_C) :: C_l
+        type(lib_ml_fmm_coefficient), intent(in) :: C_l_plus_1
+        type(lib_ml_fmm_coefficient) :: C_l
+
+        ! auxiliary
+        integer(kind=1) :: l_min
+        integer(kind=1) :: l_max
+
+        integer(kind=1) :: i
+
+
+        l_min = lib_tree_get_level_min(m_neighbourhodd_size_k)
+        l_max = lib_tree_get_level_max(m_s_opt)
 
     end function lib_ml_fmm_calculate_upward_pass_step_2
 
@@ -326,5 +417,34 @@ module lib_ml_fmm
         implicit none
         integer :: dummy
     end function lib_ml_fmm_calculate_downward_pass_step_2
+
+    ! ----- test functions -----
+    function lib_ml_fmm_test_functions() result(error_counter)
+        implicit none
+
+        integer :: error_counter
+
+        if (.not. test_calculate_upward_pass_step_1()) then
+            error_counter = error_counter + 1
+        end if
+
+        print *, "-------------lib_ml_fmm_test_functions----------------"
+        if (error_counter == 0) then
+            print *, "lib_ml_fmm_test_functions tests: OK"
+        else
+            print *, error_counter,"lib_ml_fmm_test_functions test(s) FAILED"
+        end if
+        print *, "------------------------------------------------------"
+
+        contains
+
+        function test_calculate_upward_pass_step_1() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+        end function test_calculate_upward_pass_step_1
+
+    end function lib_ml_fmm_test_functions
 
 end module lib_ml_fmm

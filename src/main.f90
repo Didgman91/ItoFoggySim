@@ -4,15 +4,20 @@ program main
     use lib_tree_helper_functions
     use lib_hash_function
     use lib_sort
+
+    use lib_ml_fmm_type_operator
     implicit none
 
     integer :: error_counter
+
+
 
     error_counter = 0
     error_counter = error_counter + lib_sort_test_functions()
     error_counter = error_counter + lib_test_hash_function()
     error_counter = error_counter + lib_tree_hf_test_functions()
     error_counter = error_counter + lib_tree_test_functions()
+    error_counter = error_counter + lib_ml_fmm_type_operator_test_functions()
 
 !    call lib_tree_benchmark()
 !     call lib_tree_hf_benchmark()

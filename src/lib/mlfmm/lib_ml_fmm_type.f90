@@ -4,36 +4,26 @@ module lib_ml_fmm_type
     use lib_tree_type
     implicit none
 
-    type lib_ml_fmm_u
-        integer, dimension(:), allocatable :: u
+    integer(kind=1), parameter :: LIB_ML_FMM_COEFFICIENT_KIND = 8
+
+    type lib_ml_fmm_v
+        real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
     end type
 
-!    type lib_ml_fmm_A
-!        integer :: dummy
-!    end type
-
-    type lib_ml_fmm_A_i
-        integer :: dummy
+    ! e.g. A, B, C or D coefficient
+    ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, p. 6
+    type lib_ml_fmm_coefficient
+        real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
     end type
 
-!    type lib_ml_fmm_B
-!        integer :: dummy
-!    end type
-
-    type lib_ml_fmm_B_i
-        integer :: dummy
-    end type
-
-    type lib_ml_fmm_C
-        integer :: dummy
-    end type
-
+    ! values of the local (regular) basis function
     type lib_ml_fmm_R
-        integer :: dummy
+        real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
     end type
 
+    ! values of the multipole (singular) basis function
     type lib_ml_fmm_S
-        integer :: dummy
+        real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
     end type
 
 end module lib_ml_fmm_type
