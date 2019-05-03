@@ -271,8 +271,8 @@ module lib_tree
 !            D%x(ii) = (x_max%x(ii) - x_min%x(ii)) * nearest(1.0, -1.0)
         end do
 
-        ! use for all dimension the same scaling factor
-        D%x(:) = maxval(D%x)
+!        ! use for all dimension the same scaling factor
+!        D%x(:) = maxval(D%x)
 
         !$OMP PARALLEL DO PRIVATE(i, ii)
         do i=1, size(element_list)
