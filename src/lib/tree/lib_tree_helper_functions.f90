@@ -61,9 +61,8 @@ module lib_tree_helper_functions
     private
 
     ! parameter
-    integer(kind=1), public, parameter :: TREE_INTEGER_KIND = 4
     integer(kind=1), public, parameter :: NUMBER_OF_BITS_PER_BYTE = 8
-    integer(kind=TREE_INTEGER_KIND), public, parameter :: TREE_BOX_IGNORE_ENTRY = -1
+    integer(kind=UINDEX_BYTES), public, parameter :: TREE_BOX_IGNORE_ENTRY = -1
     integer(kind=1), public, parameter :: UNIVERSAL_INDEX_OVERFLOW = 0
 
     ! integer kind of the bit interleaving process, default = 1
@@ -104,7 +103,7 @@ module lib_tree_helper_functions
     public :: lib_tree_hf_get_centre_of_box
     public :: lib_tree_hf_get_neighbour_all_xD
 
-    public :: lib_tree_hf_get_neighbourhood_size
+!    public :: lib_tree_hf_get_neighbourhood_size
 
     ! test functions
     public :: lib_tree_hf_test_functions
@@ -140,103 +139,6 @@ contains
         !$OMP END SINGLE
 
     end subroutine lib_tree_hf_destructor
-
-    ! "The S-expansion (10) near the center of the nth box at level l for
-    !  x_i ∈ E_1 (n,l) is valid for any y in the domain E_3 (n,l)."
-    !
-    ! Equation
-    !   k >= 1/2 (R_c * d^(1/2) - 1)   (25)
-    !
-    ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
-    !
-    ! Arguments
-    ! ----
-    !   R_c: double precision
-    !
-    !
-    ! Returns
-    ! ----
-    !   k: integer
-    !       the minimum number of neighbours
-    !
-    !
-    function lib_tree_hf_get_neighbourhood_size_S(R_c) result (k)
-        implicit none
-
-        double precision, intent (in) :: R_c
-        double precision :: buffer
-        integer(kind=TREE_INTEGER_KIND) :: k
-
-        buffer = 0.5 * ( R_c * sqrt(real(TREE_DIMENSIONS)) - 1 )
-
-        k = ceiling(buffer)
-
-    end function lib_tree_hf_get_neighbourhood_size_S
-
-    ! "The R-expansion (8) near the center of the nth box at level l for x i ∈ E_3 (n,l) 
-    ! is valid for any y from the domain E_1 (n,l)."
-    !
-    ! Equation
-    !   k >= 1/2 (1/r_c * d^(1/2) - 1)   (26)
-    !
-    ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
-    !
-    ! Arguments
-    ! ----
-    !   R_c: double precision
-    !       number of the node, with n ranging form 0 to 2^(3*l) in a three-dimensional space
-    !
-    ! Returns
-    ! ----
-    !   k: integer
-    !       the minimum number of neighbours
-    !
-    !
-    function lib_tree_hf_get_neighbourhood_size_R(r_c) result (k)
-        implicit none
-
-        double precision, intent (in) :: r_c
-        double precision :: buffer
-        integer(kind=TREE_INTEGER_KIND) :: k
-
-        buffer = 0.5 * (1/r_c * sqrt(real(TREE_DIMENSIONS)) -1 )
-
-        k = ceiling(buffer)
-
-    end function lib_tree_hf_get_neighbourhood_size_R
-
-    ! "The R-expansion (8) near the center of the nth box at level l for x i ∈ E_3 (n,l) 
-    ! is valid for any y from the domain E_1 (n,l)."
-    !
-    ! Equation
-    !   k >= 1/2 (max(1/r_c, R_c) * d^(1/2) - 1)   (26)
-    !
-    ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
-    !
-    ! Arguments
-    ! ----
-    !   R_c: double precision
-    !       number of the node, with n ranging form 0 to 2^(3*l) in a three-dimensional space
-    !
-    ! Returns
-    ! ----
-    !   k: integer
-    !       the minimum number of neighbours
-    !
-    !
-    function lib_tree_hf_get_neighbourhood_size(R_c1, r_c2) result (k)
-        implicit none
-
-        double precision, intent (in) :: R_c1
-        double precision, intent (in) :: r_c2
-        double precision :: buffer
-        integer(kind=TREE_INTEGER_KIND) :: k
-
-        buffer = 0.5 * (max(1/r_c2, R_c1) * sqrt(real(TREE_DIMENSIONS)) -1 )
-
-        k = ceiling(buffer)
-
-    end function lib_tree_hf_get_neighbourhood_size
 
     ! Calculates the universal index *n* of a given normalised floating point *point_x*.
     ! Related to the level *l*.
@@ -683,162 +585,6 @@ contains
         coordinate_binary = ishft(f_mantissa, -shift)   ! right shift
 
     end function lib_tree_hf_get_coordinate_binary_number_1D_double
-
-!    function lib_tree_hf_get_coordinate_binary_number_3D_float(f) result (coordinate_binary_3D)
-!        implicit none
-!        ! Calculates the binary coordinate of a normalised floating point vector (0..1, 0..1, 0..1).
-!        !
-!        !   x = (0.N_1 N_2 N_3 ... N_j...)_(2_d), N_j=(b_(1j) b_(2j)...b_(dj) )_2 , j=1, 2, ..., N_j=0, ..., 2_d−1. (77)
-!        !
-!        ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
-!        !
-!        ! Arguments
-!        ! ----
-!        !   f: float, dimension(3)
-!        !       normalised single precision floating point number (0.0..1.0, 0.0..1.0, 0.0..1.0)
-!        !
-!        ! Returns
-!        ! ----
-!        !   the binary representation of the floating point vector (only the decimal place).
-!        !
-!        !   coordinate_binary_D: 16 bytes
-!        !
-!
-!        ! parameters
-!        integer(kind=1), parameter :: DIMENSION = 3         ! do not change, function is specialised in three-dimensional data points
-!        integer(kind=1), parameter :: NUMBER_OF_BYTES_COORDINATE_3D = 16  ! space for 3 (=DIMENSION) integer of kind 4 (TREE_INTEGER_KIND)
-!        integer(kind=1), parameter :: NUMBER_OF_BITS_COORDINATE_1D = 4 * NUMBER_OF_BITS_PER_BYTE
-!        integer(kind=2), parameter :: NUMBER_OF_BITS_COORDINATE_3D = NUMBER_OF_BYTES_COORDINATE_3D * NUMBER_OF_BITS_PER_BYTE
-!
-!        ! dummy arguments
-!        real, dimension(DIMENSION), intent(in) :: f
-!        integer(kind=NUMBER_OF_BYTES_COORDINATE_3D) :: coordinate_binary_3D
-!
-!        ! auxiliary variables
-!        real :: f_buffer
-!        integer(kind=1) :: i
-!        integer(kind=1) :: ii
-!        integer(kind=4), dimension(DIMENSION) :: coordinate_binary_1D
-!
-!        do i = 1, DIMENSION
-!            f_buffer = f(i)
-!            coordinate_binary_1D(i) = lib_tree_hf_get_coordinate_binary_number_1D_float(f_buffer)
-!        end do
-!
-!        ! make out of three binary coordinates one binary coordinate
-!        !
-!        ! Example
-!        ! ----
-!        !   x1: 0.100   => 0.5   (base 10)
-!        !   x2: 0.010   => 0.25  (base 10)
-!        !   x3: 0.001   => 0.125 (base 10)
-!        !
-!        !   x1: 0.1  |0  |0
-!        !   x2: 0. 0 | 1 | 0
-!        !   x3: 0.  0|  0|  1
-!        !  ------------------
-!        !  x3D: 0.100|010|001
-!        !
-!        ! Bit number example
-!        ! ----
-!        !   integer(kind=1): 1000 0100
-!        !        bit number |7..4 3..0|
-!        !
-!
-!        coordinate_binary_3D = 0 !ishft(coordinate_binary_3D, NUMBER_OF_BITS_COORDINATE_3D) ! set every bit to 0
-!        do i = 1, DIMENSION
-!            do ii = 0, NUMBER_OF_BITS_COORDINATE_1D - 1  ! bit operations: index starts at 0
-!                if (btest(coordinate_binary_1D(i), NUMBER_OF_BITS_COORDINATE_1D - 1 - ii)) then
-!                    coordinate_binary_3D = ibset(coordinate_binary_3D, NUMBER_OF_BITS_COORDINATE_3D - ii*DIMENSION - i)
-!                else
-!                    coordinate_binary_3D= ibclr(coordinate_binary_3D, NUMBER_OF_BITS_COORDINATE_3D - ii*DIMENSION - i)
-!                end if
-!            end do
-!        end do
-!
-!
-!    end function lib_tree_hf_get_coordinate_binary_number_3D_float
-!
-!    function lib_tree_hf_get_coordinate_binary_number_3D_double(f) result (coordinate_binary_3D)
-!        implicit none
-!        ! Calculates the binary coordinate of a normalised floating point vector (0..1, 0..1, 0..1).
-!        !
-!        !   x = (0.N_1 N_2 N_3 ... N_j...)_(2_d), N_j=(b_(1j) b_(2j)...b_(dj) )_2 , j=1, 2, ..., N_j=0, ..., 2_d−1. (77)
-!        !
-!        ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
-!        !
-!        ! Arguments
-!        ! ----
-!        !   f: double precision, dimension(3)
-!        !       normalised single precision floating point number (0.0..1.0, 0.0..1.0, 0.0..1.0)
-!        !
-!        ! Returns
-!        ! ----
-!        !   the binary representation of the floating point vector (only the decimal place).
-!        !
-!        !   coordinate_binary_D: 16 bytes
-!        !
-!
-!        ! parameters
-!        integer(kind=1), parameter :: DIMENSION = 3         ! do not change, function is specialised in three-dimensional data points
-!        integer(kind=1), parameter :: NUMBER_OF_BYTES_COORDINATE_3D = 16  ! space for 3 (=DIMENSION) integer of kind 8
-!        integer(kind=1), parameter :: NUMBER_OF_BITS_COORDINATE_1D = 8 * NUMBER_OF_BITS_PER_BYTE
-!        integer(kind=2), parameter :: NUMBER_OF_BITS_COORDINATE_3D = NUMBER_OF_BYTES_COORDINATE_3D * NUMBER_OF_BITS_PER_BYTE
-!
-!        ! dummy arguments
-!        double precision, dimension(DIMENSION), intent(in) :: f
-!        integer(kind=NUMBER_OF_BYTES_COORDINATE_3D) :: coordinate_binary_3D
-!
-!        ! auxiliary variables
-!        double precision :: f_buffer
-!        integer(kind=1) :: i
-!        integer(kind=1) :: ii
-!        integer(kind=8), dimension(DIMENSION) :: coordinate_binary_1D
-!        integer(kind=1) :: bit_number_3D
-!        integer(kind=1) :: bit_number_1D
-!
-!        do i = 1, DIMENSION
-!            f_buffer = f(i)
-!            coordinate_binary_1D(i) = lib_tree_hf_get_coordinate_binary_number_1D_double(f_buffer)
-!        end do
-!
-!        ! make out of three binary coordinates one binary coordinate
-!        !
-!        ! Example
-!        ! ----
-!        !   x1: 0.100   => 0.5   (base 10)
-!        !   x2: 0.010   => 0.25  (base 10)
-!        !   x3: 0.001   => 0.125 (base 10)
-!        !
-!        !   x1: 0.1  |0  |0
-!        !   x2: 0. 0 | 1 | 0
-!        !   x3: 0.  0|  0|  1
-!        !  ------------------
-!        !  x3D: 0.100|010|001
-!        !
-!        ! Bit number example
-!        ! ----
-!        !   integer(kind=1): 1000 0100
-!        !        bit number |7..4 3..0|
-!
-!        !
-!        coordinate_binary_3D = 0 !ishft(coordinate_binary_3D, NUMBER_OF_BITS_COORDINATE_3D) ! set every bit to 0
-!                bit_number_3D = NUMBER_OF_BITS_COORDINATE_3D - ii*DIMENSION - i
-!        do i = 1, DIMENSION
-!            do ii = 0, NUMBER_OF_BITS_COORDINATE_1D - 1  ! bit operations: index starts at 0
-!                if (bit_number_3D >= 0) then
-!                    bit_number_1D = NUMBER_OF_BITS_COORDINATE_1D - 1 - ii
-!                    if (btest(coordinate_binary_1D(i), bit_number_1D)) then
-!                        coordinate_binary_3D = ibset(coordinate_binary_3D, bit_number_3D)
-!                    else
-!                        coordinate_binary_3D= ibclr(coordinate_binary_3D, bit_number_3D)
-!                    end if
-!                end if
-!            end do
-!        end do
-!
-!
-!    end function lib_tree_hf_get_coordinate_binary_number_3D_double
     
     ! Calculates the binary coordinate of a normalised floating point vector (0..1, 0..1, 0..1).
     ! For each element separately.
@@ -1045,18 +791,18 @@ contains
     !
     ! Arguments
     ! ----
-    !   k: integer(kind=TREE_INTEGER_KIND)
+    !   k: integer(kind=UINDEX_BYTES)
     !       k-th neighbour
-    !   n: integer(kind=TREE_INTEGER_KIND)
+    !   n: integer(kind=UINDEX_BYTES)
     !       universal index of a box
-    !   l: integer(kind=TREE_INTEGER_KIND)
+    !   l: integer(kind=UINDEX_BYTES)
     !       number of the level
     !
     ! Returns
     ! ----
     !   the universal indexes of all neigbour boxes of the given box.
     !
-    !   neighbour_all: Integer(kind=TREE_INTEGER_KIND), dimension(2^d)
+    !   neighbour_all: Integer(kind=UINDEX_BYTES), dimension(2^d)
     function lib_tree_hf_get_neighbour_all_1D(k,n,l) result (neighbour_1d)
         implicit none
 
@@ -1067,8 +813,8 @@ contains
         integer(kind=UINDEX_BYTES), dimension(3) :: neighbour_1d
 
         ! auxiliary variables
-        integer(kind=TREE_INTEGER_KIND), parameter :: ignore_entry = -1
-        integer(kind=TREE_INTEGER_KIND), parameter :: lower_boundary = 0
+        integer(kind=UINDEX_BYTES), parameter :: ignore_entry = -1
+        integer(kind=UINDEX_BYTES), parameter :: lower_boundary = 0
         integer(kind=UINDEX_BYTES) :: upper_boundary
         integer(kind=UINDEX_BYTES) :: buffer_n
 
@@ -1119,7 +865,7 @@ contains
     !
     ! Arguments
     ! ----
-    !   k: integer(kind=TREE_INTEGER_KIND)
+    !   k: integer(kind=UINDEX_BYTES)
     !       k-th neighbour
     !   n: integer(kind=COORDINATE_BINARY_BYTES)
     !       universal index of a box
@@ -1138,7 +884,7 @@ contains
         implicit none
 
         ! parameter
-        integer(kind=TREE_INTEGER_KIND), parameter :: lower_boundary = 0
+        integer(kind=UINDEX_BYTES), parameter :: lower_boundary = 0
         integer(kind=1), parameter :: NUMBER_OF_1D_NEIGHBOURS = 3   ! includes its own box number
         integer(kind=1), parameter :: NUMBER_OF_NEIGHBOURS = 3**TREE_DIMENSIONS-1
 
@@ -1149,7 +895,7 @@ contains
         integer(kind=UINDEX_BYTES), dimension(NUMBER_OF_NEIGHBOURS) :: neighbour_all
 
         ! auxiliary variables
-        integer(kind=TREE_INTEGER_KIND) :: upper_boundary
+        integer(kind=UINDEX_BYTES) :: upper_boundary
 
         integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: n_deinterleaved
 
