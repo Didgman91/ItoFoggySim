@@ -968,10 +968,10 @@ module lib_tree
         integer(kind=2), intent(in) :: margin
 
         ! auxiliary
-        integer(kind=4) :: correspondence_vector_dimension
-        integer(kind=4) :: hashed_uindex
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: correspondence_vector_dimension
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: hashed_uindex
 #ifdef _DEBUG_
-        integer(kind=4) :: hashed_uindex_old = -1
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: hashed_uindex_old = -1
 #endif
         type(lib_tree_universal_index) :: uindex
         integer(kind=4) :: i
@@ -1088,14 +1088,8 @@ module lib_tree
                     hashed_uindex_old = hashed_uindex
 #endif
 
-!#if (_UINDEX_BYTES_ == 16)
-!                    hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), lib_tree_hash_max)
-!#elif (_UINDEX_BYTES_ == 8)
-!                    hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
-!#elif (_UINDEX_BYTES_ == 4)
-                    hashed_uindex =  IEOR(hashed_uindex, ii)
+                    hashed_uindex =  IEOR(hashed_uindex, int(ii, CORRESPONDENCE_VECTOR_KIND))
                     hashed_uindex = 1 + hash_fnv1a_4_byte(hashed_uindex, lib_tree_hash_max)
-!#endif
                 end do
                 if (.not. element_saved) then
                     hash_overflow_counter = hash_overflow_counter + 1
@@ -1133,7 +1127,7 @@ module lib_tree
         type(lib_tree_data_element) :: rv
 
         ! auxiliary
-        integer(kind=4) :: hashed_uindex
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: hashed_uindex
         integer(kind=2) :: i
         logical :: element_found
 
@@ -1175,24 +1169,12 @@ module lib_tree
 
                         exit
                     else
-!#if (_UINDEX_BYTES_ == 16)
-!                        hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), lib_tree_hash_max)
-!#elif (_UINDEX_BYTES_ == 8)
-!                        hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
-!#elif (_UINDEX_BYTES_ == 4)
-                        hashed_uindex = IEOR(hashed_uindex, i)
-                        hashed_uindex = 1 + hash_fnv1a_4_byte(int(hashed_uindex,4), lib_tree_hash_max)
-!#endif
+                        hashed_uindex =  IEOR(hashed_uindex, int(i, CORRESPONDENCE_VECTOR_KIND))
+                        hashed_uindex = 1 + hash_fnv1a_4_byte(hashed_uindex, lib_tree_hash_max)
                     end if
                 else
-!#if (_UINDEX_BYTES_ == 16)
-!                    hashed_uindex = 1 + hash_fnv1a_16_byte(int(hashed_uindex,16), lib_tree_hash_max)
-!#elif (_UINDEX_BYTES_ == 8)
-!                    hashed_uindex = 1 + hash_fnv1a_8_byte(int(hashed_uindex,8), lib_tree_hash_max)
-!#elif (_UINDEX_BYTES_ == 4)
-                    hashed_uindex = IEOR(hashed_uindex, i)
-                    hashed_uindex = 1 + hash_fnv1a_4_byte(int(hashed_uindex,4), lib_tree_hash_max)
-!#endif
+                        hashed_uindex =  IEOR(hashed_uindex, int(i, CORRESPONDENCE_VECTOR_KIND))
+                        hashed_uindex = 1 + hash_fnv1a_4_byte(hashed_uindex, lib_tree_hash_max)
                 end if
 !                !$  end if
 
