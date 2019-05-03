@@ -44,6 +44,9 @@ module lib_tree
     public :: lib_tree_get_level_min
     public :: lib_tree_get_level_max
 
+    public :: lib_tree_get_number_of_boxes
+    public :: lib_tree_get_centre_of_box
+
     public :: lib_tree_test_functions
     public :: lib_tree_benchmark
 
@@ -794,7 +797,7 @@ module lib_tree
         implicit none
         ! dummy
         integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: k
-        integer(kind=UINDEX_BYTES) :: l_min
+        integer(kind=1) :: l_min
 
         l_min = int(1 + floor(log(real(k+1)) / log(2.0), UINDEX_BYTES))
 
@@ -881,6 +884,54 @@ module lib_tree
         rv = lib_tree_l_th
 
     end function lib_tree_get_level_threshold
+
+    ! Returns the number of boxes at level *l*.
+    !
+    ! Arguments
+    ! ----
+    !   l: integer
+    !       number of the level [0..l_th]
+    !
+    ! Returns
+    ! ----
+    !   rv: integer
+    !       number of boxes a t level *l*
+    !
+    function lib_tree_get_number_of_boxes(l) result (rv)
+        implicit none
+        ! dummy
+        integer(kind=1) :: l
+        integer(kind=UINDEX_BYTES) :: rv
+
+        rv = 2**(l*TREE_DIMENSIONS)
+    end function lib_tree_get_number_of_boxes
+
+    ! Calculates the centre of a box(n,l).
+    !
+    !   x_m(n, l) = 2^(−l) ( n + 2^(−1))       (87)
+    !
+    ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
+    !
+    ! Arguments
+    ! ----
+    !   n: integer
+    !       number of the node, with n ranging form 0 to 2^(3*l) in a three-dimensional space
+    !   l: integer
+    !       number of the level
+    ! Returns
+    ! ----
+    !   x_m: [float, double]
+    !       counting system undependet value
+    !
+    function lib_tree_get_centre_of_box(uindex) result (rv)
+        implicit none
+        ! dummy
+        type(lib_tree_universal_index), intent(in) :: uindex
+        type(lib_tree_spatial_point) :: rv
+
+        rv = lib_tree_hf_get_centre_of_box(uindex%n, uindex%l)
+
+    end function lib_tree_get_centre_of_box
 
     ! This routine stores references (list entries) of the lib_tree_data_element_list array.
     ! These references are sorted into ascending numerical order of the universal index.
@@ -1247,6 +1298,9 @@ module lib_tree
             error_counter = error_counter + 1
         end if
         if (.not. test_lib_tree_get_level_max()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_tree_get_number_of_boxes()) then
             error_counter = error_counter + 1
         end if
 
@@ -1931,6 +1985,33 @@ module lib_tree
             end do
 
         end function test_lib_tree_get_level_max
+
+        function test_lib_tree_get_number_of_boxes() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            integer(kind=1) :: l
+            integer(kind=UINDEX_BYTES) :: number_of_boxes
+            integer(kind=UINDEX_BYTES) :: ground_truth_number_of_boxes
+
+            l = 2
+#if (_FMM_DIMENSION_ == 2)
+            ground_truth_number_of_boxes = 16! 2**(2*2)
+#elif (_FMM_DIMENSION_ == 3)
+            ground_truth_number_of_boxes = 64! 2**(3*2)
+#endif
+            number_of_boxes = lib_tree_get_number_of_boxes(l)
+
+            if (ground_truth_number_of_boxes .eq. number_of_boxes) then
+                print *, "test_lib_tree_get_number_of_boxes: OK"
+                rv = .true.
+            else
+                print *, "test_lib_tree_get_number_of_boxes: FAILED"
+                rv = .false.
+            end if
+
+        end function test_lib_tree_get_number_of_boxes
 
         function test_lib_tree_create_correspondece_vector_sorted_data_elements() result(rv)
             implicit none
