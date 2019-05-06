@@ -2,6 +2,7 @@
 !
 module lib_ml_fmm_helper_functions
     use lib_tree_type
+    use lib_tree_type_operator
     implicit none
 
     private
@@ -132,6 +133,12 @@ module lib_ml_fmm_helper_functions
             real, intent(in) :: r_c
             logical :: rv
 
+            if (abs(y - x) .le. r_c * abs(x_i - x)) then
+                rv = .true.
+            else
+                rv = .false.
+            end if
+
         end function lib_ml_fmm_hf_check_validity_expansion_R
 
         ! Calculates if the S expansino is valid
@@ -160,6 +167,12 @@ module lib_ml_fmm_helper_functions
             type(lib_tree_spatial_point), intent(in) :: x
             real, intent(in) :: R_c
             logical :: rv
+
+            if (abs(y - x) .ge. R_c * abs(x_i - x)) then
+                rv = .true.
+            else
+                rv = .false.
+            end if
 
         end function lib_ml_fmm_hf_check_validity_expansion_S
 
@@ -193,6 +206,12 @@ module lib_ml_fmm_helper_functions
             type(lib_tree_spatial_point), intent(in) :: x_2
             real, intent(in) :: r_c
             logical :: rv
+
+            if (abs(y - x_2) .le. (r_c * abs(x_i - x_1) - abs(x_1 - x_2))) then
+                rv = .true.
+            else
+                rv = .false.
+            end if
 
         end function lib_ml_fmm_hf_check_validity_translation_RR
 
@@ -231,6 +250,12 @@ module lib_ml_fmm_helper_functions
             real, intent(in) :: r_c2
             logical :: rv
 
+            if (abs(y - x_2) .le. min(abs(x_2 - x_1) - R_c1 * abs(x_i - x_1), r_c2 * abs(x_i - x_2))) then
+                rv = .true.
+            else
+                rv = .false.
+            end if
+
         end function lib_ml_fmm_hf_check_validity_translation_SR
 
         ! Calculates if the SR translation is valid
@@ -263,6 +288,12 @@ module lib_ml_fmm_helper_functions
             type(lib_tree_spatial_point), intent(in) :: x_2
             real, intent(in) :: R_c
             logical :: rv
+
+            if (abs(y - x_2) .gt. R_c * abs(x_2 - x_1) + R_c * abs(x_i - x_1)) then
+                rv = .true.
+            else
+                rv = .false.
+            end if
 
         end function lib_ml_fmm_hf_check_validity_translation_SS
 

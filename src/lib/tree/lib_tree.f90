@@ -21,6 +21,7 @@
 module lib_tree
     !$  use omp_lib
     use lib_tree_type
+    use lib_tree_type_operator
     use lib_tree_helper_functions
     use lib_hash_function
     use lib_sort
@@ -65,6 +66,10 @@ module lib_tree
     ! --- public type definitions ---
     public :: lib_tree_spatial_point
 
+    ! --- public operator definitions ---
+    public :: operator (+)
+    public :: operator (-)
+    public :: operator (*)
 
     ! --- member---
     integer(kind=1), parameter :: CORRESPONDENCE_VECTOR_KIND = 4    ! limited by the total number of elements -> 2**(8*4) = 4,294,967,296 elements
