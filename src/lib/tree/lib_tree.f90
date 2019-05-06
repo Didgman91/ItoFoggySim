@@ -36,6 +36,9 @@ module lib_tree
     public :: lib_tree_constructor
     public :: lib_tree_destructor
 
+    public :: lib_tree_get_parent
+    public :: lib_tree_get_children
+
     public :: lib_tree_get_domain_e1
     public :: lib_tree_get_domain_e2
     public :: lib_tree_get_domain_e3

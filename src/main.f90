@@ -5,6 +5,8 @@ program main
     use lib_hash_function
     use lib_sort
 
+    use ml_fmm_math
+
     use lib_ml_fmm_type_operator
     implicit none
 
