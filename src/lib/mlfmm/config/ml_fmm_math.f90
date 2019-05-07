@@ -5,9 +5,25 @@ module ml_fmm_math
 
     private
 
+    ! --- public functions ---
+    public :: ml_fmm_type_operator_get_procedures
+
     public :: lib_ml_fmm_type_operator_test_functions
 
     contains
+
+    function ml_fmm_type_operator_get_procedures() result (operator_procedures)
+        implicit none
+        ! dummy
+        type(ml_fmm_type_operator_procedures) :: operator_procedures
+
+        ! load test procedure functions
+        operator_procedures%coefficient_add => test_c_add
+        operator_procedures%coefficient_set_zero => test_set_coefficient_zero
+        operator_procedures%cor => test_cor
+        operator_procedures%u_dot_coefficient => test_u_dot_coefficient
+
+    end function ml_fmm_type_operator_get_procedures
 
     ! ----- test functions ----
     function lib_ml_fmm_type_operator_test_functions() result (error_counter)
@@ -82,78 +98,78 @@ module ml_fmm_math
 
         end function test_lib_ml_fmm_type_operator_constructor
 
-        function test_c_add(lhs, rhs) result (rv)
-            implicit none
-            ! dummy
-            type (lib_ml_fmm_coefficient), intent(in) :: lhs, rhs
-            type (lib_ml_fmm_coefficient) :: rv
-
-            ! auxiliary
-            integer :: i
-            integer :: length
-
-            if (size(lhs%dummy) .eq. size(rhs%dummy)) then
-                length = size(lhs%dummy)
-                allocate (rv%dummy(length))
-                do i=1, length
-                    rv%dummy(i) = lhs%dummy(i) + rhs%dummy(i)
-                end do
-            end if
-
-        end function
-
-        function test_u_dot_coefficient(lhs, rhs) result (rv)
-            implicit none
-            ! dummy
-            type (lib_ml_fmm_v), intent(in) :: lhs
-            type (lib_ml_fmm_coefficient), intent(in) :: rhs
-            type (lib_ml_fmm_coefficient) :: rv
-
-            ! auxiliary
-            integer :: i
-            integer :: length
-
-            if (size(lhs%dummy) .eq. size(rhs%dummy)) then
-                length = size(lhs%dummy)
-                allocate (rv%dummy(length))
-                do i=1, length
-                    rv%dummy(i) = lhs%dummy(i) * rhs%dummy(i)
-                end do
-            end if
-        end function test_u_dot_coefficient
-
-        function test_cor(lhs, rhs)  result (rv)
-            implicit none
-            ! dummy
-            type(lib_ml_fmm_coefficient), intent(in) :: lhs
-            type(lib_ml_fmm_R), intent(in) :: rhs
-            type(lib_ml_fmm_v) :: rv
-
-            ! auxiliary
-            integer :: i
-            integer :: length
-
-            allocate (rv%dummy(1))
-            rv%dummy(1) = 0
-
-            if (size(lhs%dummy) .eq. size(rhs%dummy)) then
-                length = size(lhs%dummy)
-                do i=1, length
-                    rv%dummy(1) = rv%dummy(1) + lhs%dummy(i) * rhs%dummy(i)
-                end do
-            end if
-
-        end function test_cor
-
-        subroutine test_set_coefficient_zero(coefficient)
-            implicit none
-            ! dummy
-            type(lib_ml_fmm_coefficient), intent(inout) :: coefficient
-
-            if (allocated(coefficient%dummy)) then
-                coefficient%dummy(:) = 0
-            end if
-        end subroutine
-
     end function lib_ml_fmm_type_operator_test_functions
+
+    function test_c_add(lhs, rhs) result (rv)
+        implicit none
+        ! dummy
+        type (lib_ml_fmm_coefficient), intent(in) :: lhs, rhs
+        type (lib_ml_fmm_coefficient) :: rv
+
+        ! auxiliary
+        integer :: i
+        integer :: length
+
+        if (size(lhs%dummy) .eq. size(rhs%dummy)) then
+            length = size(lhs%dummy)
+            allocate (rv%dummy(length))
+            do i=1, length
+                rv%dummy(i) = lhs%dummy(i) + rhs%dummy(i)
+            end do
+        end if
+
+    end function
+
+    function test_u_dot_coefficient(lhs, rhs) result (rv)
+        implicit none
+        ! dummy
+        type (lib_ml_fmm_v), intent(in) :: lhs
+        type (lib_ml_fmm_coefficient), intent(in) :: rhs
+        type (lib_ml_fmm_coefficient) :: rv
+
+        ! auxiliary
+        integer :: i
+        integer :: length
+
+        if (size(lhs%dummy) .eq. size(rhs%dummy)) then
+            length = size(lhs%dummy)
+            allocate (rv%dummy(length))
+            do i=1, length
+                rv%dummy(i) = lhs%dummy(i) * rhs%dummy(i)
+            end do
+        end if
+    end function test_u_dot_coefficient
+
+    function test_cor(lhs, rhs)  result (rv)
+        implicit none
+        ! dummy
+        type(lib_ml_fmm_coefficient), intent(in) :: lhs
+        type(lib_ml_fmm_R), intent(in) :: rhs
+        type(lib_ml_fmm_v) :: rv
+
+        ! auxiliary
+        integer :: i
+        integer :: length
+
+        allocate (rv%dummy(1))
+        rv%dummy(1) = 0
+
+        if (size(lhs%dummy) .eq. size(rhs%dummy)) then
+            length = size(lhs%dummy)
+            do i=1, length
+                rv%dummy(1) = rv%dummy(1) + lhs%dummy(i) * rhs%dummy(i)
+            end do
+        end if
+
+    end function test_cor
+
+    subroutine test_set_coefficient_zero(coefficient)
+        implicit none
+        ! dummy
+        type(lib_ml_fmm_coefficient), intent(inout) :: coefficient
+
+        if (allocated(coefficient%dummy)) then
+            coefficient%dummy(:) = 0
+        end if
+    end subroutine
 end module ml_fmm_math

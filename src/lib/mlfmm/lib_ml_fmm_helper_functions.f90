@@ -1,11 +1,15 @@
 ! LIB: Mulitlevel Fast Multipole Method - Helper Functions
 !
 module lib_ml_fmm_helper_functions
-    use lib_tree_type
-    use lib_tree_type_operator
+    use lib_tree_public
+    use ml_fmm_type
     implicit none
 
     private
+
+    ! --- public functions ---
+    public :: lib_ml_fmm_hf_get_neighbourhood_size
+    public :: lib_ml_fmm_hf_create_hierarchy
 
     contains
 
@@ -296,5 +300,66 @@ module lib_ml_fmm_helper_functions
             end if
 
         end function lib_ml_fmm_hf_check_validity_translation_SS
+
+        ! Argument
+        ! ----
+        !   data: array<lib_tree_data_element>
+        !       list of data points
+        !
+        ! Result
+        ! ----
+        !   hierarchy
+        !       hierarchy of the X- and Y-hierarchy (sources and targets)
+        function lib_ml_fmm_hf_create_hierarchy(data_elements, length, l_max, l_min) result(hierarchy)
+            implicit none
+            ! dummy
+            type(lib_tree_data_element), dimension(:), intent(in) :: data_elements
+            integer(kind=UINDEX_BYTES), dimension(3), intent(in) :: length
+            integer(kind=1), intent(in) :: l_max
+            integer(kind=1), intent(in) :: l_min
+            type(lib_ml_fmm_hierarchy) :: hierarchy
+
+            ! auxiliary
+            integer(kind=1) :: buffer_l
+            integer(kind=UINDEX_BYTES) :: i
+            type(lib_tree_universal_index) :: buffer_uindex
+            integer(kind=UINDEX_BYTES) :: number_of_boxes_at_l_max
+
+!            allocate( hierarchy%X(l_min:l_max))
+!            allocate( hierarchy%Y(l_min:l_max))
+!
+!            allocate (hierarchy%X(l_max)%uindex(length(HIERARCHY_X) + length(HIERARCHY_XY)))
+!            allocate (hierarchy%Y(l_max)%uindex(length(HIERARCHY_Y) + length(HIERARCHY_XY)))
+!
+!            ! iterate over all data elements
+!            if( length(HIERARCHY_X) .gt. 0 ) then
+!                do i=1, length(HIERARCHY_X)
+!                    ! get box uindex at l=l_max
+!                    buffer_uindex = data_elements(i)%uindex
+!                    buffer_l = l_max - buffer_uindex%l
+!                    if (buffer_l .gt. 0) then
+!                        buffer_uindex = lib_tree_get_parent(buffer_uindex, buffer_l)
+!                    else if (buffer_l .eq. 0) then
+!                        continue
+!                    else
+!                        print *, "lib_ml_fmm_create_hierarchy: ERROR"
+!                        print *, "  l_th < l_max"
+!                        print *, "  check for example the Tree constructor (lib_tree_constructor)"
+!                    end if
+!
+!                    ! add buffer_uindex to the X-hierarchy
+!                    hierarchy%X(l_max)%uindex(i) = buffer_uindex
+!                end do
+!            end if
+        end function
+
+        subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy(uindex_list, uindex)
+            implicit none
+            ! dummy
+            type(lib_tree_universal_index), dimension(:), intent(inout) :: uindex_list
+            type(lib_tree_universal_index), intent(in) :: uindex
+
+
+        end subroutine
 
 end module lib_ml_fmm_helper_functions

@@ -54,6 +54,8 @@ module lib_tree
     public :: lib_tree_test_functions
     public :: lib_tree_benchmark
 
+    public :: lib_tree_get_diagonal_test_dataset
+
     public :: lib_tree_hf_test_functions
     public :: lib_tree_hf_benchmark
 !    public :: lib_tree_hf_destructor       ! only for debugging purpose
@@ -282,8 +284,8 @@ module lib_tree
 !            D%x(ii) = (x_max%x(ii) - x_min%x(ii)) * nearest(1.0, -1.0)
         end do
 
-!        ! use for all dimension the same scaling factor
-!        D%x(:) = maxval(D%x)
+        ! use for all dimension the same scaling factor
+        D%x(:) = maxval(D%x)
 
         !$OMP PARALLEL DO PRIVATE(i, ii)
         do i=1, size(element_list)
@@ -321,11 +323,11 @@ module lib_tree
 
         ! dummy arguments
         type(lib_tree_universal_index), intent (in) :: uindex
-        integer(kind=UINDEX_BYTES), intent (in), optional :: step
+        integer(kind=1), intent (in), optional :: step
         type(lib_tree_universal_index) :: rv
 
         ! auxiliary
-        integer(kind=UINDEX_BYTES) :: m_step
+        integer(kind=1) :: m_step
 
         m_step = 1
         if(present(step))m_step=step
@@ -1269,6 +1271,38 @@ module lib_tree
 
     end subroutine lib_tree_reallocate_1d_data_element_list
 
+    function lib_tree_get_diagonal_test_dataset(list_length, l_th, element_type, hierarchy_type, margin) result(element_list)
+        implicit none
+        ! dummy
+        integer(kind=UINDEX_BYTES), intent(in) :: list_length
+        integer(kind=1), intent(in) :: l_th
+        integer(kind=1), intent(in) :: element_type
+        integer(kind=1), intent(in) :: hierarchy_type
+        integer(kind=2), optional :: margin
+        type(lib_tree_data_element), dimension(list_length) :: element_list
+
+        ! auxiliary
+        integer(kind=2) :: m_margin
+        integer(kind=4) :: i
+
+        m_margin = 300
+        if (present(margin)) m_margin = margin
+
+#if (_FMM_DIMENSION_ == 2)
+        do i=1, list_length
+            element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
+            element_list(i)%point_x%x(2) = (0.999 * i)/(1.0*list_length)
+        end do
+#elif (_FMM_DIMENSION_ == 3)
+        do i=1, list_length
+            element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
+            element_list(i)%point_x%x(2) = (0.9 * i)/(1.0*list_length)
+            element_list(i)%point_x%x(3) = (0.9 * i)/(1.0*list_length)
+        end do
+#endif
+        element_list(:)%element_type = element_type
+        element_list(:)%hierarchy = hierarchy_type
+    end function
 
     ! ----------------- test functions -----------------
     function lib_tree_test_functions() result(error_counter)

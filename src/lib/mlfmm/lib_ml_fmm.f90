@@ -4,6 +4,7 @@ module lib_ml_fmm
     use lib_tree
     use lib_tree_type
     use ml_fmm_type
+    use ml_fmm_math
     use lib_ml_fmm_type_operator
     use lib_ml_fmm_helper_functions
     implicit none
@@ -237,15 +238,23 @@ module lib_ml_fmm
         procedure(lib_ml_fmm_translation_SS), pointer, nopass :: get_translation_SS => null()
     end type lib_ml_fmm_procedure_handles
 
+    type lib_ml_fmm_data
+        type(lib_tree_data_element), dimension(:), allocatable :: X
+        type(lib_tree_data_element), dimension(:), allocatable :: Y
+        type(lib_tree_data_element), dimension(:), allocatable :: XY
+    end type
+
     ! --- member ---
     type(lib_ml_fmm_procedure_handles) :: m_ml_fmm_handles
     integer(kind=2) :: m_ml_fmm_p_truncation
 
     ! e.g. matrix vector product v = u*phi
     type(lib_ml_fmm_v), dimension(:), allocatable :: m_ml_fmm_u
+    type(lib_ml_fmm_v), dimension(:), allocatable :: m_ml_fmm_v
 
-    type(lib_ml_fmm_coefficient_list_list) :: m_ml_fmm_C
-    type(lib_ml_fmm_coefficient_list_list) :: m_ml_fmm_D
+    type(lib_ml_fmm_coefficient_list_list) :: m_ml_fmm_expansion_coefficients
+
+    type(lib_ml_fmm_hierarchy) :: m_ml_fmm_hierarchy
 
     ! Tree parameters
     integer(kind=UINDEX_BYTES) :: m_tree_neighbourhodd_size_k
@@ -263,18 +272,39 @@ module lib_ml_fmm
     ! 2. create ml fmm data set
     !       - C per box and per level (l_max up to l_min)
     !       - D per box and per level (l_min down to l_max)
-    subroutine lib_ml_fmm_constructor(data)
+    subroutine lib_ml_fmm_constructor(data_elements)
         implicit none
         ! dummy
-        type(lib_tree_data_element), dimension(:) :: data
+        type(lib_ml_fmm_data), intent(in) :: data_elements
 
-        call lib_tree_constructor(data)
+        ! auxiliaray
+        type(lib_tree_data_element), dimension(:), allocatable :: data_concatenated
+        integer(kind=UINDEX_BYTES), dimension(3) :: length
+        type(ml_fmm_type_operator_procedures) :: operator_procedures
+
+        ! concatenate X-, Y- and XY-hierarchy data
+        !   length(1) = size(data_elements%X)
+        !   length(2) = size(data_elements%Y)
+        !   length(3) = size(data_elements%XY)
+        data_concatenated = lib_ml_fmm_concatenate_data_array(data_elements, length)
+
+        ! initiate the Tree
+        call lib_tree_constructor(data_concatenated)
+
+        ! initiate the X- and Y-hierarchy
+        m_ml_fmm_hierarchy = lib_ml_fmm_hf_create_hierarchy(data_concatenated, length, m_tree_l_max, m_tree_l_min)
+
+        ! initiate the ml fmm type operators
+        operator_procedures = ml_fmm_type_operator_get_procedures()
+        call lib_ml_fmm_type_operator_constructor(operator_procedures)
+
+        ! adjust Tree parameters
         m_tree_neighbourhodd_size_k = 1!lib_ml_fmm_hf_get_neighbourhood_size(R_c1, r_c2)
         m_tree_l_min = lib_tree_get_level_min(m_tree_neighbourhodd_size_k)
         m_tree_l_max = lib_tree_get_level_max(m_tree_s_opt)
 
-        call lib_ml_fmm_type_operator_allocate_coefficient_list(m_ml_fmm_C, m_tree_l_min, m_tree_l_max)
-        call lib_ml_fmm_type_operator_allocate_coefficient_list(m_ml_fmm_D, m_tree_l_min, m_tree_l_max)
+        ! setup the ml fmm data structure
+        call lib_ml_fmm_type_operator_allocate_coefficient_list(m_ml_fmm_expansion_coefficients, m_tree_l_min, m_tree_l_max)
 
 
     end subroutine lib_ml_fmm_constructor
@@ -290,8 +320,7 @@ module lib_ml_fmm
 !        integer(kind=1) :: i
 !        integer(kind=4) :: ii
 
-        call lib_ml_fmm_type_operator_deallocate_coefficient_list(m_ml_fmm_C)
-        call lib_ml_fmm_type_operator_deallocate_coefficient_list(m_ml_fmm_D)
+        call lib_ml_fmm_type_operator_deallocate_coefficient_list(m_ml_fmm_expansion_coefficients)
 
 !        if ( allocated(m_ml_fmm_C) ) then
 !            ! HINT: m_ml_fmm_C has a deep structure. If the automatic deallocation fails,
@@ -318,6 +347,52 @@ module lib_ml_fmm
 
     end subroutine lib_ml_fmm_destructor
 
+    function lib_ml_fmm_concatenate_data_array(data_elements, length) result(data_concatenated)
+        implicit none
+        type(lib_ml_fmm_data), intent(in) :: data_elements
+        integer(kind=UINDEX_BYTES), dimension(3), intent(out) :: length
+        type(lib_tree_data_element), dimension(:), allocatable :: data_concatenated
+
+        ! auxiliaray
+        integer(kind=1) :: i
+        integer(kind=UINDEX_BYTES) :: start, last
+
+        length(:) = 0
+        if( allocated(data_elements%X) ) then
+            length(HIERARCHY_X) = size(data_elements%X)
+        end if
+
+        if( allocated(data_elements%Y) ) then
+            length(HIERARCHY_Y) = size(data_elements%Y)
+        end if
+
+        if( allocated(data_elements%XY) ) then
+            length(HIERARCHY_XY) = size(data_elements%XY)
+        end if
+
+        ! concatenate all three datasets
+        allocate( data_concatenated(sum(length)))
+
+        do i=1, 3
+            if (length(i) .gt. 0) then
+                start = sum(length(:i))
+                last = start + length(i)
+                if (i .eq. HIERARCHY_X) then
+                    data_concatenated(start:last) = data_elements%X
+                    data_concatenated(start:last)%hierarchy = HIERARCHY_X
+                else if (i .eq. HIERARCHY_Y) then
+                    data_concatenated(start:last) = data_elements%Y
+                    data_concatenated(start:last)%hierarchy = HIERARCHY_Y
+                else if (i .eq. HIERARCHY_XY) then
+                    data_concatenated(start:last) = data_elements%XY
+                    data_concatenated(start:last)%hierarchy = HIERARCHY_XY
+                end if
+            end if
+        end do
+    end function
+
+
+
     subroutine lib_ml_fmm_calculate_upward_pass()
         implicit none
 
@@ -337,11 +412,6 @@ module lib_ml_fmm
     !
     ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(32)
     !
-    ! Arguments
-    ! ----
-    !   h_get_B_i: function handle
-    !
-    !
     subroutine lib_ml_fmm_calculate_upward_pass_step_1()
         use lib_tree
         implicit none
@@ -350,8 +420,8 @@ module lib_ml_fmm
 
         ! auxiliaray
         integer(kind=UINDEX_BYTES) :: number_of_boxes
-
         type(lib_tree_universal_index) :: uindex
+        logical :: ignore_box
 
         integer(kind=UINDEX_BYTES) :: i
 
@@ -361,9 +431,10 @@ module lib_ml_fmm
         do i=1, number_of_boxes
             uindex%n = i
 
-            C = lib_ml_fmm_get_C_i_from_elements_at_box(uindex)
-
-            call lib_ml_fmm_type_operator_set_coefficient(C, uindex, m_ml_fmm_C)
+!            C = lib_ml_fmm_get_C_i_from_elements_at_box(uindex, ignore_box)
+!            if (.not. ignore_box) then
+!                call lib_ml_fmm_type_operator_set_coefficient(C, uindex, m_ml_fmm_expansion_coefficient)
+!            end if
         end do
 
     end subroutine lib_ml_fmm_calculate_upward_pass_step_1
@@ -378,10 +449,11 @@ module lib_ml_fmm
     ! ----
     !   C_i: type(lib_ml_fmm_coefficient)
     !       C coefficient of the Tree-box
-    function lib_ml_fmm_get_C_i_from_elements_at_box(uindex) result(C_i)
+    function lib_ml_fmm_get_C_i_from_elements_at_box(uindex, ignore_box) result(C_i)
         implicit none
         ! dummy
-        type(lib_tree_universal_index) :: uindex
+        type(lib_tree_universal_index), intent(in) :: uindex
+        logical, intent(out) :: ignore_box
         type(lib_ml_fmm_coefficient) :: C_i
 
         ! auxiliary
@@ -399,11 +471,14 @@ module lib_ml_fmm
         data_element = lib_tree_get_domain_e1(uindex, element_number)
         if ((allocated (data_element)) &
             .and. (size(data_element) .gt. 0)) then
+            ignore_box = .false.
             x_c = lib_tree_get_centre_of_box(uindex)
             do i=1, size(data_element)
                 buffer_C_i = m_ml_fmm_u(element_number(i)) * m_ml_fmm_handles%get_B_i(x_c, data_element(i))
                 C_i = C_i + buffer_C_i
             end do
+        else
+            ignore_box = .true.
         end if
     end function lib_ml_fmm_get_C_i_from_elements_at_box
 
@@ -435,12 +510,21 @@ module lib_ml_fmm
             do n=1, number_of_boxes
                 uindex%n = n - int(1, UINDEX_BYTES)
                 C = lib_ml_fmm_get_C_of_box(uindex)
-                call lib_ml_fmm_type_operator_set_coefficient(C, uindex, m_ml_fmm_C)
+!                call lib_ml_fmm_type_operator_set_coefficient(C, uindex, m_ml_fmm_C)
             end do
         end do
 
     end subroutine lib_ml_fmm_calculate_upward_pass_step_2
 
+    ! Argument
+    ! ----
+    !   uindex: type(lib_tree_universal_index)
+    !       universal index of a box
+    !
+    ! Returns
+    ! ----
+    !   C: type(lib_ml_fmm_coefficient)
+    !       expansion coefficients of the box uindex
     function lib_ml_fmm_get_C_of_box(uindex) result(C)
         implicit none
         ! dummy
@@ -463,7 +547,7 @@ module lib_ml_fmm
         call lib_ml_fmm_type_operator_set_coefficient_zero(C)
         do i=1, size(uindex_children)
             x_c_child = lib_tree_get_centre_of_box(uindex_children(i))
-            C_child = lib_ml_fmm_type_operator_get_coefficient(uindex_children(i), m_ml_fmm_C)
+!            C_child = lib_ml_fmm_type_operator_get_coefficient(uindex_children(i), m_ml_fmm_C)
             C = C + m_ml_fmm_handles%get_translation_SS(C_child, x_c_child, x_c)
         end do
     end function lib_ml_fmm_get_C_of_box
@@ -473,13 +557,15 @@ module lib_ml_fmm
     ! Procedure
     ! ----
     !   for each box at l_min, ..., l_max
-    !       1.
+    !       - SR-transformation of the C coefficients into the middle of box I_4
     !
     ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(34)
     !
     function lib_ml_fmm_calculate_downward_pass_step_1() result(dummy)
         implicit none
         integer :: dummy
+
+
     end function lib_ml_fmm_calculate_downward_pass_step_1
 
     ! Downward pass - step 2
@@ -515,6 +601,23 @@ module lib_ml_fmm
         print *, "------------------------------------------------------"
 
         contains
+
+        function test_lib_ml_fmm_constructor() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            integer(kind=UINDEX_BYTES), parameter :: list_length = 10
+            integer(kind=1), parameter :: l_th = 5
+            integer(kind=1), parameter :: element_type = 1
+            type(lib_tree_data_element), dimension(list_length) :: element_list
+
+            element_list = lib_tree_get_diagonal_test_dataset(list_length, l_th, element_type, HIERARCHY_X)
+
+            rv = .false.
+
+        end function
 
         function test_calculate_upward_pass_step_1() result(rv)
             implicit none

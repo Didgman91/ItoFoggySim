@@ -669,11 +669,11 @@ contains
 
         ! dummy arguments
         integer(kind=UINDEX_BYTES), intent (in) :: n
-        integer(kind=UINDEX_BYTES), intent (in), optional :: step
+        integer(kind=1), intent (in), optional :: step
         integer(kind=UINDEX_BYTES) :: parent_n
 
         ! auxiliary
-        integer(kind=UINDEX_BYTES) :: m_step
+        integer(kind=1) :: m_step
 
         m_step = 1
         if(present(step))m_step=step

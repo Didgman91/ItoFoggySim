@@ -30,6 +30,12 @@ module lib_tree_type
 #endif
 
     integer(kind=1), public, parameter :: UINDEX_BYTES = _UINDEX_BYTES_
+
+    ! data element association: source(X), target(Y) or both(XY)
+    ! Reference: Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, chapter 2. Data hierarchies
+    integer(kind=1), public, parameter :: HIERARCHY_X = 1
+    integer(kind=1), public, parameter :: HIERARCHY_Y = 2
+    integer(kind=1), public, parameter :: HIERARCHY_XY = 3
     ! ~ parameter ~
 
     ! type definitions
@@ -55,6 +61,7 @@ module lib_tree_type
         type(lib_tree_spatial_point) :: point_x
         type(lib_tree_universal_index) :: uindex
         integer(kind=1) :: element_type
+        integer(kind=1) :: hierarchy
     end type lib_tree_data_element
 
 end module lib_tree_type

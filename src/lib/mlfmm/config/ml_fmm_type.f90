@@ -80,4 +80,51 @@ module ml_fmm_type
         real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
     end type
 
+    type lib_ml_fmm_uindex_list
+        type(lib_tree_universal_index), dimension(:), allocatable :: uindex
+    end type
+
+    type lib_ml_fmm_hashed_coeffcient_index
+        integer(kind=LIB_ML_FMM_COEFFICIENT_KIND) :: array_position
+        integer(kind=2) :: number_of_hash_runs
+    end type
+
+    ! hierarchy of the data structure for the ML FMM
+    ! Reference: Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, chapter 2. Data hierarchies
+    !
+    ! This type represents a dataset of a hierarchy level.
+    !
+    ! Example
+    ! ----
+    !
+    !                   -----
+    !                   | 0 |                 l = 0
+    !                   -----
+    !         -----               -----
+    !         | 0 |               | 1 |       l = 1
+    !         -----            v  -----
+    !    -----     -----     -----     -----
+    !    | 0 |     | 1 |     | 2 |     | 3 |  l = 2    <---
+    !    -----     -----     -----     -----
+    !
+    !     Variable                    Value
+    !    -----------------------------------
+    !     is_hashed                     F
+    !     coefficient_type              C
+    !     number_of_boxes               1
+    !     type                          X
+    !     coefficient_list_index(2)     1
+    !     size(coefficient_list)        1
+    !
+    !   Only one box contains coefficients at level 1. These coefficients are C expansion coefficients
+
+    type lib_ml_fmm_hierarchy
+        type(lib_ml_fmm_coefficient), dimension(:), allocatable :: coefficient_list
+        type(lib_ml_fmm_hashed_coeffcient_index), dimension(:), allocatable :: hashed_coefficient_list_index
+        integer(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: coefficient_list_index
+        logical :: is_hashed                                            ! true: access coefficient with hashed uindex%n, false: access coefficient with uindex%n
+        integer(kind=1) :: coefficient_type                             ! [C, D^~, D]
+        integer(kind=LIB_ML_FMM_COEFFICIENT_KIND) :: number_of_boxes    ! number of not empty boxes
+        integer(kind=1) :: type                                         ! [X, Y, XY] hierarchy type
+    end type
 end module ml_fmm_type
