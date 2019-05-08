@@ -25,6 +25,8 @@ module lib_tree
     use lib_tree_helper_functions
     use lib_hash_function
     use lib_sort
+
+    use toolbox
     implicit none
     ! Data Structures, Optimal Choice of Parameters, and Complexity Results for Generalized Multilevel Fast Multipole Methods in d Dimensions
 
@@ -36,6 +38,8 @@ module lib_tree
     ! --- public functions ---
     public :: lib_tree_constructor
     public :: lib_tree_destructor
+
+    public :: lib_tree_get_element_list
 
     public :: lib_tree_get_parent
     public :: lib_tree_get_children
@@ -82,7 +86,7 @@ module lib_tree
 
     ! --- type definition ---
     type lib_tree_correspondece_vector_element
-        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: data_element_number
+        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: data_element_number
         integer(kind=2) :: number_of_hash_runs
     end type lib_tree_correspondece_vector_element
 
@@ -111,10 +115,18 @@ module lib_tree
 
     contains
 
-    subroutine lib_tree_constructor(element_list)
+    ! Arguments
+    ! ----
+    !   element_list: lib_tree_data_element
+    !
+    !   s: integer
+    !       maximum number of elements at a box
+    !
+    subroutine lib_tree_constructor(element_list, s)
         implicit none
         ! dummy
-        type(lib_tree_data_element), dimension(:), intent(in) :: element_list
+        type(lib_tree_data_element), dimension(:), intent(inout) :: element_list
+        integer(kind=CORRESPONDENCE_VECTOR_KIND), optional :: s    ! "optimisation value"
 
         ! auxiliary
         type(lib_tree_data_element), dimension(size(element_list)) :: element_list_scaled
@@ -124,16 +136,15 @@ module lib_tree
         integer(kind=2) :: margin
 
         ! auxiliary: get_level_max
-        integer(kind=CORRESPONDENCE_VECTOR_KIND), parameter :: s = 1    ! "optimisation value"
         integer(kind=1) :: l_max
 
 #ifdef _DEBUG_
         ! debug
         integer(kind=1) :: i
         real :: start, finish
-        integer(kind=1), parameter :: length = 6
-        double precision, dimension(length) :: cpu_time_delta
-        character(len=75), dimension(length) :: note_string
+        integer(kind=1) :: length
+        double precision, dimension(6) :: cpu_time_delta
+        character(len=75), dimension(6) :: note_string
 #endif
 
         ! scaling
@@ -151,7 +162,7 @@ module lib_tree
 #if (_UINDEX_BYTES_ == 16)
         threshold_level = int(int(UINDEX_BYTES,2) * int(NUMBER_OF_BITS_PER_BYTE,2) * 1.0 / TREE_DIMENSIONS, 1) - 1
 #else
-        threshold_level = int(UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE * 1.0 / TREE_DIMENSIONS, 1)
+        threshold_level = int(UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE * 1.0 / TREE_DIMENSIONS, 1) - 5
 #endif
 #ifdef _DEBUG_
         print *, "threshold_level = ", threshold_level
@@ -163,63 +174,66 @@ module lib_tree
         cpu_time_delta(2) = finish - start
         note_string(2) = "lib_tree_create_correspondence_vector"
 #endif
-
+        length = 2
 
         ! optimise threshold level
+        if (present(s)) then
 #ifdef _DEBUG_
-        call cpu_time(start)
+            call cpu_time(start)
 #endif
-        call lib_tree_create_correspondece_vector_sorted_data_elements()
+            call lib_tree_create_correspondece_vector_sorted_data_elements()
 #ifdef _DEBUG_
-        call cpu_time(finish)
-        cpu_time_delta(3) = finish - start
-        note_string(3) = "lib_tree_create_correspondece_vector_sorted_data_elements"
+            call cpu_time(finish)
+            cpu_time_delta(3) = finish - start
+            note_string(3) = "lib_tree_create_correspondece_vector_sorted_data_elements"
 #endif
 #ifdef _DEBUG_
-        call cpu_time(start)
+            call cpu_time(start)
 #endif
-        l_max = lib_tree_get_level_max(s)
+            l_max = lib_tree_get_level_max(s)
 #ifdef _DEBUG_
-        call cpu_time(finish)
-        cpu_time_delta(4) = finish - start
-        note_string(4) = "lib_tree_get_level_max"
+            call cpu_time(finish)
+            cpu_time_delta(4) = finish - start
+            note_string(4) = "lib_tree_get_level_max"
 #endif
 
-        ! clean up for optimisation
-        if (allocated(lib_tree_correspondence_vector_sorted_data_elements)) then
-            deallocate (lib_tree_correspondence_vector_sorted_data_elements)
+            ! clean up for optimisation
+            if (allocated(lib_tree_correspondence_vector_sorted_data_elements)) then
+                deallocate (lib_tree_correspondence_vector_sorted_data_elements)
+            end if
+            if (allocated(lib_tree_correspondence_vector)) then
+                deallocate (lib_tree_correspondence_vector)
+            end if
+#ifdef _DEBUG_
+            print *, "threshold_level = ", l_max
+            call cpu_time(start)
+#endif
+            call lib_tree_create_correspondence_vector(element_list_scaled, l_max, margin)
+#ifdef _DEBUG_
+            call cpu_time(finish)
+            cpu_time_delta(5) = finish - start
+            note_string(5) = "lib_tree_create_correspondence_vector"
+#endif
+#ifdef _DEBUG_
+            call cpu_time(start)
+#endif
+            call lib_tree_create_correspondece_vector_sorted_data_elements()
+#ifdef _DEBUG_
+            call cpu_time(finish)
+            cpu_time_delta(6) = finish - start
+            note_string(6) = "lib_tree_create_correspondece_vector_sorted_data_elements"
+#endif
+            ! todo: optimise correspondence vector (if size(elements) ~~ size(correspondence vector), then without hash  algorithm)
+            ! ~~~ end: optimization ~~~
+            length = 6
         end if
-        if (allocated(lib_tree_correspondence_vector)) then
-            deallocate (lib_tree_correspondence_vector)
-        end if
-#ifdef _DEBUG_
-        print *, "threshold_level = ", l_max
-        call cpu_time(start)
-#endif
-        call lib_tree_create_correspondence_vector(element_list_scaled, l_max, margin)
-#ifdef _DEBUG_
-        call cpu_time(finish)
-        cpu_time_delta(5) = finish - start
-        note_string(5) = "lib_tree_create_correspondence_vector"
-#endif
-#ifdef _DEBUG_
-        call cpu_time(start)
-#endif
-        call lib_tree_create_correspondece_vector_sorted_data_elements()
-#ifdef _DEBUG_
-        call cpu_time(finish)
-        cpu_time_delta(6) = finish - start
-        note_string(6) = "lib_tree_create_correspondece_vector_sorted_data_elements"
-#endif
-        ! todo: optimise correspondence vector (if size(elements) ~~ size(correspondence vector), then without hash  algorithm)
-        ! ~~~ end: optimization ~~~
 
 #ifdef _DEBUG_
-        print *, " ------- DEBUG: lib_tree_constructor -------"
+        print *, " ------- DEBUG: lib_tree_constructor (CPU time) -------"
         do i=1, length
             print *, note_string(i), cpu_time_delta(i), " seconds"
         end do
-        print *, " -------------------------------------------"
+        print *, " ------------------------------------------------------"
 #endif
 
     end subroutine lib_tree_constructor
@@ -242,6 +256,14 @@ module lib_tree
         call lib_tree_hf_destructor()
         !$OMP END SINGLE
     end subroutine lib_tree_destructor
+
+    function lib_tree_get_element_list() result(rv)
+        implicit none
+        ! dummy
+        type(lib_tree_data_element), dimension (:), allocatable :: rv
+
+        rv = lib_tree_data_element_list
+    end function
 
     !
     ! D = max_d D_d                        (59)
@@ -414,11 +436,12 @@ module lib_tree
 
         ! auxiliar
         integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number_buffer_list
-        type(lib_tree_universal_index), dimension(:), allocatable :: buffer_1
-        type(lib_tree_universal_index), dimension(:), allocatable :: buffer_2
+        type(lib_tree_universal_index), dimension(:), allocatable :: buffer_1_uindex
+        type(lib_tree_universal_index), dimension(:), allocatable :: buffer_2_uindex
+        type(lib_tree_data_element), dimension(:), allocatable :: buffer_data_element
         type(lib_tree_data_element), dimension(:), allocatable :: buffer_rv
         integer(kind=1) :: l_diff
-        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: buffer_element_number
+        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: buffer_element_number
         integer(kind=UINDEX_BYTES) :: number_of_data_elements
         integer(kind=UINDEX_BYTES) :: i
         integer(kind=UINDEX_BYTES) :: ii
@@ -436,31 +459,31 @@ module lib_tree
         if (uindex%n .ne. TREE_BOX_IGNORE_ENTRY) then
             l_diff = lib_tree_l_th - uindex%l
 
-            allocate (buffer_rv(2**(l_diff*TREE_DIMENSIONS)))
-            allocate (buffer_1(2**(l_diff*TREE_DIMENSIONS)))
-            allocate (buffer_2(2**(l_diff*TREE_DIMENSIONS)))
+!            allocate (buffer_rv(2**(l_diff*TREE_DIMENSIONS)))
+            allocate (buffer_1_uindex(2**(l_diff*TREE_DIMENSIONS)))
+            allocate (buffer_2_uindex(2**(l_diff*TREE_DIMENSIONS)))
 
             ! get all universal indices at the threshold level
-            buffer_1(1) = uindex
+            buffer_1_uindex(1) = uindex
             do i=1, l_diff
                 !$OMP PARALLEL DO PRIVATE(index_start, index_end, i)
                 do ii=1, 2**((i-1)*TREE_DIMENSIONS)
                     index_start = (ii-1)*2**TREE_DIMENSIONS+1
                     index_end = index_start + 2**TREE_DIMENSIONS-1
-                    buffer_2(index_start:index_end) = lib_tree_get_children(buffer_1(ii))
+                    buffer_2_uindex(index_start:index_end) = lib_tree_get_children(buffer_1_uindex(ii))
                 end do
                 !$OMP END PARALLEL DO
-                buffer_1 = buffer_2
+                buffer_1_uindex = buffer_2_uindex
             end do
-            deallocate (buffer_2)
+            deallocate (buffer_2_uindex)
 
             ! get all elements
             number_of_data_elements = 0
-            allocate(element_number_buffer_list(size(buffer_1)))
-            !$OMP PARALLEL DO PRIVATE(buffer_element_number, i)
-            do i=1, size(buffer_1)
-                buffer_rv(i) = lib_tree_get_element_from_correspondence_vector(buffer_1(i), buffer_element_number)
-                element_number_buffer_list(i) = buffer_element_number
+!            allocate(element_number_buffer_list(size(buffer_1_uindex)))
+            !$OMP PARALLEL DO PRIVATE(buffer_data_element, buffer_element_number, i)
+            do i=1, size(buffer_1_uindex)
+                buffer_data_element = lib_tree_get_element_from_correspondence_vector(buffer_1_uindex(i), &
+                                                                               buffer_element_number)
                 ! ---- OMP semaphore ----
                 !$  if (semaphore_write_number_of_data_elements .eqv. .false.) then
                 !$      ! wait until write process is finished
@@ -471,15 +494,28 @@ module lib_tree
                 !$      end do
                 !$  end if
                 ! ~~~~ OMP semaphore ~~~~
-                if (buffer_rv(i)%element_type .ne. LIB_TREE_ELEMENT_TYPE_EMPTY) then
-                    !$  semaphore_write_number_of_data_elements = .false.
-                    number_of_data_elements = number_of_data_elements + 1
-                    !$  semaphore_write_number_of_data_elements = .true.
+
+                !$  semaphore_write_number_of_data_elements = .false.
+                do ii=1, size(buffer_data_element)
+                    if (buffer_data_element(ii)%element_type .ne. LIB_TREE_ELEMENT_TYPE_EMPTY) then
+                        call concatenate(buffer_rv, buffer_data_element(ii))                            ! todo: optimize
+                        call concatenate(element_number_buffer_list, buffer_element_number(ii))         ! todo: optimize
+                        number_of_data_elements = number_of_data_elements + 1
+                    end if
+                end do
+                !$  semaphore_write_number_of_data_elements = .true.
+
+                ! clean up
+                if (allocated(buffer_element_number)) then
+                    deallocate(buffer_element_number)
+                end if
+                if (allocated(buffer_data_element)) then
+                    deallocate(buffer_data_element)
                 end if
             end do
             !$OMP END PARALLEL DO
 
-            deallocate (buffer_1)
+            deallocate (buffer_1_uindex)
 
             if (number_of_data_elements .gt. 0) then
                 allocate (rv(number_of_data_elements))
@@ -488,7 +524,7 @@ module lib_tree
                 ii=1
                 do i=1, size(buffer_rv)
                     if (buffer_rv(i)%element_type .ne. LIB_TREE_ELEMENT_TYPE_EMPTY) then
-                        element_number((ii)) = element_number_buffer_list(i)
+                        element_number(ii) = element_number_buffer_list(i)
                         rv(ii) = buffer_rv(i)
                         ii = ii + 1
                     end if
@@ -497,7 +533,9 @@ module lib_tree
                 allocate(rv(0))
             end if
 
-            deallocate (buffer_rv)
+            if ( allocated(buffer_rv) ) then
+                deallocate (buffer_rv)
+            end if
         else
             allocate(rv(0))
         end if
@@ -531,7 +569,7 @@ module lib_tree
         integer(kind=UINDEX_BYTES) :: number_of_boxes
         type(lib_tree_universal_index), dimension(:, :), allocatable :: buffer_uindex
         integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: buffer_element_number
-        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number_temp
+!        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number_temp
         type(lib_tree_universal_index), dimension(:), allocatable :: buffer_uindex_reduced
         type(lib_tree_universal_index), dimension(:), allocatable :: buffer_uindex_reduced_temp
         type(lib_tree_data_element), dimension(:), allocatable :: buffer_data_element_list
@@ -539,7 +577,7 @@ module lib_tree
 
         integer(kind=UINDEX_BYTES) :: i
         integer(kind=UINDEX_BYTES) :: ii
-        integer(kind=UINDEX_BYTES) :: index_number
+!        integer(kind=UINDEX_BYTES) :: index_number
 
         ! get all neighbours
         allocate(buffer_uindex(k, 3**TREE_DIMENSIONS-1))
@@ -579,24 +617,28 @@ module lib_tree
         ! get data elements
         do i=1, number_of_boxes
             buffer_data_element_list = lib_tree_get_domain_e1(buffer_uindex_reduced(i), buffer_element_number)
-            if (allocated(buffer_rv)) then
+!            if (allocated(buffer_rv)) then
                 if ((allocated(buffer_data_element_list)) .and. (size(buffer_data_element_list).gt. 0)) then
-                    index_number = size(buffer_rv) + 1
-                    call lib_tree_reallocate_1d_data_element_list(buffer_rv, size(buffer_data_element_list))
-                    buffer_rv(index_number:) = buffer_data_element_list
+
+                    call concatenate(buffer_rv, buffer_data_element_list)
+!                    index_number = size(buffer_rv) + 1
+!                    call reallocate(buffer_rv, size(buffer_data_element_list))  ! check replacement
+!                    buffer_rv(index_number:) = buffer_data_element_list
                 end if
 
                 ! copy buffer_element_number into element_number
                 if ((allocated(buffer_element_number)) .and. (size(buffer_element_number).gt. 0)) then
-                    allocate(element_number_temp(size(element_number)))
-                    element_number_temp = element_number
 
-                    ii = size(buffer_element_number) + size(element_number)
-                    deallocate(element_number)
-                    allocate(element_number(ii))
-                    ii = size(element_number_temp)
-                    element_number(:ii) = element_number_temp
-                    element_number(ii+1:) = buffer_element_number
+                    call concatenate(element_number, buffer_element_number)
+!                    allocate(element_number_temp(size(element_number)))
+!                    element_number_temp = element_number
+!
+!                    ii = size(buffer_element_number) + size(element_number)
+!                    deallocate(element_number)
+!                    allocate(element_number(ii))
+!                    ii = size(element_number_temp)
+!                    element_number(:ii) = element_number_temp
+!                    element_number(ii+1:) = buffer_element_number
                 end if
 
                 if (allocated(buffer_element_number)) then
@@ -605,10 +647,10 @@ module lib_tree
                 if (allocated(buffer_data_element_list)) then
                     deallocate (buffer_data_element_list)
                 end if
-            else
-                call move_alloc(buffer_element_number, element_number)
-                call move_alloc(buffer_data_element_list, buffer_rv)
-            end if
+!            else
+!                call move_alloc(buffer_element_number, element_number)
+!                call move_alloc(buffer_data_element_list, buffer_rv)
+!            end if
         end do
 
         ! clean up
@@ -955,6 +997,9 @@ module lib_tree
 
         if (allocated(lib_tree_data_element_list) .and. allocated(lib_tree_correspondence_vector)) then
             i = size(lib_tree_data_element_list)
+            if (allocated(lib_tree_correspondence_vector_sorted_data_elements)) then
+                deallocate(lib_tree_correspondence_vector_sorted_data_elements)
+            end if
             allocate (lib_tree_correspondence_vector_sorted_data_elements(i))
 
             allocate (uindex_list(i))
@@ -1035,7 +1080,9 @@ module lib_tree
         integer(kind=CORRESPONDENCE_VECTOR_KIND) :: hashed_uindex_old = -1
 #endif
         type(lib_tree_universal_index) :: uindex
-        integer(kind=4) :: i
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: i
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: buffer_element_number
+        logical :: element_with_uindex_exists
         integer(kind=2) :: ii
 #if (_UINDEX_BYTES_ == 16)
         integer(kind=2) :: number_of_bits
@@ -1113,10 +1160,20 @@ module lib_tree
                     !$  end if
                     ! ~~~~ OMP semaphore ~~~~
                     ! save
-                    if (lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs .eq. 0) then
+                    element_with_uindex_exists = .false.
+                    if ( allocated(lib_tree_correspondence_vector(hashed_uindex)%data_element_number) ) then
+                        buffer_element_number = lib_tree_correspondence_vector(hashed_uindex)%data_element_number(1)
+                        if ( lib_tree_data_element_list(buffer_element_number)%uindex%n .eq. uindex%n ) then
+                            element_with_uindex_exists = .true.
+                        end if
+                    end if
+                    if ((lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs .eq. 0) .or. &
+                        element_with_uindex_exists) then
                         !$  semaphore_write_correspondence_vector = .false.
                         if ((hashed_uindex .gt. 0) .and. (hashed_uindex .le. lib_tree_hash_max)) then
-                            lib_tree_correspondence_vector(hashed_uindex)%data_element_number = i
+                            call concatenate(lib_tree_correspondence_vector(hashed_uindex)%data_element_number, &
+                                                                            i)
+!                            lib_tree_correspondence_vector(hashed_uindex)%data_element_number = i
                             lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs = ii
 
                             if (lib_tree_max_number_of_hash_runs .lt. ii) then
@@ -1178,12 +1235,13 @@ module lib_tree
         implicit none
         !dummy
         type(lib_tree_universal_index), intent(in) :: uindex
-        integer(kind=CORRESPONDENCE_VECTOR_KIND), intent(inout) :: element_number
-        type(lib_tree_data_element) :: rv
+        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable, intent(inout) :: element_number
+        type(lib_tree_data_element), dimension(:), allocatable :: rv
 
         ! auxiliary
         integer(kind=CORRESPONDENCE_VECTOR_KIND) :: hashed_uindex
         integer(kind=2) :: i
+        integer(kind=UINDEX_BYTES) :: ii
         logical :: element_found
 
         !$  logical :: opm_end_do_loop
@@ -1213,9 +1271,13 @@ module lib_tree
 !                    print *, "element found"
 
                     element_number = lib_tree_correspondence_vector(hashed_uindex)%data_element_number
-                    if (lib_tree_data_element_list(element_number)%uindex%n .eq. uindex%n) then
+                    if (lib_tree_data_element_list(element_number(1))%uindex%n .eq. uindex%n) then
                         element_found = .true.
-                        rv = lib_tree_data_element_list(element_number)
+                        allocate( rv(size(element_number)) )
+
+                        do ii=1, size(element_number)
+                            rv(ii) = lib_tree_data_element_list(element_number(ii))
+                        end do
 
                         exit
                     else
@@ -1231,6 +1293,9 @@ module lib_tree
             end do
 !            !   $   OMP END PARALLEL DO
             if (.not. element_found) then
+                if (.not. allocated(rv)) then
+                    allocate(rv(1))
+                end if
                 rv%element_type = LIB_TREE_ELEMENT_TYPE_EMPTY
 #ifdef DEBUG
                 print *, "Element could not be found: n=", uindex%n," ..note"
@@ -1255,7 +1320,7 @@ module lib_tree
     !
     ! copy of toolbox.reallocate_1d
     subroutine lib_tree_reallocate_1d_data_element_list(a,n)
-
+        implicit none
         type(lib_tree_data_element),dimension(:),allocatable,intent(inout) :: a
         type(lib_tree_data_element),dimension(:),allocatable :: temp
         integer,intent(in) :: n
@@ -1318,21 +1383,27 @@ module lib_tree
         if (.not. test_lib_tree_create_correspondence_vector()) then
             error_counter = error_counter + 1
         end if
+        call lib_tree_destructor()
         if (.not. test_lib_tree_get_element_from_correspondence_vector()) then
             error_counter = error_counter + 1
         end if
+        call lib_tree_destructor()
         if (.not. test_lib_tree_create_correspondece_vector_sorted_data_elements()) then
             error_counter = error_counter + 1
         end if
+        call lib_tree_destructor()
         if (.not. test_lib_tree_get_domain_e1()) then
             error_counter = error_counter + 1
         end if
+        call lib_tree_destructor()
         if (.not. test_lib_tree_get_domain_e2()) then
             error_counter = error_counter + 1
         end if
+        call lib_tree_destructor()
         if (.not. test_lib_tree_get_domain_e3()) then
             error_counter = error_counter + 1
         end if
+        call lib_tree_destructor()
         if (.not. test_lib_tree_get_domain_e4()) then
             error_counter = error_counter + 1
         end if
@@ -2094,7 +2165,7 @@ module lib_tree
             call lib_tree_create_correspondece_vector_sorted_data_elements()
 
 
-            print *, "test_lib_tree_create_correspondece_vector:"
+            print *, "test_lib_tree_create_correspondece_vector_sorted_data_elements:"
             rv = .true.
             do i=1, list_length
                 if (lib_tree_correspondence_vector_sorted_data_elements(i) .eq. &
@@ -2114,7 +2185,7 @@ module lib_tree
 
             integer(kind=4), parameter :: list_length = 5
 
-            integer(kind=1), parameter :: l_th = 8 ! threshold level
+            integer(kind=1), parameter :: l_th = 2 ! threshold level
             type(lib_tree_data_element), dimension(list_length) :: element_list
             integer(kind=2) :: margin
 
@@ -2141,7 +2212,7 @@ module lib_tree
             number = 0
             do i=1, size(lib_tree_correspondence_vector)
                 if (lib_tree_correspondence_vector(i)%number_of_hash_runs .ne. 0) then
-                    number = number + 1
+                    number = number + size(lib_tree_correspondence_vector(i)%data_element_number)
                 end if
             end do
 
@@ -2171,8 +2242,8 @@ module lib_tree
 
             ! auxiliary
             type(lib_tree_universal_index) :: uindex
-            type(lib_tree_data_element) :: data_element
-            integer(kind=CORRESPONDENCE_VECTOR_KIND) :: buffer_element_number
+            type(lib_tree_data_element), dimension(:), allocatable :: data_element
+            integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: buffer_element_number
 
             ! generate dataset
             integer(kind=4), parameter :: list_length = 5
@@ -2207,8 +2278,8 @@ module lib_tree
             do i=1, list_length
                 uindex = lib_tree_hf_get_universal_index(element_list(i)%point_x, lib_tree_l_th)
                 data_element = lib_tree_get_element_from_correspondence_vector(uindex, buffer_element_number)
-                if ((element_list(i)%point_x%x(1) .ne. data_element%point_x%x(1)) .or. &
-                    (element_list(i)%point_x%x(2) .ne. data_element%point_x%x(2))) then
+                if ((element_list(i)%point_x%x(1) .ne. data_element(1)%point_x%x(1)) .or. &
+                    (element_list(i)%point_x%x(2) .ne. data_element(1)%point_x%x(2))) then
                    wrong = wrong + 1
                 end if
             end do
@@ -2289,8 +2360,8 @@ module lib_tree
 
             integer(kind=1), parameter :: l_th = 16 ! threshold level
             type(lib_tree_data_element), dimension(list_length) :: element_list
-            integer(kind=CORRESPONDENCE_VECTOR_KIND) :: buffer_element_number
-            type(lib_tree_data_element) :: data_element
+            integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: buffer_element_number
+            type(lib_tree_data_element), dimension(:), allocatable :: data_element
             type(lib_tree_universal_index) :: uindex
             integer(kind=2) :: margin
 

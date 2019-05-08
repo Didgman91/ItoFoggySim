@@ -60,6 +60,16 @@ module lib_tree_helper_functions
 
     private
 
+    interface reallocate
+        module procedure lib_tree_hf_reallocate_1d_uindex
+        module procedure lib_tree_hf_reallocate_1d_data_element_list
+    end interface
+
+    interface concatenate
+        module procedure lib_tree_hf_concatenate_1d_data_element_list
+        module procedure lib_tree_hf_concatenate_1d_data_element_list_single
+    end interface
+
     ! parameter
     integer(kind=1), public, parameter :: NUMBER_OF_BITS_PER_BYTE = 8
     integer(kind=UINDEX_BYTES), public, parameter :: TREE_BOX_IGNORE_ENTRY = -1
@@ -91,6 +101,8 @@ module lib_tree_helper_functions
     ! ~ module global variable ~
 
     ! public member functions
+    public :: reallocate
+    public :: concatenate
     public :: lib_tree_hf_destructor
 
     public :: lib_tree_spatial_point
@@ -1964,6 +1976,104 @@ contains
 
         rv = deinterleaved_coordinate_binary
     end function lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut
+
+    ! reallocate a 1-dimensional array
+    !
+    ! Arguments
+    ! ----
+    !   a: 1-dimensional uindex array
+    !       original array, will be replaced with the resized array
+    !   n: positiv integer
+    !       number of additional array elements
+    !
+    subroutine lib_tree_hf_reallocate_1d_uindex(a, n)
+        use lib_tree_type
+        implicit none
+        type(lib_tree_universal_index), dimension(:), allocatable, intent(inout) :: a
+        type(lib_tree_universal_index), dimension(:), allocatable :: temp
+        integer,intent(in) :: n
+        integer :: ni_old
+
+        if ( allocated(a) ) then
+            ni_old = size(a)
+
+            allocate(temp(ni_old+n))
+
+            temp(1:ni_old) = a
+
+            call move_alloc(temp,a)
+
+        else
+            allocate(a(n))
+        end if
+    end subroutine lib_tree_hf_reallocate_1d_uindex
+
+    ! reallocates the data element list with additional n elements
+    !
+    ! Arguments
+    ! ----
+    !   a: 1-dimensional lib_tree_data_element array
+    !       original array, will be replaced with the resized array
+    !   n: pos. integer
+    !       number of additional array elements
+    !
+    ! copy of toolbox.reallocate_1d
+    subroutine lib_tree_hf_reallocate_1d_data_element_list(a,n)
+        implicit none
+        type(lib_tree_data_element),dimension(:),allocatable,intent(inout) :: a
+        type(lib_tree_data_element),dimension(:),allocatable :: temp
+        integer,intent(in) :: n
+        integer :: ni_old
+
+        if ( allocated(a) ) then
+            ni_old = size(a)
+
+            allocate(temp(ni_old+n))
+
+            temp(1:ni_old) = a
+
+            call move_alloc(temp,a)
+        else
+            allocate(a(n))
+        end if
+
+    end subroutine lib_tree_hf_reallocate_1d_data_element_list
+
+    subroutine lib_tree_hf_concatenate_1d_data_element_list(a, b)
+        implicit none
+        ! dummy
+        type(lib_tree_data_element),dimension(:),allocatable,intent(inout) :: a
+        type(lib_tree_data_element),dimension(:),allocatable,intent(in) :: b
+
+        ! auxiliaray
+        integer :: size_a_org
+
+        if ( allocated(a) ) then
+            size_a_org = size(a)
+        else
+            size_a_org = 0
+        end if
+        call reallocate(a, size(b))
+
+        a(size_a_org+1:) = b
+
+    end subroutine lib_tree_hf_concatenate_1d_data_element_list
+
+    subroutine lib_tree_hf_concatenate_1d_data_element_list_single(a, b)
+        implicit none
+        ! dummy
+        type(lib_tree_data_element), dimension(:), allocatable, intent(inout) :: a
+        type(lib_tree_data_element), intent(in) :: b
+
+        ! auxiliaray
+        type(lib_tree_data_element),dimension(:),allocatable :: buffer_b
+
+        allocate(buffer_b(1))
+        buffer_b(1) = b
+
+        call concatenate(a, buffer_b)
+
+    end subroutine lib_tree_hf_concatenate_1d_data_element_list_single
 
     ! ----------------- test functions -----------------
     function lib_tree_hf_test_functions() result(error_counter)
