@@ -254,7 +254,7 @@ module lib_ml_fmm
 
     type(lib_ml_fmm_coefficient_list_list) :: m_ml_fmm_expansion_coefficients
 
-    type(lib_ml_fmm_hierarchy) :: m_ml_fmm_hierarchy
+    type(lib_ml_fmm_hierarchy), dimension(:), allocatable :: m_ml_fmm_hierarchy
 
     ! Tree parameters
     integer(kind=UINDEX_BYTES) :: m_tree_neighbourhodd_size_k
@@ -289,7 +289,8 @@ module lib_ml_fmm
         data_concatenated = lib_ml_fmm_concatenate_data_array(data_elements, length)
 
         ! initiate the Tree
-        call lib_tree_constructor(data_concatenated)
+        call lib_tree_constructor(data_concatenated, 1)
+        data_concatenated = lib_tree_get_element_list()
 
         ! initiate the X- and Y-hierarchy
         m_ml_fmm_hierarchy = lib_ml_fmm_hf_create_hierarchy(data_concatenated, length, m_tree_l_max, m_tree_l_min)
@@ -375,8 +376,12 @@ module lib_ml_fmm
 
         do i=1, 3
             if (length(i) .gt. 0) then
-                start = sum(length(:i))
-                last = start + length(i)
+                if (i .eq. 1) then
+                    start = 1
+                else
+                    start = sum(length(:i-1))
+                end if
+                last = start + length(i) - 1
                 if (i .eq. HIERARCHY_X) then
                     data_concatenated(start:last) = data_elements%X
                     data_concatenated(start:last)%hierarchy = HIERARCHY_X
@@ -585,10 +590,12 @@ module lib_ml_fmm
     ! ----- test functions -----
     function lib_ml_fmm_test_functions() result(error_counter)
         implicit none
-
+        ! dummy
         integer :: error_counter
 
-        if (.not. test_calculate_upward_pass_step_1()) then
+        error_counter = 0
+
+        if (.not. test_lib_ml_fmm_constructor()) then
             error_counter = error_counter + 1
         end if
 
@@ -609,11 +616,15 @@ module lib_ml_fmm
 
             ! auxiliary
             integer(kind=UINDEX_BYTES), parameter :: list_length = 10
-            integer(kind=1), parameter :: l_th = 5
             integer(kind=1), parameter :: element_type = 1
             type(lib_tree_data_element), dimension(list_length) :: element_list
+            type(lib_ml_fmm_data) :: data_elements
 
-            element_list = lib_tree_get_diagonal_test_dataset(list_length, l_th, element_type, HIERARCHY_X)
+            element_list = lib_tree_get_diagonal_test_dataset(list_length, element_type, HIERARCHY_X)
+
+            data_elements%X = element_list
+
+            call lib_ml_fmm_constructor(data_elements)
 
             rv = .false.
 

@@ -40,6 +40,7 @@ module lib_tree
     public :: lib_tree_destructor
 
     public :: lib_tree_get_element_list
+    public :: lib_tree_get_correspondence_vector
 
     public :: lib_tree_get_parent
     public :: lib_tree_get_children
@@ -78,17 +79,9 @@ module lib_tree
     public :: operator (*)
 
     ! --- member---
-    integer(kind=1), parameter :: CORRESPONDENCE_VECTOR_KIND = 4    ! limited by the total number of elements -> 2**(8*4) = 4,294,967,296 elements
     integer(kind=4), parameter :: LIB_TREE_MAX_HASH_RUNS = 400
 
     integer(kind=1), parameter :: LIB_TREE_ELEMENT_TYPE_EMPTY = -1
-
-
-    ! --- type definition ---
-    type lib_tree_correspondece_vector_element
-        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: data_element_number
-        integer(kind=2) :: number_of_hash_runs
-    end type lib_tree_correspondece_vector_element
 
 
     ! --- module global ---
@@ -162,7 +155,7 @@ module lib_tree
 #if (_UINDEX_BYTES_ == 16)
         threshold_level = int(int(UINDEX_BYTES,2) * int(NUMBER_OF_BITS_PER_BYTE,2) * 1.0 / TREE_DIMENSIONS, 1) - 1
 #else
-        threshold_level = int(UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE * 1.0 / TREE_DIMENSIONS, 1) - 5
+        threshold_level = int(UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE * 1.0 / TREE_DIMENSIONS, 1)
 #endif
 #ifdef _DEBUG_
         print *, "threshold_level = ", threshold_level
@@ -190,42 +183,48 @@ module lib_tree
 #ifdef _DEBUG_
             call cpu_time(start)
 #endif
+            length = 3
             l_max = lib_tree_get_level_max(s)
+            if ( l_max .lt. threshold_level ) then
 #ifdef _DEBUG_
-            call cpu_time(finish)
-            cpu_time_delta(4) = finish - start
-            note_string(4) = "lib_tree_get_level_max"
+                call cpu_time(finish)
+                cpu_time_delta(4) = finish - start
+                note_string(4) = "lib_tree_get_level_max"
 #endif
 
-            ! clean up for optimisation
-            if (allocated(lib_tree_correspondence_vector_sorted_data_elements)) then
-                deallocate (lib_tree_correspondence_vector_sorted_data_elements)
+                ! clean up for optimisation
+                if (allocated(lib_tree_correspondence_vector_sorted_data_elements)) then
+                    deallocate (lib_tree_correspondence_vector_sorted_data_elements)
+                end if
+                if (allocated(lib_tree_correspondence_vector)) then
+                    deallocate (lib_tree_correspondence_vector)
+                end if
+#ifdef _DEBUG_
+                print *, "threshold_level = ", l_max
+                call cpu_time(start)
+#endif
+                call lib_tree_create_correspondence_vector(element_list_scaled, l_max, margin)
+#ifdef _DEBUG_
+                call cpu_time(finish)
+                cpu_time_delta(5) = finish - start
+                note_string(5) = "lib_tree_create_correspondence_vector"
+#endif
+#ifdef _DEBUG_
+                call cpu_time(start)
+#endif
+                call lib_tree_create_correspondece_vector_sorted_data_elements()
+#ifdef _DEBUG_
+                call cpu_time(finish)
+                cpu_time_delta(6) = finish - start
+                note_string(6) = "lib_tree_create_correspondece_vector_sorted_data_elements"
+#endif
+                ! todo: optimise correspondence vector (if size(elements) ~~ size(correspondence vector), then without hash  algorithm)
+                ! ~~~ end: optimization ~~~
+                length = 6
+            else
+                print *, "lib_tree_constructor: NOTE"
+                print *, "  number of elements per box could NOT be set with *s*"
             end if
-            if (allocated(lib_tree_correspondence_vector)) then
-                deallocate (lib_tree_correspondence_vector)
-            end if
-#ifdef _DEBUG_
-            print *, "threshold_level = ", l_max
-            call cpu_time(start)
-#endif
-            call lib_tree_create_correspondence_vector(element_list_scaled, l_max, margin)
-#ifdef _DEBUG_
-            call cpu_time(finish)
-            cpu_time_delta(5) = finish - start
-            note_string(5) = "lib_tree_create_correspondence_vector"
-#endif
-#ifdef _DEBUG_
-            call cpu_time(start)
-#endif
-            call lib_tree_create_correspondece_vector_sorted_data_elements()
-#ifdef _DEBUG_
-            call cpu_time(finish)
-            cpu_time_delta(6) = finish - start
-            note_string(6) = "lib_tree_create_correspondece_vector_sorted_data_elements"
-#endif
-            ! todo: optimise correspondence vector (if size(elements) ~~ size(correspondence vector), then without hash  algorithm)
-            ! ~~~ end: optimization ~~~
-            length = 6
         end if
 
 #ifdef _DEBUG_
@@ -263,6 +262,14 @@ module lib_tree
         type(lib_tree_data_element), dimension (:), allocatable :: rv
 
         rv = lib_tree_data_element_list
+    end function
+
+    function lib_tree_get_correspondence_vector() result(rv)
+        implicit none
+        ! dummy
+        type(lib_tree_correspondece_vector_element), dimension(:), allocatable :: rv
+
+        rv = lib_tree_correspondence_vector
     end function
 
     !
@@ -1336,11 +1343,10 @@ module lib_tree
 
     end subroutine lib_tree_reallocate_1d_data_element_list
 
-    function lib_tree_get_diagonal_test_dataset(list_length, l_th, element_type, hierarchy_type, margin) result(element_list)
+    function lib_tree_get_diagonal_test_dataset(list_length, element_type, hierarchy_type, margin) result(element_list)
         implicit none
         ! dummy
         integer(kind=UINDEX_BYTES), intent(in) :: list_length
-        integer(kind=1), intent(in) :: l_th
         integer(kind=1), intent(in) :: element_type
         integer(kind=1), intent(in) :: hierarchy_type
         integer(kind=2), optional :: margin

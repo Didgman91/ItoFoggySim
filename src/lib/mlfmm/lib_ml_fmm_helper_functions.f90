@@ -317,22 +317,56 @@ module lib_ml_fmm_helper_functions
             integer(kind=UINDEX_BYTES), dimension(3), intent(in) :: length
             integer(kind=1), intent(in) :: l_max
             integer(kind=1), intent(in) :: l_min
-            type(lib_ml_fmm_hierarchy) :: hierarchy
+            type(lib_ml_fmm_hierarchy), dimension(:), allocatable :: hierarchy
 
             ! auxiliary
             integer(kind=1) :: buffer_l
             integer(kind=UINDEX_BYTES) :: i
             type(lib_tree_universal_index) :: buffer_uindex
+            type(lib_tree_universal_index), dimension(:), allocatable :: uindex_list_X
+            type(lib_tree_universal_index), dimension(:), allocatable :: uindex_list_Y
+            type(lib_tree_universal_index), dimension(:), allocatable :: uindex_list_XY
+            integer(kind=1) :: hierarchy_type
+            integer(kind=UINDEX_BYTES), dimension(3) :: uindex_list_counter
             integer(kind=UINDEX_BYTES) :: number_of_boxes_at_l_max
 
-!            allocate( hierarchy%X(l_min:l_max))
-!            allocate( hierarchy%Y(l_min:l_max))
-!
-!            allocate (hierarchy%X(l_max)%uindex(length(HIERARCHY_X) + length(HIERARCHY_XY)))
-!            allocate (hierarchy%Y(l_max)%uindex(length(HIERARCHY_Y) + length(HIERARCHY_XY)))
-!
-!            ! iterate over all data elements
+            type(lib_tree_correspondece_vector_element), dimension(:), allocatable :: correspondence_vector
+            integer(kind=CORRESPONDENCE_VECTOR_KIND) :: element_index
+
+            allocate( hierarchy(l_min:l_max))
+
+            allocate( uindex_list_X(length(HIERARCHY_X)) )
+            allocate( uindex_list_Y(length(HIERARCHY_Y)) )
+            allocate( uindex_list_XY(length(HIERARCHY_XY)) )
+            uindex_list_counter(:) = 0
+
+            ! iterate over all correspondence vector elements (l = l_th)
+            correspondence_vector = lib_tree_get_correspondence_vector()
+            do i=1, size(correspondence_vector)
+                if (correspondence_vector(i)%number_of_hash_runs .gt. 0) then
+                    element_index = correspondence_vector(i)%data_element_number(1)
+                    hierarchy_type = data_elements(element_index)%hierarchy
+                    buffer_uindex = data_elements(element_index)%uindex
+                    if (hierarchy_type .eq. HIERARCHY_X) then
+                        uindex_list_counter(HIERARCHY_X) = uindex_list_counter(HIERARCHY_X) + 1
+                        uindex_list_X(uindex_list_counter(HIERARCHY_X)) = buffer_uindex
+                    else if (hierarchy_type .eq. HIERARCHY_Y) then
+                        uindex_list_counter(HIERARCHY_Y) = uindex_list_counter(HIERARCHY_Y) + 1
+                        uindex_list_Y(uindex_list_counter(HIERARCHY_Y)) = buffer_uindex
+                    else if (hierarchy_type .eq. HIERARCHY_XY) then
+                        uindex_list_counter(HIERARCHY_XY) = uindex_list_counter(HIERARCHY_XY) + 1
+                        uindex_list_XY(uindex_list_counter(HIERARCHY_XY)) = buffer_uindex
+                    else
+                        print *, "lib_ml_fmm_hf_create_hierarchy: ERROR"
+                        print *, "  hierarchy not defined"
+                    end if
+                end if
+            end do
+
+!            ! iterate over all data elements of the X-hierarchy
 !            if( length(HIERARCHY_X) .gt. 0 ) then
+!                allocate( uindex_list(length(HIERARCHY_X)) )
+!                ! setup at level l_max
 !                do i=1, length(HIERARCHY_X)
 !                    ! get box uindex at l=l_max
 !                    buffer_uindex = data_elements(i)%uindex
@@ -347,19 +381,21 @@ module lib_ml_fmm_helper_functions
 !                        print *, "  check for example the Tree constructor (lib_tree_constructor)"
 !                    end if
 !
-!                    ! add buffer_uindex to the X-hierarchy
-!                    hierarchy%X(l_max)%uindex(i) = buffer_uindex
+!                    uindex_list(i) = buffer_uindex
 !                end do
+!                hierarchy(l_max)%type = HIERARCHY_X
+!
+!
 !            end if
         end function
 
-        subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy(uindex_list, uindex)
+        subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy(hierarchy, uindex)
             implicit none
             ! dummy
-            type(lib_tree_universal_index), dimension(:), intent(inout) :: uindex_list
+            type(lib_ml_fmm_hierarchy), dimension(:), intent(inout) :: hierarchy
             type(lib_tree_universal_index), intent(in) :: uindex
 
-
+!            hierarchy()
         end subroutine
 
 end module lib_ml_fmm_helper_functions

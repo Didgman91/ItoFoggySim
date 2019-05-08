@@ -126,5 +126,6 @@ module ml_fmm_type
         integer(kind=1) :: coefficient_type                             ! [C, D^~, D]
         integer(kind=LIB_ML_FMM_COEFFICIENT_KIND) :: number_of_boxes    ! number of not empty boxes
         integer(kind=1) :: type                                         ! [X, Y, XY] hierarchy type
+        integer(kind=2) :: maximum_number_of_hash_runs
     end type
 end module ml_fmm_type

@@ -23,6 +23,8 @@ module lib_tree_type
     ! parameter
     integer(kind=1), public, parameter :: TREE_DIMENSIONS = _FMM_DIMENSION_ ! dimensions
 
+    integer(kind=1), public, parameter :: CORRESPONDENCE_VECTOR_KIND = 4    ! limited by the total number of elements -> 2**(8*4) = 4,294,967,296 elements
+
 #if(_SPATIAL_POINT_IS_DOUBLE_ == 1)
     integer(kind=1), public, parameter :: COORDINATE_BINARY_BYTES = 8
 #elif(_SPATIAL_POINT_IS_DOUBLE_ == 0)
@@ -54,6 +56,11 @@ module lib_tree_type
 !            :: interleaved_bits
         integer(kind=1) :: l
     end type lib_tree_universal_index
+
+    type lib_tree_correspondece_vector_element
+        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: data_element_number
+        integer(kind=2) :: number_of_hash_runs
+    end type lib_tree_correspondece_vector_element
     ! ~ type definitions ~
 
         ! --- type definition ---
