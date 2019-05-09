@@ -122,7 +122,7 @@ module lib_tree
         integer(kind=CORRESPONDENCE_VECTOR_KIND), optional :: s    ! "optimisation value"
 
         ! auxiliary
-        type(lib_tree_data_element), dimension(size(element_list)) :: element_list_scaled
+!        type(lib_tree_data_element), dimension(size(element_list)) :: element_list_scaled
 
         ! auxiliary: create_correspondece_vector
         integer(kind=1) :: threshold_level
@@ -140,11 +140,13 @@ module lib_tree
         character(len=75), dimension(6) :: note_string
 #endif
 
+        ! copy data to the module globle variable
+        lib_tree_data_element_list = element_list
         ! scaling
 #ifdef _DEBUG_
         call cpu_time(start)
 #endif
-        element_list_scaled = lib_tree_get_scaled_element_list(element_list)
+        call lib_tree_get_scaled_element_list(lib_tree_data_element_list)
 #ifdef _DEBUG_
         call cpu_time(finish)
         cpu_time_delta(1) = finish - start
@@ -161,10 +163,10 @@ module lib_tree
         print *, "threshold_level = ", threshold_level
         call cpu_time(start)
 #endif
-        call lib_tree_create_correspondence_vector(element_list_scaled, threshold_level, margin)
+        call lib_tree_create_correspondence_vector(threshold_level, margin)
 #ifdef _DEBUG_
-        call cpu_time(finish)
         cpu_time_delta(2) = finish - start
+        call cpu_time(finish)
         note_string(2) = "lib_tree_create_correspondence_vector"
 #endif
         length = 2
@@ -203,7 +205,7 @@ module lib_tree
                 print *, "threshold_level = ", l_max
                 call cpu_time(start)
 #endif
-                call lib_tree_create_correspondence_vector(element_list_scaled, l_max, margin)
+                call lib_tree_create_correspondence_vector(l_max, margin)
 #ifdef _DEBUG_
                 call cpu_time(finish)
                 cpu_time_delta(5) = finish - start
@@ -285,11 +287,11 @@ module lib_tree
     ! BITS_MANTISSA
     !   number of bits of the Mantissa (floating point number)
     !
-    function lib_tree_get_scaled_element_list(element_list) result(rv)
+    subroutine lib_tree_get_scaled_element_list(element_list)
         implicit none
         ! dummy
-        type(lib_tree_data_element), dimension(:), intent(in) :: element_list
-        type(lib_tree_data_element), dimension(size(element_list)) :: rv
+        type(lib_tree_data_element), dimension(:), intent(inout) :: element_list
+!        type(lib_tree_data_element), dimension(size(element_list)) :: rv
 
         ! auxiliary
         type(lib_tree_spatial_point) :: D
@@ -319,7 +321,8 @@ module lib_tree
         !$OMP PARALLEL DO PRIVATE(i, ii)
         do i=1, size(element_list)
             do ii=1, TREE_DIMENSIONS
-                rv(i)%point_x%x(ii) = (element_list(i)%point_x%x(ii) - x_min%x(ii)) / D%x(ii)
+!                rv(i)%point_x%x(ii) = (element_list(i)%point_x%x(ii) - x_min%x(ii)) / D%x(ii)
+                element_list(i)%point_x%x(ii) = (element_list(i)%point_x%x(ii) - x_min%x(ii)) / D%x(ii)
             end do
         end do
         !$OMP END PARALLEL DO
@@ -329,9 +332,9 @@ module lib_tree
         lib_tree_scaling_x_min = x_min
         lib_tree_scaling_x_max = x_max
 
-        rv(:)%element_type = element_list(:)%element_type
+!        rv(:)%element_type = element_list(:)%element_type
 
-    end function lib_tree_get_scaled_element_list
+    end subroutine lib_tree_get_scaled_element_list
 
     ! Arguments
     ! ----
@@ -1073,15 +1076,15 @@ module lib_tree
     !         ^                   ^
     !  index: 0                   5     // hash(universal index)
     !
-    subroutine lib_tree_create_correspondence_vector(element_list, threshold_level, margin)
+    subroutine lib_tree_create_correspondence_vector(threshold_level, margin)
         implicit none
         ! dummy
-        type(lib_tree_data_element), dimension(:), intent(in) :: element_list
         integer(kind=1), intent(in) :: threshold_level
         integer(kind=2), intent(in) :: margin
 
         ! auxiliary
         integer(kind=CORRESPONDENCE_VECTOR_KIND) :: correspondence_vector_dimension
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: correspondence_vector_dimension_log_2
         integer(kind=CORRESPONDENCE_VECTOR_KIND) :: hashed_uindex
 #ifdef _DEBUG_
         integer(kind=CORRESPONDENCE_VECTOR_KIND) :: hashed_uindex_old = -1
@@ -1111,15 +1114,6 @@ module lib_tree
 
         ! copy element list to the module global *lib_tree_data_element_list* list.
 
-        if ( .not. allocated(lib_tree_data_element_list) ) then
-            allocate( lib_tree_data_element_list(size(element_list)) )
-        else
-            if ( size(lib_tree_data_element_list) .ne. size(element_list)) then
-                deallocate (lib_tree_data_element_list)
-                allocate( lib_tree_data_element_list(size(element_list)) )
-            end if
-        end if
-        lib_tree_data_element_list = element_list
         lib_tree_l_th = threshold_level
 
         ! check if the significant bits doesn't exceed the number of bits of the universal index
@@ -1129,7 +1123,14 @@ module lib_tree
 #else
         if (number_of_bits .le. (UINDEX_BYTES * NUMBER_OF_BITS_PER_BYTE)) then
 #endif
-            correspondence_vector_dimension = ceiling(size(element_list) * margin / 100.0)
+            correspondence_vector_dimension = ceiling(size(lib_tree_data_element_list) * margin / 100.0)
+            correspondence_vector_dimension_log_2 = int(log(real(correspondence_vector_dimension))/log(2.0), &
+                                                              CORRESPONDENCE_VECTOR_KIND)
+            ! if the number of boxes on the level l_th is smaler than the number of elements, the
+            ! size of the correspondece_vector can be set to this number.
+            if (correspondence_vector_dimension_log_2 .gt. (TREE_DIMENSIONS*threshold_level + log(margin/100.0) / log(2.0))) then
+                correspondence_vector_dimension = ceiling(2**(TREE_DIMENSIONS*threshold_level) * margin/100.0)
+            end if
 
             lib_tree_hash_max = correspondence_vector_dimension
 
@@ -1386,46 +1387,46 @@ module lib_tree
 
         error_counter = 0
 
-        if (.not. test_lib_tree_create_correspondence_vector()) then
-            error_counter = error_counter + 1
-        end if
-        call lib_tree_destructor()
-        if (.not. test_lib_tree_get_element_from_correspondence_vector()) then
-            error_counter = error_counter + 1
-        end if
-        call lib_tree_destructor()
-        if (.not. test_lib_tree_create_correspondece_vector_sorted_data_elements()) then
-            error_counter = error_counter + 1
-        end if
-        call lib_tree_destructor()
-        if (.not. test_lib_tree_get_domain_e1()) then
-            error_counter = error_counter + 1
-        end if
-        call lib_tree_destructor()
-        if (.not. test_lib_tree_get_domain_e2()) then
-            error_counter = error_counter + 1
-        end if
-        call lib_tree_destructor()
-        if (.not. test_lib_tree_get_domain_e3()) then
-            error_counter = error_counter + 1
-        end if
-        call lib_tree_destructor()
-        if (.not. test_lib_tree_get_domain_e4()) then
-            error_counter = error_counter + 1
-        end if
-        if (.not. test_lib_tree_get_level_min()) then
-            error_counter = error_counter + 1
-        end if
-        if (.not. test_lib_tree_get_level_max()) then
-            error_counter = error_counter + 1
-        end if
-        if (.not. test_lib_tree_get_number_of_boxes()) then
-            error_counter = error_counter + 1
-        end if
-
-        if (.not. test_lib_tree_get_scaled_element_list()) then
-            error_counter = error_counter + 1
-        end if
+!        if (.not. test_lib_tree_create_correspondence_vector()) then
+!            error_counter = error_counter + 1
+!        end if
+!        call lib_tree_destructor()
+!        if (.not. test_lib_tree_get_element_from_correspondence_vector()) then
+!            error_counter = error_counter + 1
+!        end if
+!        call lib_tree_destructor()
+!        if (.not. test_lib_tree_create_correspondece_vector_sorted_data_elements()) then
+!            error_counter = error_counter + 1
+!        end if
+!        call lib_tree_destructor()
+!        if (.not. test_lib_tree_get_domain_e1()) then
+!            error_counter = error_counter + 1
+!        end if
+!        call lib_tree_destructor()
+!        if (.not. test_lib_tree_get_domain_e2()) then
+!            error_counter = error_counter + 1
+!        end if
+!        call lib_tree_destructor()
+!        if (.not. test_lib_tree_get_domain_e3()) then
+!            error_counter = error_counter + 1
+!        end if
+!        call lib_tree_destructor()
+!        if (.not. test_lib_tree_get_domain_e4()) then
+!            error_counter = error_counter + 1
+!        end if
+!        if (.not. test_lib_tree_get_level_min()) then
+!            error_counter = error_counter + 1
+!        end if
+!        if (.not. test_lib_tree_get_level_max()) then
+!            error_counter = error_counter + 1
+!        end if
+!        if (.not. test_lib_tree_get_number_of_boxes()) then
+!            error_counter = error_counter + 1
+!        end if
+!
+!        if (.not. test_lib_tree_get_scaled_element_list()) then
+!            error_counter = error_counter + 1
+!        end if
 
         if (.not. test_lib_tree_constructor()) then
             error_counter = error_counter + 1
@@ -1483,7 +1484,7 @@ module lib_tree
 
             integer(kind=1), parameter :: l_th = 4 ! threshold level
             type(lib_tree_data_element), dimension(list_length) :: element_list
-            type(lib_tree_data_element), dimension(list_length) :: element_list_rv
+!            type(lib_tree_data_element), dimension(list_length) :: element_list_rv
 
             integer(kind=4) :: i
 
@@ -1504,10 +1505,10 @@ module lib_tree
 
             ! normalise element data point
 
-            element_list_rv = lib_tree_get_scaled_element_list(element_list)
+            call lib_tree_get_scaled_element_list(element_list)
 
             print *, "test_lib_tree_get_scaled_element_list"
-            print *, "  last x-value: ", element_list_rv(list_length)%point_x%x(1)
+            print *, "  last x-value: ", element_list(list_length)%point_x%x(1)
 
             ! todo: evaluate element_list_rv
 
@@ -1563,7 +1564,9 @@ module lib_tree
             ground_truth_number_of_elements = 2
 #endif
             element_list(:)%element_type = 1
-            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+
+            lib_tree_data_element_list = element_list
+            call lib_tree_create_correspondence_vector(l_th, margin)
 
             number = 0
             do i=1, size(lib_tree_correspondence_vector)
@@ -1684,7 +1687,9 @@ module lib_tree
             end do
 #endif
             element_list(:)%element_type = 1
-            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+
+            lib_tree_data_element_list = element_list
+            call lib_tree_create_correspondence_vector(l_th, margin)
 
             number = 0
             do i=1, size(lib_tree_correspondence_vector)
@@ -1804,7 +1809,9 @@ module lib_tree
             end do
 #endif
             element_list(:)%element_type = 1
-            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+
+            lib_tree_data_element_list = element_list
+            call lib_tree_create_correspondence_vector(l_th, margin)
 
             number = 0
             do i=1, size(lib_tree_correspondence_vector)
@@ -1924,7 +1931,9 @@ module lib_tree
             end do
 #endif
             element_list(:)%element_type = 1
-            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+
+            lib_tree_data_element_list = element_list
+            call lib_tree_create_correspondence_vector(l_th, margin)
 
             number = 0
             do i=1, size(lib_tree_correspondence_vector)
@@ -2054,7 +2063,8 @@ module lib_tree
                 element_list(i)%point_x%x(3) = 1.0 - (0.999 * i)/(1.0*list_length)
             end do
 #endif
-            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+            lib_tree_data_element_list = element_list
+            call lib_tree_create_correspondence_vector(l_th, margin)
 
             gt_correspondence_vector_sorted_data_elements = (/5,4,3,2,1/)
 
@@ -2163,7 +2173,8 @@ module lib_tree
                 element_list(i)%point_x%x(3) = 1.0 - (0.999 * i)/(1.0*list_length)
             end do
 #endif
-            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+            lib_tree_data_element_list = element_list
+            call lib_tree_create_correspondence_vector(l_th, margin)
 
             ! begin of the test of the lib_tree_create_correspondece_vector_sorted_data_elements function
             gt_correspondence_vector_sorted_data_elements = (/5,4,3,2,1/)
@@ -2213,7 +2224,8 @@ module lib_tree
                 element_list(i)%point_x%x(3) = (0.999 * i)/(1.0*list_length)
             end do
 #endif
-            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+            lib_tree_data_element_list = element_list
+            call lib_tree_create_correspondence_vector(l_th, margin)
 
             number = 0
             do i=1, size(lib_tree_correspondence_vector)
@@ -2276,7 +2288,8 @@ module lib_tree
                 element_list(i)%point_x%x(3) = (0.999 * i)/(1.0*list_length)
             end do
 #endif
-            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+            lib_tree_data_element_list = element_list
+            call lib_tree_create_correspondence_vector(l_th, margin)
 
 
             ! test dataset
@@ -2343,10 +2356,11 @@ module lib_tree
             end do
 #endif
 
+            lib_tree_data_element_list = element_list
 
             call cpu_time(start)
             do i=1, number_of_runs
-                call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+                call lib_tree_create_correspondence_vector(l_th, margin)
             end do
             call cpu_time(finish)
             print *, "benchmark_lib_tree_create_correspondece_vector:"
@@ -2388,7 +2402,8 @@ module lib_tree
                 element_list(i)%point_x%x(3) = 0.9 + (-0.9 * i)/list_length
             end do
 #endif
-            call lib_tree_create_correspondence_vector(element_list, l_th, margin)
+            lib_tree_data_element_list = element_list
+            call lib_tree_create_correspondence_vector(l_th, margin)
 
             uindex = lib_tree_hf_get_universal_index(element_list(1)%point_x, lib_tree_l_th)
 
