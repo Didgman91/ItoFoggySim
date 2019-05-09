@@ -275,10 +275,11 @@ module lib_ml_fmm
     subroutine lib_ml_fmm_constructor(data_elements)
         implicit none
         ! dummy
-        type(lib_ml_fmm_data), intent(in) :: data_elements
+        type(lib_ml_fmm_data), intent(inout) :: data_elements
 
         ! auxiliaray
         type(lib_tree_data_element), dimension(:), allocatable :: data_concatenated
+        type(lib_tree_correspondece_vector_element), dimension(:), allocatable :: correspondence_vector
         integer(kind=UINDEX_BYTES), dimension(3) :: length
         type(ml_fmm_type_operator_procedures) :: operator_procedures
 
@@ -288,12 +289,11 @@ module lib_ml_fmm
         !   length(3) = size(data_elements%XY)
         data_concatenated = lib_ml_fmm_concatenate_data_array(data_elements, length)
 
-        ! initiate the Tree
-        call lib_tree_constructor(data_concatenated, 1)
-        data_concatenated = lib_tree_get_element_list()
+        m_tree_s_opt = 1 ! todo: calculate s
 
-        ! initiate the X- and Y-hierarchy
-        m_ml_fmm_hierarchy = lib_ml_fmm_hf_create_hierarchy(data_concatenated, length, m_tree_l_max, m_tree_l_min)
+        ! initiate the Tree
+        call lib_tree_constructor(data_concatenated, m_tree_s_opt)
+        data_concatenated = lib_tree_get_element_list()
 
         ! initiate the ml fmm type operators
         operator_procedures = ml_fmm_type_operator_get_procedures()
@@ -303,6 +303,11 @@ module lib_ml_fmm
         m_tree_neighbourhodd_size_k = 1!lib_ml_fmm_hf_get_neighbourhood_size(R_c1, r_c2)
         m_tree_l_min = lib_tree_get_level_min(m_tree_neighbourhodd_size_k)
         m_tree_l_max = lib_tree_get_level_max(m_tree_s_opt)
+
+        ! initiate the X- and Y-hierarchy
+        correspondence_vector = lib_tree_get_correspondence_vector()
+        m_ml_fmm_hierarchy = lib_ml_fmm_hf_create_hierarchy(data_concatenated, correspondence_vector, &
+                                                            length, m_tree_l_min, m_tree_l_max)
 
         ! setup the ml fmm data structure
         call lib_ml_fmm_type_operator_allocate_coefficient_list(m_ml_fmm_expansion_coefficients, m_tree_l_min, m_tree_l_max)
@@ -620,9 +625,8 @@ module lib_ml_fmm
             type(lib_tree_data_element), dimension(list_length) :: element_list
             type(lib_ml_fmm_data) :: data_elements
 
-            element_list = lib_tree_get_diagonal_test_dataset(list_length, element_type, HIERARCHY_X)
-
-            data_elements%X = element_list
+            data_elements%X = lib_tree_get_diagonal_test_dataset(list_length, element_type, HIERARCHY_X)
+            data_elements%Y = lib_tree_get_diagonal_test_dataset(4_8, element_type, HIERARCHY_Y, .true.)
 
             call lib_ml_fmm_constructor(data_elements)
 

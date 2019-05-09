@@ -97,15 +97,16 @@ module ml_fmm_type
     ! Example
     ! ----
     !
-    !                   -----
-    !                   | 0 |                 l = 0
-    !                   -----
-    !         -----               -----
-    !         | 0 |               | 1 |       l = 1
-    !         -----            v  -----
-    !    -----     -----     -----     -----
-    !    | 0 |     | 1 |     | 2 |     | 3 |  l = 2    <---
-    !    -----     -----     -----     -----
+    !                            -----
+    !                            | 0 |                 l = 0
+    !                            -----
+    !                  -----      XY       -----
+    !                  | 0 |               | 1 |       l = 1
+    !                  -----            v  -----
+    !             -----  Y  -----     -----  X  -----
+    !             | 0 |     | 1 |     | 2 |     | 3 |  l = 2    <---
+    !             -----     -----     -----     -----
+    !     type:     Y         Y         X         -
     !
     !     Variable                    Value
     !    -----------------------------------
@@ -115,17 +116,19 @@ module ml_fmm_type
     !     type                          X
     !     coefficient_list_index(2)     1
     !     size(coefficient_list)        1
+    !     number_of_boxes               3       <-- these boxes are not empty
+    !     size(coefficient_list)        3
     !
     !   Only one box contains coefficients at level 1. These coefficients are C expansion coefficients
 
     type lib_ml_fmm_hierarchy
         type(lib_ml_fmm_coefficient), dimension(:), allocatable :: coefficient_list
+        integer(kind=1), dimension(:), allocatable :: hierarchy_type                                            ! [X, Y, XY] hierarchy type
+        integer(kind=1), dimension(:), allocatable :: coefficient_type                                          ! [C, D^~, D]
         type(lib_ml_fmm_hashed_coeffcient_index), dimension(:), allocatable :: hashed_coefficient_list_index
-        integer(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: coefficient_list_index
-        logical :: is_hashed                                            ! true: access coefficient with hashed uindex%n, false: access coefficient with uindex%n
-        integer(kind=1) :: coefficient_type                             ! [C, D^~, D]
-        integer(kind=LIB_ML_FMM_COEFFICIENT_KIND) :: number_of_boxes    ! number of not empty boxes
-        integer(kind=1) :: type                                         ! [X, Y, XY] hierarchy type
+        integer(kind=UINDEX_BYTES), dimension(:), allocatable :: coefficient_list_index
+        logical :: is_hashed                                                                                    ! true: access coefficient with hashed uindex%n, false: access coefficient with uindex%n
+        integer(kind=UINDEX_BYTES) :: number_of_boxes                                            ! number of not empty boxes
         integer(kind=2) :: maximum_number_of_hash_runs
     end type
 end module ml_fmm_type

@@ -1128,6 +1128,8 @@ module lib_tree
                                                               CORRESPONDENCE_VECTOR_KIND)
             ! if the number of boxes on the level l_th is smaler than the number of elements, the
             ! size of the correspondece_vector can be set to this number.
+            !
+            !   correspondence_vector_dimension > 2**(dimension * level) * margin/100.0
             if (correspondence_vector_dimension_log_2 .gt. (TREE_DIMENSIONS*threshold_level + log(margin/100.0) / log(2.0))) then
                 correspondence_vector_dimension = ceiling(2**(TREE_DIMENSIONS*threshold_level) * margin/100.0)
             end if
@@ -1344,33 +1346,53 @@ module lib_tree
 
     end subroutine lib_tree_reallocate_1d_data_element_list
 
-    function lib_tree_get_diagonal_test_dataset(list_length, element_type, hierarchy_type, margin) result(element_list)
+    function lib_tree_get_diagonal_test_dataset(list_length, element_type, hierarchy_type, mirror) result(element_list)
         implicit none
         ! dummy
         integer(kind=UINDEX_BYTES), intent(in) :: list_length
         integer(kind=1), intent(in) :: element_type
         integer(kind=1), intent(in) :: hierarchy_type
-        integer(kind=2), optional :: margin
+!        integer(kind=2), optional :: margin
+        logical, optional :: mirror
         type(lib_tree_data_element), dimension(list_length) :: element_list
 
         ! auxiliary
-        integer(kind=2) :: m_margin
-        integer(kind=4) :: i
+        logical :: m_mirror
+!        integer(kind=2) :: m_margin
+        integer(kind=UINDEX_BYTES) :: i
 
-        m_margin = 300
-        if (present(margin)) m_margin = margin
+        m_mirror = .false.
+        if (present(mirror)) m_mirror = mirror
+
+!        m_margin = 300
+!        if (present(margin)) m_margin = margin
 
 #if (_FMM_DIMENSION_ == 2)
-        do i=1, list_length
-            element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
-            element_list(i)%point_x%x(2) = (0.999 * i)/(1.0*list_length)
-        end do
+        if (m_mirror) then
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = ((1.0 - 0.999) * i)/(1.0*list_length)
+            end do
+        else
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = (0.999 * i)/(1.0*list_length)
+            end do
+        end if
 #elif (_FMM_DIMENSION_ == 3)
-        do i=1, list_length
-            element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
-            element_list(i)%point_x%x(2) = (0.9 * i)/(1.0*list_length)
-            element_list(i)%point_x%x(3) = (0.9 * i)/(1.0*list_length)
-        end do
+        if (m_mirror) then
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = ((1.0 - 0.9) * i)/(1.0*list_length)
+                element_list(i)%point_x%x(3) = ((1.0 - 0.9) * i)/(1.0*list_length)
+            end do
+        else
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = (0.9 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(3) = (0.9 * i)/(1.0*list_length)
+            end do
+        end if
 #endif
         element_list(:)%element_type = element_type
         element_list(:)%hierarchy = hierarchy_type
