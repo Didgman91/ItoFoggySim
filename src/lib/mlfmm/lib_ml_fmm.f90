@@ -384,7 +384,7 @@ module lib_ml_fmm
                 if (i .eq. 1) then
                     start = 1
                 else
-                    start = sum(length(:i-1))
+                    start = sum(length(:i-1)) + 1
                 end if
                 last = start + length(i) - 1
                 if (i .eq. HIERARCHY_X) then
@@ -599,6 +599,8 @@ module lib_ml_fmm
         integer :: error_counter
 
         error_counter = 0
+
+        error_counter = error_counter + lib_ml_fmm_hf_test_functions()
 
         if (.not. test_lib_ml_fmm_constructor()) then
             error_counter = error_counter + 1

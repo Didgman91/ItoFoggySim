@@ -14,10 +14,13 @@ module lib_ml_fmm_helper_functions
     public :: lib_ml_fmm_hf_get_neighbourhood_size
     public :: lib_ml_fmm_hf_create_hierarchy
 
+    public :: lib_ml_fmm_hf_test_functions
+
     ! --- parameter ---
     integer(kind=2), public, parameter :: LIB_ML_FMM_HF_HIERARCHY_MARGIN = 200
 
     integer(kind=1), parameter :: IGNORE_ENTRY = -1
+    integer(kind=2), parameter :: MAXIMUM_NUMBER_OF_HASH_RUNS = 200
 
     ! --- type definitions ---
     type hash_list_type
@@ -448,10 +451,13 @@ module lib_ml_fmm_helper_functions
             type(lib_tree_universal_index), dimension(:), intent(inout) :: uindex_list_XY
 
             !auxiliary
-            integer(kind=LIB_ML_FMM_COEFFICIENT_KIND) :: number_of_boxes
-            integer(kind=LIB_ML_FMM_COEFFICIENT_KIND) :: number_of_entries_log_2
-            integer(kind=LIB_ML_FMM_COEFFICIENT_KIND) :: counter
-            integer(kind=LIB_ML_FMM_COEFFICIENT_KIND) :: i
+            integer(kind=UINDEX_BYTES) :: number_of_boxes
+            integer(kind=UINDEX_BYTES) :: number_of_entries_log_2
+            integer(kind=UINDEX_BYTES) :: counter
+            integer(kind=UINDEX_BYTES) :: i
+            integer(kind=2) :: ii
+            integer(kind=UINDEX_BYTES) :: hash
+            integer(kind=UINDEX_BYTES) :: max_value
             integer(kind=UINDEX_BYTES) :: n
             logical :: no_hash
 
@@ -464,12 +470,15 @@ module lib_ml_fmm_helper_functions
             allocate (hierarchy(level)%hierarchy_type(number_of_boxes))
             allocate (hierarchy(level)%coefficient_type(number_of_boxes))
 
+            hierarchy(level)%hierarchy_type(:) = IGNORE_ENTRY
+
             ! 2**(dl) < 256
             if (log(real(level)) / log(2.0) .lt. 8) then
                 no_hash = .true.
             else
                 no_hash = .false.
             end if
+            no_hash = .false.
 
             ! calculates whether hash access or direct access via the universal index requires less memory
             !
@@ -478,11 +487,44 @@ module lib_ml_fmm_helper_functions
             if ((number_of_entries_log_2 .lt. TREE_DIMENSIONS * level) .and. &
                 .not. no_hash) then
                 hierarchy(level)%is_hashed = .true.
-                i = ceiling(number_of_boxes * LIB_ML_FMM_HF_HIERARCHY_MARGIN/100.0)
-                allocate (hierarchy(level)%hashed_coefficient_list_index(i))
+                max_value = ceiling(number_of_boxes * LIB_ML_FMM_HF_HIERARCHY_MARGIN/100.0)
+                allocate (hierarchy(level)%hashed_coefficient_list_index(max_value))
+                hierarchy(level)%hashed_coefficient_list_index(:)%number_of_hash_runs = IGNORE_ENTRY
+                hierarchy(level)%maximum_number_of_hash_runs = 0
+                allocate (hierarchy(level)%coefficient_list_index(number_of_boxes))
+                hierarchy(level)%coefficient_list_index(:) = IGNORE_ENTRY
 
-                ! todo: hash
-
+                counter = 0
+                call lib_ml_fmm_hf_add_uindex_to_hierarchy_hashed(hierarchy, level, uindex_list_X, HIERARCHY_X, counter)
+                call lib_ml_fmm_hf_add_uindex_to_hierarchy_hashed(hierarchy, level, uindex_list_Y, HIERARCHY_Y, counter)
+                call lib_ml_fmm_hf_add_uindex_to_hierarchy_hashed(hierarchy, level, uindex_list_XY, HIERARCHY_XY, counter)
+!                ! interate over all indices
+!                do i=1, size(uindex_list_X)
+!                    ! determine a valid hash
+!                    do ii=1, MAXIMUM_NUMBER_OF_HASH_RUNS
+!                        hash = hash_fnv1a(uindex_list_X(i)%n, max_value)
+!                        if (hierarchy(i)%hashed_coefficient_list_index(hash)%number_of_hash_runs .eq. IGNORE_ENTRY) then
+!                            counter = counter + 1
+!                            hierarchy(level)%hashed_coefficient_list_index(hash)%number_of_hash_runs = ii
+!                            hierarchy(level)%hashed_coefficient_list_index(hash)%array_position = counter
+!                            hierarchy(level)%coefficient_list_index(counter) = uindex_list_X(i)%n
+!                            hierarchy(level)%hierarchy_type = HIERARCHY_X
+!
+!                            if (hierarchy(level)%maximum_number_of_hash_runs .lt. ii) then
+!                                hierarchy(level)%maximum_number_of_hash_runs = ii
+!                            end if
+!
+!                            exit
+!                        else if (hierarchy(level)%coefficient_list_index(counter+1) .ne. uindex_list_X(i)%n) then
+!                            hash = IEOR(hash, int(ii, UINDEX_BYTES))
+!                            hash = hash_fnv1a(hash, max_value)
+!                        else
+!                            print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy: WARNING"
+!                            print *, "  an entry with the same index already exists"
+!                            print *, "  n: ", uindex_list_X(i)%n
+!                        end if
+!                    end do
+!                end do
 
              else
                 hierarchy(level)%is_hashed = .false.
@@ -493,60 +535,163 @@ module lib_ml_fmm_helper_functions
 
                 ! setup the arrays coeeficient_list_index and hierarchy_type
                 counter = 0
-                do i=1, size(uindex_list_X)
-                    counter = counter + 1
-                    n = uindex_list_X(i)%n + 1
-                    if (hierarchy(level)%coefficient_list_index(n) .eq. IGNORE_ENTRY) then
-                        hierarchy(level)%coefficient_list_index(n) = counter
-                        hierarchy(level)%hierarchy_type(counter) = HIERARCHY_X
-                    else
-                        if (hierarchy(level)%hierarchy_type(counter) .ne. HIERARCHY_X) then
-                            hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
-                        end if
-#ifdef _DEBUG_
-                        print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy: NOTE"
-                        print *, "  uindex bypassed at level: ", level
-                        print *, "  uindex_list_X(i)%n: ", n
-#endif
-                    end if
-                end do
-                do i=1, size(uindex_list_Y)
-                    counter = counter + 1
-                    n = uindex_list_Y(i)%n + 1
-                    if (hierarchy(level)%coefficient_list_index(n) .eq. IGNORE_ENTRY) then
-                        hierarchy(level)%coefficient_list_index(n) = counter
-                        hierarchy(level)%hierarchy_type(counter) = HIERARCHY_Y
-                    else
-                        if (hierarchy(level)%hierarchy_type(counter) .ne. HIERARCHY_Y) then
-                            hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
-                        end if
-#ifdef _DEBUG_
-                        print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy: NOTE"
-                        print *, "  uindex bypassed at level: ", level
-                        print *, "  uindex_list_Y(i)%n: ", n
-#endif
-                    end if
-                end do
-                do i=1, size(uindex_list_XY)
-                    counter = counter + 1
-                    n = uindex_list_XY(i)%n + 1
-                    if (hierarchy(level)%coefficient_list_index(n) .eq. IGNORE_ENTRY) then
-                        hierarchy(level)%coefficient_list_index(n) = counter
-                        hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
-                    else
-                        if (hierarchy(level)%hierarchy_type(counter) .ne. HIERARCHY_XY) then
-                            hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
-                        end if
-#ifdef _DEBUG_
-                        print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy: NOTE"
-                        print *, "  uindex bypassed at level: ", level
-                        print *, "  uindex_list_XY(i)%n: ", n
-#endif
-                    end if
-                end do
+
+                call lib_ml_fmm_hf_add_uindex_to_hierarchy_uindex(hierarchy, level, uindex_list_X, HIERARCHY_X, counter)
+                call lib_ml_fmm_hf_add_uindex_to_hierarchy_uindex(hierarchy, level, uindex_list_Y, HIERARCHY_Y, counter)
+                call lib_ml_fmm_hf_add_uindex_to_hierarchy_uindex(hierarchy, level, uindex_list_XY, HIERARCHY_XY, counter)
+!                do i=1, size(uindex_list_X)
+!                    counter = counter + 1
+!                    n = uindex_list_X(i)%n + 1
+!                    if (hierarchy(level)%coefficient_list_index(n) .eq. IGNORE_ENTRY) then
+!                        hierarchy(level)%coefficient_list_index(n) = counter
+!                        hierarchy(level)%hierarchy_type(counter) = HIERARCHY_X
+!                    else
+!                        if (hierarchy(level)%hierarchy_type(counter) .ne. HIERARCHY_X) then
+!                            hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
+!                        end if
+!#ifdef _DEBUG_
+!                        print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy: NOTE"
+!                        print *, "  uindex bypassed at level: ", level
+!                        print *, "  uindex_list_X(i)%n: ", n
+!#endif
+!                    end if
+!                end do
+!                do i=1, size(uindex_list_Y)
+!                    counter = counter + 1
+!                    n = uindex_list_Y(i)%n + 1
+!                    if (hierarchy(level)%coefficient_list_index(n) .eq. IGNORE_ENTRY) then
+!                        hierarchy(level)%coefficient_list_index(n) = counter
+!                        hierarchy(level)%hierarchy_type(counter) = HIERARCHY_Y
+!                    else
+!                        if (hierarchy(level)%hierarchy_type(counter) .ne. HIERARCHY_Y) then
+!                            hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
+!                        end if
+!#ifdef _DEBUG_
+!                        print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy: NOTE"
+!                        print *, "  uindex bypassed at level: ", level
+!                        print *, "  uindex_list_Y(i)%n: ", n
+!#endif
+!                    end if
+!                end do
+!                do i=1, size(uindex_list_XY)
+!                    counter = counter + 1
+!                    n = uindex_list_XY(i)%n + 1
+!                    if (hierarchy(level)%coefficient_list_index(n) .eq. IGNORE_ENTRY) then
+!                        hierarchy(level)%coefficient_list_index(n) = counter
+!                        hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
+!                    else
+!                        if (hierarchy(level)%hierarchy_type(counter) .ne. HIERARCHY_XY) then
+!                            hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
+!                        end if
+!#ifdef _DEBUG_
+!                        print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy: NOTE"
+!                        print *, "  uindex bypassed at level: ", level
+!                        print *, "  uindex_list_XY(i)%n: ", n
+!#endif
+!                    end if
+!                end do
             end if
 
         end subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy
+
+        subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy_hashed(hierarchy, level, uindex_list, hierarchy_type, counter)
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
+            integer(kind=1), intent(in) :: level
+            type(lib_tree_universal_index), dimension(:), intent(inout) :: uindex_list
+            integer(kind=1), intent(in) :: hierarchy_type
+            integer(kind=UINDEX_BYTES) :: counter
+
+            ! auxiliary
+            integer(kind=UINDEX_BYTES) :: i
+            integer(kind=2) :: ii
+            integer(kind=UINDEX_BYTES) :: hash
+            integer(kind=UINDEX_BYTES) :: max_value
+
+            max_value = size(hierarchy(level)%hashed_coefficient_list_index)
+
+            ! interate over all indices
+            do i=1, size(uindex_list)
+                ! determine a valid hash
+                hash = hash_fnv1a(uindex_list(i)%n, max_value)
+                do ii=1, MAXIMUM_NUMBER_OF_HASH_RUNS
+                    if (hierarchy(level)%hashed_coefficient_list_index(hash)%number_of_hash_runs .eq. IGNORE_ENTRY) then
+                        ! saving the uindex in the hierarchy
+                        counter = counter + 1
+                        hierarchy(level)%hashed_coefficient_list_index(hash)%number_of_hash_runs = ii
+                        hierarchy(level)%hashed_coefficient_list_index(hash)%array_position = counter
+                        hierarchy(level)%coefficient_list_index(counter) = uindex_list(i)%n
+                        hierarchy(level)%hierarchy_type(counter) = hierarchy_type
+
+                        if (hierarchy(level)%maximum_number_of_hash_runs .lt. ii) then
+                            hierarchy(level)%maximum_number_of_hash_runs = ii
+                        end if
+
+                        exit
+                    else if (hierarchy(level)%coefficient_list_index(counter+1) .ne. uindex_list(i)%n) then
+                        ! hash collision -> re-hash
+                        hash = IEOR(hash, int(ii, UINDEX_BYTES))
+                        hash = hash_fnv1a(hash, max_value)
+                    else
+                        ! uindex exists already in the hierarchy
+                        if (hierarchy(level)%hierarchy_type(counter+1) .ne. hierarchy_type) then
+                            ! hierarchy type differ -> merge hierarchy types
+                            hierarchy(level)%hierarchy_type(counter+1) = HIERARCHY_XY
+                        end if
+#ifdef _DEBUG_
+                        print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy_hashed: NOTE"
+                        print *, "  uindex bypassed at level: ", level
+                        print *, "  hierarchy_type", hierarchy_type
+                        print *, "  uindex_list(i)%n: ", uindex_list(i)%n
+#endif
+                    end if
+                end do
+                if (ii .gt. MAXIMUM_NUMBER_OF_HASH_RUNS) then
+                    print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy_hashed: ERROR"
+                    print *, "  uindex bypassed at level: ", level
+                    print *, "  hierarchy_type", hierarchy_type
+                    print *, "  uindex_list(i)%n: ", uindex_list(i)%n
+                end if
+            end do
+
+        end subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy_hashed
+
+        subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy_uindex(hierarchy, level, uindex_list, hierarchy_type, counter)
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
+            integer(kind=1), intent(in) :: level
+            type(lib_tree_universal_index), dimension(:), intent(inout) :: uindex_list
+            integer(kind=1), intent(in) :: hierarchy_type
+            integer(kind=UINDEX_BYTES) :: counter
+
+            ! auxiliary
+            integer(kind=UINDEX_BYTES) :: i
+            integer(kind=UINDEX_BYTES) :: n
+
+            do i=1, size(uindex_list)
+                counter = counter + 1
+                n = uindex_list(i)%n + 1
+                if (hierarchy(level)%coefficient_list_index(n) .eq. IGNORE_ENTRY) then
+                    hierarchy(level)%coefficient_list_index(n) = counter
+                    hierarchy(level)%hierarchy_type(counter) = hierarchy_type
+                else
+                    if (hierarchy(level)%hierarchy_type(counter) .ne. hierarchy_type) then
+                        hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
+                    end if
+#ifdef _DEBUG_
+                    print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy: NOTE"
+                    print *, "  uindex bypassed at level: ", level
+                    print *, "  hierarchy_type", hierarchy_type
+                    print *, "  uindex_list(i)%n: ", n
+#endif
+                end if
+            end do
+
+        end subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy_uindex
+
+
 
         function lib_ml_fmm_hf_get_index(hierarchy, uindex) result(rv)
             implicit none
@@ -609,12 +754,13 @@ module lib_ml_fmm_helper_functions
                 counter = 0
                 do i=1, size(uindex_list)
                     ! hash runs
-                    do ii=1, 200
+                    do ii=1, MAXIMUM_NUMBER_OF_HASH_RUNS
                         hash = hash_fnv1a(uindex_list(i)%n, max_value)
                         if (hash_list(hash)%hash_runs .eq. 0) then
                             hash_list(hash)%value = uindex_list(i)%n
                             hash_list(hash)%hash_runs = ii
                             counter = counter + 1
+                            exit
                         else if (hash_list(hash)%value .ne. uindex_list(i)%n) then
                             hash = IEOR(hash, int(ii, 4))
                             hash = hash_fnv1a(hash, max_value)
@@ -638,5 +784,75 @@ module lib_ml_fmm_helper_functions
                 rv = uindex_list
             end if
         end function
+
+        ! --- test functions ---
+        function lib_ml_fmm_hf_test_functions() result(error_counter)
+            implicit none
+            ! dummy
+            integer :: error_counter
+
+            error_counter = 0
+
+            if (.not. test_lib_ml_hf_make_uindex_list_unique()) then
+                error_counter = error_counter + 1
+            end if
+
+            contains
+
+                function test_lib_ml_hf_make_uindex_list_unique() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    type(lib_tree_universal_index), dimension(:), allocatable :: uindex_list
+                    type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_reduced
+                    type(lib_tree_universal_index), dimension(:), allocatable :: uindex_reduced
+
+                    integer(kind=UINDEX_BYTES) :: uindex_sum
+                    integer(kind=UINDEX_BYTES) :: ground_truth_uindex_sum
+                    integer :: length
+                    integer :: ground_truth_length
+                    integer :: i
+
+                    length = 10
+                    ground_truth_length = 4
+
+                    allocate (uindex_list(length))
+                    allocate (ground_truth_uindex_reduced(ground_truth_length))
+
+                    do i=1, length
+                        uindex_list(i)%n = mod(i, ground_truth_length)
+                    end do
+
+                    do i=1, ground_truth_length
+                        ground_truth_uindex_reduced(i)%n = i-1
+                    end do
+
+                    uindex_reduced = lib_ml_hf_make_uindex_list_unique(uindex_list)
+
+                    if (size(uindex_reduced) .eq. size(ground_truth_uindex_reduced)) then
+                        uindex_sum = 0
+                        ground_truth_uindex_sum = 0
+                        do i=1, ground_truth_length
+                            uindex_sum = uindex_sum + uindex_reduced(i)%n
+                            ground_truth_uindex_sum = ground_truth_uindex_sum &
+                                                      + ground_truth_uindex_reduced(i)%n
+                        end do
+
+                        if (uindex_sum .eq. ground_truth_uindex_sum) then
+                            print *, "test_lib_ml_hf_make_uindex_list_unique: OK"
+                        else
+                            print *, "test_lib_ml_hf_make_uindex_list_unique: FAILED"
+                        end if
+
+                    else
+                        rv = .false.
+                        print *, "test_lib_ml_hf_make_uindex_list_unique: FAILED"
+                    end if
+
+                end function test_lib_ml_hf_make_uindex_list_unique
+
+        end function lib_ml_fmm_hf_test_functions
 
 end module lib_ml_fmm_helper_functions

@@ -1155,7 +1155,7 @@ module lib_tree
                 uindex = lib_tree_hf_get_universal_index(lib_tree_data_element_list(i)%point_x, threshold_level)
                 lib_tree_data_element_list(i)%uindex = uindex
                 ! find unique hashed universal index
-                hashed_uindex = 1 + hash_fnv1a(uindex%n, lib_tree_hash_max)
+                hashed_uindex = hash_fnv1a(uindex%n, lib_tree_hash_max)
 
                 element_saved = .false.
                 do ii=1, LIB_TREE_MAX_HASH_RUNS !huge(lib_tree_correspondence_vector(1)%number_of_hash_runs)-1
@@ -1211,7 +1211,7 @@ module lib_tree
 #endif
 
                     hashed_uindex =  IEOR(hashed_uindex, int(ii, CORRESPONDENCE_VECTOR_KIND))
-                    hashed_uindex = 1 + hash_fnv1a(hashed_uindex, lib_tree_hash_max)
+                    hashed_uindex = hash_fnv1a(hashed_uindex, lib_tree_hash_max)
                 end do
                 if (.not. element_saved) then
                     hash_overflow_counter = hash_overflow_counter + 1
@@ -1269,7 +1269,7 @@ module lib_tree
 
         if (allocated(lib_tree_correspondence_vector)) then
 
-            hashed_uindex = 1 + hash_fnv1a(uindex%n, lib_tree_hash_max)
+            hashed_uindex = hash_fnv1a(uindex%n, lib_tree_hash_max)
 
             element_found = .false.
 !            !$  opm_end_do_loop = .false.
@@ -1292,11 +1292,11 @@ module lib_tree
                         exit
                     else
                         hashed_uindex =  IEOR(hashed_uindex, int(i, CORRESPONDENCE_VECTOR_KIND))
-                        hashed_uindex = 1 + hash_fnv1a(hashed_uindex, lib_tree_hash_max)
+                        hashed_uindex = hash_fnv1a(hashed_uindex, lib_tree_hash_max)
                     end if
                 else
                         hashed_uindex =  IEOR(hashed_uindex, int(i, CORRESPONDENCE_VECTOR_KIND))
-                        hashed_uindex = 1 + hash_fnv1a(hashed_uindex, lib_tree_hash_max)
+                        hashed_uindex = hash_fnv1a(hashed_uindex, lib_tree_hash_max)
                 end if
 !                !$  end if
 
@@ -1409,47 +1409,50 @@ module lib_tree
 
         error_counter = 0
 
-!        if (.not. test_lib_tree_create_correspondence_vector()) then
-!            error_counter = error_counter + 1
-!        end if
-!        call lib_tree_destructor()
-!        if (.not. test_lib_tree_get_element_from_correspondence_vector()) then
-!            error_counter = error_counter + 1
-!        end if
-!        call lib_tree_destructor()
-!        if (.not. test_lib_tree_create_correspondece_vector_sorted_data_elements()) then
-!            error_counter = error_counter + 1
-!        end if
-!        call lib_tree_destructor()
-!        if (.not. test_lib_tree_get_domain_e1()) then
-!            error_counter = error_counter + 1
-!        end if
-!        call lib_tree_destructor()
-!        if (.not. test_lib_tree_get_domain_e2()) then
-!            error_counter = error_counter + 1
-!        end if
-!        call lib_tree_destructor()
-!        if (.not. test_lib_tree_get_domain_e3()) then
-!            error_counter = error_counter + 1
-!        end if
-!        call lib_tree_destructor()
-!        if (.not. test_lib_tree_get_domain_e4()) then
-!            error_counter = error_counter + 1
-!        end if
-!        if (.not. test_lib_tree_get_level_min()) then
-!            error_counter = error_counter + 1
-!        end if
-!        if (.not. test_lib_tree_get_level_max()) then
-!            error_counter = error_counter + 1
-!        end if
-!        if (.not. test_lib_tree_get_number_of_boxes()) then
-!            error_counter = error_counter + 1
-!        end if
-!
-!        if (.not. test_lib_tree_get_scaled_element_list()) then
-!            error_counter = error_counter + 1
-!        end if
-
+        if (.not. test_lib_tree_create_correspondence_vector()) then
+            error_counter = error_counter + 1
+        end if
+        call lib_tree_destructor()
+        if (.not. test_lib_tree_get_element_from_correspondence_vector()) then
+            error_counter = error_counter + 1
+        end if
+        call lib_tree_destructor()
+        if (.not. test_lib_tree_create_correspondece_vector_sorted_data_elements()) then
+            error_counter = error_counter + 1
+        end if
+        call lib_tree_destructor()
+        if (.not. test_lib_tree_get_domain_e1()) then
+            error_counter = error_counter + 1
+        end if
+        call lib_tree_destructor()
+        if (.not. test_lib_tree_get_domain_e2()) then
+            error_counter = error_counter + 1
+        end if
+        call lib_tree_destructor()
+        if (.not. test_lib_tree_get_domain_e3()) then
+            error_counter = error_counter + 1
+        end if
+        call lib_tree_destructor()
+        if (.not. test_lib_tree_get_domain_e4()) then
+            error_counter = error_counter + 1
+        end if
+        call lib_tree_destructor()
+        if (.not. test_lib_tree_get_level_min()) then
+            error_counter = error_counter + 1
+        end if
+        call lib_tree_destructor()
+        if (.not. test_lib_tree_get_level_max()) then
+            error_counter = error_counter + 1
+        end if
+        call lib_tree_destructor()
+        if (.not. test_lib_tree_get_number_of_boxes()) then
+            error_counter = error_counter + 1
+        end if
+        call lib_tree_destructor()
+        if (.not. test_lib_tree_get_scaled_element_list()) then
+            error_counter = error_counter + 1
+        end if
+        call lib_tree_destructor()
         if (.not. test_lib_tree_constructor()) then
             error_counter = error_counter + 1
         end if
