@@ -382,65 +382,44 @@ module lib_ml_fmm_helper_functions
 
             l_th = buffer_uindex%l
 
+            ! if necessary, get indices at level l_max
             if (l_th .gt. l_max) then
                 call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_X, l_th-l_max)
                 call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_Y, l_th-l_max)
                 call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_XY, l_th-l_max)
-                uindex_list_X = lib_ml_hf_make_uindex_list_unique(uindex_list_X)
-                uindex_list_Y = lib_ml_hf_make_uindex_list_unique(uindex_list_Y)
-                uindex_list_XY = lib_ml_hf_make_uindex_list_unique(uindex_list_XY)
+                uindex_list_X = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list_X)
+                uindex_list_Y = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list_Y)
+                uindex_list_XY = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list_XY)
             end if
 
+            ! setup hierarcy at level l_max
             call lib_ml_fmm_hf_add_uindex_to_hierarchy(hierarchy, l_max, uindex_list_X, uindex_list_Y, uindex_list_XY)
 
-!            call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_X)
-!            call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_Y)
-!            call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_XY)
-!            uindex_list_X = lib_ml_hf_make_uindex_list_unique(uindex_list_X)
-!            uindex_list_Y = lib_ml_hf_make_uindex_list_unique(uindex_list_Y)
-!            uindex_list_XY = lib_ml_hf_make_uindex_list_unique(uindex_list_XY)
-!            call lib_ml_fmm_hf_add_uindex_to_hierarchy(hierarchy, int(3, 1), uindex_list_X, uindex_list_Y, uindex_list_XY)
-
+            ! setup hierary up to the level l_min
             if (l_max .gt. l_min) then
                 do i=l_max-1, l_min, -1
                     call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_X)
                     call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_Y)
                     call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_XY)
-                    uindex_list_X = lib_ml_hf_make_uindex_list_unique(uindex_list_X)
-                    uindex_list_Y = lib_ml_hf_make_uindex_list_unique(uindex_list_Y)
-                    uindex_list_XY = lib_ml_hf_make_uindex_list_unique(uindex_list_XY)
+                    uindex_list_X = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list_X)
+                    uindex_list_Y = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list_Y)
+                    uindex_list_XY = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list_XY)
                     call lib_ml_fmm_hf_add_uindex_to_hierarchy(hierarchy, int(i, 1), uindex_list_X, uindex_list_Y, uindex_list_XY)
                 end do
             end if
-
-
-
-!            ! iterate over all data elements of the X-hierarchy
-!            if( length(HIERARCHY_X) .gt. 0 ) then
-!                allocate( uindex_list(length(HIERARCHY_X)) )
-!                ! setup at level l_max
-!                do i=1, length(HIERARCHY_X)
-!                    ! get box uindex at l=l_max
-!                    buffer_uindex = data_elements(i)%uindex
-!                    buffer_l = l_max - buffer_uindex%l
-!                    if (buffer_l .gt. 0) then
-!                        buffer_uindex = lib_tree_get_parent(buffer_uindex, buffer_l)
-!                    else if (buffer_l .eq. 0) then
-!                        continue
-!                    else
-!                        print *, "lib_ml_fmm_create_hierarchy: ERROR"
-!                        print *, "  l_th < l_max"
-!                        print *, "  check for example the Tree constructor (lib_tree_constructor)"
-!                    end if
-!
-!                    uindex_list(i) = buffer_uindex
-!                end do
-!                hierarchy(l_max)%type = HIERARCHY_X
-!
-!
-!            end if
         end function
 
+        ! Adds lists of universal indices of different hierachical type to the hierarchy.
+        !
+        ! Argument
+        ! ----
+        !   hierarchy: array<lib_ml_fmm_hierarchy>, inout
+        !       reference to the hierarchy object to be processed
+        !   level: integer, in
+        !       level of the hierarchy to be processed
+        !   uindex_list_[X,Y,XY]: array<lib_tree_universal_index>, inout (read-only)
+        !       list of uindex' of the type [X,Y,XY] to add to the hierarchy
+        !
         subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy(hierarchy, level, uindex_list_X, uindex_list_Y, uindex_list_XY)
             implicit none
             ! dummy
@@ -498,34 +477,6 @@ module lib_ml_fmm_helper_functions
                 call lib_ml_fmm_hf_add_uindex_to_hierarchy_hashed(hierarchy, level, uindex_list_X, HIERARCHY_X, counter)
                 call lib_ml_fmm_hf_add_uindex_to_hierarchy_hashed(hierarchy, level, uindex_list_Y, HIERARCHY_Y, counter)
                 call lib_ml_fmm_hf_add_uindex_to_hierarchy_hashed(hierarchy, level, uindex_list_XY, HIERARCHY_XY, counter)
-!                ! interate over all indices
-!                do i=1, size(uindex_list_X)
-!                    ! determine a valid hash
-!                    do ii=1, MAXIMUM_NUMBER_OF_HASH_RUNS
-!                        hash = hash_fnv1a(uindex_list_X(i)%n, max_value)
-!                        if (hierarchy(i)%hashed_coefficient_list_index(hash)%number_of_hash_runs .eq. IGNORE_ENTRY) then
-!                            counter = counter + 1
-!                            hierarchy(level)%hashed_coefficient_list_index(hash)%number_of_hash_runs = ii
-!                            hierarchy(level)%hashed_coefficient_list_index(hash)%array_position = counter
-!                            hierarchy(level)%coefficient_list_index(counter) = uindex_list_X(i)%n
-!                            hierarchy(level)%hierarchy_type = HIERARCHY_X
-!
-!                            if (hierarchy(level)%maximum_number_of_hash_runs .lt. ii) then
-!                                hierarchy(level)%maximum_number_of_hash_runs = ii
-!                            end if
-!
-!                            exit
-!                        else if (hierarchy(level)%coefficient_list_index(counter+1) .ne. uindex_list_X(i)%n) then
-!                            hash = IEOR(hash, int(ii, UINDEX_BYTES))
-!                            hash = hash_fnv1a(hash, max_value)
-!                        else
-!                            print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy: WARNING"
-!                            print *, "  an entry with the same index already exists"
-!                            print *, "  n: ", uindex_list_X(i)%n
-!                        end if
-!                    end do
-!                end do
-
              else
                 hierarchy(level)%is_hashed = .false.
                 i = 2**(TREE_DIMENSIONS * level)
@@ -536,64 +487,28 @@ module lib_ml_fmm_helper_functions
                 ! setup the arrays coeeficient_list_index and hierarchy_type
                 counter = 0
 
-                call lib_ml_fmm_hf_add_uindex_to_hierarchy_uindex(hierarchy, level, uindex_list_X, HIERARCHY_X, counter)
-                call lib_ml_fmm_hf_add_uindex_to_hierarchy_uindex(hierarchy, level, uindex_list_Y, HIERARCHY_Y, counter)
-                call lib_ml_fmm_hf_add_uindex_to_hierarchy_uindex(hierarchy, level, uindex_list_XY, HIERARCHY_XY, counter)
-!                do i=1, size(uindex_list_X)
-!                    counter = counter + 1
-!                    n = uindex_list_X(i)%n + 1
-!                    if (hierarchy(level)%coefficient_list_index(n) .eq. IGNORE_ENTRY) then
-!                        hierarchy(level)%coefficient_list_index(n) = counter
-!                        hierarchy(level)%hierarchy_type(counter) = HIERARCHY_X
-!                    else
-!                        if (hierarchy(level)%hierarchy_type(counter) .ne. HIERARCHY_X) then
-!                            hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
-!                        end if
-!#ifdef _DEBUG_
-!                        print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy: NOTE"
-!                        print *, "  uindex bypassed at level: ", level
-!                        print *, "  uindex_list_X(i)%n: ", n
-!#endif
-!                    end if
-!                end do
-!                do i=1, size(uindex_list_Y)
-!                    counter = counter + 1
-!                    n = uindex_list_Y(i)%n + 1
-!                    if (hierarchy(level)%coefficient_list_index(n) .eq. IGNORE_ENTRY) then
-!                        hierarchy(level)%coefficient_list_index(n) = counter
-!                        hierarchy(level)%hierarchy_type(counter) = HIERARCHY_Y
-!                    else
-!                        if (hierarchy(level)%hierarchy_type(counter) .ne. HIERARCHY_Y) then
-!                            hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
-!                        end if
-!#ifdef _DEBUG_
-!                        print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy: NOTE"
-!                        print *, "  uindex bypassed at level: ", level
-!                        print *, "  uindex_list_Y(i)%n: ", n
-!#endif
-!                    end if
-!                end do
-!                do i=1, size(uindex_list_XY)
-!                    counter = counter + 1
-!                    n = uindex_list_XY(i)%n + 1
-!                    if (hierarchy(level)%coefficient_list_index(n) .eq. IGNORE_ENTRY) then
-!                        hierarchy(level)%coefficient_list_index(n) = counter
-!                        hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
-!                    else
-!                        if (hierarchy(level)%hierarchy_type(counter) .ne. HIERARCHY_XY) then
-!                            hierarchy(level)%hierarchy_type(counter) = HIERARCHY_XY
-!                        end if
-!#ifdef _DEBUG_
-!                        print *, "lib_ml_fmm_hf_add_uindex_to_hierarchy: NOTE"
-!                        print *, "  uindex bypassed at level: ", level
-!                        print *, "  uindex_list_XY(i)%n: ", n
-!#endif
-!                    end if
-!                end do
+                call lib_ml_fmm_hf_add_uindex_to_hierarchy_lookup_table(hierarchy, level, uindex_list_X, HIERARCHY_X, counter)
+                call lib_ml_fmm_hf_add_uindex_to_hierarchy_lookup_table(hierarchy, level, uindex_list_Y, HIERARCHY_Y, counter)
+                call lib_ml_fmm_hf_add_uindex_to_hierarchy_lookup_table(hierarchy, level, uindex_list_XY, HIERARCHY_XY, counter)
             end if
 
         end subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy
 
+        ! Add the uindex to the hierarchy by using a hash function
+        !
+        ! Arguments
+        ! ----
+        !   hierarchy: array<lib_ml_fmm_hierarchy>, inout
+        !       reference to the hierarchy object to be processed
+        !   level: integer, in
+        !       level of the hierarchy to be processed
+        !   uindex_list: array<lib_tree_universal_index>, inout (read-only)
+        !       list of uindex' to add to the hierarchy
+        !   hierarchy_type: integer, in
+        !       type of the uindex_list [HIERARCHY_X, HIERARCHY_Y, HIERARCHY_XY]
+        !   counter: integer, inout
+        !       counter of added uindex' to the hierarchy()
+        !
         subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy_hashed(hierarchy, level, uindex_list, hierarchy_type, counter)
             implicit none
             ! dummy
@@ -657,7 +572,22 @@ module lib_ml_fmm_helper_functions
 
         end subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy_hashed
 
-        subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy_uindex(hierarchy, level, uindex_list, hierarchy_type, counter)
+        ! Add the uindex to the hierarchy by using a lookup table
+        !
+        ! Arguments
+        ! ----
+        !   hierarchy: array<lib_ml_fmm_hierarchy>, inout
+        !       reference to the hierarchy object to be processed
+        !   level: integer, in
+        !       level of the hierarchy to be processed
+        !   uindex_list: array<lib_tree_universal_index>, inout (read-only)
+        !       list of uindex' to add to the hierarchy
+        !   hierarchy_type: integer, in
+        !       type of the uindex_list [HIERARCHY_X, HIERARCHY_Y, HIERARCHY_XY]
+        !   counter: integer, inout
+        !       counter of added uindex' to the hierarchy()
+        !
+        subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy_lookup_table(hierarchy, level, uindex_list, hierarchy_type, counter)
             implicit none
             ! dummy
             type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
@@ -689,7 +619,7 @@ module lib_ml_fmm_helper_functions
                 end if
             end do
 
-        end subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy_uindex
+        end subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy_lookup_table
 
 
 
@@ -709,6 +639,15 @@ module lib_ml_fmm_helper_functions
 
         end function lib_ml_fmm_hf_get_index
 
+        ! Calculates all parent universal indices of a list of universal indices
+        !
+        ! Argument
+        ! ----
+        !   uindex_list: array<lib_tree_universal_index>, inout
+        !       list of universal indices, inplace replacement with the parent universal indices
+        !   step = 1: integer, optional
+        !       selects the relative level: [[x-th great ,]grand-]parent
+        !
         subroutine lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list, step)
             implicit none
             type(lib_tree_universal_index), dimension(:), allocatable, intent(inout) :: uindex_list
@@ -727,9 +666,21 @@ module lib_ml_fmm_helper_functions
                     uindex_list(i) = lib_tree_get_parent(uindex_list(i), m_step)
                 end do
             end if
-        end subroutine
+        end subroutine lib_ml_fmm_hf_get_parent_uindex_lists
 
-        function lib_ml_hf_make_uindex_list_unique(uindex_list) result(rv)
+        ! Returns a list of unique univeral indices
+        !
+        ! Argument
+        ! ----
+        !   uindex_list: array<lib_tree_universal_index>, inout (read-only)
+        !       list of universal indices
+        !
+        ! Returns
+        ! ----
+        !   rv: array<lib_tree_universal_index>, inout (read-only)
+        !       list of unique universal indices
+        !
+        function lib_ml_fmm_hf_make_uindex_list_unique(uindex_list) result(rv)
             implicit none
             ! dummy
             type(lib_tree_universal_index), dimension(:), allocatable, intent(inout) :: uindex_list
@@ -793,13 +744,71 @@ module lib_ml_fmm_helper_functions
 
             error_counter = 0
 
-            if (.not. test_lib_ml_hf_make_uindex_list_unique()) then
+            if (.not. test_lib_ml_fmm_hf_get_parent_uindex_lists()) then
+                error_counter = error_counter + 1
+            end if
+            if (.not. test_lib_ml_fmm_hf_make_uindex_list_unique()) then
                 error_counter = error_counter + 1
             end if
 
             contains
 
-                function test_lib_ml_hf_make_uindex_list_unique() result(rv)
+                function test_lib_ml_fmm_hf_get_parent_uindex_lists() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    type(lib_tree_universal_index), dimension(:), allocatable :: uindex_list
+                    type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_parent
+                    type(lib_tree_universal_index), dimension(:), allocatable :: uindex_parent
+
+                    integer(kind=1) :: level
+                    integer(kind=1) :: step
+                    integer(kind=1) :: ground_truth_level
+                    integer :: length
+                    integer :: ground_truth_length
+                    integer :: i
+
+                    step = 1
+                    level = 2
+                    ground_truth_level = level - step
+
+                    length = 2**(TREE_DIMENSIONS*level)
+                    ground_truth_length = length
+
+                    allocate (uindex_list(length))
+                    allocate (ground_truth_uindex_parent(ground_truth_length))
+
+                    do i=1, length
+                        uindex_list(i)%n = i-1
+                        uindex_list(i)%l = level
+                    end do
+
+                    do i=1, ground_truth_length
+                        ground_truth_uindex_parent(i) = lib_tree_get_parent(uindex_list(i), step)
+                    end do
+
+                    allocate(uindex_parent, source=uindex_list)
+                    call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_parent, step)
+
+                    rv = .true.
+                    do i=1, ground_truth_length
+                        if (ground_truth_uindex_parent(i) .ne. uindex_parent(i)) then
+                            rv = .false.
+                        end if
+                    end do
+
+                    if (rv) then
+                        print *, "test_lib_ml_fmm_hf_get_parent_uindex_lists: OK"
+                    else
+                        print *, "test_lib_ml_fmm_hf_get_parent_uindex_lists: FAILED"
+                    end if
+
+                    rv = .false.
+                end function test_lib_ml_fmm_hf_get_parent_uindex_lists
+
+                function test_lib_ml_fmm_hf_make_uindex_list_unique() result(rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -829,7 +838,7 @@ module lib_ml_fmm_helper_functions
                         ground_truth_uindex_reduced(i)%n = i-1
                     end do
 
-                    uindex_reduced = lib_ml_hf_make_uindex_list_unique(uindex_list)
+                    uindex_reduced = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list)
 
                     if (size(uindex_reduced) .eq. size(ground_truth_uindex_reduced)) then
                         uindex_sum = 0
@@ -841,17 +850,17 @@ module lib_ml_fmm_helper_functions
                         end do
 
                         if (uindex_sum .eq. ground_truth_uindex_sum) then
-                            print *, "test_lib_ml_hf_make_uindex_list_unique: OK"
+                            print *, "test_lib_ml_fmm_hf_make_uindex_list_unique: OK"
                         else
-                            print *, "test_lib_ml_hf_make_uindex_list_unique: FAILED"
+                            print *, "test_lib_ml_fmm_hf_make_uindex_list_unique: FAILED"
                         end if
 
                     else
                         rv = .false.
-                        print *, "test_lib_ml_hf_make_uindex_list_unique: FAILED"
+                        print *, "test_lib_ml_fmm_hf_make_uindex_list_unique: FAILED"
                     end if
 
-                end function test_lib_ml_hf_make_uindex_list_unique
+                end function test_lib_ml_fmm_hf_make_uindex_list_unique
 
         end function lib_ml_fmm_hf_test_functions
 

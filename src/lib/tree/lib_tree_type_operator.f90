@@ -18,6 +18,14 @@ module lib_tree_type_operator
         module procedure lib_tree_type_spatial_point_operator_scalar_product
     end interface
 
+    interface operator (.eq.)
+        module procedure lib_tree_type_compare_uindex_eq
+    end interface
+
+    interface operator (.ne.)
+        module procedure lib_tree_type_compare_uindex_ne
+    end interface
+
     interface abs
         module procedure lib_tree_type_spatial_point_operator_abs
     end interface
@@ -130,6 +138,41 @@ module lib_tree_type_operator
         end do
 
         rv = sqrt(rv)
+
+    end function
+
+    function lib_tree_type_compare_uindex_eq(lhs, rhs) result(rv)
+        implicit none
+        ! dummy
+        type(lib_tree_universal_index), intent(in) :: lhs
+        type(lib_tree_universal_index), intent(in) :: rhs
+        logical :: rv
+
+        rv = .true.
+
+        if (lhs%n .ne. rhs%n) then
+            rv = .false.
+        end if
+
+        if (lhs%l .ne. rhs%l) then
+            rv = .false.
+        end if
+
+    end function
+
+    function lib_tree_type_compare_uindex_ne(lhs, rhs) result(rv)
+        implicit none
+        ! dummy
+        type(lib_tree_universal_index), intent(in) :: lhs
+        type(lib_tree_universal_index), intent(in) :: rhs
+        logical :: rv
+
+        rv = .true.
+
+        if ((lhs%n .eq. rhs%n) .and. &
+            (lhs%l .eq. rhs%l)) then
+            rv = .false.
+        end if
 
     end function
 end module lib_tree_type_operator
