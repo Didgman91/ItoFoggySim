@@ -623,7 +623,7 @@ module lib_ml_fmm_helper_functions
 
 
 
-        function lib_ml_fmm_hf_get_index(hierarchy, uindex) result(rv)
+        function lib_ml_fmm_hf_get_hierarchy_index(hierarchy, uindex) result(rv)
             implicit none
             ! dummy
             type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
@@ -631,13 +631,43 @@ module lib_ml_fmm_helper_functions
             integer(UINDEX_BYTES) :: rv
 
             if (hierarchy(uindex%l)%is_hashed) then
-                ! todo: hash
-                continue
+                rv = lib_ml_fmm_hf_get_index_hierarchy_hashed(hierarchy, uindex)
             else
                 rv = hierarchy(uindex%l)%coefficient_list_index(uindex%n)
             end if
 
-        end function lib_ml_fmm_hf_get_index
+        end function lib_ml_fmm_hf_get_hierarchy_index
+
+        function lib_ml_fmm_hf_get_index_hierarchy_hashed(hierarchy, uindex) result(rv)
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
+            type(lib_tree_universal_index), intent(inout) :: uindex
+            integer(UINDEX_BYTES) :: rv
+
+            ! auxiliary
+            integer(kind=UINDEX_BYTES) :: i
+            integer(kind=UINDEX_BYTES) :: n
+            integer(kind=UINDEX_BYTES) :: hash
+            integer(kind=UINDEX_BYTES) :: max_value
+            integer(kind=UINDEX_BYTES) :: coefficient_list_index
+
+            max_value = size(hierarchy(uindex%l)%hashed_coefficient_list_index)
+            hash = hash_fnv1a(uindex%n, max_value)
+            do i=1, hierarchy(uindex%l)%maximum_number_of_hash_runs
+                coefficient_list_index = hierarchy(uindex%l)%hashed_coefficient_list_index(hash)%array_position
+                n = hierarchy(uindex%l)%coefficient_list_index(coefficient_list_index)
+                if ((uindex%n .eq. n) .and. &
+                    (hierarchy(uindex%l)%hashed_coefficient_list_index(hash)%number_of_hash_runs .eq. i)) then
+                    rv = coefficient_list_index
+                    exit
+                else
+                    hash = ieor(hash, i)
+                    hash = hash_fnv1a(hash, max_value)
+                end if
+            end do
+
+        end function lib_ml_fmm_hf_get_index_hierarchy_hashed
 
         ! Calculates all parent universal indices of a list of universal indices
         !
