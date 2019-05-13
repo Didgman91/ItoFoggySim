@@ -9,6 +9,7 @@ module lib_hash_function
 
     ! interface
     interface hash_fnv1a
+        module procedure hash_fnv1a32_2_byte
         module procedure hash_fnv1a32_4_byte
         module procedure hash_fnv1a32_8_byte
         module procedure hash_fnv1a32_16_byte
@@ -209,6 +210,56 @@ module lib_hash_function
 !        call FNV32(buffer_list, size(buffer_list), hash)
 !
 !    end function hash_fnv1a
+
+    ! fnv1a hash function
+    !
+    ! Arguments
+    ! ----
+    !   buffer: integer(kind=4)
+    !       data to be hashed
+    !   max_value: integer(kind=4)
+    !       maximum value of the hash
+    !
+    ! Returns
+    ! ----
+    !   a 32-bit hash value
+    !
+    function hash_fnv1a32_2_byte(buffer, max_value) result(hash)
+        implicit none
+        ! dummy
+        integer(kind=2), intent(in) :: buffer
+        integer(kind=4) :: max_value
+        integer(kind=4) :: hash
+
+        ! auxiliary
+        double precision :: buffer_hash
+        integer(kind=2) :: buffer_buffer
+        integer(kind=1), dimension(2) :: buffer_list
+
+        equivalence (buffer_buffer, buffer_list)
+
+        buffer_buffer = buffer
+
+        hash = -2128831035
+        call FNV32(buffer_list, size(buffer_list), hash)
+
+!        hash = int(real(hash,8) /  4294967296.0D0 * int(max_value-1,8) + max_value/2,4)
+        !        <--     hash     -->
+        !       |--------------------|
+        !    -2**31               2**31-1        <-- integer(kind=8)
+        !     -0.5                  0.5          <-- if hash < 0: / 2.0D0**32; else / (2*(2**31-1))
+        ! -max_value/2+1        max_value/2-1    <-- * (max_value-2)
+        !      1                  max_value      <-- + max_value / 2
+        if (hash .lt. 0) then
+            buffer_hash = real(hash,8) / 2.0D0**32
+        else if (hash .gt. 0) then
+            buffer_hash = real(hash,8) / (2.0D0**31 - 1.0D0) / 2.0D0
+        else
+            buffer_hash = 0.0D0
+        end if
+        hash = int(buffer_hash * int(max_value-2,8) + max_value/2.0D0,4)
+
+    end function hash_fnv1a32_2_byte
 
     ! fnv1a hash function
     !
