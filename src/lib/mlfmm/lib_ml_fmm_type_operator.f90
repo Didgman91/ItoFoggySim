@@ -11,8 +11,8 @@ module lib_ml_fmm_type_operator
     public :: operator (.CoR.)
 
     public :: lib_ml_fmm_type_operator_set_coefficient_zero
-    public :: lib_ml_fmm_type_operator_allocate_coefficient_list
-    public :: lib_ml_fmm_type_operator_deallocate_coefficient_list
+!    public :: lib_ml_fmm_type_operator_allocate_coefficient_list
+!    public :: lib_ml_fmm_type_operator_deallocate_coefficient_list
     public :: lib_ml_fmm_type_operator_set_coefficient
     public :: lib_ml_fmm_type_operator_get_coefficient
 
@@ -72,38 +72,38 @@ module lib_ml_fmm_type_operator
             type(lib_ml_fmm_coefficient), intent(inout) :: coefficient
         end subroutine
 
-        subroutine ml_fmm_allocate_coefficient_list(coefficient_list, l_min, l_max)
-            use ml_fmm_type
-            implicit none
-            ! dummy
-            type(lib_ml_fmm_coefficient_list_list) :: coefficient_list
-            integer(kind=1) :: l_min
-            integer(kind=1) :: l_max
-        end subroutine
+!        subroutine ml_fmm_allocate_coefficient_list(coefficient_list, l_min, l_max)
+!            use ml_fmm_type
+!            implicit none
+!            ! dummy
+!            type(lib_ml_fmm_coefficient_list_list) :: coefficient_list
+!            integer(kind=1) :: l_min
+!            integer(kind=1) :: l_max
+!        end subroutine
+!
+!        subroutine ml_fmm_deallocate_coefficient_list(coefficient_list)
+!            use ml_fmm_type
+!            implicit none
+!            type(lib_ml_fmm_coefficient_list_list), intent(inout) :: coefficient_list
+!        end subroutine
 
-        subroutine ml_fmm_deallocate_coefficient_list(coefficient_list)
-            use ml_fmm_type
-            implicit none
-            type(lib_ml_fmm_coefficient_list_list), intent(inout) :: coefficient_list
-        end subroutine
-
-        subroutine ml_fmm_set_coefficient(coefficient, uindex, coefficient_list)
+        subroutine ml_fmm_set_coefficient(coefficient, uindex, hierarchy)
             use ml_fmm_type
             use lib_tree_type
             implicit none
             ! dummy
             type(lib_tree_universal_index), intent(in) :: uindex
             type(lib_ml_fmm_coefficient), intent(in) :: coefficient
-            type(lib_ml_fmm_coefficient_list_list), intent(inout) :: coefficient_list
+            type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
         end subroutine
 
-        function ml_fmm_get_coefficient(uindex, coefficient_list) result(coefficient)
+        function ml_fmm_get_coefficient(uindex, hierarchy) result(coefficient)
             use ml_fmm_type
             use lib_tree_type
             implicit none
             ! dummy
             type(lib_tree_universal_index), intent(in) :: uindex
-            type(lib_ml_fmm_coefficient_list_list), intent(in) :: coefficient_list
+            type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
             type(lib_ml_fmm_coefficient) :: coefficient
         end function
     end interface
@@ -113,10 +113,10 @@ module lib_ml_fmm_type_operator
         procedure(ml_fmm_u_dot_coefficient_operator), pointer, nopass :: u_dot_coefficient => null()
         procedure(ml_fmm_cor_operator), pointer, nopass :: cor => null()
         procedure(ml_fmm_coefficient_set_zero), pointer, nopass :: coefficient_set_zero => null()
-        procedure(ml_fmm_allocate_coefficient_list), pointer, nopass :: allocate_coefficient_list => null()
+!        procedure(ml_fmm_allocate_coefficient_list), pointer, nopass :: allocate_coefficient_list => null()
         procedure(ml_fmm_set_coefficient), pointer, nopass :: set_coefficient => null()
         procedure(ml_fmm_get_coefficient), pointer, nopass :: get_coefficient => null()
-        procedure(ml_fmm_deallocate_coefficient_list), pointer, nopass :: deallocate_coefficient_list => null()
+!        procedure(ml_fmm_deallocate_coefficient_list), pointer, nopass :: deallocate_coefficient_list => null()
     end type
 
     ! ----- member procedures -----
@@ -124,10 +124,10 @@ module lib_ml_fmm_type_operator
     procedure(ml_fmm_u_dot_coefficient_operator), pointer :: m_u_dot_coefficient => null()
     procedure(ml_fmm_cor_operator), pointer :: m_cor => null()
     procedure(ml_fmm_coefficient_set_zero), pointer :: m_coefficient_set_zero => null()
-    procedure(ml_fmm_allocate_coefficient_list), pointer :: m_allocate_coefficient_list => null()
+!    procedure(ml_fmm_allocate_coefficient_list), pointer :: m_allocate_coefficient_list => null()
     procedure(ml_fmm_set_coefficient), pointer :: m_set_coefficient => null()
     procedure(ml_fmm_get_coefficient), pointer :: m_get_coefficient => null()
-    procedure(ml_fmm_deallocate_coefficient_list), pointer :: m_deallocate_coefficient_list => null()
+!    procedure(ml_fmm_deallocate_coefficient_list), pointer :: m_deallocate_coefficient_list => null()
 
     contains
 
@@ -164,10 +164,10 @@ module lib_ml_fmm_type_operator
         m_u_dot_coefficient => operator_procedures%u_dot_coefficient
         m_cor => operator_procedures%cor
         m_coefficient_set_zero => operator_procedures%coefficient_set_zero
-        m_allocate_coefficient_list => operator_procedures%allocate_coefficient_list
+!        m_allocate_coefficient_list => operator_procedures%allocate_coefficient_list
         m_set_coefficient => operator_procedures%set_coefficient
         m_get_coefficient => operator_procedures%get_coefficient
-        m_deallocate_coefficient_list => operator_procedures%deallocate_coefficient_list
+!        m_deallocate_coefficient_list => operator_procedures%deallocate_coefficient_list
 
     end subroutine lib_ml_fmm_type_operator_constructor
 
@@ -185,66 +185,66 @@ module lib_ml_fmm_type_operator
         end if
     end subroutine lib_ml_fmm_type_operator_set_coefficient_zero
 
-    subroutine lib_ml_fmm_type_operator_allocate_coefficient_list(coefficient_list, l_min, l_max)
-            use ml_fmm_type
-            implicit none
-            ! dummy
-            type(lib_ml_fmm_coefficient_list_list) :: coefficient_list
-            integer(kind=1) :: l_min
-            integer(kind=1) :: l_max
+!    subroutine lib_ml_fmm_type_operator_allocate_coefficient_list(coefficient_list, l_min, l_max)
+!            use ml_fmm_type
+!            implicit none
+!            ! dummy
+!            type(lib_ml_fmm_coefficient_list_list) :: coefficient_list
+!            integer(kind=1) :: l_min
+!            integer(kind=1) :: l_max
+!
+!            if ( associated(m_allocate_coefficient_list) ) then
+!                call m_allocate_coefficient_list(coefficient_list, l_min, l_max)
+!            else
+!                print *, "lib_ml_fmm_type_operator_allocate_coefficient_list:  ERROR"
+!                print *, "  m_allocate_coefficient_list is not associated"
+!            end if
+!    end subroutine lib_ml_fmm_type_operator_allocate_coefficient_list
+!
+!    subroutine lib_ml_fmm_type_operator_deallocate_coefficient_list(coefficient_list)
+!            use ml_fmm_type
+!            implicit none
+!            ! dummy
+!            type(lib_ml_fmm_coefficient_list_list) :: coefficient_list
+!            integer(kind=1) :: l_min
+!            integer(kind=1) :: l_max
+!
+!            if ( associated(m_deallocate_coefficient_list) ) then
+!                call m_deallocate_coefficient_list(coefficient_list)
+!            else
+!                print *, "lib_ml_fmm_type_operator_deallocate_coefficient_list:  ERROR"
+!                print *, "  m_deallocate_coefficient_list is not associated"
+!            end if
+!    end subroutine lib_ml_fmm_type_operator_deallocate_coefficient_list
 
-            if ( associated(m_allocate_coefficient_list) ) then
-                call m_allocate_coefficient_list(coefficient_list, l_min, l_max)
-            else
-                print *, "lib_ml_fmm_type_operator_allocate_coefficient_list:  ERROR"
-                print *, "  m_allocate_coefficient_list is not associated"
-            end if
-    end subroutine lib_ml_fmm_type_operator_allocate_coefficient_list
-
-    subroutine lib_ml_fmm_type_operator_deallocate_coefficient_list(coefficient_list)
-            use ml_fmm_type
-            implicit none
-            ! dummy
-            type(lib_ml_fmm_coefficient_list_list) :: coefficient_list
-            integer(kind=1) :: l_min
-            integer(kind=1) :: l_max
-
-            if ( associated(m_deallocate_coefficient_list) ) then
-                call m_deallocate_coefficient_list(coefficient_list)
-            else
-                print *, "lib_ml_fmm_type_operator_deallocate_coefficient_list:  ERROR"
-                print *, "  m_deallocate_coefficient_list is not associated"
-            end if
-    end subroutine lib_ml_fmm_type_operator_deallocate_coefficient_list
-
-    subroutine lib_ml_fmm_type_operator_set_coefficient(coefficient, uindex, coefficient_list)
+    subroutine lib_ml_fmm_type_operator_set_coefficient(coefficient, uindex, hierarchy)
             use ml_fmm_type
             use lib_tree_type
             implicit none
             ! dummy
-            type(lib_tree_universal_index), intent(in) :: uindex
-            type(lib_ml_fmm_coefficient), intent(in) :: coefficient
-            type(lib_ml_fmm_coefficient_list_list), intent(inout) :: coefficient_list
+            type(lib_tree_universal_index), intent(inout) :: uindex
+            type(lib_ml_fmm_coefficient), intent(inout) :: coefficient
+            type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
 
             if ( associated(m_set_coefficient)) then
-                call m_set_coefficient(coefficient, uindex, coefficient_list)
+                call m_set_coefficient(coefficient, uindex, hierarchy)
             else
                 print *, "lib_ml_fmm_type_operator_set_coefficient:  ERROR"
                 print *, "  m_set_coefficient is not associated"
             end if
         end subroutine
 
-        function lib_ml_fmm_type_operator_get_coefficient(uindex, coefficient_list) result(coefficient)
+        function lib_ml_fmm_type_operator_get_coefficient(uindex, hierarchy) result(coefficient)
             use ml_fmm_type
             use lib_tree_type
             implicit none
             ! dummy
-            type(lib_tree_universal_index), intent(in) :: uindex
-            type(lib_ml_fmm_coefficient_list_list), intent(in) :: coefficient_list
+            type(lib_tree_universal_index), intent(inout) :: uindex
+            type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
             type(lib_ml_fmm_coefficient) :: coefficient
 
             if ( associated(m_set_coefficient)) then
-                coefficient = m_get_coefficient(uindex, coefficient_list)
+                coefficient = m_get_coefficient(uindex, hierarchy)
             else
                 print *, "lib_ml_fmm_type_operator_get_coefficient:  ERROR"
                 print *, "  m_get_coefficient is not associated"

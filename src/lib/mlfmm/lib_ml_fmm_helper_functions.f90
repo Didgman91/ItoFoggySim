@@ -12,7 +12,13 @@ module lib_ml_fmm_helper_functions
 
     ! --- public functions ---
     public :: lib_ml_fmm_hf_get_neighbourhood_size
+
     public :: lib_ml_fmm_hf_create_hierarchy
+
+    public :: lib_ml_fmm_hf_set_hierarchy_coefficient
+    public :: lib_ml_fmm_hf_get_hierarchy_coefficient
+
+    public :: lib_ml_fmm_hf_get_hierarchy_index
 
     public :: lib_ml_fmm_hf_test_functions
 
@@ -462,11 +468,11 @@ module lib_ml_fmm_helper_functions
             ! calculates whether hash access or direct access via the universal index requires less memory
             !
             ! number_of_boxes * margin/100.0 < 2**(dimension * level)
-            number_of_entries_log_2 = ceiling(log(number_of_boxes * LIB_ML_FMM_HF_HIERARCHY_MARGIN/100.0) / log(2.0))
+            number_of_entries_log_2 = ceiling(log(real(number_of_boxes, 8) * LIB_ML_FMM_HF_HIERARCHY_MARGIN/100.0D0) / log(2.0D0))
             if ((number_of_entries_log_2 .lt. TREE_DIMENSIONS * level) .and. &
                 .not. no_hash) then
                 hierarchy(level)%is_hashed = .true.
-                max_value = ceiling(number_of_boxes * LIB_ML_FMM_HF_HIERARCHY_MARGIN/100.0)
+                max_value = ceiling(real(number_of_boxes, 8) * LIB_ML_FMM_HF_HIERARCHY_MARGIN/100.0D0)
                 allocate (hierarchy(level)%hashed_coefficient_list_index(max_value))
                 hierarchy(level)%hashed_coefficient_list_index(:)%number_of_hash_runs = IGNORE_ENTRY
                 hierarchy(level)%maximum_number_of_hash_runs = 0
@@ -621,7 +627,41 @@ module lib_ml_fmm_helper_functions
 
         end subroutine lib_ml_fmm_hf_add_uindex_to_hierarchy_lookup_table
 
+        subroutine lib_ml_fmm_hf_set_hierarchy_coefficient(hierarchy, uindex, coefficient, coefficient_type)
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
+            type(lib_tree_universal_index), intent(inout) :: uindex
+            type(lib_ml_fmm_coefficient), intent(inout) :: coefficient
+            integer(kind=1), intent(inout) :: coefficient_type
 
+            ! auxiliary
+            integer(kind=UINDEX_BYTES) :: list_index
+
+            if (uindex%n .ge. 0) then
+                list_index = lib_ml_fmm_hf_get_hierarchy_index(hierarchy, uindex)
+                hierarchy(uindex%l)%coefficient_list(list_index) = coefficient
+                hierarchy(uindex%l)%coefficient_type(list_index) = coefficient_type
+            end if
+        end subroutine lib_ml_fmm_hf_set_hierarchy_coefficient
+
+        function lib_ml_fmm_hf_get_hierarchy_coefficient(hierarchy, uindex, coefficient_type) result(coefficient)
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
+            type(lib_tree_universal_index), intent(inout) :: uindex
+            integer(kind=1), intent(inout) :: coefficient_type
+            type(lib_ml_fmm_coefficient) :: coefficient
+
+            ! auxiliary
+            integer(kind=UINDEX_BYTES) :: list_index
+
+            if (uindex%n .ge. 0) then
+                list_index = lib_ml_fmm_hf_get_hierarchy_index(hierarchy, uindex)
+                coefficient = hierarchy(uindex%l)%coefficient_list(list_index)
+                coefficient_type = hierarchy(uindex%l)%coefficient_type(list_index)
+            end if
+        end function lib_ml_fmm_hf_get_hierarchy_coefficient
 
         function lib_ml_fmm_hf_get_hierarchy_index(hierarchy, uindex) result(rv)
             implicit none
@@ -782,6 +822,26 @@ module lib_ml_fmm_helper_functions
             end if
 
             contains
+
+                function test_lib_ml_fmm_hf_create_hierarchy() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer(kind=UINDEX_BYTES), parameter :: list_length = 10
+                    integer(kind=1), parameter :: element_type = 1
+                    type(lib_tree_data_element), dimension(list_length) :: element_list
+!                    type(lib_ml_fmm_data) :: data_elements
+!
+!                    allocate(data_elements%X, source=lib_tree_get_diagonal_test_dataset(list_length, element_type, HIERARCHY_X))
+!                    allocate(data_elements%Y, source=lib_tree_get_diagonal_test_dataset(4_8, element_type, HIERARCHY_Y, .true.))
+
+
+
+!                    call lib_ml_fmm_hf_create_hierarchy()
+
+                end function test_lib_ml_fmm_hf_create_hierarchy
 
                 function test_lib_ml_fmm_hf_get_parent_uindex_lists() result(rv)
                     implicit none
