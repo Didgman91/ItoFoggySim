@@ -49,6 +49,9 @@ module lib_tree
     public :: lib_tree_get_domain_e2
     public :: lib_tree_get_domain_e3
     public :: lib_tree_get_domain_e4
+    public :: lib_tree_get_domain_i2
+    public :: lib_tree_get_domain_i3
+    public :: lib_tree_get_domain_i4
 
     public :: lib_tree_get_level_min
     public :: lib_tree_get_level_max
@@ -782,7 +785,7 @@ module lib_tree
         integer(kind=UINDEX_BYTES) :: i
         integer(kind=UINDEX_BYTES) :: ii
 
-        buffer_e2_parent = lib_tree_get_domain_e2(k, lib_tree_get_parent(uindex), element_number_list_e2_parent)
+        allocate(buffer_e2_parent, source=lib_tree_get_domain_e2(k, lib_tree_get_parent(uindex), element_number_list_e2_parent))
         buffer_e2 = lib_tree_get_domain_e2(k, uindex, element_number_list_e2)
 
         if (allocated(buffer_e2_parent)) then
@@ -838,6 +841,201 @@ module lib_tree
         end if
     end function lib_tree_get_domain_e4
 
+    function lib_tree_get_domain_i2(uindex, k) result(uindex_i2)
+        implicit none
+        ! dummy
+        type(lib_tree_universal_index), intent(in) :: uindex
+        integer(kind=UINDEX_BYTES), intent (in) :: k
+        type(lib_tree_universal_index), dimension(:), allocatable :: uindex_i2
+
+        ! auxiliary
+        integer(kind=UINDEX_BYTES) :: number_of_boxes
+        type(lib_tree_universal_index), dimension(:, :), allocatable :: buffer_uindex
+        type(lib_tree_universal_index), dimension(:), allocatable :: buffer_uindex_reduced_temp
+
+        integer(kind=UINDEX_BYTES) :: i
+        integer(kind=UINDEX_BYTES) :: ii
+
+        ! get all neighbours
+        allocate(buffer_uindex(k, 3**TREE_DIMENSIONS-1))
+        !$OMP PARALLEL DO PRIVATE(i)
+        do i=1, k
+            buffer_uindex(i, :) = lib_tree_get_neighbours(i, uindex)
+        end do
+        !$OMP END PARALLEL DO
+
+
+        ! reduce neigbours list (remove invalide universal indices)
+        allocate(buffer_uindex_reduced_temp(k*(3**TREE_DIMENSIONS-1) + 1))
+        number_of_boxes = 1
+        buffer_uindex_reduced_temp(number_of_boxes) = uindex
+        do i=1, k
+            do ii=1, 3**TREE_DIMENSIONS-1
+                if (buffer_uindex(i,ii)%n .ne. TREE_BOX_IGNORE_ENTRY) then
+                    number_of_boxes = number_of_boxes + 1
+                    buffer_uindex_reduced_temp(number_of_boxes) = buffer_uindex(i,ii)
+                end if
+            end do
+        end do
+
+        ! clean up
+        if (allocated(buffer_uindex)) then
+            deallocate (buffer_uindex)
+        end if
+
+        allocate(uindex_i2(number_of_boxes))
+        uindex_i2 = buffer_uindex_reduced_temp(:number_of_boxes)
+
+        ! clean up
+        if (allocated(buffer_uindex_reduced_temp)) then
+            deallocate (buffer_uindex_reduced_temp)
+        end if
+    end function lib_tree_get_domain_i2
+
+    function lib_tree_get_domain_i3(uindex, k) result(uindex_i3)
+        implicit none
+        ! dummy
+        type(lib_tree_universal_index), intent(in) :: uindex
+        integer(kind=UINDEX_BYTES), intent (in) :: k
+        type(lib_tree_universal_index), dimension(:), allocatable :: uindex_i3
+
+        ! auxiliary
+        type(lib_tree_universal_index), dimension(:), allocatable :: uindex_i2
+        integer(kind=UINDEX_BYTES), dimension(:), allocatable :: buffer_uindex
+
+        integer(kind=UINDEX_BYTES) :: i
+        integer(kind=UINDEX_BYTES) :: number_of_boxes
+
+        uindex_i2 = lib_tree_get_domain_i2(uindex, k)
+
+        allocate(buffer_uindex(2**(TREE_DIMENSIONS * uindex%l)))
+
+        ! initialize
+        do i=1, size(buffer_uindex)
+            buffer_uindex(i) = i - int(1, UINDEX_BYTES)
+        end do
+
+        ! ignore boxes of the domain i2
+        do i=1, size(uindex_i2)
+            buffer_uindex(uindex_i2(i)%n + 1) = TREE_BOX_IGNORE_ENTRY
+        end do
+        ! ignore uindex box
+        buffer_uindex(uindex%n + 1) = TREE_BOX_IGNORE_ENTRY
+
+        ! reduce the array buffer_uindex
+        number_of_boxes = size(buffer_uindex) - size(uindex_i2) - 1
+        if (number_of_boxes .gt. 0) then
+            allocate (uindex_i3(number_of_boxes))
+            number_of_boxes = 0
+            do i=1, size(buffer_uindex)
+                if (buffer_uindex(i) .ne. TREE_BOX_IGNORE_ENTRY) then
+                    number_of_boxes = number_of_boxes + 1
+                    uindex_i3(number_of_boxes)%n = buffer_uindex(i)
+                    uindex_i3(number_of_boxes)%l = uindex%l
+                end if
+            end do
+        end if
+    end function lib_tree_get_domain_i3
+
+    function lib_tree_get_domain_i4(uindex, k) result(uindex_i4)
+        implicit none
+        ! dummy
+        type(lib_tree_universal_index), intent(in) :: uindex
+        integer(kind=UINDEX_BYTES), intent (in) :: k
+        type(lib_tree_universal_index), dimension(:), allocatable :: uindex_i4
+
+        ! parameter
+        integer(kind=1), parameter :: HASH_MARGIN = 2 ! = 200%
+        integer(kind=2), parameter :: HASH_MAX_RUNS = 200
+
+        ! auxiliary
+        type(lib_tree_universal_index) :: uindex_parent
+        type(lib_tree_universal_index), dimension(:), allocatable :: uindex_i2
+        type(lib_tree_universal_index), dimension(:), allocatable :: uindex_parent_i2
+        type(lib_tree_universal_index), dimension(:,:), allocatable :: uindex_parent_i2_children
+
+        integer(kind=UINDEX_BYTES), dimension(:), allocatable :: list
+        integer(kind=2), dimension(:), allocatable :: number_of_hash_runs
+        integer(kind=2) :: hash
+
+        integer(kind=UINDEX_BYTES) :: i
+        integer(kind=UINDEX_BYTES) :: ii
+        integer(kind=2) :: hash_counter
+        integer(kind=UINDEX_BYTES) :: buffer
+
+
+        uindex_parent = lib_tree_get_parent(uindex)
+
+        allocate(uindex_i2, source=lib_tree_get_domain_i2(uindex, k))
+        allocate(uindex_parent_i2, source=lib_tree_get_domain_i2(uindex_parent, k))
+        allocate(uindex_parent_i2_children(size(uindex_parent_i2), 2**TREE_DIMENSIONS))
+
+
+        do i=1, size(uindex_parent_i2)
+            uindex_parent_i2_children(i,:) = lib_tree_get_children(uindex_parent_i2(i))
+        end do
+
+        allocate(uindex_i4(size(uindex_parent_i2_children) - size(uindex_i2)))
+
+        ! calculate the relative complement
+        if (TREE_DIMENSIONS * uindex%l .gt. (log(HASH_MARGIN * real(size(uindex_parent_i2_children))) / log(2.0))) then
+            ! use hash table
+            allocate(list(HASH_MARGIN*size(uindex_parent_i2_children)), source=TREE_BOX_IGNORE_ENTRY)
+            allocate(number_of_hash_runs(size(list)), source=0_2)
+
+            do i=1, size(uindex_parent_i2)
+                do ii=1, 2**TREE_DIMENSIONS
+                    hash = int(hash_fnv1a(uindex_parent_i2_children(i,ii)%n, size(list)), 2)
+                    do hash_counter=1, HASH_MAX_RUNS
+                        if (number_of_hash_runs(hash) .eq. 0) then
+                            list(hash) = uindex_parent_i2_children(i,ii)%n
+                            number_of_hash_runs(hash) = hash_counter
+                            exit
+                        else if (list(hash) .ne. uindex_parent_i2_children(i,ii)%n) then
+                            ! hash collision -> re-hash
+                            hash = ieor(hash, hash_counter)
+                            hash = int(hash_fnv1a(hash, size(list)), 2)
+                        else
+
+                        end if
+                    end do
+                end do
+            end do
+        else
+            ! use lookup table
+            allocate(list(TREE_DIMENSIONS * uindex%l), source=TREE_BOX_IGNORE_ENTRY)
+
+            do i=1, size(uindex_parent_i2)
+                do ii=1, 2**TREE_DIMENSIONS
+                    buffer = uindex_parent_i2_children(i, ii)%n - 1
+                    list(buffer + 1) = buffer
+                end do
+            end do
+
+            do i=1, size(uindex_i2)
+                buffer = uindex_i2(i)%n - 1
+                list(buffer + 1) = TREE_BOX_IGNORE_ENTRY
+            end do
+        end if
+
+        ! create uindex_i4
+        buffer = 0
+        do i=1, size(list)
+            if (list(i) .ne. TREE_BOX_IGNORE_ENTRY) then
+                buffer = buffer + 1
+                uindex_i4(buffer)%n = list(i)
+                uindex_i4(buffer)%l = uindex%l
+            end if
+        end do
+
+        ! clean up
+        if (allocated(list)) then
+            deallocate(list)
+        end if
+
+
+    end function lib_tree_get_domain_i4
+
     ! Calculates the minimum tree level
     !
     ! Equation
@@ -861,7 +1059,7 @@ module lib_tree
         integer(kind=COORDINATE_BINARY_BYTES), intent (in) :: k
         integer(kind=1) :: l_min
 
-        l_min = int(1 + floor(log(real(k+1)) / log(2.0), UINDEX_BYTES))
+        l_min = int(1 + floor(log(real(k+1)) / log(2.0), UINDEX_BYTES), 1)
 
     end function
 
