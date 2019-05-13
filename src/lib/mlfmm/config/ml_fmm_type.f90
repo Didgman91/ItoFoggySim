@@ -6,6 +6,10 @@ module ml_fmm_type
 
     integer(kind=1), parameter, public :: LIB_ML_FMM_COEFFICIENT_KIND = 8
 
+    integer(kind=1), parameter, public :: LIB_ML_FMM_COEFFICIENT_TYPE_C = 1
+    integer(kind=1), parameter, public :: LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE = 2
+    integer(kind=1), parameter, public :: LIB_ML_FMM_COEFFICIENT_TYPE_D = 3
+
     type lib_ml_fmm_v
         real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
     end type
@@ -158,7 +162,7 @@ module ml_fmm_type
         integer(kind=1), dimension(:), allocatable :: coefficient_type
         type(lib_ml_fmm_hashed_coeffcient_index), dimension(:), allocatable :: hashed_coefficient_list_index
         ! is_hashed .eqv. .true.: list entry correspondence with the box index n
-        ! is_hashed .eqv. .false: list entry correspondece with the coefficient_list_index index
+        ! is_hashed .eqv. .false: list entry correspondence with the coefficient_list_index index
         integer(kind=UINDEX_BYTES), dimension(:), allocatable :: coefficient_list_index
         ! true: access coefficient with hashed uindex%n, false: access coefficient with uindex%n
         logical :: is_hashed
