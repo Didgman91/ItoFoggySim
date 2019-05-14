@@ -16,236 +16,6 @@ module lib_ml_fmm
 
     public :: lib_ml_fmm_hf_test_functions
 
-    interface
-!        ! Basis function: A
-!        function lib_ml_fmm_get_A(x) result(A)
-!            use lib_tree_type
-!            use ml_fmm_type
-!            implicit none
-!            ! dummy
-!            type(lib_tree_spatial_point), intent(in) :: x
-!            type(lib_ml_fmm_A) :: A
-!        end function
-
-        ! Basis function: A_i
-        function lib_ml_fmm_get_A_i(x, data_element) result(A_i)
-            use lib_tree_type
-            use ml_fmm_type
-            implicit none
-            ! dummy
-            type(lib_tree_spatial_point), intent(in) :: x
-            type(lib_tree_data_element) :: data_element
-            type(lib_ml_fmm_coefficient) :: A_i
-        end function
-
-!        ! Basis function: B
-!        function lib_ml_fmm_get_B(x) result(B)
-!            use lib_tree_type
-!            use ml_fmm_type
-!            implicit none
-!            ! dummy
-!            type(lib_tree_spatial_point), intent(in) :: x
-!            type(lib_ml_fmm_B) :: B
-!        end function
-
-        ! Basis function: B_i
-        function lib_ml_fmm_get_B_i(x, data_element) result(B_i)
-            use lib_tree_type
-            use ml_fmm_type
-            implicit none
-            ! dummy
-            type(lib_tree_spatial_point), intent(in) :: x
-            type(lib_tree_data_element) :: data_element
-            type(lib_ml_fmm_coefficient) :: B_i
-        end function
-
-        ! Basis function: S
-        function lib_ml_fmm_get_S(x) result(S)
-            use lib_tree_type
-            use ml_fmm_type
-            implicit none
-            ! dummy
-            type(lib_tree_spatial_point), intent(in) :: x
-            type(lib_ml_fmm_S) :: S
-        end function
-
-        ! Basis function: R
-        function lib_ml_fmm_get_R(x) result(R)
-            use lib_tree_type
-            use ml_fmm_type
-            implicit none
-            ! dummy
-            type(lib_tree_spatial_point), intent(in) :: x
-            type(lib_ml_fmm_R) :: R
-        end function
-
-        ! Local expansion (inner or Regular expansion)
-        !
-        ! Restriction
-        ! ----
-        ! Example calculation:
-        !       phi_i(y) = A_i (x_∗) o R(y − x_∗)     (8)
-        !
-        !   "Here the series is valid in the domain |y − x_∗| .le. r_c |x_i − x_∗| (see Fig. 2),
-        !   where 0 < r c < 1 is some real number."
-        !
-        !   Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
-        !
-        ! Arguments
-        ! ----
-        !   i
-        !   x_*
-        !   y
-        !
-        ! Returns
-        ! ----
-        !   phi_i
-        !
-        !
-        function lib_ml_fmm_expansion_R(i, x, y) result(phi_i)
-            use lib_tree_type
-            implicit none
-            ! dummy
-            integer, intent(in) :: i
-            type(lib_tree_spatial_point), intent(in) :: x
-            type(lib_tree_spatial_point), intent(in) :: y
-            integer :: phi_i                   ! todo: define type
-        end function lib_ml_fmm_expansion_R
-
-        ! Far field expansion (outer, Singular or multipole expansion)
-        !
-        ! Restriction
-        ! ----
-        ! Example calculation:
-        !   "Any function phi_i(y) has a complementary expansion valid outside
-        !   a d-dimensional sphere centered at y = x_∗ with radius R_c |x_i − x_∗| :
-        !       phi_i(y) = B_i (x_∗) o S(y − x_∗), |y - x_*| .ge. R_c |x_i - x_*|,     (10)
-        !
-        !   where R_c > 1 is a real number similar to r_c".
-        !   "Even though for many physical fields, such as the Green’s function
-        !   for Laplace’s equation, the function S(y − x_∗) is singular at y = x_∗ ,
-        !   this condition is not necessary. In particular we can have S = R."
-        !
-        !   Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
-        !
-        ! Arguments
-        ! ----
-        !   i
-        !   x_*
-        !   y
-        !
-        ! Returns
-        ! ----
-        !   phi_i
-        !
-        !
-        function lib_ml_fmm_expansion_S(i, x, y) result(phi_i)
-            use lib_tree_type
-            implicit none
-            ! dummy
-            integer, intent(in) :: i
-            type(lib_tree_spatial_point), intent(in) :: x
-            type(lib_tree_spatial_point), intent(in) :: y
-            integer :: phi_i                   ! todo: define type
-        end function lib_ml_fmm_expansion_S
-
-        ! Translation: local-to-local (Regular-to-Regular)
-        !
-        ! Arguments
-        ! ----
-        !   A_i_1
-        !   x_1
-        !   x_2
-        !
-        ! Returns
-        ! ----
-        !   A_i_2
-        !
-        function lib_ml_fmm_translation_RR(A_i_1, x_1, x_2) result(A_i_2)
-            use lib_tree_type
-            use ml_fmm_type
-            implicit none
-            ! dummy
-            type(lib_ml_fmm_coefficient), intent(in) :: A_i_1
-            type(lib_tree_spatial_point), intent(in) :: x_1
-            type(lib_tree_spatial_point), intent(in) :: x_2
-            type(lib_ml_fmm_coefficient) :: A_i_2
-        end function
-
-        ! Translation: far-to-local (Singular-to-Regular)
-        !
-        ! Arguments
-        ! ----
-        !   B_i_1
-        !       set of expansion coefficients
-        !   x_1: spatial point
-        !       origin of coordinate system 1
-        !   x_1: spatial point
-        !       origin of coordinate system 2
-        !
-        ! Returns
-        ! ----
-        !   A_i_2
-        !       set of expansion coefficients
-        !
-        function lib_ml_fmm_translation_SR(B_i_1, x_1, x_2) result(A_i_2)
-            use lib_tree_type
-            use ml_fmm_type
-            implicit none
-            ! dummy
-            type(lib_ml_fmm_coefficient), intent(in) :: B_i_1
-            type(lib_tree_spatial_point), intent(in) :: x_1
-            type(lib_tree_spatial_point), intent(in) :: x_2
-            type(lib_ml_fmm_coefficient) :: A_i_2
-        end function
-
-        ! Translation: far-to-far (Singular-to-Singular)
-        !
-        ! Arguments
-        ! ----
-        !   B_i_1
-        !       set of expansion coefficients
-        !   x_1: spatial point
-        !       origin of coordinate system 1
-        !   x_2: spatial point
-        !       origin of coordinate system 2
-        !
-        ! Returns
-        ! ----
-        !   B_i_2
-        !       set of expansion coefficients
-        !
-        function lib_ml_fmm_translation_SS(B_i_1, x_1, x_2) result(B_i_2)
-            use lib_tree_type
-            use ml_fmm_type
-            implicit none
-            ! dummy
-            type(lib_ml_fmm_coefficient), intent(in) :: B_i_1
-            type(lib_tree_spatial_point), intent(in) :: x_1
-            type(lib_tree_spatial_point), intent(in) :: x_2
-            type(lib_ml_fmm_coefficient) :: B_i_2
-        end function
-    end interface
-
-
-    type lib_ml_fmm_procedure_handles
-        procedure(lib_ml_fmm_get_A_i), pointer, nopass :: get_A_i => null()
-        procedure(lib_ml_fmm_get_B_i), pointer, nopass :: get_B_i => null()
-        procedure(lib_ml_fmm_get_S), pointer, nopass :: get_S => null()
-        procedure(lib_ml_fmm_get_R), pointer, nopass :: get_R => null()
-        procedure(lib_ml_fmm_expansion_R), pointer, nopass :: expansion_R => null()
-        procedure(lib_ml_fmm_expansion_S), pointer, nopass :: expansion_S => null()
-        procedure(lib_ml_fmm_translation_RR), pointer, nopass :: get_translation_RR => null()
-        procedure(lib_ml_fmm_translation_SR), pointer, nopass :: get_translation_SR => null()
-        procedure(lib_ml_fmm_translation_SS), pointer, nopass :: get_translation_SS => null()
-    end type lib_ml_fmm_procedure_handles
-
-    type lib_ml_fmm_data
-        type(lib_tree_data_element), dimension(:), allocatable :: X
-        type(lib_tree_data_element), dimension(:), allocatable :: Y
-        type(lib_tree_data_element), dimension(:), allocatable :: XY
-    end type
-
     ! --- member ---
     type(lib_ml_fmm_procedure_handles) :: m_ml_fmm_handles
     integer(kind=2) :: m_ml_fmm_p_truncation
@@ -309,7 +79,8 @@ module lib_ml_fmm
         m_ml_fmm_hierarchy = lib_ml_fmm_hf_create_hierarchy(data_concatenated, correspondence_vector, &
                                                             length, m_tree_l_min, m_tree_l_max)
 
-
+        allocate (m_ml_fmm_u(length(HIERARCHY_X) + length(HIERARCHY_XY)))
+        allocate (m_ml_fmm_v(length(HIERARCHY_Y) + length(HIERARCHY_XY)))
     end subroutine lib_ml_fmm_constructor
 
     ! clean up
@@ -351,6 +122,21 @@ module lib_ml_fmm
         call lib_tree_destructor()
 
     end subroutine lib_ml_fmm_destructor
+
+    function lib_ml_fmm_run(vector_u) result(vector_v)
+        implicit none
+        ! dummy
+        type(lib_ml_fmm_v), dimension(:), allocatable, intent(inout) :: vector_u
+        type(lib_ml_fmm_v), dimension(:), allocatable :: vector_v
+
+        allocate(m_ml_fmm_u, source=vector_u)
+
+        call lib_ml_fmm_calculate_upward_pass()
+        call lib_ml_fmm_calculate_downward_pass()
+
+        allocate(vector_v, source=m_ml_fmm_v)
+
+    end function
 
     function lib_ml_fmm_concatenate_data_array(data_elements, length) result(data_concatenated)
         implicit none
@@ -613,6 +399,15 @@ module lib_ml_fmm
         end do
     end function lib_ml_fmm_get_C_of_box
 
+    subroutine lib_ml_fmm_calculate_downward_pass
+        implicit none
+
+        call lib_ml_fmm_calculate_downward_pass_step_1()
+        call lib_ml_fmm_calculate_downward_pass_step_2()
+
+
+    end subroutine
+
     ! Downward pass - step 1
     !
     ! Procedure
@@ -717,13 +512,128 @@ module lib_ml_fmm
     !
     ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(36)
     !
-    function lib_ml_fmm_calculate_downward_pass_step_2() result(dummy)
+    subroutine lib_ml_fmm_calculate_downward_pass_step_2()
+        implicit none
+        ! auxiliaray
+        type(lib_ml_fmm_coefficient) :: D
+        type(lib_tree_universal_index) :: uindex
+        integer(kind=1) :: l
+        integer(kind=UINDEX_BYTES) :: i
+        integer(kind=UINDEX_BYTES) :: number_of_boxes
+        integer(kind=UINDEX_BYTES) :: list_index
+        integer(kind=1) :: hierarchy_type
+
+        m_ml_fmm_hierarchy(m_tree_l_min)%coefficient_type(:) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+
+        do l=m_tree_l_min+int(1,1), m_tree_l_max
+            uindex%l = l
+            number_of_boxes = size(m_ml_fmm_hierarchy(l)%coefficient_list_index)
+
+            if (m_ml_fmm_hierarchy(l)%is_hashed) then
+                do i=1, number_of_boxes
+                    uindex%n = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
+                    hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(i)
+                    if ((uindex%n .ge. 0) .and. &
+                        ((hierarchy_type .eq. HIERARCHY_Y) .or. &
+                         (hierarchy_type .eq. HIERARCHY_XY))) then
+                        D = lib_ml_fmm_get_D_of_box(uindex)
+                        m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
+                        m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+                    end if
+                end do
+            else
+                do i=1, number_of_boxes
+                    uindex%n = i - int(1, 1)
+                    list_index = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
+                    hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(i)
+                    if ((list_index .gt. 0) .and. &
+                        ((hierarchy_type .eq. HIERARCHY_Y) .or. &
+                         (hierarchy_type .eq. HIERARCHY_XY))) then
+                        D = lib_ml_fmm_get_D_of_box(uindex)
+                        m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
+                        m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+                    end if
+                end do
+            end if
+        end do
+
+    end subroutine lib_ml_fmm_calculate_downward_pass_step_2
+
+    function lib_ml_fmm_get_D_of_box(uindex) result(D)
         implicit none
         ! dummy
-        integer :: dummy
+        type(lib_tree_universal_index), intent(inout) :: uindex
+        type(lib_ml_fmm_coefficient) :: D
+
+        ! auxiliary
+        type(lib_ml_fmm_coefficient) :: D_parent
+        type(lib_ml_fmm_coefficient) :: D_tilde
+        type(lib_tree_universal_index) :: uindex_parent
+        integer(kind=1) :: coefficient_type
+
+        type(lib_tree_spatial_point) :: x_c
+        type(lib_tree_spatial_point) :: x_c_parent
+
+        uindex_parent = lib_tree_get_parent(uindex)
+
+        if (uindex_parent%n .ge. 0) then
+            x_c = lib_tree_get_centre_of_box(uindex)
+            x_c_parent = lib_tree_get_centre_of_box(uindex_parent)
+            D_tilde = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
+            D_parent = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex_parent, coefficient_type)
+            D = D_tilde + m_ml_fmm_handles%get_translation_RR(D_parent, x_c_parent, x_c)
+        else
+            print *, "lib_ml_fmm_get_D_of_box: ERROR"
+            print *, "  parent box not found"
+        end if
+
+    end function lib_ml_fmm_get_D_of_box
+
+    subroutine lib_ml_fmm_final_summation()
+        implicit none
+
+        ! auxiliary
+        type(lib_ml_fmm_coefficient) :: D
+        type(lib_tree_universal_index) :: uindex
+        integer(kind=UINDEX_BYTES) :: i
+        integer(kind=UINDEX_BYTES) :: number_of_boxes
+        integer(kind=UINDEX_BYTES) :: list_index
+        integer(kind=1) :: hierarchy_type
+
+        uindex%l = m_tree_l_max
+        number_of_boxes = size(m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index)
+
+        if (m_ml_fmm_hierarchy(uindex%l)%is_hashed) then
+            do i=1, number_of_boxes
+                uindex%n = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
+                hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(i)
+                if ((uindex%n .ge. 0) .and. &
+                    ((hierarchy_type .eq. HIERARCHY_Y) .or. &
+                     (hierarchy_type .eq. HIERARCHY_XY))) then
 
 
-    end function lib_ml_fmm_calculate_downward_pass_step_2
+                    D = lib_ml_fmm_get_D_of_box(uindex)
+
+!                    m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
+!                    m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+                end if
+            end do
+        else
+            do i=1, number_of_boxes
+                uindex%n = i - int(1, 1)
+                list_index = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
+                hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(i)
+                if ((list_index .gt. 0) .and. &
+                    ((hierarchy_type .eq. HIERARCHY_Y) .or. &
+                     (hierarchy_type .eq. HIERARCHY_XY))) then
+                    D = lib_ml_fmm_get_D_of_box(uindex)
+!                    m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
+!                    m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+                end if
+            end do
+        end if
+
+    end subroutine
 
     ! ----- test functions -----
     function lib_ml_fmm_test_functions() result(error_counter)

@@ -16,8 +16,15 @@ module lib_ml_fmm_type_operator
     public :: lib_ml_fmm_type_operator_set_coefficient
     public :: lib_ml_fmm_type_operator_get_coefficient
 
+    public :: lib_ml_fmm_get_B_i
+    public :: lib_ml_fmm_phi_i_j
+    public :: lib_ml_fmm_translation_RR
+    public :: lib_ml_fmm_translation_SR
+    public :: lib_ml_fmm_translation_SS
+
     ! ---- public type definitions -----
     public :: ml_fmm_type_operator_procedures
+    public :: lib_ml_fmm_procedure_handles
 !    public :: ml_fmm_coefficient_add_operator
 
     ! ----- operator -----
@@ -106,7 +113,240 @@ module lib_ml_fmm_type_operator
             type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
             type(lib_ml_fmm_coefficient) :: coefficient
         end function
+
+!        ! Basis function: A
+!        function lib_ml_fmm_get_A(x) result(A)
+!            use lib_tree_type
+!            use ml_fmm_type
+!            implicit none
+!            ! dummy
+!            type(lib_tree_spatial_point), intent(in) :: x
+!            type(lib_ml_fmm_A) :: A
+!        end function
+
+!        ! Basis function: A_i
+!        function lib_ml_fmm_get_A_i(x, data_element) result(A_i)
+!            use lib_tree_type
+!            use ml_fmm_type
+!            implicit none
+!            ! dummy
+!            type(lib_tree_spatial_point), intent(in) :: x
+!            type(lib_tree_data_element) :: data_element
+!            type(lib_ml_fmm_coefficient) :: A_i
+!        end function
+
+!        ! Basis function: B
+!        function lib_ml_fmm_get_B(x) result(B)
+!            use lib_tree_type
+!            use ml_fmm_type
+!            implicit none
+!            ! dummy
+!            type(lib_tree_spatial_point), intent(in) :: x
+!            type(lib_ml_fmm_B) :: B
+!        end function
+
+        ! Basis function: B_i
+        function lib_ml_fmm_get_B_i(x, data_element) result(B_i)
+            use lib_tree_type
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type(lib_tree_spatial_point), intent(in) :: x
+            type(lib_tree_data_element) :: data_element
+            type(lib_ml_fmm_coefficient) :: B_i
+        end function
+
+!        ! Basis function: S
+!        function lib_ml_fmm_get_S(x) result(S)
+!            use lib_tree_type
+!            use ml_fmm_type
+!            implicit none
+!            ! dummy
+!            type(lib_tree_spatial_point), intent(in) :: x
+!            type(lib_ml_fmm_S) :: S
+!        end function
+!
+!        ! Basis function: R
+!        function lib_ml_fmm_get_R(x) result(R)
+!            use lib_tree_type
+!            use ml_fmm_type
+!            implicit none
+!            ! dummy
+!            type(lib_tree_spatial_point), intent(in) :: x
+!            type(lib_ml_fmm_R) :: R
+!        end function
+
+!        ! Local expansion (inner or Regular expansion)
+!        !
+!        ! Restriction
+!        ! ----
+!        ! Example calculation:
+!        !       phi_i(y) = A_i (x_∗) o R(y − x_∗)     (8)
+!        !
+!        !   "Here the series is valid in the domain |y − x_∗| .le. r_c |x_i − x_∗| (see Fig. 2),
+!        !   where 0 < r c < 1 is some real number."
+!        !
+!        !   Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
+!        !
+!        ! Arguments
+!        ! ----
+!        !   i
+!        !   x_*
+!        !   y
+!        !
+!        ! Returns
+!        ! ----
+!        !   phi_i
+!        !
+!        !
+!        function lib_ml_fmm_expansion_R(i, x, y) result(phi_i)
+!            use lib_tree_type
+!            implicit none
+!            ! dummy
+!            integer, intent(in) :: i
+!            type(lib_tree_spatial_point), intent(in) :: x
+!            type(lib_tree_spatial_point), intent(in) :: y
+!            integer :: phi_i                   ! todo: define type
+!        end function lib_ml_fmm_expansion_R
+
+!        ! Far field expansion (outer, Singular or multipole expansion)
+!        !
+!        ! Restriction
+!        ! ----
+!        ! Example calculation:
+!        !   "Any function phi_i(y) has a complementary expansion valid outside
+!        !   a d-dimensional sphere centered at y = x_∗ with radius R_c |x_i − x_∗| :
+!        !       phi_i(y) = B_i (x_∗) o S(y − x_∗), |y - x_*| .ge. R_c |x_i - x_*|,     (10)
+!        !
+!        !   where R_c > 1 is a real number similar to r_c".
+!        !   "Even though for many physical fields, such as the Green’s function
+!        !   for Laplace’s equation, the function S(y − x_∗) is singular at y = x_∗ ,
+!        !   this condition is not necessary. In particular we can have S = R."
+!        !
+!        !   Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C
+!        !
+!        ! Arguments
+!        ! ----
+!        !   i
+!        !   x_*
+!        !   y
+!        !
+!        ! Returns
+!        ! ----
+!        !   phi_i
+!        !
+!        !
+!        function lib_ml_fmm_expansion_S(i, x, y) result(phi_i_j)
+!            use lib_tree_type
+!            implicit none
+!            ! dummy
+!            integer, intent(in) :: i
+!            type(lib_tree_spatial_point), intent(in) :: x
+!            type(lib_tree_spatial_point), intent(in) :: y
+!            integer :: phi_i_j                   ! todo: define type
+!        end function lib_ml_fmm_expansion_S
+
+        function lib_ml_fmm_phi_i_j(data_element_i, y_j) result(rv)
+            use lib_tree_type
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type(lib_tree_data_element), intent(inout) :: data_element_i
+            type(lib_tree_spatial_point), intent(inout) :: y_j
+            type(lib_ml_fmm_v) :: rv
+
+        end function
+
+        ! Translation: local-to-local (Regular-to-Regular)
+        !
+        ! Arguments
+        ! ----
+        !   A_i_1
+        !   x_1
+        !   x_2
+        !
+        ! Returns
+        ! ----
+        !   A_i_2
+        !
+        function lib_ml_fmm_translation_RR(A_i_1, x_1, x_2) result(A_i_2)
+            use lib_tree_type
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_coefficient), intent(in) :: A_i_1
+            type(lib_tree_spatial_point), intent(in) :: x_1
+            type(lib_tree_spatial_point), intent(in) :: x_2
+            type(lib_ml_fmm_coefficient) :: A_i_2
+        end function
+
+        ! Translation: far-to-local (Singular-to-Regular)
+        !
+        ! Arguments
+        ! ----
+        !   B_i_1
+        !       set of expansion coefficients
+        !   x_1: spatial point
+        !       origin of coordinate system 1
+        !   x_1: spatial point
+        !       origin of coordinate system 2
+        !
+        ! Returns
+        ! ----
+        !   A_i_2
+        !       set of expansion coefficients
+        !
+        function lib_ml_fmm_translation_SR(B_i_1, x_1, x_2) result(A_i_2)
+            use lib_tree_type
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_coefficient), intent(in) :: B_i_1
+            type(lib_tree_spatial_point), intent(in) :: x_1
+            type(lib_tree_spatial_point), intent(in) :: x_2
+            type(lib_ml_fmm_coefficient) :: A_i_2
+        end function
+
+        ! Translation: far-to-far (Singular-to-Singular)
+        !
+        ! Arguments
+        ! ----
+        !   B_i_1
+        !       set of expansion coefficients
+        !   x_1: spatial point
+        !       origin of coordinate system 1
+        !   x_2: spatial point
+        !       origin of coordinate system 2
+        !
+        ! Returns
+        ! ----
+        !   B_i_2
+        !       set of expansion coefficients
+        !
+        function lib_ml_fmm_translation_SS(B_i_1, x_1, x_2) result(B_i_2)
+            use lib_tree_type
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_coefficient), intent(in) :: B_i_1
+            type(lib_tree_spatial_point), intent(in) :: x_1
+            type(lib_tree_spatial_point), intent(in) :: x_2
+            type(lib_ml_fmm_coefficient) :: B_i_2
+        end function
     end interface
+
+    type lib_ml_fmm_procedure_handles
+!        procedure(lib_ml_fmm_get_A_i), pointer, nopass :: get_A_i => null()
+        procedure(lib_ml_fmm_get_B_i), pointer, nopass :: get_B_i => null()
+!        procedure(lib_ml_fmm_get_S), pointer, nopass :: get_S => null()
+!        procedure(lib_ml_fmm_get_R), pointer, nopass :: get_R => null()
+!        procedure(lib_ml_fmm_expansion_R), pointer, nopass :: expansion_R => null()
+!        procedure(lib_ml_fmm_expansion_S), pointer, nopass :: expansion_S => null()
+        procedure(lib_ml_fmm_phi_i_j), pointer, nopass :: get_phi_i_j => null()
+        procedure(lib_ml_fmm_translation_RR), pointer, nopass :: get_translation_RR => null()
+        procedure(lib_ml_fmm_translation_SR), pointer, nopass :: get_translation_SR => null()
+        procedure(lib_ml_fmm_translation_SS), pointer, nopass :: get_translation_SS => null()
+    end type lib_ml_fmm_procedure_handles
 
     type ml_fmm_type_operator_procedures
         procedure(ml_fmm_coefficient_add_operator), pointer, nopass :: coefficient_add => null()
