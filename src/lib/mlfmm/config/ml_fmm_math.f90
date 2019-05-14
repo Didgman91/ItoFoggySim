@@ -57,7 +57,7 @@ module ml_fmm_math
             type(lib_ml_fmm_coefficient) :: lhs_coeff
             type(lib_ml_fmm_coefficient) :: rhs_coeff
             type(lib_ml_fmm_coefficient) :: res_coeff
-            type(lib_ml_fmm_R) :: rhs_R
+            type(lib_tree_spatial_point) :: rhs_R
             type(lib_ml_fmm_v) :: res_v
 
             type(ml_fmm_type_operator_procedures) :: ml_fmm_operator_procedures
@@ -77,7 +77,6 @@ module ml_fmm_math
             allocate (lhs_u%dummy(length))
             allocate (lhs_coeff%dummy(length))
             allocate (rhs_coeff%dummy(length))
-            allocate (rhs_R%dummy(length))
 
             lhs_coeff%dummy = (/5, 4, 3/)
             call lib_ml_fmm_type_operator_set_coefficient_zero(lhs_coeff)
@@ -90,7 +89,7 @@ module ml_fmm_math
 
             res_coeff = lhs_u * res_coeff
 
-            rhs_R%dummy = (/0, 7, 1/)
+            rhs_R%x(:2) = (/1.5, 7.0/)
             res_v = lhs_coeff .cor. rhs_R
 
             ! todo: add condition
@@ -144,7 +143,7 @@ module ml_fmm_math
         implicit none
         ! dummy
         type(lib_ml_fmm_coefficient), intent(in) :: lhs
-        type(lib_ml_fmm_R), intent(in) :: rhs
+        type(lib_tree_spatial_point), intent(in) :: rhs
         type(lib_ml_fmm_v) :: rv
 
         ! auxiliary
@@ -154,12 +153,10 @@ module ml_fmm_math
         allocate (rv%dummy(1))
         rv%dummy(1) = 0
 
-        if (size(lhs%dummy) .eq. size(rhs%dummy)) then
-            length = size(lhs%dummy)
-            do i=1, length
-                rv%dummy(1) = rv%dummy(1) + lhs%dummy(i) * rhs%dummy(i)
-            end do
-        end if
+        length = size(lhs%dummy)
+        do i=1, length
+            rv%dummy(1) = rv%dummy(1) + lhs%dummy(i) * rhs%x(1)
+        end do
 
     end function test_cor
 

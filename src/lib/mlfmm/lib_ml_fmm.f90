@@ -76,8 +76,9 @@ module lib_ml_fmm
 
         ! initiate the X- and Y-hierarchy
         correspondence_vector = lib_tree_get_correspondence_vector()
-        m_ml_fmm_hierarchy = lib_ml_fmm_hf_create_hierarchy(data_concatenated, correspondence_vector, &
-                                                            length, m_tree_l_min, m_tree_l_max)
+        call lib_ml_fmm_hf_create_hierarchy(data_concatenated, correspondence_vector, &
+                                            length, m_tree_l_min, m_tree_l_max,&
+                                            m_ml_fmm_hierarchy)
 
         allocate (m_ml_fmm_u(length(HIERARCHY_X) + length(HIERARCHY_XY)))
         allocate (m_ml_fmm_v(length(HIERARCHY_Y) + length(HIERARCHY_XY)))
@@ -129,10 +130,15 @@ module lib_ml_fmm
         type(lib_ml_fmm_v), dimension(:), allocatable, intent(inout) :: vector_u
         type(lib_ml_fmm_v), dimension(:), allocatable :: vector_v
 
-        allocate(m_ml_fmm_u, source=vector_u)
+        if (allocated(m_ml_fmm_u)) then
+            m_ml_fmm_u = vector_u
+        else
+            allocate(m_ml_fmm_u, source=vector_u)
+        end if
 
         call lib_ml_fmm_calculate_upward_pass()
         call lib_ml_fmm_calculate_downward_pass()
+        call lib_ml_fmm_final_summation()
 
         allocate(vector_v, source=m_ml_fmm_v)
 
@@ -593,7 +599,6 @@ module lib_ml_fmm
         implicit none
 
         ! auxiliary
-        type(lib_ml_fmm_coefficient) :: D
         type(lib_tree_universal_index) :: uindex
         integer(kind=UINDEX_BYTES) :: i
         integer(kind=UINDEX_BYTES) :: number_of_boxes
@@ -611,11 +616,7 @@ module lib_ml_fmm
                     ((hierarchy_type .eq. HIERARCHY_Y) .or. &
                      (hierarchy_type .eq. HIERARCHY_XY))) then
 
-
-                    D = lib_ml_fmm_get_D_of_box(uindex)
-
-!                    m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
-!                    m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+                    call lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
                 end if
             end do
         else
@@ -626,14 +627,67 @@ module lib_ml_fmm
                 if ((list_index .gt. 0) .and. &
                     ((hierarchy_type .eq. HIERARCHY_Y) .or. &
                      (hierarchy_type .eq. HIERARCHY_XY))) then
-                    D = lib_ml_fmm_get_D_of_box(uindex)
-!                    m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
-!                    m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+
+                    call lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
                 end if
             end do
         end if
 
-    end subroutine
+    end subroutine lib_ml_fmm_final_summation
+
+    subroutine lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
+        implicit none
+        ! dummy
+        type(lib_tree_universal_index), intent(inout) :: uindex
+
+        ! auxiliary
+        type(lib_ml_fmm_coefficient) :: D
+        integer(kind=1) :: coefficient_type
+        integer(kind=UINDEX_BYTES) :: i
+        type(lib_tree_data_element), dimension(:), allocatable :: data_element_e1
+        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number_e1
+        type(lib_tree_data_element), dimension(:), allocatable :: data_element_e2
+        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number_e2
+
+
+        allocate(data_element_e1, source = lib_tree_get_domain_e1(uindex, &
+                                                                  element_number_e1))
+        allocate(data_element_e2, source = lib_tree_get_domain_e2(m_tree_neighbourhood_size_k, &
+                                                                  uindex, &
+                                                                  element_number_e2))
+
+        D = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
+        do i=1, size(data_element_e1)
+            if ((data_element_e1(i)%hierarchy .eq. HIERARCHY_Y) .or. &
+                (data_element_e1(i)%hierarchy .eq. HIERARCHY_XY)) then
+                m_ml_fmm_v(element_number_e1(i)) = lib_ml_fmm_calculate_v_y_j(data_element_e1(i), data_element_e2, D)
+            end if
+        end do
+    end subroutine lib_ml_fmm_calculate_all_v_y_j_at_uindex
+
+    function lib_ml_fmm_calculate_v_y_j(data_element_y_j, data_element_e2, D) result(rv)
+        implicit none
+        ! dummy
+        type(lib_tree_data_element), intent(inout) :: data_element_y_j
+        type(lib_tree_data_element), dimension(:), allocatable, intent(inout) :: data_element_e2
+        type(lib_ml_fmm_coefficient), intent(inout) :: D
+        type(lib_ml_fmm_v) :: rv
+
+        ! auxiliary
+        integer(kind=UINDEX_BYTES) :: i
+        type(lib_tree_spatial_point) :: x_c
+        type(lib_tree_spatial_point) :: y_j
+
+        x_c = lib_tree_get_centre_of_box(data_element_y_j%uindex)
+        y_j = data_element_y_j%point_x
+
+        rv = D .cor. (y_j - x_c)
+
+        do i=1, size(data_element_e2)
+            rv = rv + m_ml_fmm_handles%get_phi_i_j(data_element_e2(i), y_j)
+        end do
+
+    end function lib_ml_fmm_calculate_v_y_j
 
     ! ----- test functions -----
     function lib_ml_fmm_test_functions() result(error_counter)
@@ -663,14 +717,29 @@ module lib_ml_fmm
             logical :: rv
 
             ! auxiliary
+            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
+            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_v
+
             integer(kind=UINDEX_BYTES), parameter :: list_length = 10
             integer(kind=1), parameter :: element_type = 1
             type(lib_ml_fmm_data) :: data_elements
+
+            real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
+            integer(kind=LIB_ML_FMM_COEFFICIENT_KIND) :: i
 
             allocate(data_elements%X, source=lib_tree_get_diagonal_test_dataset(list_length, element_type, HIERARCHY_X))
             allocate(data_elements%Y, source=lib_tree_get_diagonal_test_dataset(4_8, element_type, HIERARCHY_Y, .true.))
 
             call lib_ml_fmm_constructor(data_elements)
+
+            allocate(vector_u(list_length+4_8))
+            allocate(dummy(1))
+            dummy(1) = 1.0
+            do i=1, size(vector_u)
+                vector_u(i)%dummy = dummy
+            end do
+
+            allocate(vector_v, source = lib_ml_fmm_run(vector_u))
 
             rv = .false.
 

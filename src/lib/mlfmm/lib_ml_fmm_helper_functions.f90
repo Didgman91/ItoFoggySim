@@ -333,7 +333,7 @@ module lib_ml_fmm_helper_functions
         ! ----
         !   hierarchy
         !       hierarchy of the X- and Y-hierarchy (sources and targets)
-        function lib_ml_fmm_hf_create_hierarchy(data_elements, correspondence_vector, length, l_min, l_max) result(hierarchy)
+        subroutine lib_ml_fmm_hf_create_hierarchy(data_elements, correspondence_vector, length, l_min, l_max, hierarchy)
             implicit none
             ! dummy
             type(lib_tree_data_element), dimension(:), intent(inout) :: data_elements
@@ -341,7 +341,7 @@ module lib_ml_fmm_helper_functions
             integer(kind=UINDEX_BYTES), dimension(3), intent(in) :: length
             integer(kind=1), intent(in) :: l_max
             integer(kind=1), intent(in) :: l_min
-            type(lib_ml_fmm_hierarchy), dimension(:), allocatable :: hierarchy
+            type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
 
             ! auxiliary
             integer(kind=1) :: buffer_l
@@ -413,7 +413,7 @@ module lib_ml_fmm_helper_functions
                     call lib_ml_fmm_hf_add_uindex_to_hierarchy(hierarchy, int(i, 1), uindex_list_X, uindex_list_Y, uindex_list_XY)
                 end do
             end if
-        end function
+        end subroutine
 
         ! Adds lists of universal indices of different hierachical type to the hierarchy.
         !

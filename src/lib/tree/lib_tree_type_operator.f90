@@ -36,7 +36,7 @@ module lib_tree_type_operator
         implicit none
         ! dummy
         type (lib_tree_spatial_point), intent(in) :: lhs
-        type (lib_tree_spatial_point), intent(in):: rhs
+        type (lib_tree_spatial_point), intent(in) :: rhs
         type (lib_tree_spatial_point) :: rv
 
         ! auxilary
@@ -51,7 +51,7 @@ module lib_tree_type_operator
         implicit none
         ! dummy
         type (lib_tree_spatial_point), intent(in) :: lhs
-        type (lib_tree_spatial_point), intent(in):: rhs
+        type (lib_tree_spatial_point), intent(in) :: rhs
         type (lib_tree_spatial_point) :: rv
 
         ! auxilary

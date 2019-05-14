@@ -8,6 +8,7 @@ module lib_ml_fmm_type_operator
 
     public :: operator (*)
     public :: operator (+)
+    public :: operator (-)
     public :: operator (.CoR.)
 
     public :: lib_ml_fmm_type_operator_set_coefficient_zero
@@ -31,6 +32,13 @@ module lib_ml_fmm_type_operator
     interface operator (+)
         module procedure m_coefficient_add
 !        module procedure m_procedures%m_coefficient_add
+        module procedure lib_ml_fmm_v_operator_add
+        module procedure lib_ml_fmm_v_operator_add_0d
+    end interface
+
+    interface operator (-)
+        module procedure lib_ml_fmm_v_operator_sub
+        module procedure lib_ml_fmm_v_operator_sub_0d
     end interface
 
     interface operator (*)
@@ -68,7 +76,7 @@ module lib_ml_fmm_type_operator
             implicit none
             ! dummy
             type(lib_ml_fmm_coefficient), intent(in) :: lhs
-            type(lib_ml_fmm_R), intent(in) :: rhs
+            type(lib_tree_spatial_point), intent(in) :: rhs
             type(lib_ml_fmm_v) :: rv
         end function ml_fmm_cor_operator
 
@@ -489,6 +497,62 @@ module lib_ml_fmm_type_operator
                 print *, "lib_ml_fmm_type_operator_get_coefficient:  ERROR"
                 print *, "  m_get_coefficient is not associated"
             end if
+        end function
+
+        function lib_ml_fmm_v_operator_add(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type (lib_ml_fmm_v), dimension(:), intent(in) :: lhs
+            type (lib_ml_fmm_v), dimension(size(lhs)), intent(in) :: rhs
+            type (lib_ml_fmm_v), dimension(size(lhs)) :: rv
+
+            ! auxilary
+            integer :: i
+
+            do i=1, size(lhs)
+                rv(i)%dummy = lhs(i)%dummy + rhs(i)%dummy
+            end do
+        end function
+
+        function lib_ml_fmm_v_operator_add_0d(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type (lib_ml_fmm_v), intent(in) :: lhs
+            type (lib_ml_fmm_v), intent(in) :: rhs
+            type (lib_ml_fmm_v) :: rv
+
+!            allocate(rv%dummy, source = lhs%dummy + rhs%dummy)
+            rv%dummy = lhs%dummy + rhs%dummy
+        end function
+
+        function lib_ml_fmm_v_operator_sub(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type (lib_ml_fmm_v), dimension(:), intent(in) :: lhs
+            type (lib_ml_fmm_v), dimension(size(lhs)), intent(in) :: rhs
+            type (lib_ml_fmm_v), dimension(size(lhs)) :: rv
+
+            ! auxilary
+            integer :: i
+
+            do i=1, size(lhs)
+                rv(i)%dummy = lhs(i)%dummy - rhs(i)%dummy
+            end do
+        end function
+
+        function lib_ml_fmm_v_operator_sub_0d(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type (lib_ml_fmm_v), intent(in) :: lhs
+            type (lib_ml_fmm_v), intent(in) :: rhs
+            type (lib_ml_fmm_v) :: rv
+
+!            allocate(rv%dummy, source = lhs%dummy - rhs%dummy)
+            rv%dummy = lhs%dummy - rhs%dummy
         end function
 
 end module lib_ml_fmm_type_operator
