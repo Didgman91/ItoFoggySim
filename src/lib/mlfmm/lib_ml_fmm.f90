@@ -14,6 +14,8 @@ module lib_ml_fmm
     ! --- public functions ---
     public :: lib_ml_fmm_test_functions
 
+    public :: lib_ml_fmm_hf_test_functions
+
     interface
 !        ! Basis function: A
 !        function lib_ml_fmm_get_A(x) result(A)
@@ -620,11 +622,8 @@ module lib_ml_fmm
     !
     ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(34)
     !
-    function lib_ml_fmm_calculate_downward_pass_step_1() result(dummy)
+    subroutine lib_ml_fmm_calculate_downward_pass_step_1()
         implicit none
-        ! dummy
-        integer :: dummy
-
         ! auxilary
         type(lib_tree_universal_index) :: uindex
         type(lib_ml_fmm_coefficient) :: D_tilde
@@ -669,7 +668,7 @@ module lib_ml_fmm
         end do
 
 
-    end function lib_ml_fmm_calculate_downward_pass_step_1
+    end subroutine lib_ml_fmm_calculate_downward_pass_step_1
 
     function lib_ml_fmm_get_D_tilde_of_box(uindex) result(D_tilde)
         implicit none
@@ -679,7 +678,7 @@ module lib_ml_fmm
 
         ! auxiliary
         type(lib_ml_fmm_coefficient) :: C
-        type(lib_tree_universal_index), dimension(:), allocatable :: boxes_e4
+        type(lib_tree_universal_index), dimension(:), allocatable :: boxes_i4
 
         type(lib_tree_spatial_point) :: x_c
         type(lib_tree_spatial_point) :: x_c_neighbour
@@ -688,22 +687,22 @@ module lib_ml_fmm
         integer(kind=UINDEX_BYTES) :: list_index
         integer(kind=1) :: hierarchy_type
 
-        allocate(boxes_e4, source=lib_tree_get_domain_i4(uindex, m_tree_neighbourhood_size_k))
+        allocate(boxes_i4, source=lib_tree_get_domain_i4(uindex, m_tree_neighbourhood_size_k))
 
         call lib_ml_fmm_type_operator_set_coefficient_zero(D_tilde)
 
         x_c = lib_tree_get_centre_of_box(uindex)
 
-        do i=1, size(boxes_e4)
+        do i=1, size(boxes_i4)
             list_index = lib_ml_fmm_hf_get_hierarchy_index(m_ml_fmm_hierarchy, uindex)
             hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(list_index)
             if ((list_index .gt. 0) .and. &
                 ((hierarchy_type .eq. HIERARCHY_X) .or. &
                  (hierarchy_type .eq. HIERARCHY_XY))) then
                 C = m_ml_fmm_hierarchy(uindex%l)%coefficient_list(list_index)
-                x_c_neighbour = lib_tree_get_centre_of_box(boxes_e4(i))
+                x_c_neighbour = lib_tree_get_centre_of_box(boxes_i4(i))
 
-!                D_tilde = D_tilde + lib_ml_fmm_procedure_handles%get_translation_SR(C, x_c, x_c_neighbour)
+                D_tilde = D_tilde + m_ml_fmm_handles%get_translation_SR(C, x_c, x_c_neighbour)
             end if
         end do
 
@@ -720,7 +719,10 @@ module lib_ml_fmm
     !
     function lib_ml_fmm_calculate_downward_pass_step_2() result(dummy)
         implicit none
+        ! dummy
         integer :: dummy
+
+
     end function lib_ml_fmm_calculate_downward_pass_step_2
 
     ! ----- test functions -----
@@ -730,8 +732,6 @@ module lib_ml_fmm
         integer :: error_counter
 
         error_counter = 0
-
-        error_counter = error_counter + lib_ml_fmm_hf_test_functions()
 
         if (.not. test_lib_ml_fmm_constructor()) then
             error_counter = error_counter + 1
@@ -755,7 +755,6 @@ module lib_ml_fmm
             ! auxiliary
             integer(kind=UINDEX_BYTES), parameter :: list_length = 10
             integer(kind=1), parameter :: element_type = 1
-            type(lib_tree_data_element), dimension(list_length) :: element_list
             type(lib_ml_fmm_data) :: data_elements
 
             allocate(data_elements%X, source=lib_tree_get_diagonal_test_dataset(list_length, element_type, HIERARCHY_X))

@@ -821,6 +821,14 @@ module lib_ml_fmm_helper_functions
                 error_counter = error_counter + 1
             end if
 
+            print *, "-------------lib_ml_fmm_hf_test_functions----------------"
+            if (error_counter == 0) then
+                print *, "lib_ml_fmm_hf_test_functions tests: OK"
+            else
+                print *, error_counter,"lib_ml_fmm_hf_test_functions test(s) FAILED"
+            end if
+            print *, "------------------------------------------------------"
+
             contains
 
                 function test_lib_ml_fmm_hf_create_hierarchy() result(rv)
@@ -895,7 +903,6 @@ module lib_ml_fmm_helper_functions
                         print *, "test_lib_ml_fmm_hf_get_parent_uindex_lists: FAILED"
                     end if
 
-                    rv = .false.
                 end function test_lib_ml_fmm_hf_get_parent_uindex_lists
 
                 function test_lib_ml_fmm_hf_make_uindex_list_unique() result(rv)
@@ -940,8 +947,10 @@ module lib_ml_fmm_helper_functions
                         end do
 
                         if (uindex_sum .eq. ground_truth_uindex_sum) then
+                            rv = .true.
                             print *, "test_lib_ml_fmm_hf_make_uindex_list_unique: OK"
                         else
+                            rv = .false.
                             print *, "test_lib_ml_fmm_hf_make_uindex_list_unique: FAILED"
                         end if
 

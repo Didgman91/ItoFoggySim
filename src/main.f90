@@ -4,6 +4,7 @@ program main
     use lib_tree_helper_functions
     use lib_hash_function
     use lib_sort
+
     use lib_ml_fmm
 
     use ml_fmm_math
@@ -22,6 +23,7 @@ program main
     error_counter = error_counter + lib_tree_hf_test_functions()
     error_counter = error_counter + lib_tree_test_functions()
     error_counter = error_counter + lib_ml_fmm_type_operator_test_functions()
+    error_counter = error_counter + lib_ml_fmm_hf_test_functions()
     error_counter = error_counter + lib_ml_fmm_test_functions()
 
 !    call lib_tree_benchmark()
