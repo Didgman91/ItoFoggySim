@@ -954,7 +954,7 @@ module lib_tree
         type(lib_tree_universal_index), dimension(:), allocatable :: uindex_parent_i2
         type(lib_tree_universal_index), dimension(:,:), allocatable :: uindex_parent_i2_children
 
-        integer(kind=UINDEX_BYTES), dimension(:), allocatable :: list
+        integer(kind=UINDEX_BYTES), dimension(:), allocatable :: list_n
         integer(kind=2), dimension(:), allocatable :: number_of_hash_runs
         integer(kind=2) :: hash
 
@@ -980,60 +980,110 @@ module lib_tree
         ! calculate the relative complement
         if (TREE_DIMENSIONS * uindex%l .gt. (log(HASH_MARGIN * real(size(uindex_parent_i2_children))) / log(2.0))) then
             ! use hash table
-            allocate(list(HASH_MARGIN*size(uindex_parent_i2_children)), source=TREE_BOX_IGNORE_ENTRY)
-            allocate(number_of_hash_runs(size(list)), source=0_2)
+            allocate(list_n(HASH_MARGIN*size(uindex_parent_i2_children)), source=TREE_BOX_IGNORE_ENTRY)
+            allocate(number_of_hash_runs(size(list_n)), source=0_2)
 
             do i=1, size(uindex_parent_i2)
                 do ii=1, 2**TREE_DIMENSIONS
-                    hash = int(hash_fnv1a(uindex_parent_i2_children(i,ii)%n, size(list)), 2)
+                    hash = int(hash_fnv1a(uindex_parent_i2_children(i,ii)%n, size(list_n)), 2)
+                    ! get unique hash
                     do hash_counter=1, HASH_MAX_RUNS
                         if (number_of_hash_runs(hash) .eq. 0) then
-                            list(hash) = uindex_parent_i2_children(i,ii)%n
+                            ! add uindex to the list_n
+                            list_n(hash) = uindex_parent_i2_children(i,ii)%n
                             number_of_hash_runs(hash) = hash_counter
                             exit
-                        else if (list(hash) .ne. uindex_parent_i2_children(i,ii)%n) then
+                        else if (list_n(hash) .ne. uindex_parent_i2_children(i,ii)%n) then
                             ! hash collision -> re-hash
                             hash = ieor(hash, hash_counter)
-                            hash = int(hash_fnv1a(hash, size(list)), 2)
+                            hash = int(hash_fnv1a(hash, size(list_n)), 2)
                         else
-
+                            ! this should never happen
+                            print *, "lib_tree_get_domain_i4: ERROR"
+                            print *, "  uindex_parent_i2_children: the same uindex occurs several times. n = ", &
+                                      uindex_parent_i2_children(i,ii)%n
+                            exit
                         end if
                     end do
                 end do
             end do
+
+            do i=1, size(uindex_i2)
+                hash = int(hash_fnv1a(uindex_i2(i)%n, size(list_n)), 2)
+                ! get unique hash
+                do hash_counter=1, HASH_MAX_RUNS
+                    if (number_of_hash_runs(hash) .eq. 0) then
+                        ! add uindex to the list_n: list_n(hash) = -n-1
+                        list_n(hash) = -uindex_i2(i)%n - 1
+                        number_of_hash_runs(hash) = hash_counter
+                        exit
+                    else if ((list_n(hash) .eq. uindex_i2(i)%n) .and. &
+                             (number_of_hash_runs(hash) .eq. hash_counter)) then
+                        ! has to be removed from the list_n -> list_n(hash) = -list_n(hash)-1
+                        list_n(hash) = -list_n(hash)-1
+                        exit
+                    else if ((list_n(hash) .eq. (-uindex_i2(i)%n-1)) .and. &
+                             (number_of_hash_runs(hash) .eq. hash_counter)) then
+                        print *, "lib_tree_get_domain_i4: ERROR"
+                        print *, "  uindex_i2: the same uindex occurs several times. n = ", uindex_i2(i)%n
+                    else
+                        ! hash collision
+                        hash = ieor(hash, hash_counter)
+                        hash = int(hash_fnv1a(hash, size(list_n)), 2)
+                    end if
+                end do
+            end do
         else
             ! use lookup table
-            allocate(list(TREE_DIMENSIONS * uindex%l), source=TREE_BOX_IGNORE_ENTRY)
+            allocate(list_n(2**(TREE_DIMENSIONS * uindex%l)))
+            list_n(:) = TREE_BOX_IGNORE_ENTRY
 
             do i=1, size(uindex_parent_i2)
                 do ii=1, 2**TREE_DIMENSIONS
-                    buffer = uindex_parent_i2_children(i, ii)%n - 1
-                    list(buffer + 1) = buffer
+                    buffer = uindex_parent_i2_children(i, ii)%n
+                    list_n(buffer + 1) = buffer
                 end do
             end do
 
             do i=1, size(uindex_i2)
-                buffer = uindex_i2(i)%n - 1
-                list(buffer + 1) = TREE_BOX_IGNORE_ENTRY
+                buffer = uindex_i2(i)%n
+                list_n(buffer + 1) = TREE_BOX_IGNORE_ENTRY
             end do
+!
+!            ! create uindex_i4
+!            buffer = 0
+!            do i=1, size(list)
+!                if (list(i) .ne. TREE_BOX_IGNORE_ENTRY) then
+!                    buffer = buffer + 1
+!                    uindex_i4(buffer)%n = list(i)
+!                    uindex_i4(buffer)%l = uindex%l
+!                end if
+!            end do
+!
+!            ! clean up
+!            if allocated(list) then
+!                deallocate(list)
+!            end if
         end if
 
         ! create uindex_i4
         buffer = 0
-        do i=1, size(list)
-            if (list(i) .ne. TREE_BOX_IGNORE_ENTRY) then
+        do i=1, size(list_n)
+            if (list_n(i) .ge. 0) then
                 buffer = buffer + 1
-                uindex_i4(buffer)%n = list(i)
+                uindex_i4(buffer)%n = list_n(i)
                 uindex_i4(buffer)%l = uindex%l
             end if
         end do
 
         ! clean up
-        if (allocated(list)) then
-            deallocate(list)
+        if (allocated(list_n)) then
+            deallocate(list_n)
         end if
 
-
+        if (allocated(number_of_hash_runs)) then
+            deallocate(number_of_hash_runs)
+        end if
     end function lib_tree_get_domain_i4
 
     ! Calculates the minimum tree level
@@ -1634,6 +1684,12 @@ module lib_tree
         if (.not. test_lib_tree_get_domain_e4()) then
             error_counter = error_counter + 1
         end if
+        if (.not. test_lib_tree_get_domain_i2()) then
+            error_counter = error_counter + 1
+        end if
+        if (.not. test_lib_tree_get_domain_i4()) then
+            error_counter = error_counter + 1
+        end if
         call lib_tree_destructor()
         if (.not. test_lib_tree_get_level_min()) then
             error_counter = error_counter + 1
@@ -2225,6 +2281,147 @@ module lib_tree
                 deallocate (element_number)
             end if
         end function test_lib_tree_get_domain_e4
+
+        function test_lib_tree_get_domain_i2() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            type(lib_tree_universal_index) :: uindex
+            integer(kind=UINDEX_BYTES) :: k
+            type(lib_tree_universal_index), dimension(:), allocatable :: uindex_i2
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_i2
+
+            integer(kind=1) :: i
+            k = 1
+
+#if (_FMM_DIMENSION_ == 2)
+            ! ---------------------------------
+            ! |  5    |  7    | 13    | 15    |
+            ! |       |       |       |       |
+            ! |-------1---------------3-------|
+            ! |  4    |  6    | 12    | 14    |
+            ! |    *  |    *  |   *   |       |
+            ! |---------------0---------------|
+            ! |  1    |  3    | 9     | 11    |
+            ! |    *  |    X* |   *   |       |
+            ! |-------0---------------2-------|
+            ! |  0    |  2    | 8     | 10    |
+            ! |    *  |    *  |   *   |       |  X: uindex
+            ! ---------------------------------  *: ground_truth_uindex_i2
+            uindex%n = 3
+            uindex%l = 2
+            allocate(uindex_i2, source=lib_tree_get_domain_i2(uindex, k))
+
+            allocate(ground_truth_uindex_i2(3**TREE_DIMENSIONS))
+            ground_truth_uindex_i2(:)%l = uindex%l
+            ground_truth_uindex_i2(1)%n = 0
+            ground_truth_uindex_i2(2)%n = 1
+            ground_truth_uindex_i2(3)%n = 2
+            ground_truth_uindex_i2(4)%n = 3
+            ground_truth_uindex_i2(5)%n = 4
+            ground_truth_uindex_i2(6)%n = 6
+            ground_truth_uindex_i2(7)%n = 8
+            ground_truth_uindex_i2(8)%n = 9
+            ground_truth_uindex_i2(9)%n = 12
+
+            if (sum(uindex_i2(:)%n) .eq. sum(ground_truth_uindex_i2(:)%n)) then
+                rv = .true.
+                print *, "test_lib_tree_get_domain_i2: OK"
+            else
+                rv = .false.
+                print *, "test_lib_tree_get_domain_i2: FAILED"
+            end if
+#elif (_FMM_DIMENSION_ == 3)
+            !  /                               /
+            ! ---------------------------------
+            ! |       |       |       |       |
+            ! |       |       |       |       |
+            ! |-------1---------------3-------|
+            ! |       |       |       |       |
+            ! |       |       |       |       |
+            ! |---------------0---------------|
+            ! |  1    |  3    |       |       |
+            ! |    *  |    *  |       |       |
+            ! |-------0---------------2-------|
+            ! |  0    |  2    |       |       |
+            ! |    *X |    *  |       |       |  X: uindex
+            ! ---------------------------------/ *: ground_truth_uindex_i2
+            uindex%n = 0
+            uindex%l = 2
+            allocate(uindex_i2, source=lib_tree_get_domain_i2(uindex, k))
+
+            allocate(ground_truth_uindex_i2(8))
+            ground_truth_uindex_i2(:)%l = uindex%l
+            ground_truth_uindex_i2(1)%n = 0
+            ground_truth_uindex_i2(2)%n = 1
+            ground_truth_uindex_i2(3)%n = 2
+            ground_truth_uindex_i2(4)%n = 3
+            ground_truth_uindex_i2(5)%n = 4
+            ground_truth_uindex_i2(6)%n = 5
+            ground_truth_uindex_i2(7)%n = 6
+            ground_truth_uindex_i2(8)%n = 7
+
+            if (sum(uindex_i2(:)%n) .eq. sum(ground_truth_uindex_i2(:)%n)) then
+                rv = .true.
+                print *, "test_lib_tree_get_domain_i2: OK"
+            else
+                rv = .false.
+                print *, "test_lib_tree_get_domain_i2: FAILED"
+            end if
+#endif
+
+        end function test_lib_tree_get_domain_i2
+
+        function test_lib_tree_get_domain_i4() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            type(lib_tree_universal_index) :: uindex
+            integer(kind=UINDEX_BYTES) :: k
+            type(lib_tree_universal_index), dimension(:), allocatable :: uindex_i4
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_i4
+
+            ! ---------------------------------
+            ! |  5    |  7    | 13    | 15    |
+            ! |    *  |    *  |    *  |    *  |
+            ! |-------1---------------3-------|
+            ! |  4    |  6    | 12    | 14    |
+            ! |       |       |       |    *  |
+            ! |---------------0---------------|
+            ! |  1    |  3    | 9     | 11    |
+            ! |       |    X  |       |    *  |
+            ! |-------0---------------2-------|
+            ! |  0    |  2    | 8     | 10    |
+            ! |       |       |       |    *  |  X: uindex
+            ! ---------------------------------  *: ground_truth_uindex_i4
+            uindex%n = 3
+            uindex%l = 3
+            k = 1
+            allocate(uindex_i4, source=lib_tree_get_domain_i4(uindex, k))
+
+            allocate(ground_truth_uindex_i4(7))
+            ground_truth_uindex_i4(:)%l = uindex%l
+            ground_truth_uindex_i4(1)%n = 5
+            ground_truth_uindex_i4(2)%n = 7
+            ground_truth_uindex_i4(3)%n = 10
+            ground_truth_uindex_i4(4)%n = 11
+            ground_truth_uindex_i4(5)%n = 13
+            ground_truth_uindex_i4(6)%n = 14
+            ground_truth_uindex_i4(7)%n = 15
+
+            if (sum(uindex_i4(:)%n) .eq. sum(ground_truth_uindex_i4(:)%n)) then
+                rv = .true.
+                print *, "test_lib_tree_get_domain_i4: OK"
+            else
+                rv = .false.
+                print *, "test_lib_tree_get_domain_i4: FAILED"
+            end if
+
+        end function test_lib_tree_get_domain_i4
 
         function test_lib_tree_get_level_min() result(rv)
             implicit none
