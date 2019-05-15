@@ -195,7 +195,8 @@ module ml_fmm_math
         type(lib_tree_data_element) :: data_element
         type(lib_ml_fmm_coefficient) :: B_i
 
-        allocate(B_i%dummy, source = (/data_element%uindex%n + abs(x)/))
+!        allocate(B_i%dummy, source = (/data_element%uindex%n + abs(x)/))
+        allocate(B_i%dummy, source = (/real(data_element%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)/))
     end function
 
     function test_phi_i_j(data_element_i, y_j) result(rv)
@@ -207,7 +208,8 @@ module ml_fmm_math
         type(lib_tree_spatial_point), intent(inout) :: y_j
         type(lib_ml_fmm_v) :: rv
 
-        allocate(rv%dummy, source = (/data_element_i%uindex%n + abs(y_j)/))
+!        allocate(rv%dummy, source = (/data_element_i%uindex%n + abs(y_j)/))
+        allocate(rv%dummy, source = (/real(data_element_i%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)/))
 
     end function
 
@@ -221,11 +223,9 @@ module ml_fmm_math
         type(lib_tree_spatial_point), intent(in) :: x_2
         type(lib_ml_fmm_coefficient) :: A_i_2
 
-        if (allocated(A_i_2%dummy)) then
-            A_i_2%dummy(1) = A_i_1%dummy(1) + abs(x_2 - x_1)
-        else
-            allocate(A_i_2%dummy, source = (/A_i_1%dummy + abs(x_2 - x_1)/))
-        end if
+
+!        allocate(A_i_2%dummy, source = (/A_i_1%dummy + abs(x_2 - x_1)/))
+        allocate(A_i_2%dummy, source = (/A_i_1%dummy(1)/))
 
     end function
 
@@ -239,11 +239,8 @@ module ml_fmm_math
         type(lib_tree_spatial_point), intent(in) :: x_2
         type(lib_ml_fmm_coefficient) :: A_i_2
 
-        if (allocated(A_i_2%dummy)) then
-            A_i_2%dummy(1) = B_i_1%dummy(1) + abs(x_2 - x_1)
-        else
-            allocate(A_i_2%dummy, source = (/B_i_1%dummy + abs(x_2 - x_1)/))
-        end if
+!        allocate(A_i_2%dummy, source = (/B_i_1%dummy + abs(x_2 - x_1)/))
+        allocate(A_i_2%dummy, source = (/B_i_1%dummy(1)/))
 
     end function
 
@@ -257,12 +254,8 @@ module ml_fmm_math
         type(lib_tree_spatial_point), intent(in) :: x_2
         type(lib_ml_fmm_coefficient) :: B_i_2
 
-
-        if (allocated(B_i_2%dummy)) then
-            B_i_2%dummy(1) = B_i_1%dummy(1) + abs(x_2 - x_1)
-        else
-            allocate(B_i_2%dummy, source = (/B_i_1%dummy(1) + abs(x_2 - x_1)/))
-        end if
+!        allocate(B_i_2%dummy, source = (/B_i_1%dummy(1) + abs(x_2 - x_1)/))
+        allocate(B_i_2%dummy, source = (/B_i_1%dummy(1)/))
 
     end function
 end module ml_fmm_math

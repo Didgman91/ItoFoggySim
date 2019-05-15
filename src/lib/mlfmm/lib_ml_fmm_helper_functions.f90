@@ -393,9 +393,8 @@ module lib_ml_fmm_helper_functions
                 call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_X, l_th-l_max)
                 call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_Y, l_th-l_max)
                 call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_XY, l_th-l_max)
-                uindex_list_X = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list_X)
-                uindex_list_Y = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list_Y)
-                uindex_list_XY = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list_XY)
+
+                call lib_ml_fmm_hf_make_uindex_list_X_Y_XY_unique(uindex_list_X, uindex_list_Y, uindex_list_XY)
             end if
 
             ! setup hierarcy at level l_max
@@ -407,9 +406,9 @@ module lib_ml_fmm_helper_functions
                     call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_X)
                     call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_Y)
                     call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_list_XY)
-                    uindex_list_X = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list_X)
-                    uindex_list_Y = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list_Y)
-                    uindex_list_XY = lib_ml_fmm_hf_make_uindex_list_unique(uindex_list_XY)
+
+                    call lib_ml_fmm_hf_make_uindex_list_X_Y_XY_unique(uindex_list_X, uindex_list_Y, uindex_list_XY)
+
                     call lib_ml_fmm_hf_add_uindex_to_hierarchy(hierarchy, int(i, 1), uindex_list_X, uindex_list_Y, uindex_list_XY)
                 end do
             end if
@@ -810,6 +809,216 @@ module lib_ml_fmm_helper_functions
                 rv = uindex_list
             end if
         end function
+
+        ! Returns a list of unique univeral indices
+        !
+        ! Argument
+        ! ----
+        !   uindex_list: array<lib_tree_universal_index>, inout (read-only)
+        !       list of universal indices
+        !
+        ! Returns
+        ! ----
+        !   rv: array<lib_tree_universal_index>, inout (read-only)
+        !       list of unique universal indices
+        !
+        subroutine lib_ml_fmm_hf_make_uindex_list_X_Y_XY_unique(uindex_list_X, uindex_list_Y, uindex_list_XY)
+            implicit none
+            ! dummy
+            type(lib_tree_universal_index), dimension(:), allocatable, intent(inout) :: uindex_list_X
+            type(lib_tree_universal_index), dimension(:), allocatable, intent(inout) :: uindex_list_Y
+            type(lib_tree_universal_index), dimension(:), allocatable, intent(inout) :: uindex_list_XY
+
+            ! auxiliary
+            type(hash_list_type), dimension(:), allocatable :: hash_list
+            integer(kind=1), dimension(:), allocatable :: hash_type
+            type(lib_tree_universal_index) :: buffer_uindex
+            integer(kind=4) :: max_value
+            integer(kind=4) :: hash
+            integer(kind=UINDEX_BYTES) :: counter_X
+            integer(kind=UINDEX_BYTES) :: counter_Y
+            integer(kind=UINDEX_BYTES) :: counter_XY
+            integer(kind=UINDEX_BYTES) :: i
+            integer(kind=2) :: ii
+
+            integer(kind=UINDEX_BYTES) :: length
+
+            length = (size(uindex_list_X) + size(uindex_list_Y) + size(uindex_list_XY)) * &
+                                                    LIB_ML_FMM_HF_HIERARCHY_MARGIN
+            if (length .gt. 0) then
+                allocate(hash_list(length))
+                allocate(hash_type(length))
+
+                hash_list(:)%value = -1
+                hash_list(:)%hash_runs = 0
+
+                max_value = size(hash_list)
+                counter_X = 0
+                counter_Y = 0
+                counter_XY = 0
+
+                ! X-hierarchy
+                if (size(uindex_list_X) .gt. 0) then
+                    buffer_uindex%l = uindex_list_X(1)%l
+                    do i=1, size(uindex_list_X)
+                        ! hash runs
+                        do ii=1, MAXIMUM_NUMBER_OF_HASH_RUNS
+                            hash = hash_fnv1a(uindex_list_X(i)%n, max_value)
+                            if (hash_list(hash)%hash_runs .eq. 0) then
+                                ! new entry at hash_list
+                                hash_list(hash)%value = uindex_list_X(i)%n
+                                hash_list(hash)%hash_runs = ii
+                                counter_X = counter_X + 1
+                                hash_type(hash) = HIERARCHY_X
+                                exit
+                            else if (hash_list(hash)%value .ne. uindex_list_X(i)%n) then
+                                ! hash collision -> re-hash
+                                hash = IEOR(hash, int(ii, 4))
+                                hash = hash_fnv1a(hash, max_value)
+                            else if (hash_list(hash)%value .eq. uindex_list_X(i)%n) then
+                                ! uindex duplicate found
+                                exit
+                            else
+                                print *, "lib_ml_fmm_hf_make_uindex_list_X_Y_XY_unique: ERROR"
+                                print *, "  hash: uindex_list_X"
+                                exit
+                            end if
+                        end do
+                    end do
+                end if
+
+                ! Y-hierarchy
+                if (size(uindex_list_Y) .gt. 0) then
+                    buffer_uindex%l = uindex_list_Y(1)%l
+                    do i=1, size(uindex_list_Y)
+                        ! hash runs
+                        do ii=1, MAXIMUM_NUMBER_OF_HASH_RUNS
+                            hash = hash_fnv1a(uindex_list_Y(i)%n, max_value)
+                            if (hash_list(hash)%hash_runs .eq. 0) then
+                                ! new entry at hash_list
+                                hash_list(hash)%value = uindex_list_Y(i)%n
+                                hash_list(hash)%hash_runs = ii
+                                counter_Y = counter_Y + 1
+                                hash_type(hash) = HIERARCHY_Y
+                                exit
+                            else if (hash_list(hash)%value .ne. uindex_list_Y(i)%n) then
+                                ! hash colision -> re-hash
+                                hash = IEOR(hash, int(ii, 4))
+                                hash = hash_fnv1a(hash, max_value)
+                            else if (hash_list(hash)%value .eq. uindex_list_Y(i)%n) then
+                                if (hash_type(hash) .eq. HIERARCHY_Y) then
+                                    ! uindex duplicate found
+                                    exit
+                                else if (hash_type(hash) .eq. HIERARCHY_X) then
+                                    ! uindex was previously of type x-hierarchy
+                                    counter_X = counter_X - 1
+                                    counter_XY = counter_XY + 1
+                                    hash_type(hash) = HIERARCHY_XY
+                                    exit
+                                else
+                                    ! should never be reached
+                                    print *, "lib_ml_fmm_hf_make_uindex_list_X_Y_XY_unique: ERROR"
+                                    print *, "  hash: uindex_list_Y: should never be reached"
+                                    exit
+                                end if
+                            else
+                                print *, "lib_ml_fmm_hf_make_uindex_list_X_Y_XY_unique: ERROR"
+                                print *, "  hash: uindex_list_Y"
+                                exit
+                            end if
+                        end do
+                    end do
+                end if
+
+                ! XY-hierarchy
+                if (size(uindex_list_XY) .gt. 0) then
+                    buffer_uindex%l = uindex_list_XY(1)%l
+                    do i=1, size(uindex_list_XY)
+                        ! hash runs
+                        do ii=1, MAXIMUM_NUMBER_OF_HASH_RUNS
+                            hash = hash_fnv1a(uindex_list_XY(i)%n, max_value)
+                            if (hash_list(hash)%hash_runs .eq. 0) then
+                                ! new entry at hash_list
+                                hash_list(hash)%value = uindex_list_XY(i)%n
+                                hash_list(hash)%hash_runs = ii
+                                counter_XY = counter_XY + 1
+                                hash_type(hash) = HIERARCHY_Y
+                                exit
+                            else if (hash_list(hash)%value .ne. uindex_list_XY(i)%n) then
+                                ! hash colision -> re-hash
+                                hash = IEOR(hash, int(ii, 4))
+                                hash = hash_fnv1a(hash, max_value)
+                            else if (hash_list(hash)%value .eq. uindex_list_XY(i)%n) then
+                                ! entry exists -> set a more general type (HIERARCHY_XY)
+                                if (hash_type(hash) .eq. HIERARCHY_X) then
+                                    ! duplicate found
+                                    exit
+                                else if (hash_type(hash) .eq. HIERARCHY_X) then
+                                    ! uindex was previously of type x-hierarchy
+                                    counter_X = counter_X - 1
+                                    counter_XY = counter_XY + 1
+                                    hash_type(hash) = HIERARCHY_XY
+                                    exit
+                                else if (hash_type(hash) .eq. HIERARCHY_Y) then
+                                    ! uindex was previously of type y-hierarchy
+                                    counter_Y = counter_Y - 1
+                                    counter_XY = counter_XY + 1
+                                    hash_type(hash) = HIERARCHY_XY
+                                    exit
+                                else
+                                    ! should never be reached
+                                    print *, "lib_ml_fmm_hf_make_uindex_list_X_Y_XY_unique: ERROR"
+                                    print *, "  hash: uindex_list_XY: should never be reached"
+                                    exit
+                                end if
+                            else
+                                print *, "lib_ml_fmm_hf_make_uindex_list_X_Y_XY_unique: ERROR"
+                                print *, "  hash: uindex_list_XY"
+                                exit
+                            end if
+                        end do
+                    end do
+                end if
+
+                if ((counter_X + counter_Y + counter_XY) .gt. 0) then
+                    if (allocated(uindex_list_X)) then
+                        deallocate(uindex_list_X)
+                        allocate(uindex_list_X(counter_X))
+                    end if
+
+                    if (allocated(uindex_list_Y)) then
+                        deallocate(uindex_list_Y)
+                        allocate(uindex_list_Y(counter_Y))
+                    end if
+
+                    if (allocated(uindex_list_XY)) then
+                        deallocate(uindex_list_XY)
+                        allocate(uindex_list_XY(counter_XY))
+                    end if
+
+                    counter_X = 0
+                    counter_Y = 0
+                    counter_XY = 0
+                    do i=1, size(hash_list)
+                        if (hash_list(i)%hash_runs .ne. 0) then
+                            if (hash_type(i) .eq. HIERARCHY_X) then
+                                counter_X = counter_X + 1
+                                buffer_uindex%n = hash_list(i)%value
+                                uindex_list_X(counter_X) = buffer_uindex
+                            else if (hash_type(i) .eq. HIERARCHY_Y) then
+                                counter_Y = counter_Y + 1
+                                buffer_uindex%n = hash_list(i)%value
+                                uindex_list_Y(counter_Y) = buffer_uindex
+                            else if (hash_type(i) .eq. HIERARCHY_XY) then
+                                counter_XY = counter_XY + 1
+                                buffer_uindex%n = hash_list(i)%value
+                                uindex_list_XY(counter_XY) = buffer_uindex
+                            end if
+                        end if
+                    end do
+                end if
+            end if
+        end subroutine lib_ml_fmm_hf_make_uindex_list_X_Y_XY_unique
 
         ! --- test functions ---
         function lib_ml_fmm_hf_test_functions() result(error_counter)
