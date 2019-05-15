@@ -104,7 +104,7 @@ module lib_ml_fmm_type_operator
 
         subroutine ml_fmm_set_coefficient(coefficient, uindex, hierarchy)
             use ml_fmm_type
-            use lib_tree_type
+            use lib_tree_public
             implicit none
             ! dummy
             type(lib_tree_universal_index), intent(in) :: uindex
@@ -114,7 +114,7 @@ module lib_ml_fmm_type_operator
 
         function ml_fmm_get_coefficient(uindex, hierarchy) result(coefficient)
             use ml_fmm_type
-            use lib_tree_type
+            use lib_tree_public
             implicit none
             ! dummy
             type(lib_tree_universal_index), intent(in) :: uindex
@@ -155,7 +155,7 @@ module lib_ml_fmm_type_operator
 
         ! Basis function: B_i
         function lib_ml_fmm_get_B_i(x, data_element) result(B_i)
-            use lib_tree_type
+            use lib_tree_public
             use ml_fmm_type
             implicit none
             ! dummy
@@ -255,7 +255,7 @@ module lib_ml_fmm_type_operator
 !        end function lib_ml_fmm_expansion_S
 
         function lib_ml_fmm_phi_i_j(data_element_i, y_j) result(rv)
-            use lib_tree_type
+            use lib_tree_public
             use ml_fmm_type
             implicit none
             ! dummy
@@ -278,7 +278,7 @@ module lib_ml_fmm_type_operator
         !   A_i_2
         !
         function lib_ml_fmm_translation_RR(A_i_1, x_1, x_2) result(A_i_2)
-            use lib_tree_type
+            use lib_tree_public
             use ml_fmm_type
             implicit none
             ! dummy
@@ -305,7 +305,7 @@ module lib_ml_fmm_type_operator
         !       set of expansion coefficients
         !
         function lib_ml_fmm_translation_SR(B_i_1, x_1, x_2) result(A_i_2)
-            use lib_tree_type
+            use lib_tree_public
             use ml_fmm_type
             implicit none
             ! dummy
@@ -332,7 +332,7 @@ module lib_ml_fmm_type_operator
         !       set of expansion coefficients
         !
         function lib_ml_fmm_translation_SS(B_i_1, x_1, x_2) result(B_i_2)
-            use lib_tree_type
+            use lib_tree_public
             use ml_fmm_type
             implicit none
             ! dummy

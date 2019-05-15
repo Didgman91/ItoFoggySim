@@ -21,7 +21,14 @@ module lib_ml_fmm
     integer(kind=2) :: m_ml_fmm_p_truncation
 
     ! e.g. matrix vector product v = u*phi
+    ! order restiction:
+    !   1. elements of the X-hierarchy
+    !   2. elements of the XY-hierarchy
     type(lib_ml_fmm_v), dimension(:), allocatable :: m_ml_fmm_u
+    ! e.g. matrix vector product v = u*phi
+    ! order restiction:
+    !   1. elements of the Y-hierarchy
+    !   2. elements of the XY-hierarchy
     type(lib_ml_fmm_v), dimension(:), allocatable :: m_ml_fmm_v
 
     type(lib_ml_fmm_hierarchy), dimension(:), allocatable :: m_ml_fmm_hierarchy
@@ -68,6 +75,9 @@ module lib_ml_fmm
         ! initiate the ml fmm type operators
         operator_procedures = ml_fmm_type_operator_get_procedures()
         call lib_ml_fmm_type_operator_constructor(operator_procedures)
+
+        ! initiate the ml fmm procedures
+        m_ml_fmm_handles = ml_fmm_get_procedures()
 
         ! adjust Tree parameters
         m_tree_neighbourhood_size_k = 1!lib_ml_fmm_hf_get_neighbourhood_size(R_c1, r_c2)
@@ -144,9 +154,23 @@ module lib_ml_fmm
 
     end function
 
+    ! Concatenates the arrays at the data_elements to one array of the type lib_tree_data_element
+    !
+    ! Argument
+    ! ----
+    !   data_elements: lib_ml_fmm_data
+    !       lists of lib_tree_data_element arrays
+    !   length: integer array, out
+    !       size of each lib_tree_data_element array
+    !
+    ! Returns
+    ! ----
+    !   data_concatenated: lib_tree_data_element array
+    !       concatenation of the lib_tree_element arrays of data_elements
+    !
     function lib_ml_fmm_concatenate_data_array(data_elements, length) result(data_concatenated)
         implicit none
-        type(lib_ml_fmm_data), intent(in) :: data_elements
+        type(lib_ml_fmm_data), intent(inout) :: data_elements
         integer(kind=UINDEX_BYTES), dimension(3), intent(out) :: length
         type(lib_tree_data_element), dimension(:), allocatable :: data_concatenated
 
@@ -338,26 +362,28 @@ module lib_ml_fmm
             if (m_ml_fmm_hierarchy(l)%is_hashed) then
                 do i=1, number_of_boxes
                     uindex%n = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
-                    hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(i)
-                    if ((uindex%n .ge. 0) .and. &
-                        ((hierarchy_type .eq. HIERARCHY_X) .or. &
-                         (hierarchy_type .eq. HIERARCHY_XY))) then
-                        C = lib_ml_fmm_get_C_of_box(uindex)
-                        m_ml_fmm_hierarchy(l)%coefficient_list(i) = C
-                        m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_C
+                    if (uindex%n .ge. 0) then
+                        hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(i)
+                        if (((hierarchy_type .eq. HIERARCHY_X) .or. &
+                             (hierarchy_type .eq. HIERARCHY_XY))) then
+                            C = lib_ml_fmm_get_C_of_box(uindex)
+                            m_ml_fmm_hierarchy(l)%coefficient_list(i) = C
+                            m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_C
+                        end if
                     end if
                 end do
             else
                 do i=1, number_of_boxes
                     uindex%n = i - int(1, 1)
                     list_index = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
-                    hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(i)
-                    if ((list_index .gt. 0) .and. &
-                        ((hierarchy_type .eq. HIERARCHY_X) .or. &
-                         (hierarchy_type .eq. HIERARCHY_XY))) then
-                        C = lib_ml_fmm_get_C_of_box(uindex)
-                        m_ml_fmm_hierarchy(l)%coefficient_list(list_index) = C
-                        m_ml_fmm_hierarchy(l)%coefficient_type(list_index) = LIB_ML_FMM_COEFFICIENT_TYPE_C
+                    if (list_index .gt. 0) then
+                        hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(list_index)
+                        if (((hierarchy_type .eq. HIERARCHY_X) .or. &
+                             (hierarchy_type .eq. HIERARCHY_XY))) then
+                            C = lib_ml_fmm_get_C_of_box(uindex)
+                            m_ml_fmm_hierarchy(l)%coefficient_list(list_index) = C
+                            m_ml_fmm_hierarchy(l)%coefficient_type(list_index) = LIB_ML_FMM_COEFFICIENT_TYPE_C
+                        end if
                     end if
                 end do
             end if
@@ -388,6 +414,7 @@ module lib_ml_fmm
 
         integer(kind=UINDEX_BYTES) :: i
         integer(kind=UINDEX_BYTES) :: list_index
+        integer(kind=1) :: hierarchy_type
 
         x_c = lib_tree_get_centre_of_box(uindex)
 
@@ -399,8 +426,12 @@ module lib_ml_fmm
             x_c_child = lib_tree_get_centre_of_box(uindex_children(i))
             list_index = lib_ml_fmm_hf_get_hierarchy_index(m_ml_fmm_hierarchy, uindex_children(i))
             if (list_index .gt. 0) then
-                C_child = m_ml_fmm_hierarchy(uindex%l)%coefficient_list(list_index)
-                C = C + m_ml_fmm_handles%get_translation_SS(C_child, x_c_child, x_c)
+                hierarchy_type = m_ml_fmm_hierarchy(uindex_children(i)%l)%hierarchy_type(list_index)
+                if (((hierarchy_type .eq. HIERARCHY_X) .or. &
+                     (hierarchy_type .eq. HIERARCHY_XY))) then
+                    C_child = m_ml_fmm_hierarchy(uindex_children(i)%l)%coefficient_list(list_index)
+                    C = C + m_ml_fmm_handles%get_translation_SS(C_child, x_c_child, x_c)
+                end if
             end if
         end do
     end function lib_ml_fmm_get_C_of_box
@@ -443,26 +474,28 @@ module lib_ml_fmm
             if (m_ml_fmm_hierarchy(l)%is_hashed) then
                 do i=1, number_of_boxes
                     uindex%n = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
-                    hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(i)
-                    if ((uindex%n .ge. 0) .and. &
-                        ((hierarchy_type .eq. HIERARCHY_Y) .or. &
-                         (hierarchy_type .eq. HIERARCHY_XY))) then
-                        D_tilde = lib_ml_fmm_get_D_tilde_of_box(uindex)
-                        m_ml_fmm_hierarchy(l)%coefficient_list(i) = D_tilde
-                        m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
+                    if (uindex%n .ge. 0) then
+                        hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(i)
+                        if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
+                             (hierarchy_type .eq. HIERARCHY_XY))) then
+                            D_tilde = lib_ml_fmm_get_D_tilde_of_box(uindex)
+                            m_ml_fmm_hierarchy(l)%coefficient_list(i) = D_tilde
+                            m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
+                        end if
                     end if
                 end do
             else
                 do i=1, number_of_boxes
                     uindex%n = i - int(1, 1)
                     list_index = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
-                    hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(i)
-                    if ((list_index .gt. 0) .and. &
-                        ((hierarchy_type .eq. HIERARCHY_Y) .or. &
-                         (hierarchy_type .eq. HIERARCHY_XY))) then
-                        D_tilde = lib_ml_fmm_get_D_tilde_of_box(uindex)
-                        m_ml_fmm_hierarchy(l)%coefficient_list(i) = D_tilde
-                        m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
+                    if (list_index .gt. 0) then
+                        hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(list_index)
+                        if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
+                             (hierarchy_type .eq. HIERARCHY_XY))) then
+                            D_tilde = lib_ml_fmm_get_D_tilde_of_box(uindex)
+                            m_ml_fmm_hierarchy(l)%coefficient_list(list_index) = D_tilde
+                            m_ml_fmm_hierarchy(l)%coefficient_type(list_index) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
+                        end if
                     end if
                 end do
             end if
@@ -471,6 +504,18 @@ module lib_ml_fmm
 
     end subroutine lib_ml_fmm_calculate_downward_pass_step_1
 
+    ! Translates the C coefficient of a box from the regular to the local expansion.
+    !
+    ! Argument
+    ! ----
+    !   uindex: lib_tree_universal_index
+    !       index of the box
+    !
+    ! Returns
+    ! ----
+    !   D_tilde: lib_ml_fmm_coefficient
+    !       C coefficient of the box *uindex* S|R-translated
+    !
     function lib_ml_fmm_get_D_tilde_of_box(uindex) result(D_tilde)
         implicit none
         ! dummy
@@ -495,15 +540,16 @@ module lib_ml_fmm
         x_c = lib_tree_get_centre_of_box(uindex)
 
         do i=1, size(boxes_i4)
-            list_index = lib_ml_fmm_hf_get_hierarchy_index(m_ml_fmm_hierarchy, uindex)
-            hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(list_index)
-            if ((list_index .gt. 0) .and. &
-                ((hierarchy_type .eq. HIERARCHY_X) .or. &
-                 (hierarchy_type .eq. HIERARCHY_XY))) then
-                C = m_ml_fmm_hierarchy(uindex%l)%coefficient_list(list_index)
-                x_c_neighbour = lib_tree_get_centre_of_box(boxes_i4(i))
+            list_index = lib_ml_fmm_hf_get_hierarchy_index(m_ml_fmm_hierarchy, boxes_i4(i))
+            if (list_index .gt. 0) then
+                hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(list_index)
+                if (((hierarchy_type .eq. HIERARCHY_X) .or. &
+                     (hierarchy_type .eq. HIERARCHY_XY))) then
+                    C = m_ml_fmm_hierarchy(uindex%l)%coefficient_list(list_index)
+                    x_c_neighbour = lib_tree_get_centre_of_box(boxes_i4(i))
 
-                D_tilde = D_tilde + m_ml_fmm_handles%get_translation_SR(C, x_c, x_c_neighbour)
+                    D_tilde = D_tilde + m_ml_fmm_handles%get_translation_SR(C, x_c, x_c_neighbour)
+                end if
             end if
         end do
 
@@ -513,8 +559,11 @@ module lib_ml_fmm
     !
     ! Procedure
     ! ----
-    !   for boxes at l_min, ..., l_max
-    !       1.
+    !   for boxes at l_min
+    !       - D = D_tilde
+    !
+    !   for boxes at l_min + 1, ..., l_max
+    !       - adds the local expansion of a box with the RR translated local expansion of the parent box
     !
     ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(36)
     !
@@ -538,26 +587,28 @@ module lib_ml_fmm
             if (m_ml_fmm_hierarchy(l)%is_hashed) then
                 do i=1, number_of_boxes
                     uindex%n = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
-                    hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(i)
-                    if ((uindex%n .ge. 0) .and. &
-                        ((hierarchy_type .eq. HIERARCHY_Y) .or. &
-                         (hierarchy_type .eq. HIERARCHY_XY))) then
-                        D = lib_ml_fmm_get_D_of_box(uindex)
-                        m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
-                        m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+                    if (uindex%n .ge. 0) then
+                        hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(i)
+                        if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
+                             (hierarchy_type .eq. HIERARCHY_XY))) then
+                            D = lib_ml_fmm_get_D_of_box(uindex)
+                            m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
+                            m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+                        end if
                     end if
                 end do
             else
                 do i=1, number_of_boxes
                     uindex%n = i - int(1, 1)
                     list_index = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
-                    hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(i)
-                    if ((list_index .gt. 0) .and. &
-                        ((hierarchy_type .eq. HIERARCHY_Y) .or. &
-                         (hierarchy_type .eq. HIERARCHY_XY))) then
-                        D = lib_ml_fmm_get_D_of_box(uindex)
-                        m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
-                        m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+                    if (list_index .gt. 0) then
+                        hierarchy_type = m_ml_fmm_hierarchy(l)%hierarchy_type(list_index)
+                        if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
+                             (hierarchy_type .eq. HIERARCHY_XY))) then
+                            D = lib_ml_fmm_get_D_of_box(uindex)
+                            m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
+                            m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+                        end if
                     end if
                 end do
             end if
@@ -565,6 +616,16 @@ module lib_ml_fmm
 
     end subroutine lib_ml_fmm_calculate_downward_pass_step_2
 
+    ! Argument
+    ! ----
+    !   uindex: lib_tree_universal_index
+    !       index of the box
+    !
+    ! Returns
+    ! -----
+    !   D: lib_ml_fmm_coefficient
+    !       summation of the local exapnsion of the box and of the parent box
+    !
     function lib_ml_fmm_get_D_of_box(uindex) result(D)
         implicit none
         ! dummy
@@ -595,6 +656,16 @@ module lib_ml_fmm
 
     end function lib_ml_fmm_get_D_of_box
 
+    ! Final Summation
+    !
+    ! Procedure
+    ! ----
+    !   for boxes of the Y-hierarchy at l_max
+    !       1. calculate DoR
+    !       2. calculate the contribution of the source elements (X-hierarchy)
+    !          at the E2 domain of the evaluation element (Y-hierarchy)
+    !
+    ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(38)
     subroutine lib_ml_fmm_final_summation()
         implicit none
 
@@ -611,30 +682,45 @@ module lib_ml_fmm
         if (m_ml_fmm_hierarchy(uindex%l)%is_hashed) then
             do i=1, number_of_boxes
                 uindex%n = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
-                hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(i)
-                if ((uindex%n .ge. 0) .and. &
-                    ((hierarchy_type .eq. HIERARCHY_Y) .or. &
-                     (hierarchy_type .eq. HIERARCHY_XY))) then
+                if (uindex%n .ge. 0) then
+                    hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(i)
+                    if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
+                         (hierarchy_type .eq. HIERARCHY_XY))) then
 
-                    call lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
+                        call lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
+                    end if
                 end if
             end do
         else
             do i=1, number_of_boxes
                 uindex%n = i - int(1, 1)
                 list_index = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
-                hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(i)
-                if ((list_index .gt. 0) .and. &
-                    ((hierarchy_type .eq. HIERARCHY_Y) .or. &
-                     (hierarchy_type .eq. HIERARCHY_XY))) then
+                if (list_index .gt. 0) then
+                    hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(list_index)
+                    if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
+                         (hierarchy_type .eq. HIERARCHY_XY))) then
 
-                    call lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
+                        call lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
+                    end if
                 end if
             end do
         end if
 
     end subroutine lib_ml_fmm_final_summation
 
+    ! Argument
+    ! ----
+    !   uindex: lib_tree_universal_index
+    !       uiniversal index of a box of the Y-hierarchy
+    !
+    !Procedure
+    ! ----
+    !   for elements of the box *uindex*
+    !       1. calculate DoR
+    !       2. calculate the contribution of the source elements (X-hierarchy)
+    !          at the E2 domain of the evaluation element (Y-hierarchy)
+    !
+    ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(38)
     subroutine lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
         implicit none
         ! dummy
@@ -649,6 +735,8 @@ module lib_ml_fmm
         type(lib_tree_data_element), dimension(:), allocatable :: data_element_e2
         integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number_e2
 
+        integer(kind=UINDEX_BYTES) :: v_counter
+
 
         allocate(data_element_e1, source = lib_tree_get_domain_e1(uindex, &
                                                                   element_number_e1))
@@ -657,14 +745,33 @@ module lib_ml_fmm
                                                                   element_number_e2))
 
         D = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
+        v_counter = 0
         do i=1, size(data_element_e1)
             if ((data_element_e1(i)%hierarchy .eq. HIERARCHY_Y) .or. &
                 (data_element_e1(i)%hierarchy .eq. HIERARCHY_XY)) then
-                m_ml_fmm_v(element_number_e1(i)) = lib_ml_fmm_calculate_v_y_j(data_element_e1(i), data_element_e2, D)
+                v_counter = v_counter + 1
+                m_ml_fmm_v(v_counter) = lib_ml_fmm_calculate_v_y_j(data_element_e1(i), data_element_e2, D)
             end if
         end do
     end subroutine lib_ml_fmm_calculate_all_v_y_j_at_uindex
 
+    ! Argument
+    ! ----
+    !   data_element_y_j: lib_tree_data_element
+    !       evaluation element
+    !   data_element_e2: lib_tree_data_element array
+    !       elements of the E2 domain of the evaluation element *data_element_y_j*
+    !   D: lib_ml_fmm_coefficient
+    !       expansion coefficient of the box containing the element *data_element_y_j*
+    !
+    !Procedure
+    ! ----
+    !   for a evaluation element
+    !       1. calculate DoR
+    !       2. calculate the contribution of the source elements (X-hierarchy)
+    !          at the E2 domain of the evaluation element (Y-hierarchy)
+    !
+    ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(38)
     function lib_ml_fmm_calculate_v_y_j(data_element_y_j, data_element_e2, D) result(rv)
         implicit none
         ! dummy

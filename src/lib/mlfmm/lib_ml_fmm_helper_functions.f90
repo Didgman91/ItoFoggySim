@@ -673,7 +673,7 @@ module lib_ml_fmm_helper_functions
             if (hierarchy(uindex%l)%is_hashed) then
                 rv = lib_ml_fmm_hf_get_index_hierarchy_hashed(hierarchy, uindex)
             else
-                rv = hierarchy(uindex%l)%coefficient_list_index(uindex%n)
+                rv = hierarchy(uindex%l)%coefficient_list_index(uindex%n + int(1,1))
             end if
 
         end function lib_ml_fmm_hf_get_hierarchy_index
@@ -695,15 +695,20 @@ module lib_ml_fmm_helper_functions
             max_value = size(hierarchy(uindex%l)%hashed_coefficient_list_index)
             hash = hash_fnv1a(uindex%n, max_value)
             do i=1, hierarchy(uindex%l)%maximum_number_of_hash_runs
-                coefficient_list_index = hierarchy(uindex%l)%hashed_coefficient_list_index(hash)%array_position
-                n = hierarchy(uindex%l)%coefficient_list_index(coefficient_list_index)
-                if ((uindex%n .eq. n) .and. &
-                    (hierarchy(uindex%l)%hashed_coefficient_list_index(hash)%number_of_hash_runs .eq. i)) then
-                    rv = coefficient_list_index
-                    exit
+                if (hierarchy(uindex%l)%hashed_coefficient_list_index(hash)%number_of_hash_runs .gt. 0) then
+                    coefficient_list_index = hierarchy(uindex%l)%hashed_coefficient_list_index(hash)%array_position
+                    n = hierarchy(uindex%l)%coefficient_list_index(coefficient_list_index)
+                    if ((uindex%n .eq. n) .and. &
+                        (hierarchy(uindex%l)%hashed_coefficient_list_index(hash)%number_of_hash_runs .eq. i)) then
+                        rv = coefficient_list_index
+                        exit
+                    else
+                        hash = ieor(hash, i)
+                        hash = hash_fnv1a(hash, max_value)
+                    end if
                 else
-                    hash = ieor(hash, i)
-                    hash = hash_fnv1a(hash, max_value)
+                    rv = IGNORE_ENTRY
+                    exit
                 end if
             end do
 
