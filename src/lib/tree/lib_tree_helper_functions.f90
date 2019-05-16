@@ -310,7 +310,7 @@ contains
             ! ii = TREE_DIMENSIONS * (i - 1) + 1
             ii = int(TREE_DIMENSIONS * (i-1) + 1, 1)
 
-            interleaved_bits(ii:ii+TREE_DIMENSIONS+1) = ib_buffer(:)
+            interleaved_bits(ii:ii+TREE_DIMENSIONS-1) = ib_buffer(:)
         end do
 
         ! calculate the universal index n
@@ -774,7 +774,11 @@ contains
         n_treeD = lib_tree_hf_deinterleave_bits_1D_to_treeD(buffer)
 
         do i=1, TREE_DIMENSIONS
+#if (_SPATIAL_POINT_IS_DOUBLE_ == 1)
+            point%x(i) = 2.0D0**(-l) * (n_treeD(i) + 0.5D0)
+#elif (_SPATIAL_POINT_IS_DOUBLE_ == 0)
             point%x(i) = 2.0**(-l) * (n_treeD(i) + 0.5)
+#endif
         end do
 
     end function lib_tree_hf_get_centre_of_box
@@ -1767,7 +1771,7 @@ contains
             ! ii = TREE_DIMENSIONS * (i - 1) + 1
             ii = int(TREE_DIMENSIONS * (i-1) + 1, 1)
 
-            interleaved_bits(ii:ii+TREE_DIMENSIONS+1) = ib_buffer(:)
+            interleaved_bits(ii:ii+TREE_DIMENSIONS-1) = ib_buffer(:)
         end do
 
         rv = interleaved_coordinate_binary
@@ -1965,7 +1969,7 @@ contains
             ! ii = TREE_DIMENSIONS * (UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND - UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND + i - 1) + 1
             ! ii = TREE_DIMENSIONS * (i - 1) + 1
             ii = int(TREE_DIMENSIONS * (i-1) + 1, 1)
-            ob_buffer_DIM(:) = cb_buffer(ii:ii+TREE_DIMENSIONS+1)
+            ob_buffer_DIM(:) = cb_buffer(ii:ii+TREE_DIMENSIONS-1)
 
             dib_buffer = lib_tree_hf_deinterleave_bits_use_lut(ob_buffer_DIM)
 

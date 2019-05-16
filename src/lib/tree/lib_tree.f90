@@ -1931,7 +1931,7 @@ module lib_tree
             integer(kind=4) :: number
 
             type(lib_tree_universal_index) :: uindex
-            integer(kind=_UINDEX_BYTES_) :: k
+            integer(kind=UINDEX_BYTES) :: k
             type(lib_tree_data_element), dimension(:), allocatable :: domain_element_list
             integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number
 
@@ -2053,7 +2053,7 @@ module lib_tree
             integer(kind=4) :: number
 
             type(lib_tree_universal_index) :: uindex
-            integer(kind=_UINDEX_BYTES_) :: k
+            integer(kind=UINDEX_BYTES) :: k
             type(lib_tree_data_element), dimension(:), allocatable :: domain_element_list
             integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number
 
@@ -2175,7 +2175,7 @@ module lib_tree
             integer(kind=4) :: number
 
             type(lib_tree_universal_index) :: uindex
-            integer(kind=_UINDEX_BYTES_) :: k
+            integer(kind=UINDEX_BYTES) :: k
             type(lib_tree_data_element), dimension(:), allocatable :: domain_element_list
             integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number
 
