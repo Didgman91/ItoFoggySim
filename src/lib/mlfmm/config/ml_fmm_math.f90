@@ -23,6 +23,8 @@ module ml_fmm_math
         operator_procedures%coefficient_set_zero => test_set_coefficient_zero
         operator_procedures%cor => test_cor
         operator_procedures%u_dot_coefficient => test_u_dot_coefficient
+        operator_procedures%coefficient_eq => test_coefficient_eq
+        operator_procedures%coefficient_ne => test_coefficient_ne
 
     end function ml_fmm_type_operator_get_procedures
 
@@ -172,6 +174,36 @@ module ml_fmm_math
         end do
 
     end function test_cor
+
+    function test_coefficient_eq(lhs, rhs) result (rv)
+        implicit none
+        ! dummy
+        type(lib_ml_fmm_coefficient), intent(in) :: lhs
+        type(lib_ml_fmm_coefficient), intent(in) :: rhs
+        logical :: rv
+
+        if (lhs%dummy(1) .eq. rhs%dummy(1)) then
+            rv = .true.
+        else
+            rv = .false.
+        end if
+
+    end function test_coefficient_eq
+
+    function test_coefficient_ne(lhs, rhs) result (rv)
+        implicit none
+        ! dummy
+        type(lib_ml_fmm_coefficient), intent(in) :: lhs
+        type(lib_ml_fmm_coefficient), intent(in) :: rhs
+        logical :: rv
+
+        if (lhs%dummy(1) .ne. rhs%dummy(1)) then
+            rv = .true.
+        else
+            rv = .false.
+        end if
+
+    end function test_coefficient_ne
 
     subroutine test_set_coefficient_zero(coefficient)
         implicit none

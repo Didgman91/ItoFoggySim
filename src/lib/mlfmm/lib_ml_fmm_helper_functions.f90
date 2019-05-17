@@ -357,6 +357,9 @@ module lib_ml_fmm_helper_functions
 
             integer(kind=CORRESPONDENCE_VECTOR_KIND) :: element_index
 
+            if (allocated(hierarchy)) then
+                deallocate(hierarchy)
+            end if
             allocate( hierarchy(l_min:l_max))
 
             allocate( uindex_list_X(length(HIERARCHY_X)) )
@@ -693,6 +696,7 @@ module lib_ml_fmm_helper_functions
 
             max_value = size(hierarchy(uindex%l)%hashed_coefficient_list_index)
             hash = hash_fnv1a(uindex%n, max_value)
+            rv = IGNORE_ENTRY
             do i=1, hierarchy(uindex%l)%maximum_number_of_hash_runs
                 if (hierarchy(uindex%l)%hashed_coefficient_list_index(hash)%number_of_hash_runs .gt. 0) then
                     coefficient_list_index = hierarchy(uindex%l)%hashed_coefficient_list_index(hash)%array_position

@@ -11,6 +11,9 @@ module lib_ml_fmm_type_operator
     public :: operator (-)
     public :: operator (.CoR.)
 
+    public :: operator (.eq.)
+    public :: operator (.ne.)
+
     public :: lib_ml_fmm_type_operator_set_coefficient_zero
 !    public :: lib_ml_fmm_type_operator_allocate_coefficient_list
 !    public :: lib_ml_fmm_type_operator_deallocate_coefficient_list
@@ -43,6 +46,14 @@ module lib_ml_fmm_type_operator
 
     interface operator (*)
         module procedure m_u_dot_coefficient
+    end interface
+
+    interface operator (.eq.)
+        module procedure m_coefficient_eq
+    end interface
+
+    interface operator (.ne.)
+        module procedure m_coefficient_ne
     end interface
 
     ! Sum_q=0_p-1[C_q R_q(y_j − x_∗)] = C o R(y_j − x_∗)
@@ -79,6 +90,22 @@ module lib_ml_fmm_type_operator
             type(lib_tree_spatial_point), intent(in) :: rhs
             type(lib_ml_fmm_v) :: rv
         end function ml_fmm_cor_operator
+
+        function ml_fmm_coefficient_eq(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            type(lib_ml_fmm_coefficient), intent(in) :: lhs
+            type(lib_ml_fmm_coefficient), intent(in) :: rhs
+            logical :: rv
+        end function
+
+        function ml_fmm_coefficient_ne(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            type(lib_ml_fmm_coefficient), intent(in) :: lhs
+            type(lib_ml_fmm_coefficient), intent(in) :: rhs
+            logical :: rv
+        end function
 
         subroutine ml_fmm_coefficient_set_zero(coefficient)
             use ml_fmm_type
@@ -365,6 +392,8 @@ module lib_ml_fmm_type_operator
         procedure(ml_fmm_set_coefficient), pointer, nopass :: set_coefficient => null()
         procedure(ml_fmm_get_coefficient), pointer, nopass :: get_coefficient => null()
 !        procedure(ml_fmm_deallocate_coefficient_list), pointer, nopass :: deallocate_coefficient_list => null()
+        procedure(ml_fmm_coefficient_eq), pointer, nopass :: coefficient_eq => null()
+        procedure(ml_fmm_coefficient_eq), pointer, nopass :: coefficient_ne => null()
     end type
 
     ! ----- member procedures -----
@@ -376,6 +405,8 @@ module lib_ml_fmm_type_operator
     procedure(ml_fmm_set_coefficient), pointer :: m_set_coefficient => null()
     procedure(ml_fmm_get_coefficient), pointer :: m_get_coefficient => null()
 !    procedure(ml_fmm_deallocate_coefficient_list), pointer :: m_deallocate_coefficient_list => null()
+    procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_eq => null()
+    procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_ne => null()
 
     contains
 
@@ -416,6 +447,9 @@ module lib_ml_fmm_type_operator
         m_set_coefficient => operator_procedures%set_coefficient
         m_get_coefficient => operator_procedures%get_coefficient
 !        m_deallocate_coefficient_list => operator_procedures%deallocate_coefficient_list
+
+        m_coefficient_eq => operator_procedures%coefficient_eq
+        m_coefficient_ne => operator_procedures%coefficient_ne
 
     end subroutine lib_ml_fmm_type_operator_constructor
 
