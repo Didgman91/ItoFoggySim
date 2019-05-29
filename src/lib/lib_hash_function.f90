@@ -1,4 +1,7 @@
 module lib_hash_function
+#ifndef __GFORTRAN__
+    USE IFPORT          ! ifort function: rand
+#endif
     implicit none
     private
 
@@ -12,10 +15,14 @@ module lib_hash_function
         module procedure hash_fnv1a32_2_byte
         module procedure hash_fnv1a32_4_byte
         module procedure hash_fnv1a32_8_byte
+#ifdef __GFORTRAN__
         module procedure hash_fnv1a32_16_byte
+#endif
         module procedure hash_fnv1a64_4_byte
         module procedure hash_fnv1a64_8_byte
+#ifdef __GFORTRAN__
         module procedure hash_fnv1a64_16_byte
+#endif
     end interface
 
     contains
@@ -154,7 +161,7 @@ module lib_hash_function
              HASH = IAND(HASH, X'FFFFFFFF')      ! discard > 32 bits
       90   CONTINUE ! next j
 
-      END !############## of file fnv32.f ##############################
+      END SUBROUTINE!############## of file fnv32.f ##############################
 
       SUBROUTINE FNV64 (BUFFER, LENGTH, HASH)
            IMPLICIT NONE
@@ -191,7 +198,7 @@ module lib_hash_function
              HASH = IAND(HASH, X'FFFFFFFFFFFFFFFF')      ! discard > 64 bits
       90   CONTINUE ! next j
 
-      END !############## of file fnv32.f ##############################
+      END SUBROUTINE!############## of file fnv32.f ##############################
 
 !    function hash_fnv1a(buffer) result(hash)
 !        ! dummy
@@ -362,6 +369,7 @@ module lib_hash_function
 
     end function hash_fnv1a32_8_byte
 
+#ifdef __GFORTRAN__
     ! fnv1a hash function
     !
     ! Arguments
@@ -412,6 +420,7 @@ module lib_hash_function
         hash = int(buffer_hash * int(max_value-2,8) + max_value/2.0D0,4)
 
     end function hash_fnv1a32_16_byte
+#endif
 
     ! fnv1a hash function
     !
@@ -513,6 +522,7 @@ module lib_hash_function
 
     end function hash_fnv1a64_8_byte
 
+#ifdef __GFORTRAN__
     ! fnv1a hash function
     !
     ! Arguments
@@ -562,6 +572,8 @@ module lib_hash_function
         hash = int(buffer_hash * int(max_value-2,8) + max_value/2.0D0,8)
 
     end function hash_fnv1a64_16_byte
+#endif
+
 !
 !    ! fnv1a hash function
 !    !
@@ -748,6 +760,7 @@ module lib_hash_function
         end if
     end function
 
+#ifdef __GFORTRAN__
     ! ********************************************************* hash
     !berechnet ndigit-Hash wert der Koordinaten Matrix a,b,max,n ,versuch i
     integer(kind=8) function hash_kf_16_byte(a,b,max,i,idum) result(hash)
@@ -793,6 +806,7 @@ module lib_hash_function
         buffer = buffer * real(idum(2),kind=8)/2147483647.0D0
         hashpp=int(buffer*real(max-1,kind=8),kind=8)
     end function
+#endif
 
     function hash_8_byte(a, max) result(hash)
         implicit none
@@ -805,17 +819,17 @@ module lib_hash_function
         integer(kind=8) :: idum
         idum = a
 
-        hash = int(ran(idum) * real((max-1)), 4)
+        hash = int(numerical_recipes_ran(idum) * real((max-1)), 4)
 
     end function hash_8_byte
 
     ! Numerical Recipes in F90
     ! p. 1142
-    FUNCTION ran(idum)
+    FUNCTION numerical_recipes_ran(idum)
         IMPLICIT NONE
         INTEGER, PARAMETER :: K4B=8!selected_int_kind(9)
         INTEGER(K4B), INTENT(INOUT) :: idum
-        REAL :: ran
+        REAL :: numerical_recipes_ran
         INTEGER(K4B), PARAMETER :: IA=16807,IM=2147483647,IQ=127773,IR=2836
         REAL :: am
         INTEGER(K4B):: ix=-1,iy=-1,k
@@ -831,8 +845,8 @@ module lib_hash_function
         k=iy/IQ
         iy=IA*(iy-k*IQ)-IR*k
         if (iy < 0) iy=iy+IM
-        ran=am*ior(iand(IM,ieor(ix,iy)),1)
-    END FUNCTION ran
+        numerical_recipes_ran=am*ior(iand(IM,ieor(ix,iy)),1)
+    END FUNCTION numerical_recipes_ran
 
 
     ! ----------- test functions -----------

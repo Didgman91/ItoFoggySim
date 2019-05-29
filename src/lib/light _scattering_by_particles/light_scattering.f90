@@ -278,7 +278,7 @@
         cnrm(n) = (2.0*rn+1.0)/(rf*rn*(rn+1.0))
 30    continue
       return
-      end
+      end subroutine
       subroutine besh(x,hankel,nc)
 !     ...................................................
 !     .  calculate Hankel functions                     .
@@ -348,7 +348,7 @@
         hankel(k) = cmplx(bj(k)*alpha,by(k))
 40      continue
       return
-      end
+      end subroutine
       subroutine genlgp(theta,pnmllg,nc)
       implicit none
 !     ........................................................

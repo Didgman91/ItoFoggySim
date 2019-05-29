@@ -8,7 +8,9 @@ module toolbox
         module procedure reallocate_1d_integer_2
         module procedure reallocate_1d_integer_4
         module procedure reallocate_1d_integer_8
+#ifdef __GFORTRAN__
         module procedure reallocate_1d_integer_16
+#endif
     end interface
 
     interface concatenate
@@ -16,12 +18,16 @@ module toolbox
         module procedure lib_tree_hf_concatenate_1d_integer_2_array
         module procedure lib_tree_hf_concatenate_1d_integer_4_array
         module procedure lib_tree_hf_concatenate_1d_integer_8_array
+#ifdef __GFORTRAN__
         module procedure lib_tree_hf_concatenate_1d_integer_16_array
+#endif
         module procedure lib_tree_hf_concatenate_1d_integer_1_array_single
         module procedure lib_tree_hf_concatenate_1d_integer_2_array_single
         module procedure lib_tree_hf_concatenate_1d_integer_4_array_single
         module procedure lib_tree_hf_concatenate_1d_integer_8_array_single
+#ifdef __GFORTRAN__
         module procedure lib_tree_hf_concatenate_1d_integer_16_array_single
+#endif
     end interface
 
 contains
@@ -147,6 +153,7 @@ contains
 
     end subroutine
 
+#ifdef __GFORTRAN__
     subroutine reallocate_1d_integer_16(a,n)
         implicit none
 
@@ -168,6 +175,7 @@ contains
         end if
 
     end subroutine
+#endif
 
     subroutine lib_tree_hf_concatenate_1d_integer_1_array(a, b)
         implicit none
@@ -245,6 +253,7 @@ contains
         a(size_a_org+1:) = b
     end subroutine
 
+#ifdef __GFORTRAN__
     subroutine lib_tree_hf_concatenate_1d_integer_16_array(a, b)
         implicit none
         integer(kind=16), dimension(:), allocatable, intent(inout) :: a
@@ -263,6 +272,7 @@ contains
 
         a(size_a_org+1:) = b
     end subroutine
+#endif
 
     subroutine lib_tree_hf_concatenate_1d_integer_1_array_single(a, b)
         implicit none
@@ -340,6 +350,7 @@ contains
         a(size_a_org+1:) = b
     end subroutine
 
+#ifdef __GFORTRAN__
     subroutine lib_tree_hf_concatenate_1d_integer_16_array_single(a, b)
         implicit none
         ! dummy
@@ -359,4 +370,5 @@ contains
 
         a(size_a_org+1:) = b
     end subroutine
+#endif
 end module toolbox

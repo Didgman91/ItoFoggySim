@@ -250,8 +250,8 @@ module ml_fmm_math
         type (lib_ml_fmm_v), intent(in) :: rhs
         type (lib_ml_fmm_v) :: rv
 
-!            allocate(rv%dummy, source = lhs%dummy + rhs%dummy)
-        rv%dummy = lhs%dummy + rhs%dummy
+        allocate(rv%dummy, source = lhs%dummy + rhs%dummy)
+!        rv%dummy = lhs%dummy + rhs%dummy
     end function
 
     function test_v_operator_sub(lhs, rhs) result(rv)
@@ -266,7 +266,8 @@ module ml_fmm_math
         integer :: i
 
         do i=1, size(lhs)
-            rv(i)%dummy = lhs(i)%dummy - rhs(i)%dummy
+            allocate(rv(i)%dummy, source = lhs(i)%dummy - rhs(i)%dummy)
+!            rv(i)%dummy = lhs(i)%dummy - rhs(i)%dummy
         end do
     end function
 
@@ -278,8 +279,8 @@ module ml_fmm_math
         type (lib_ml_fmm_v), intent(in) :: rhs
         type (lib_ml_fmm_v) :: rv
 
-!            allocate(rv%dummy, source = lhs%dummy - rhs%dummy)
-        rv%dummy = lhs%dummy - rhs%dummy
+        allocate(rv%dummy, source = lhs%dummy - rhs%dummy)
+!        rv%dummy = lhs%dummy - rhs%dummy
     end function
 
     function test_get_B_i(x, data_element) result(B_i)

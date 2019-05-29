@@ -186,7 +186,7 @@ module lib_sort
             endif
             ra(i)=rra                           !Put rra into its slot.
         goto 10
-    END
+    END SUBROUTINE
 
     ! ----- test functions -----
     function lib_sort_test_functions() result(error_counter)

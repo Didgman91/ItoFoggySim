@@ -3192,7 +3192,7 @@ contains
             integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: x
             integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: buffer
 
-            integer(kind=8) :: number_of_runs = 10**10
+            integer(kind=8) :: number_of_runs = 10_8**10_8
             integer(kind=8) :: i
             real :: start, finish
             double precision :: delta
@@ -3233,7 +3233,7 @@ contains
             integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: x
             integer(kind=INTERLEAVE_BITS_INTEGER_KIND), dimension(TREE_DIMENSIONS) :: buffer
 
-            integer(kind=8) :: number_of_runs = 10**10
+            integer(kind=8) :: number_of_runs = 10_8**10_8
             integer(kind=8) :: i
             real :: start, finish
             double precision :: delta
@@ -3274,7 +3274,7 @@ contains
             integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: x
             integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: buffer
 
-            integer(kind=8) :: number_of_runs = 10**10
+            integer(kind=8) :: number_of_runs = 10_8**10_8
             integer(kind=8) :: i
             real :: start, finish
             DOUBLE PRECISION :: delta
@@ -3315,7 +3315,7 @@ contains
             integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: x
             integer(kind=UINDEX_BYTES), dimension(TREE_DIMENSIONS) :: buffer
 
-            integer(kind=8) :: number_of_runs = 10**10
+            integer(kind=8) :: number_of_runs = 10_8**10_8
             integer(kind=8) :: i
             real :: start, finish
             DOUBLE PRECISION :: delta
