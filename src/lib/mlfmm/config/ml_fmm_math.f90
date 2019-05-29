@@ -25,6 +25,10 @@ module ml_fmm_math
         operator_procedures%u_dot_coefficient => test_u_dot_coefficient
         operator_procedures%coefficient_eq => test_coefficient_eq
         operator_procedures%coefficient_ne => test_coefficient_ne
+        operator_procedures%v_add => test_v_operator_add
+        operator_procedures%v_add_0D => test_v_operator_add_0D
+        operator_procedures%v_sub => test_v_operator_sub
+        operator_procedures%v_sub_0D => test_v_operator_sub_0D
 
     end function ml_fmm_type_operator_get_procedures
 
@@ -81,6 +85,10 @@ module ml_fmm_math
             ml_fmm_operator_procedures%coefficient_set_zero => test_set_coefficient_zero
             ml_fmm_operator_procedures%cor => test_cor
             ml_fmm_operator_procedures%u_dot_coefficient => test_u_dot_coefficient
+            ml_fmm_operator_procedures%v_add => test_v_operator_add
+            ml_fmm_operator_procedures%v_add_0D => test_v_operator_add_0D
+            ml_fmm_operator_procedures%v_sub => test_v_operator_sub
+            ml_fmm_operator_procedures%v_sub_0D => test_v_operator_sub_0D
 
             call lib_ml_fmm_type_operator_constructor(ml_fmm_operator_procedures)
 !            call lib_ml_fmm_type_operator_constructor(test_c_add, test_u_dot_coefficient, test_cor, &
@@ -217,6 +225,62 @@ module ml_fmm_math
             coefficient%dummy(1) = 0
         end if
     end subroutine
+
+    function test_v_operator_add(lhs, rhs) result(rv)
+        use ml_fmm_type
+        implicit none
+        ! dummy
+        type (lib_ml_fmm_v), dimension(:), intent(in) :: lhs
+        type (lib_ml_fmm_v), dimension(size(lhs)), intent(in) :: rhs
+        type (lib_ml_fmm_v), dimension(size(lhs)) :: rv
+
+        ! auxilary
+        integer :: i
+
+        do i=1, size(lhs)
+            rv(i)%dummy = lhs(i)%dummy + rhs(i)%dummy
+        end do
+    end function
+
+    function test_v_operator_add_0d(lhs, rhs) result(rv)
+        use ml_fmm_type
+        implicit none
+        ! dummy
+        type (lib_ml_fmm_v), intent(in) :: lhs
+        type (lib_ml_fmm_v), intent(in) :: rhs
+        type (lib_ml_fmm_v) :: rv
+
+!            allocate(rv%dummy, source = lhs%dummy + rhs%dummy)
+        rv%dummy = lhs%dummy + rhs%dummy
+    end function
+
+    function test_v_operator_sub(lhs, rhs) result(rv)
+        use ml_fmm_type
+        implicit none
+        ! dummy
+        type (lib_ml_fmm_v), dimension(:), intent(in) :: lhs
+        type (lib_ml_fmm_v), dimension(size(lhs)), intent(in) :: rhs
+        type (lib_ml_fmm_v), dimension(size(lhs)) :: rv
+
+        ! auxilary
+        integer :: i
+
+        do i=1, size(lhs)
+            rv(i)%dummy = lhs(i)%dummy - rhs(i)%dummy
+        end do
+    end function
+
+    function test_v_operator_sub_0d(lhs, rhs) result(rv)
+        use ml_fmm_type
+        implicit none
+        ! dummy
+        type (lib_ml_fmm_v), intent(in) :: lhs
+        type (lib_ml_fmm_v), intent(in) :: rhs
+        type (lib_ml_fmm_v) :: rv
+
+!            allocate(rv%dummy, source = lhs%dummy - rhs%dummy)
+        rv%dummy = lhs%dummy - rhs%dummy
+    end function
 
     function test_get_B_i(x, data_element) result(B_i)
         use lib_tree_public

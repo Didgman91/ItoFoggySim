@@ -35,13 +35,13 @@ module lib_ml_fmm_type_operator
     interface operator (+)
         module procedure m_coefficient_add
 !        module procedure m_procedures%m_coefficient_add
-        module procedure lib_ml_fmm_v_operator_add
-        module procedure lib_ml_fmm_v_operator_add_0d
+        module procedure lib_ml_fmm_type_operator_v_add
+        module procedure lib_ml_fmm_type_operator_v_add_0D
     end interface
 
     interface operator (-)
-        module procedure lib_ml_fmm_v_operator_sub
-        module procedure lib_ml_fmm_v_operator_sub_0d
+        module procedure lib_ml_fmm_type_operator_v_sub
+        module procedure lib_ml_fmm_type_operator_v_sub_0D
     end interface
 
     interface operator (*)
@@ -147,6 +147,42 @@ module lib_ml_fmm_type_operator
             type(lib_tree_universal_index), intent(in) :: uindex
             type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
             type(lib_ml_fmm_coefficient) :: coefficient
+        end function
+
+        function ml_fmm_v_add_operator(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type (lib_ml_fmm_v), dimension(:), intent(in) :: lhs
+            type (lib_ml_fmm_v), dimension(size(lhs)), intent(in) :: rhs
+            type (lib_ml_fmm_v), dimension(size(lhs)) :: rv
+        end function
+
+        function ml_fmm_v_add_0D_operator(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type (lib_ml_fmm_v), intent(in) :: lhs
+            type (lib_ml_fmm_v), intent(in) :: rhs
+            type (lib_ml_fmm_v) :: rv
+        end function
+
+        function ml_fmm_v_sub_operator(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type (lib_ml_fmm_v), dimension(:), intent(in) :: lhs
+            type (lib_ml_fmm_v), dimension(size(lhs)), intent(in) :: rhs
+            type (lib_ml_fmm_v), dimension(size(lhs)) :: rv
+        end function
+
+        function ml_fmm_v_sub_0D_operator(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type (lib_ml_fmm_v), intent(in) :: lhs
+            type (lib_ml_fmm_v), intent(in) :: rhs
+            type (lib_ml_fmm_v) :: rv
         end function
 
 !        ! Basis function: A
@@ -391,6 +427,12 @@ module lib_ml_fmm_type_operator
 !        procedure(ml_fmm_allocate_coefficient_list), pointer, nopass :: allocate_coefficient_list => null()
         procedure(ml_fmm_set_coefficient), pointer, nopass :: set_coefficient => null()
         procedure(ml_fmm_get_coefficient), pointer, nopass :: get_coefficient => null()
+
+        procedure(ml_fmm_v_add_operator), pointer, nopass :: v_add => null()
+        procedure(ml_fmm_v_add_0D_operator), pointer, nopass :: v_add_0D => null()
+        procedure(ml_fmm_v_sub_operator), pointer, nopass :: v_sub => null()
+        procedure(ml_fmm_v_sub_0D_operator), pointer, nopass :: v_sub_0D => null()
+
 !        procedure(ml_fmm_deallocate_coefficient_list), pointer, nopass :: deallocate_coefficient_list => null()
         procedure(ml_fmm_coefficient_eq), pointer, nopass :: coefficient_eq => null()
         procedure(ml_fmm_coefficient_eq), pointer, nopass :: coefficient_ne => null()
@@ -404,6 +446,12 @@ module lib_ml_fmm_type_operator
 !    procedure(ml_fmm_allocate_coefficient_list), pointer :: m_allocate_coefficient_list => null()
     procedure(ml_fmm_set_coefficient), pointer :: m_set_coefficient => null()
     procedure(ml_fmm_get_coefficient), pointer :: m_get_coefficient => null()
+
+    procedure(ml_fmm_v_add_operator), pointer :: m_v_add => null()
+    procedure(ml_fmm_v_add_0D_operator), pointer :: m_v_add_0D => null()
+    procedure(ml_fmm_v_sub_operator), pointer :: m_v_sub => null()
+    procedure(ml_fmm_v_sub_0D_operator), pointer :: m_v_sub_0D => null()
+
 !    procedure(ml_fmm_deallocate_coefficient_list), pointer :: m_deallocate_coefficient_list => null()
     procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_eq => null()
     procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_ne => null()
@@ -446,6 +494,11 @@ module lib_ml_fmm_type_operator
 !        m_allocate_coefficient_list => operator_procedures%allocate_coefficient_list
         m_set_coefficient => operator_procedures%set_coefficient
         m_get_coefficient => operator_procedures%get_coefficient
+
+        m_v_add => operator_procedures%v_add
+        m_v_add_0D => operator_procedures%v_add_0D
+        m_v_sub => operator_procedures%v_sub
+        m_v_sub_0D => operator_procedures%v_sub_0D
 !        m_deallocate_coefficient_list => operator_procedures%deallocate_coefficient_list
 
         m_coefficient_eq => operator_procedures%coefficient_eq
@@ -533,7 +586,7 @@ module lib_ml_fmm_type_operator
             end if
         end function
 
-        function lib_ml_fmm_v_operator_add(lhs, rhs) result(rv)
+        function lib_ml_fmm_type_operator_v_add(lhs, rhs) result(rv)
             use ml_fmm_type
             implicit none
             ! dummy
@@ -541,15 +594,15 @@ module lib_ml_fmm_type_operator
             type (lib_ml_fmm_v), dimension(size(lhs)), intent(in) :: rhs
             type (lib_ml_fmm_v), dimension(size(lhs)) :: rv
 
-            ! auxilary
-            integer :: i
-
-            do i=1, size(lhs)
-                rv(i)%dummy = lhs(i)%dummy + rhs(i)%dummy
-            end do
+            if ( associated(m_v_add)) then
+                rv = m_v_add(lhs, rhs)
+            else
+                print *, "lib_ml_fmm_type_operator_v_add:  ERROR"
+                print *, "  m_v_add is not associated"
+            end if
         end function
 
-        function lib_ml_fmm_v_operator_add_0d(lhs, rhs) result(rv)
+        function lib_ml_fmm_type_operator_v_add_0d(lhs, rhs) result(rv)
             use ml_fmm_type
             implicit none
             ! dummy
@@ -557,11 +610,15 @@ module lib_ml_fmm_type_operator
             type (lib_ml_fmm_v), intent(in) :: rhs
             type (lib_ml_fmm_v) :: rv
 
-!            allocate(rv%dummy, source = lhs%dummy + rhs%dummy)
-            rv%dummy = lhs%dummy + rhs%dummy
+            if ( associated(m_v_add)) then
+                rv = m_v_add_0d(lhs, rhs)
+            else
+                print *, "lib_ml_fmm_type_operator_v_add_0d:  ERROR"
+                print *, "  m_v_add_0d is not associated"
+            end if
         end function
 
-        function lib_ml_fmm_v_operator_sub(lhs, rhs) result(rv)
+        function lib_ml_fmm_type_operator_v_sub(lhs, rhs) result(rv)
             use ml_fmm_type
             implicit none
             ! dummy
@@ -569,15 +626,15 @@ module lib_ml_fmm_type_operator
             type (lib_ml_fmm_v), dimension(size(lhs)), intent(in) :: rhs
             type (lib_ml_fmm_v), dimension(size(lhs)) :: rv
 
-            ! auxilary
-            integer :: i
-
-            do i=1, size(lhs)
-                rv(i)%dummy = lhs(i)%dummy - rhs(i)%dummy
-            end do
+            if ( associated(m_v_sub)) then
+                rv = m_v_sub(lhs, rhs)
+            else
+                print *, "lib_ml_fmm_type_operator_v_sub:  ERROR"
+                print *, "  m_v_sub is not associated"
+            end if
         end function
 
-        function lib_ml_fmm_v_operator_sub_0d(lhs, rhs) result(rv)
+        function lib_ml_fmm_type_operator_v_sub_0d(lhs, rhs) result(rv)
             use ml_fmm_type
             implicit none
             ! dummy
@@ -585,8 +642,12 @@ module lib_ml_fmm_type_operator
             type (lib_ml_fmm_v), intent(in) :: rhs
             type (lib_ml_fmm_v) :: rv
 
-!            allocate(rv%dummy, source = lhs%dummy - rhs%dummy)
-            rv%dummy = lhs%dummy - rhs%dummy
+            if ( associated(m_v_sub_0d)) then
+                rv = m_v_sub_0D(lhs, rhs)
+            else
+                print *, "lib_ml_fmm_type_operator_v_sub_0d:  ERROR"
+                print *, "  m_v_sub_0d is not associated"
+            end if
         end function
 
 end module lib_ml_fmm_type_operator
