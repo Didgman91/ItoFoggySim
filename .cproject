@@ -155,11 +155,13 @@
                     					
                     <sourceEntries>
                         						
-                        <entry excluding="config|test|lib|data_types|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        <entry excluding="light _scattering_by_particles|config|test|lib|data_types|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
                         						
                         <entry excluding="lib|data_types" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
                         						
-                        <entry excluding="mlfmm|tree" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
+                        <entry excluding="light _scattering_by_particles|mlfmm|tree" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
+                        						
+                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/light _scattering_by_particles"/>
                         						
                         <entry excluding="config" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/mlfmm"/>
                         						
@@ -271,11 +273,13 @@
                     					
                     <sourceEntries>
                         						
-                        <entry excluding="config|test|lib|data_types|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        <entry excluding="light _scattering_by_particles|config|test|lib|data_types|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
                         						
                         <entry excluding="lib|data_types" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
                         						
-                        <entry excluding="mlfmm|tree" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
+                        <entry excluding="light _scattering_by_particles|mlfmm|tree" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
+                        						
+                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/light _scattering_by_particles"/>
                         						
                         <entry excluding="config" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/mlfmm"/>
                         						
