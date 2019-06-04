@@ -1,4 +1,5 @@
 program main
+    use lib_math_bessel
     use lib_data_types
     use lib_tree
     use lib_tree_helper_functions
@@ -14,7 +15,6 @@ program main
 
     integer :: error_counter
 
-
 !    polarization: parallel (1) perpendicular (2)
 !    size parameter: x
 !    index of refraction: real,imaginary (+ for absorption)
@@ -26,9 +26,10 @@ program main
 !        cmr = 1.33    ! water: 1.33
 !        cmi = 0       ! water: 0
 !        npnts = 10
-    call S2(1, 2*3.14159265358979*10, 1.33, 0.0, 10)
+    !call S2(1, 2*3.14159265358979*10, 1.33, 0.0, 10)
 
     error_counter = 0
+    error_counter = error_counter + lib_math_bessel_test_functions()
     error_counter = error_counter + lib_sort_test_functions()
     error_counter = error_counter + lib_test_hash_function()
     error_counter = error_counter + lib_tree_hf_test_functions()
