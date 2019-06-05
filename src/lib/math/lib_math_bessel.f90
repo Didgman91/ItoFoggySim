@@ -1,3 +1,5 @@
+#define _DEBUG_
+
 module lib_math_bessel
     implicit none
 
@@ -14,12 +16,12 @@ module lib_math_bessel
         module procedure lib_math_bessel_spherical_second_kind_cmplx
     end interface
 
-    interface lib_math_bessel_spherical_third_kind_1
+    interface lib_math_hankel_spherical_1
         module procedure lib_math_bessel_spherical_third_kind_1_real
         module procedure lib_math_bessel_spherical_third_kind_1_cmplx
     end interface
 
-    interface lib_math_bessel_spherical_third_kind_2
+    interface lib_math_hankel_spherical_2
         module procedure lib_math_bessel_spherical_third_kind_2_real
     end interface
 
@@ -29,6 +31,14 @@ module lib_math_bessel
 
     interface lib_math_bessel_spherical_second_kind_derivative
         module procedure lib_math_bessel_spherical_second_kind_real_derivative
+    end interface
+
+    interface lib_math_hankel_1_derivative
+        module procedure lib_math_bessel_spherical_third_kind_1_real_derivative
+    end interface
+
+    interface lib_math_hankel_2_derivative
+        module procedure lib_math_bessel_spherical_third_kind_2_real_derivative
     end interface
 
     ! --- public functions ---
@@ -432,6 +442,218 @@ module lib_math_bessel
 
     end function lib_math_bessel_spherical_third_kind_2_real
 
+    ! calculates the the Riccati Bessel function
+    !
+    ! symbol: S
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ S_{n}(z) \equiv z j_{n}(z)=\sqrt{\frac{\pi z}{2}} J_{n+1 / 2}(z) $$
+    !
+    ! Reference: http://mathworld.wolfram.com/Riccati-BesselFunctions.html
+    !
+    function lib_math_bessel_riccati_s_real(x, fnu, n) result (rv)
+        implicit none
+        ! dummy
+        double precision, intent(in) :: x
+        integer, intent(in) :: fnu
+        integer, intent(in) :: n
+        double precision, dimension(n) :: rv
+
+        ! auxiliary
+        double precision :: rv_1
+
+        ! nz: integer
+        !    number of components of Y set to zero due to
+        !    underflow,
+        !    NZ=0   , normal return, computation completed
+        !    NZ .NE. 0, last NZ components of Y set to zero,
+        !             Y(K)=0.0D0, K=N-NZ+1,...,N.
+        integer :: nz
+
+        rv_1 = sqrt(PI/2.0D0 * x)
+
+        call DBESJ (X, FNU+0.5D0, N, rv, nz)
+
+#ifdef _DEBUG_
+        if (nz .ne. 0) then
+            print *, "lib_math_bessel_riccati_s_real: WARNING"
+            print *, "  number of components of Y set to zero due to underflow: ", nz
+        end if
+#endif
+
+        rv(:) = rv_1 * rv(:)
+
+    end function lib_math_bessel_riccati_s_real
+
+    ! calculates the the Riccat Bessel function
+    !
+    ! symbol: C
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ C_{n}(z) \equiv-z n_{n}(z)=-\sqrt{\frac{\pi z}{2}} N_{n+1 / 2}(z) $$
+    !
+    ! Reference: http://mathworld.wolfram.com/Riccati-BesselFunctions.html
+    !
+    function lib_math_bessel_riccati_c_real(x, fnu, n) result (rv)
+        implicit none
+        ! dummy
+        double precision, intent(in) :: x
+        integer, intent(in) :: fnu
+        integer, intent(in) :: n
+
+        double precision, dimension(n) :: rv
+
+        ! auxiliary
+        double precision :: rv_1
+
+        rv_1 = -sqrt(PI / 2.D0 * x)
+
+        call DBESY (X, FNU+0.5D0, N, rv)
+
+        rv(:) = rv_1 * rv(:)
+
+    end function lib_math_bessel_riccati_c_real
+
+    ! calculates the the Riccat Bessel function
+    !
+    ! symbol: Xi
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \xi_{n}(\rho)= \sqrt{\frac{\pi \rho}{2}} J_{n+1 / 2}(\rho) + i \sqrt{\frac{\pi \rho}{2}} Y_{n+1 / 2}(\rho) $$
+    !
+    ! Reference: Absorption and Scattering of Light by Small Particles Absorption and Scattering of Light by Small Particles (page 101)
+    !
+    function lib_math_bessel_riccati_xi_real(x, fnu, n) result (rv)
+        implicit none
+        ! dummy
+        double precision, intent(in) :: x
+        integer, intent(in) :: fnu
+        integer, intent(in) :: n
+
+        complex(kind=8), dimension(n) :: rv
+
+        ! auxiliary
+        double precision, dimension(n) :: j
+        double precision, dimension(n) :: y
+        double precision :: rv_1
+
+        ! nz: integer
+        !    number of components of Y set to zero due to
+        !    underflow,
+        !    NZ=0   , normal return, computation completed
+        !    NZ .NE. 0, last NZ components of Y set to zero,
+        !             Y(K)=0.0D0, K=N-NZ+1,...,N.
+        integer :: nz
+
+        rv_1 = sqrt(PI/2.D0 * x)
+
+        call DBESJ (X, FNU+0.5D0, N, j, nz)
+
+#ifdef _DEBUG_
+        if (nz .ne. 0) then
+            print *, "lib_math_bessel_riccati_s_real: WARNING"
+            print *, "  number of components of Y set to zero due to underflow: ", nz
+        end if
+#endif
+
+        call DBESY (X, FNU+0.5D0, N, y)
+
+        rv(:) = cmplx(rv_1 * j(:), rv_1 * y(:), kind=8)
+
+    end function lib_math_bessel_riccati_xi_real
+
+    ! calculates the the Riccat Bessel function
+    !
+    ! symbol: Zeta
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \zeta_{n}(x)=x h_{n}^{(2)}(x)=\sqrt{\frac{\pi x}{2}} H_{n+\frac{1}{2}}^{(2)}(x)=S_{n}(x)+i C_{n}(x) $$
+    !
+    ! Reference:
+    !
+    function lib_math_bessel_riccati_zetta_real(x, fnu, n) result (rv)
+        implicit none
+        ! dummy
+        double precision, intent(in) :: x
+        integer, intent(in) :: fnu
+        integer, intent(in) :: n
+
+        complex(kind=8), dimension(n) :: rv
+
+        ! auxiliary
+        double precision, dimension(n) :: j
+        double precision, dimension(n) :: y
+        double precision :: rv_1
+
+        ! nz: integer
+        !    number of components of Y set to zero due to
+        !    underflow,
+        !    NZ=0   , normal return, computation completed
+        !    NZ .NE. 0, last NZ components of Y set to zero,
+        !             Y(K)=0.0D0, K=N-NZ+1,...,N.
+        integer :: nz
+
+        rv_1 = sqrt(PI * x/2.D0)
+
+        call DBESJ (X, FNU+0.5D0, N, j, nz)
+
+#ifdef _DEBUG_
+        if (nz .ne. 0) then
+            print *, "lib_math_bessel_riccati_s_real: WARNING"
+            print *, "  number of components of Y set to zero due to underflow: ", nz
+        end if
+#endif
+
+        call DBESY (X, FNU+0.5D0, N, y)
+
+        rv(:) = cmplx(rv_1 * j(:), -rv_1 * y(:), kind=8)
+
+    end function lib_math_bessel_riccati_zetta_real
+
     ! Calculates the derivative of the spherical Bessel function of the first kind
     !
     ! symbol: j'_n
@@ -607,6 +829,48 @@ module lib_math_bessel
 
     end function lib_math_bessel_spherical_third_kind_2_real_derivative
 
+    ! Calculates the derivative of the Riccati-Bessel function
+    !
+    ! symbol: S
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL J FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   S_n: array<double precision>
+    !       Riccati-Bessel function [fnu-1..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ x j_{n - 1}\left(x\right) - n j_{n}\left(x\right) $$
+    !
+    ! Reference:
+    !
+    function lib_math_bessel_riccati_s_real_derivative(x, fnu, n, h_2_n) result (rv)
+        implicit none
+        ! dummy
+        double precision, intent(in) :: x
+        integer, intent(in) :: fnu
+        integer, intent(in) :: n
+        complex(kind=8), dimension(n+2), intent(inout) :: h_2_n
+        complex(kind=8), dimension(n) :: rv
+
+        ! auxiliary
+        integer :: i
+
+!        h_2_n = lib_math_bessel_spherical_third_kind_2_real(x, fnu-1, n+2)
+!
+!        do i=1, n
+!             rv(i) = 0.5D0 * (h_2_n(i) - (h_2_n(i+1) + x * h_2_n(i+2))/x)
+!        end do
+
+    end function lib_math_bessel_riccati_s_real_derivative
+
     function lib_math_bessel_test_functions() result (rv)
         implicit none
         ! dummy
@@ -614,6 +878,7 @@ module lib_math_bessel
 
         rv = 0
 
+        ! test: Bessel functions
         if (.not. test_lib_math_bessel_spherical_first_kind_real()) then
             rv = rv + 1
         end if
@@ -626,6 +891,20 @@ module lib_math_bessel
         if (.not. test_lib_math_bessel_spherical_third_kind_2_real()) then
             rv = rv + 1
         end if
+        if (.not. test_lib_math_bessel_riccati_s_real()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_riccati_c_real()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_riccati_xi_real()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_riccati_zetta_real()) then
+            rv = rv + 1
+        end if
+
+        ! test: derivatives of the Bessel functions
         if (.not. test_lib_math_bessel_spherical_first_kind_real_derivative()) then
             rv = rv + 1
         end if
@@ -638,7 +917,21 @@ module lib_math_bessel
         if (.not. test_lib_math_bessel_spherical_third_kind_2_real_derivative()) then
             rv = rv + 1
         end if
+        if (.not. test_lib_math_bessel_riccati_s_real_derivative()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_riccati_c_real_derivative()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_riccati_xi_real_derivative()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_riccati_zetta_real_derivative()) then
+            rv = rv + 1
+        end if
 
+
+        ! test: Bessel functions with a complex argument
         if (.not. test_lib_math_bessel_spherical_first_kind_cmplx()) then
             rv = rv + 1
         end if
@@ -938,6 +1231,230 @@ module lib_math_bessel
 
         end function test_lib_math_bessel_spherical_third_kind_2_real
 
+        function test_lib_math_bessel_riccati_s_real() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            double precision :: x = 4
+            double precision, dimension(n) :: s
+            integer :: fnu = 1
+
+            double precision, dimension(n) :: ground_truth_s
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> S(n,x) = x*spherical_bessel_J(n,x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(S)
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(S(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+
+            ground_truth_s(1) = 0.464442997036630_8
+            ground_truth_s(2) = 1.10513474308540_8
+            ground_truth_s(3) = 0.916975431820121_8
+            ground_truth_s(4) = 0.499572262599811_8
+            ground_truth_s(5) = 0.207062159029454_8
+
+            s = lib_math_bessel_riccati_s_real(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_s_real:"
+            do i=1, n
+                buffer = abs(s(i) - ground_truth_s(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_s_real
+
+        function test_lib_math_bessel_riccati_c_real() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            double precision :: x = 4
+            double precision, dimension(n) :: c
+            integer :: fnu = 1
+
+            double precision, dimension(n) :: ground_truth_c
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> C(n,x) = -x*spherical_bessel_Y(n,x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(C)
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(C(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+
+            ground_truth_c(1) = -0.920213400523831_8
+            ground_truth_c(2) = -0.0365164295292615_8
+            ground_truth_c(3) = 0.874567863612254_8
+            ground_truth_c(4) = 1.56701019085071_8
+            ground_truth_c(5) = 2.65120506580184_8
+
+            c = lib_math_bessel_riccati_c_real(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_c_real:"
+            do i=1, n
+                buffer = abs(c(i) - ground_truth_c(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_c_real
+
+        function test_lib_math_bessel_riccati_xi_real() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            double precision :: x = 4
+            complex(kind=8), dimension(n) :: xi
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_xi
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> S(n,x) = x*spherical_bessel_J(n,x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(S)
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(S(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+
+            ground_truth_xi(1) = cmplx(0.464442997036630_8, +0.920213400523831_8, kind=8)
+            ground_truth_xi(2) = cmplx(1.10513474308540_8, +0.0365164295292615_8, kind=8)
+            ground_truth_xi(3) = cmplx(0.916975431820121_8, -0.874567863612254_8, kind=8)
+            ground_truth_xi(4) = cmplx(0.499572262599811_8, -1.56701019085071_8, kind=8)
+            ground_truth_xi(5) = cmplx(0.207062159029454_8, -2.65120506580184_8, kind=8)
+
+            xi = lib_math_bessel_riccati_xi_real(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_xi_real:"
+            do i=1, n
+                buffer = abs(xi(i) - ground_truth_xi(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_xi_real
+
+        function test_lib_math_bessel_riccati_zetta_real() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            double precision :: x = 4
+            complex(kind=8), dimension(n) :: zetta
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_zetta
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> S(n,x) = x*spherical_bessel_J(n,x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(S)
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(S(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+
+            ground_truth_zetta(1) = cmplx(0.464442997036630_8, -0.920213400523831_8, kind=8)
+            ground_truth_zetta(2) = cmplx(1.10513474308540_8, -0.0365164295292615_8, kind=8)
+            ground_truth_zetta(3) = cmplx(0.916975431820121_8, +0.874567863612254_8, kind=8)
+            ground_truth_zetta(4) = cmplx(0.499572262599811_8, +1.56701019085071_8, kind=8)
+            ground_truth_zetta(5) = cmplx(0.207062159029454_8, +2.65120506580184_8, kind=8)
+
+            zetta = lib_math_bessel_riccati_zetta_real(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_zetta_real:"
+            do i=1, n
+                buffer = abs(zetta(i) - ground_truth_zetta(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_zetta_real
+
         function test_lib_math_bessel_spherical_first_kind_real_derivative() result (rv)
             implicit none
             ! dummy
@@ -1141,6 +1658,230 @@ module lib_math_bessel
             end do
 
         end function test_lib_math_bessel_spherical_third_kind_2_real_derivative
+
+        function test_lib_math_bessel_riccati_s_real_derivative() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            double precision :: x = 4
+            double precision, dimension(n) :: s
+            integer :: fnu = 1
+
+            double precision, dimension(n) :: ground_truth_s
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> S(n,x) = x*spherical_bessel_J(n,x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(S)
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(S(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+
+            ground_truth_s(1) = 0.464442997036630_8
+            ground_truth_s(2) = 1.10513474308540_8
+            ground_truth_s(3) = 0.916975431820121_8
+            ground_truth_s(4) = 0.499572262599811_8
+            ground_truth_s(5) = 0.207062159029454_8
+
+            s = lib_math_bessel_riccati_s_real(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_s_real:"
+            do i=1, n
+                buffer = abs(s(i) - ground_truth_s(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_s_real_derivative
+
+        function test_lib_math_bessel_riccati_c_real_derivative() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            double precision :: x = 4
+            double precision, dimension(n) :: c
+            integer :: fnu = 1
+
+            double precision, dimension(n) :: ground_truth_c
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> C(n,x) = -x*spherical_bessel_Y(n,x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(C)
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(C(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+
+            ground_truth_c(1) = -0.920213400523831_8
+            ground_truth_c(2) = -0.0365164295292615_8
+            ground_truth_c(3) = 0.874567863612254_8
+            ground_truth_c(4) = 1.56701019085071_8
+            ground_truth_c(5) = 2.65120506580184_8
+
+            c = lib_math_bessel_riccati_c_real(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_c_real:"
+            do i=1, n
+                buffer = abs(c(i) - ground_truth_c(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_c_real_derivative
+
+        function test_lib_math_bessel_riccati_xi_real_derivative() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            double precision :: x = 4
+            complex(kind=8), dimension(n) :: xi
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_xi
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> S(n,x) = x*spherical_bessel_J(n,x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(S)
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(S(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+
+            ground_truth_xi(1) = cmplx(0.464442997036630_8, +0.920213400523831_8, kind=8)
+            ground_truth_xi(2) = cmplx(1.10513474308540_8, +0.0365164295292615_8, kind=8)
+            ground_truth_xi(3) = cmplx(0.916975431820121_8, -0.874567863612254_8, kind=8)
+            ground_truth_xi(4) = cmplx(0.499572262599811_8, -1.56701019085071_8, kind=8)
+            ground_truth_xi(5) = cmplx(0.207062159029454_8, -2.65120506580184_8, kind=8)
+
+            xi = lib_math_bessel_riccati_xi_real(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_xi_real:"
+            do i=1, n
+                buffer = abs(xi(i) - ground_truth_xi(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_xi_real_derivative
+
+        function test_lib_math_bessel_riccati_zetta_real_derivative() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            double precision :: x = 4
+            complex(kind=8), dimension(n) :: zetta
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_zetta
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> S(n,x) = x*spherical_bessel_J(n,x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(S)
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(S(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+
+            ground_truth_zetta(1) = cmplx(0.464442997036630_8, -0.920213400523831_8, kind=8)
+            ground_truth_zetta(2) = cmplx(1.10513474308540_8, -0.0365164295292615_8, kind=8)
+            ground_truth_zetta(3) = cmplx(0.916975431820121_8, +0.874567863612254_8, kind=8)
+            ground_truth_zetta(4) = cmplx(0.499572262599811_8, +1.56701019085071_8, kind=8)
+            ground_truth_zetta(5) = cmplx(0.207062159029454_8, +2.65120506580184_8, kind=8)
+
+            zetta = lib_math_bessel_riccati_zetta_real(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_zetta_real:"
+            do i=1, n
+                buffer = abs(zetta(i) - ground_truth_zetta(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_zetta_real_derivative
 
     end function lib_math_bessel_test_functions
 
