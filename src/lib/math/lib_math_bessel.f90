@@ -465,14 +465,18 @@ module lib_math_bessel
         double precision, dimension(n) :: rv
 
         ! auxiliary
-        double precision :: rv_1
         integer :: i
 
+!        j_n = lib_math_bessel_spherical_first_kind_real(x, fnu-1, n+1)
+!
+!        do i=1, n
+!            rv(i) = -(real(fnu + i - 1, 8) + 1.0D0)/x * j_n(i+1) + j_n(i)
+!        end do
+
         j_n = lib_math_bessel_spherical_first_kind_real(x, fnu, n+1)
-        rv_1 = real(n, 8) / x
 
         do i=1, n
-            rv(i) = rv_1 * j_n(i) - j_n(i+1)
+            rv(i) = (real(fnu + i - 1, 8))/x * j_n(i) - j_n(i+1)
         end do
 
     end function lib_math_bessel_spherical_first_kind_real_derivative
@@ -509,17 +513,99 @@ module lib_math_bessel
         double precision, dimension(n) :: rv
 
         ! auxiliary
-        double precision :: rv_1
         integer :: i
 
         y_n = lib_math_bessel_spherical_second_kind_real(x, fnu, n+1)
-        rv_1 = real(n, 8) / x
 
         do i=1, n
-            rv(i) = rv_1 * y_n(i) - y_n(i+1)
+            rv(i) = real(i+fnu-1, 8) / x * y_n(i) - y_n(i+1)
         end do
 
     end function lib_math_bessel_spherical_second_kind_real_derivative
+
+    ! Calculates the derivative of the spherical Bessel function of the third kind 1
+    !
+    ! symbol: h'^(1)_n
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL J FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   h_1_n: array<double precision>
+    !       spherical Bessel function of the third kind 1 [fnu-1..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \frac{d}{d z} h_{n}^{(1)}(z)=\frac{1}{2}\left[h_{n-1}^{(1)}(z)-\frac{h_{n}^{(1)}(z)+z h_{n+1}^{(1)}(z)}{z}\right] $$
+    !
+    ! Reference: http://mathworld.wolfram.com/SphericalHankelFunctionoftheFirstKind.html
+    !
+    function lib_math_bessel_spherical_third_kind_1_real_derivative(x, fnu, n, h_1_n) result (rv)
+        implicit none
+        ! dummy
+        double precision, intent(in) :: x
+        integer, intent(in) :: fnu
+        integer, intent(in) :: n
+        complex(kind=8), dimension(n+2), intent(inout) :: h_1_n
+        complex(kind=8), dimension(n) :: rv
+
+        ! auxiliary
+        integer :: i
+
+        h_1_n = lib_math_bessel_spherical_third_kind_1_real(x, fnu-1, n+2)
+
+        do i=1, n
+             rv(i) = 0.5D0 * (h_1_n(i) - (h_1_n(i+1) + x * h_1_n(i+2))/x)
+        end do
+
+    end function lib_math_bessel_spherical_third_kind_1_real_derivative
+
+    ! Calculates the derivative of the spherical Bessel function of the third kind 1
+    !
+    ! symbol: h'^(2)_n
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL J FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   h_2_n: array<double precision>
+    !       spherical Bessel function of the third kind 2 [fnu-1..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \frac{d}{d z} h_{n}^{(2)}(z)=\frac{1}{2}\left[h_{n-1}^{(2)}(z)-\frac{h_{n}^{(2)}(z)+z h_{n+1}^{(2)}(z)}{z}\right] $$
+    !
+    ! Reference: http://mathworld.wolfram.com/SphericalHankelFunctionoftheSecondKind.html
+    !
+    function lib_math_bessel_spherical_third_kind_2_real_derivative(x, fnu, n, h_2_n) result (rv)
+        implicit none
+        ! dummy
+        double precision, intent(in) :: x
+        integer, intent(in) :: fnu
+        integer, intent(in) :: n
+        complex(kind=8), dimension(n+2), intent(inout) :: h_2_n
+        complex(kind=8), dimension(n) :: rv
+
+        ! auxiliary
+        integer :: i
+
+        h_2_n = lib_math_bessel_spherical_third_kind_2_real(x, fnu-1, n+2)
+
+        do i=1, n
+             rv(i) = 0.5D0 * (h_2_n(i) - (h_2_n(i+1) + x * h_2_n(i+2))/x)
+        end do
+
+    end function lib_math_bessel_spherical_third_kind_2_real_derivative
 
     function lib_math_bessel_test_functions() result (rv)
         implicit none
@@ -540,6 +626,19 @@ module lib_math_bessel
         if (.not. test_lib_math_bessel_spherical_third_kind_2_real()) then
             rv = rv + 1
         end if
+        if (.not. test_lib_math_bessel_spherical_first_kind_real_derivative()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_spherical_second_kind_real_derivative()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_spherical_third_kind_1_real_derivative()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_spherical_third_kind_2_real_derivative()) then
+            rv = rv + 1
+        end if
+
         if (.not. test_lib_math_bessel_spherical_first_kind_cmplx()) then
             rv = rv + 1
         end if
@@ -568,10 +667,10 @@ module lib_math_bessel
 
             ! auxiliary
             double precision :: x = 5
-            double precision, dimension(n) :: y
+            double precision, dimension(n) :: j
             integer :: fnu = 0
 
-            double precision, dimension(n) :: ground_truth_y
+            double precision, dimension(n) :: ground_truth_j
 
             integer :: i
             double precision :: buffer
@@ -583,15 +682,15 @@ module lib_math_bessel
             !  >>> for n in range(0,5):
             !  >>>     value = numerical_approx(spherical_bessel_J(n, x))
             !  >>>     print("n = {}: {}".format(n, value))
-            data ground_truth_y / -0.191784854932628_8, -0.0950894080791708_8, 0.134731210085125_8,&
+            data ground_truth_j / -0.191784854932628_8, -0.0950894080791708_8, 0.134731210085125_8,&
                                   0.229820618164296_8, 0.187017655344889_8/
 
-            y = lib_math_bessel_spherical_first_kind_real(x, fnu, n)
+            j = lib_math_bessel_spherical_first_kind_real(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_spherical_first_kind_real:"
             do i=1, n
-                buffer = y(i) - ground_truth_y(i)
+                buffer = j(i) - ground_truth_j(i)
                 if (abs(buffer) .gt. ground_truth_e) then
                     print *, "  ", i , "difference: ", buffer, " : FAILED"
                     rv = .false.
@@ -693,7 +792,7 @@ module lib_math_bessel
                 end if
             end do
 
-        end function
+        end function test_lib_math_bessel_spherical_second_kind_real
 
         function test_lib_math_bessel_spherical_third_kind_1_real() result (rv)
             implicit none
@@ -741,7 +840,7 @@ module lib_math_bessel
                 end if
             end do
 
-        end function
+        end function test_lib_math_bessel_spherical_third_kind_1_real
 
         function test_lib_math_bessel_spherical_third_kind_1_cmplx() result (rv)
             implicit none
@@ -837,7 +936,7 @@ module lib_math_bessel
                 end if
             end do
 
-        end function
+        end function test_lib_math_bessel_spherical_third_kind_2_real
 
         function test_lib_math_bessel_spherical_first_kind_real_derivative() result (rv)
             implicit none
@@ -849,10 +948,10 @@ module lib_math_bessel
             double precision, parameter :: ground_truth_e = 10.0_8**(-13.0_8)
 
             ! auxiliary
-            double precision :: x = 5
+            double precision :: x = 4
             double precision, dimension(n) :: y
             double precision, dimension(n+1) :: y_n
-            integer :: fnu = 0
+            integer :: fnu = 1
 
             double precision, dimension(n) :: ground_truth_y
 
@@ -862,12 +961,17 @@ module lib_math_bessel
             ! Values were generated with sageMath
             !
             ! source code:
-            !  >>> x=5.0 +I*0.0
             !  >>> for n in range(0,5):
-            !  >>>     value = numerical_approx(spherical_bessel_J(n, x))
+            !  >>>     var('x')
+            !  >>>     f(x) = derivative(spherical_bessel_J(n, x))
+            !  >>>     x=4.0
+            !  >>>     value = numerical_approx(f(x))
             !  >>>     print("n = {}: {}".format(n, value))
-            data ground_truth_y / -0.191784854932628_8, -0.0950894080791708_8, 0.134731210085125_8,&
-                                  0.229820618164296_8, 0.187017655344889_8/
+            data ground_truth_y / -0.247255998456561_8, &
+                                  -0.0911020150693551_8, &
+                                  0.0470398278163199_8, &
+                                  0.0731275258925893_8, &
+                                  0.0472447560139076_8/
 
             y = lib_math_bessel_spherical_first_kind_real_derivative(x, fnu, n, y_n)
 
@@ -883,7 +987,160 @@ module lib_math_bessel
                 end if
             end do
 
-        end function
+        end function test_lib_math_bessel_spherical_first_kind_real_derivative
+
+        function test_lib_math_bessel_spherical_second_kind_real_derivative() result (rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+            double precision, parameter :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            ! auxiliary
+            double precision :: x = 4
+            double precision, dimension(n) :: y
+            double precision, dimension(n+1) :: y_n
+            integer :: fnu = 1
+
+            double precision, dimension(n) :: ground_truth_y
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> for n in range(1,6):
+            !  >>>     var('x')
+            !  >>>     f(x) = derivative(spherical_bessel_Y(n, x))
+            !  >>>     x=4.0
+            !  >>>     value = numerical_approx(f(x))
+            !  >>>     print("n = {}: {}".format(n, value))
+            data ground_truth_y / 0.0483842301504241_8, &
+                                  0.223206519594221_8, &
+                                  0.227771073285379_8, &
+                                  0.271048718737782_8, &
+                                  0.602449351963012_8 /
+
+            y = lib_math_bessel_spherical_second_kind_real_derivative(x, fnu, n, y_n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_spherical_second_kind_real_derivative:"
+            do i=1, n
+                buffer = y(i) - ground_truth_y(i)
+                if (abs(buffer) .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+
+        end function test_lib_math_bessel_spherical_second_kind_real_derivative
+
+        function test_lib_math_bessel_spherical_third_kind_1_real_derivative() result (rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+            double precision, parameter :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            ! auxiliary
+            double precision :: x = 4
+            complex(kind=8), dimension(n) :: h_1
+            complex(kind=8), dimension(n+2) :: h_1_n
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_h_1
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> for n in range(1,6):
+            !  >>>     var('x')
+            !  >>>     f(x) = derivative(spherical_hankel1(n, x))
+            !  >>>     x=4.0
+            !  >>>     value = numerical_approx(f(x))
+            !  >>>     print("n = {}: {}".format(n, value))
+            ground_truth_h_1(1) = cmplx(-0.247255998456561_8, +0.0483842301504241_8, kind=8)
+            ground_truth_h_1(2) = cmplx(-0.0911020150693551_8, +0.223206519594221_8, kind=8)
+            ground_truth_h_1(3) = cmplx(0.0470398278163199_8, +0.227771073285379_8, kind=8)
+            ground_truth_h_1(4) = cmplx(0.0731275258925893_8, +0.271048718737782_8, kind=8)
+            ground_truth_h_1(5) = cmplx(0.0472447560139076_8, +0.602449351963012_8, kind=8)
+
+            h_1 = lib_math_bessel_spherical_third_kind_1_real_derivative(x, fnu, n, h_1_n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_spherical_third_kind_1_real_derivative:"
+            do i=1, n
+                buffer = abs(h_1(i) - ground_truth_h_1(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+
+        end function test_lib_math_bessel_spherical_third_kind_1_real_derivative
+
+        function test_lib_math_bessel_spherical_third_kind_2_real_derivative() result (rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+            double precision, parameter :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            ! auxiliary
+            double precision :: x = 4
+            complex(kind=8), dimension(n) :: h_2
+            complex(kind=8), dimension(n+2) :: h_2_n
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_h_2
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> for n in range(1,6):
+            !  >>>     var('x')
+            !  >>>     f(x) = derivative(spherical_hankel2(n, x))
+            !  >>>     x=4.0
+            !  >>>     value = numerical_approx(f(x))
+            !  >>>     print("n = {}: {}".format(n, value))
+            ground_truth_h_2(1) = cmplx(-0.247255998456561_8, -0.0483842301504241_8, kind=8)
+            ground_truth_h_2(2) = cmplx(-0.0911020150693552_8, -0.223206519594221_8, kind=8)
+            ground_truth_h_2(3) = cmplx(0.0470398278163199_8, -0.227771073285379_8, kind=8)
+            ground_truth_h_2(4) = cmplx(0.0731275258925893_8, -0.271048718737782_8, kind=8)
+            ground_truth_h_2(5) = cmplx(0.0472447560139076_8, -0.602449351963012_8, kind=8)
+
+            h_2 = lib_math_bessel_spherical_third_kind_2_real_derivative(x, fnu, n, h_2_n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_spherical_third_kind_2_real_derivative:"
+            do i=1, n
+                buffer = abs(h_2(i) - ground_truth_h_2(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+
+        end function test_lib_math_bessel_spherical_third_kind_2_real_derivative
 
     end function lib_math_bessel_test_functions
 
