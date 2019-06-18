@@ -71,6 +71,8 @@
                                     									
                                     <listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/8/include"/>
                                     									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath/Debug}&quot;"/>
+                                    									
                                     <listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/8/include-fixed"/>
                                     								
                                 </option>
@@ -81,13 +83,21 @@
                             							
                             <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.844012393" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.debug">
                                 								
-                                <option id="gnu.fortran.link.option.ldflags.48812646" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-fopenmp -v" valueType="string"/>
+                                <option id="gnu.fortran.link.option.ldflags.48812646" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-fopenmp -Wl,-rpath=&quot;${workspace_loc:/libmath/Debug}&quot;" valueType="string"/>
                                 								
-                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="true" id="gnu.fortran.link.option.libs.728795757" name="Libraries (-l)" superClass="gnu.fortran.link.option.libs" useByScannerDiscovery="false" valueType="libs"/>
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.link.option.libs.728795757" name="Libraries (-l)" superClass="gnu.fortran.link.option.libs" useByScannerDiscovery="false" valueType="libs">
+                                    									
+                                    <listOptionValue builtIn="false" value="math"/>
+                                    								
+                                </option>
                                 								
                                 <option id="gnu.fortran.link.option.noshared.83566521" name="No shared libraries (-static)" superClass="gnu.fortran.link.option.noshared" useByScannerDiscovery="false" value="false" valueType="boolean"/>
                                 								
-                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="true" id="gnu.fortran.link.option.paths.1160433664" name="Library search path (-L)" superClass="gnu.fortran.link.option.paths" useByScannerDiscovery="false" valueType="stringList"/>
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.link.option.paths.1160433664" name="Library search path (-L)" superClass="gnu.fortran.link.option.paths" useByScannerDiscovery="false" valueType="stringList">
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath/Debug}&quot;"/>
+                                    								
+                                </option>
                                 								
                                 <option id="gnu.fortran.link.option.shared.451308642" name="Shared (-shared)" superClass="gnu.fortran.link.option.shared" useByScannerDiscovery="false" value="false" valueType="boolean"/>
                                 								
@@ -163,7 +173,7 @@
                     					
                     <sourceEntries>
                         						
-                        <entry excluding="light _scattering_by_particles|config|test|lib|data_types|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        <entry excluding="special_functions|light _scattering_by_particles|config|test|lib|data_types|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
                         						
                         <entry excluding="lib|data_types" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
                         						
@@ -171,7 +181,7 @@
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/light _scattering_by_particles"/>
                         						
-                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/math"/>
+                        <entry excluding="special_functions" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/math"/>
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/mie_theory"/>
                         						
@@ -285,7 +295,7 @@
                     					
                     <sourceEntries>
                         						
-                        <entry excluding="light _scattering_by_particles|config|test|lib|data_types|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        <entry excluding="special_functions|light _scattering_by_particles|config|test|lib|data_types|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
                         						
                         <entry excluding="lib|data_types" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
                         						
@@ -293,7 +303,7 @@
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/light _scattering_by_particles"/>
                         						
-                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/math"/>
+                        <entry excluding="special_functions" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/math"/>
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/mie_theory"/>
                         						
