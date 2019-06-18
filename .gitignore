@@ -115,3 +115,5 @@ Release
 !.cproject
 
 pre_calc
+
+TEST/**
