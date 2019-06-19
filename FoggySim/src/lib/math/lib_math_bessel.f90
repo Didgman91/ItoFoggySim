@@ -958,16 +958,19 @@ module lib_math_bessel
         double precision, intent(in) :: x
         integer(kind=4), intent(in) :: fnu
         integer(kind=4), intent(in) :: n
-        complex(kind=8), dimension(n+2), intent(inout) :: h_1_n
+        complex(kind=8), dimension(n), intent(inout) :: h_1_n
         complex(kind=8), dimension(n) :: rv
 
         ! auxiliary
         integer :: i
+        complex(kind=8), dimension(n+2) :: buffer_h_1_n
 
-        h_1_n = lib_math_bessel_spherical_third_kind_1_real(x, fnu-1, n+2)
+        buffer_h_1_n = lib_math_bessel_spherical_third_kind_1_real(x, fnu-1, n+2)
+
+        h_1_n = buffer_h_1_n(2:n+1)
 
         do i=1, n
-             rv(i) = 0.5D0 * (h_1_n(i) - (h_1_n(i+1) + x * h_1_n(i+2))/x)
+             rv(i) = 0.5D0 * (buffer_h_1_n(i) - (buffer_h_1_n(i+1) + x * buffer_h_1_n(i+2))/x)
         end do
 
     end function lib_math_bessel_spherical_third_kind_1_derivative_real
@@ -1000,16 +1003,18 @@ module lib_math_bessel
         complex(kind=8), intent(in) :: z
         integer(kind=4), intent(in) :: fnu
         integer(kind=4), intent(in) :: n
-        complex(kind=8), dimension(n+2), intent(inout) :: h_1_n
+        complex(kind=8), dimension(n), intent(inout) :: h_1_n
         complex(kind=8), dimension(n) :: rv
 
         ! auxiliary
+        complex(kind=8), dimension(n+2) :: buffer_h_1_n
         integer :: i
 
-        h_1_n = lib_math_bessel_spherical_third_kind_1_cmplx(z, fnu-1, n+2)
+        buffer_h_1_n = lib_math_bessel_spherical_third_kind_1_cmplx(z, fnu-1, n+2)
+        h_1_n = buffer_h_1_n(2:n+1)
 
         do i=1, n
-             rv(i) = 0.5D0 * (h_1_n(i) - (h_1_n(i+1) + z * h_1_n(i+2))/z)
+             rv(i) = 0.5D0 * (buffer_h_1_n(i) - (buffer_h_1_n(i+1) + z * buffer_h_1_n(i+2))/z)
         end do
 
     end function lib_math_bessel_spherical_third_kind_1_derivative_cmplx
@@ -1042,16 +1047,19 @@ module lib_math_bessel
         double precision, intent(in) :: x
         integer(kind=4), intent(in) :: fnu
         integer(kind=4), intent(in) :: n
-        complex(kind=8), dimension(n+2), intent(inout) :: h_2_n
+        complex(kind=8), dimension(n), intent(inout) :: h_2_n
         complex(kind=8), dimension(n) :: rv
 
         ! auxiliary
         integer :: i
+        complex(kind=8), dimension(n+2) :: buffer_h_2_n
 
-        h_2_n = lib_math_bessel_spherical_third_kind_2_real(x, fnu-1, n+2)
+        buffer_h_2_n = lib_math_bessel_spherical_third_kind_2_real(x, fnu-1, n+2)
+
+        h_2_n = buffer_h_2_n(2:n+1)
 
         do i=1, n
-             rv(i) = 0.5D0 * (h_2_n(i) - (h_2_n(i+1) + x * h_2_n(i+2))/x)
+             rv(i) = 0.5D0 * (buffer_h_2_n(i) - (buffer_h_2_n(i+1) + x * buffer_h_2_n(i+2))/x)
         end do
 
     end function lib_math_bessel_spherical_third_kind_2_derivative_real
@@ -1084,16 +1092,18 @@ module lib_math_bessel
         complex(kind=8), intent(in) :: z
         integer(kind=4), intent(in) :: fnu
         integer(kind=4), intent(in) :: n
-        complex(kind=8), dimension(n+2), intent(inout) :: h_2_n
+        complex(kind=8), dimension(n), intent(inout) :: h_2_n
         complex(kind=8), dimension(n) :: rv
 
         ! auxiliary
+        complex(kind=8), dimension(n+2) :: buffer_h_2_n
         integer :: i
 
-        h_2_n = lib_math_bessel_spherical_third_kind_2_cmplx(z, fnu-1, n+2)
+        buffer_h_2_n = lib_math_bessel_spherical_third_kind_2_cmplx(z, fnu-1, n+2)
+        h_2_n = buffer_h_2_n(2:n+1)
 
         do i=1, n
-             rv(i) = 0.5D0 * (h_2_n(i) - (h_2_n(i+1) + z * h_2_n(i+2))/z)
+             rv(i) = 0.5D0 * (buffer_h_2_n(i) - (buffer_h_2_n(i+1) + z * buffer_h_2_n(i+2))/z)
         end do
 
     end function lib_math_bessel_spherical_third_kind_2_derivative_cmplx
@@ -1195,7 +1205,7 @@ module lib_math_bessel
 
         buffer_r_n = z * jf
 
-        s_n = buffer_r_n(fnu:order)
+        s_n = buffer_r_n(fnu+1:order+1)
 
         do i=2, n+1
             rv(i-1) = (buffer_r_n(i-1) + jf(i) - buffer_r_n(i+1)) / 2
@@ -1320,7 +1330,7 @@ module lib_math_bessel
 
         buffer_c_n = z * yf
 
-        c_n = buffer_c_n(fnu:order)
+        c_n = -buffer_c_n(fnu+1:order+1)
 
         do i=2, n+1
             rv(i-1) = (-buffer_c_n(i-1) - yf(i) + buffer_c_n(i+1)) / 2
@@ -2169,9 +2179,11 @@ module lib_math_bessel
             integer :: fnu = 1
 
             double precision, dimension(n) :: ground_truth_y
+            double precision, dimension(n) :: ground_truth_y_n
 
             integer :: i
             double precision :: buffer
+            double precision :: buffer_y_n
 
             ! Values were generated with sageMath
             !
@@ -2188,6 +2200,8 @@ module lib_math_bessel
                                   0.0731275258925893_8, &
                                   0.0472447560139076_8/
 
+            ground_truth_y_n = lib_math_bessel_spherical_first_kind_real(x, fnu, n)
+
             y = lib_math_bessel_spherical_first_kind_derivative_real(x, fnu, n, y_n)
 
             rv = .true.
@@ -2199,6 +2213,12 @@ module lib_math_bessel
                     rv = .false.
                 else
                     print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(y_n(i) - ground_truth_y_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
                 end if
             end do
 
@@ -2220,9 +2240,11 @@ module lib_math_bessel
             integer :: fnu = 1
 
             complex(kind=8), dimension(n) :: ground_truth_y
+            complex(kind=8), dimension(n) :: ground_truth_y_n
 
             integer :: i
             double precision :: buffer
+            double precision :: buffer_y_n
 
             ! Values were generated with sageMath
             !
@@ -2240,6 +2262,7 @@ module lib_math_bessel
             ground_truth_y(5) = cmplx(0.0689518418682064_8, +0.0830203052493826_8, kind=8)
 
             y = lib_math_bessel_spherical_first_kind_derivative_cmplx(x, fnu, n, y_n)
+            ground_truth_y_n = lib_math_bessel_spherical_first_kind_cmplx(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_spherical_first_kind_derivative_cmplx:"
@@ -2250,6 +2273,12 @@ module lib_math_bessel
                     rv = .false.
                 else
                     print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(y_n(i) - ground_truth_y_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
                 end if
             end do
 
@@ -2271,9 +2300,11 @@ module lib_math_bessel
             integer :: fnu = 1
 
             double precision, dimension(n) :: ground_truth_y
+            double precision, dimension(n) :: ground_truth_y_n
 
             integer :: i
             double precision :: buffer
+            double precision :: buffer_y_n
 
             ! Values were generated with sageMath
             !
@@ -2291,6 +2322,7 @@ module lib_math_bessel
                                   0.602449351963012_8 /
 
             y = lib_math_bessel_spherical_second_kind_derivative_real(x, fnu, n, y_n)
+            ground_truth_y_n = lib_math_bessel_spherical_second_kind_real(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_spherical_second_kind_derivative_real:"
@@ -2301,6 +2333,12 @@ module lib_math_bessel
                     rv = .false.
                 else
                     print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(y_n(i) - ground_truth_y_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
                 end if
             end do
 
@@ -2322,9 +2360,11 @@ module lib_math_bessel
             integer :: fnu = 1
 
             complex(kind=8), dimension(n) :: ground_truth_y
+            complex(kind=8), dimension(n) :: ground_truth_y_n
 
             integer :: i
             double precision :: buffer
+            double precision :: buffer_y_n
 
             ! Values were generated with sageMath
             !
@@ -2342,6 +2382,7 @@ module lib_math_bessel
             ground_truth_y(5) = cmplx(-0.304721328288274_8, -0.0586613842326251_8, kind=8)
 
             y = lib_math_bessel_spherical_second_kind_derivative_cmplx(x, fnu, n, y_n)
+            ground_truth_y_n = lib_math_bessel_spherical_second_kind_cmplx(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_spherical_second_kind_derivative_cmplx:"
@@ -2353,11 +2394,15 @@ module lib_math_bessel
                 else
                     print *, "  ", i, ": OK"
                 end if
+
+                buffer_y_n = abs(y_n(i) - ground_truth_y_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
+                end if
             end do
 
         end function test_lib_math_bessel_spherical_second_kind_derivative_cmplx
-
-
 
         function test_lib_math_bessel_spherical_third_kind_1_derivative_real() result (rv)
             implicit none
@@ -2371,13 +2416,15 @@ module lib_math_bessel
             ! auxiliary
             double precision :: x = 4
             complex(kind=8), dimension(n) :: h_1
-            complex(kind=8), dimension(n+2) :: h_1_n
+            complex(kind=8), dimension(n) :: h_1_n
             integer :: fnu = 1
 
             complex(kind=8), dimension(n) :: ground_truth_h_1
+            complex(kind=8), dimension(n) :: ground_truth_h_1_n
 
             integer :: i
             double precision :: buffer
+            double precision :: buffer_y_n
 
             ! Values were generated with sageMath
             !
@@ -2395,6 +2442,7 @@ module lib_math_bessel
             ground_truth_h_1(5) = cmplx(0.0472447560139076_8, +0.602449351963012_8, kind=8)
 
             h_1 = lib_math_bessel_spherical_third_kind_1_derivative_real(x, fnu, n, h_1_n)
+            ground_truth_h_1_n = lib_math_bessel_spherical_third_kind_1_real(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_spherical_third_kind_1_derivative_real:"
@@ -2405,6 +2453,12 @@ module lib_math_bessel
                     rv = .false.
                 else
                     print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(h_1_n(i) - ground_truth_h_1_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
                 end if
             end do
 
@@ -2422,13 +2476,15 @@ module lib_math_bessel
             ! auxiliary
             complex(kind=8) :: x = cmplx(4, 2, kind=8)
             complex(kind=8), dimension(n) :: h_1
-            complex(kind=8), dimension(n+2) :: h_1_n
+            complex(kind=8), dimension(n) :: h_1_n
             integer :: fnu = 1
 
             complex(kind=8), dimension(n) :: ground_truth_h_1
+            complex(kind=8), dimension(n) :: ground_truth_h_1_n
 
             integer :: i
             double precision :: buffer
+            double precision :: buffer_y_n
 
             ! Values were generated with sageMath
             !
@@ -2447,6 +2503,7 @@ module lib_math_bessel
             ground_truth_h_1(5) = cmplx(0.127613226100831_8, -0.221701023038892_8, kind=8)
 
             h_1 = lib_math_bessel_spherical_third_kind_1_derivative_cmplx(x, fnu, n, h_1_n)
+            ground_truth_h_1_n = lib_math_bessel_spherical_third_kind_1_cmplx(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_spherical_third_kind_1_derivative_cmplx:"
@@ -2457,6 +2514,12 @@ module lib_math_bessel
                     rv = .false.
                 else
                     print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(h_1_n(i) - ground_truth_h_1_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
                 end if
             end do
 
@@ -2474,13 +2537,15 @@ module lib_math_bessel
             ! auxiliary
             double precision :: x = 4
             complex(kind=8), dimension(n) :: h_2
-            complex(kind=8), dimension(n+2) :: h_2_n
+            complex(kind=8), dimension(n) :: h_2_n
             integer :: fnu = 1
 
             complex(kind=8), dimension(n) :: ground_truth_h_2
+            complex(kind=8), dimension(n) :: ground_truth_h_2_n
 
             integer :: i
             double precision :: buffer
+            double precision :: buffer_y_n
 
             ! Values were generated with sageMath
             !
@@ -2498,6 +2563,7 @@ module lib_math_bessel
             ground_truth_h_2(5) = cmplx(0.0472447560139076_8, -0.602449351963012_8, kind=8)
 
             h_2 = lib_math_bessel_spherical_third_kind_2_derivative_real(x, fnu, n, h_2_n)
+            ground_truth_h_2_n = lib_math_bessel_spherical_third_kind_2_real(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_spherical_third_kind_2_derivative_real:"
@@ -2508,6 +2574,12 @@ module lib_math_bessel
                     rv = .false.
                 else
                     print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(h_2_n(i) - ground_truth_h_2_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
                 end if
             end do
 
@@ -2525,13 +2597,15 @@ module lib_math_bessel
             ! auxiliary
             complex(kind=8) :: x = cmplx(4, 2, kind=8)
             complex(kind=8), dimension(n) :: h_2
-            complex(kind=8), dimension(n+2) :: h_2_n
+            complex(kind=8), dimension(n) :: h_2_n
             integer :: fnu = 1
 
             complex(kind=8), dimension(n) :: ground_truth_h_2
+            complex(kind=8), dimension(n) :: ground_truth_h_2_n
 
             integer :: i
             double precision :: buffer
+            double precision :: buffer_y_n
 
             ! Values were generated with sageMath
             !
@@ -2549,6 +2623,7 @@ module lib_math_bessel
             ground_truth_h_2(5) = cmplx(0.0102904576355813_8, +0.387741633537657_8, kind=8)
 
             h_2 = lib_math_bessel_spherical_third_kind_2_derivative_cmplx(x, fnu, n, h_2_n)
+            ground_truth_h_2_n = lib_math_bessel_spherical_third_kind_2_cmplx(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_spherical_third_kind_2_derivative_cmplx:"
@@ -2559,6 +2634,12 @@ module lib_math_bessel
                     rv = .false.
                 else
                     print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(h_2_n(i) - ground_truth_h_2_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
                 end if
             end do
 
@@ -2580,10 +2661,12 @@ module lib_math_bessel
             integer :: fnu = 1
 
             double precision, dimension(n) :: ground_truth_s
+            double precision, dimension(n) :: ground_truth_s_n
             double precision :: ground_truth_e = 10.0_8**(-13.0_8)
 
             integer :: i
             double precision :: buffer
+            double precision :: buffer_y_n
 
             ! Values were generated with sageMath
             !
@@ -2608,6 +2691,7 @@ module lib_math_bessel
             ground_truth_s(5) = 0.240744563812994_8
 
             s = lib_math_bessel_riccati_s_derivative_real(x, fnu, n, s_n)
+            ground_truth_s_n = lib_math_bessel_riccati_s_real(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_riccati_s_derivative_real:"
@@ -2618,6 +2702,12 @@ module lib_math_bessel
                     rv = .false.
                 else
                     print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(s_n(i) - ground_truth_s_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
                 end if
             end do
         end function test_lib_math_bessel_riccati_s_derivative_real
@@ -2638,10 +2728,12 @@ module lib_math_bessel
             integer :: fnu = 1
 
             complex(kind=8), dimension(n) :: ground_truth_s
+            complex(kind=8), dimension(n) :: ground_truth_s_n
             double precision :: ground_truth_e = 10.0_8**(-13.0_8)
 
             integer :: i
             double precision :: buffer
+            double precision :: buffer_y_n
 
             ! Values were generated with sageMath
             !
@@ -2669,6 +2761,7 @@ module lib_math_bessel
             ground_truth_s(5) = cmplx(0.0995240805571297_8, +0.579739235324844_8, kind=8)
 
             s = lib_math_bessel_riccati_s_derivative_cmplx(x, fnu, n, s_n)
+            ground_truth_s_n = lib_math_bessel_riccati_s_cmplx(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_riccati_s_derivative_cmplx:"
@@ -2679,6 +2772,12 @@ module lib_math_bessel
                     rv = .false.
                 else
                     print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(s_n(i) - ground_truth_s_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
                 end if
             end do
         end function test_lib_math_bessel_riccati_s_derivative_cmplx
@@ -2698,10 +2797,12 @@ module lib_math_bessel
             integer :: fnu = 1
 
             double precision, dimension(n) :: ground_truth_c
+            double precision, dimension(n) :: ground_truth_c_n
             double precision :: ground_truth_e = 10.0_8**(-13.0_8)
 
             integer :: i
             double precision :: buffer
+            double precision :: buffer_y_n
 
             ! Values were generated with sageMath
             !
@@ -2727,6 +2828,7 @@ module lib_math_bessel
             ground_truth_c(5) = -1.74699614140159_8
 
             c = lib_math_bessel_riccati_c_derivative_real(x, fnu, n, c_n)
+            ground_truth_c_n = lib_math_bessel_riccati_c_real(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_riccati_c_derivative_real:"
@@ -2737,6 +2839,12 @@ module lib_math_bessel
                     rv = .false.
                 else
                     print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(c_n(i) - ground_truth_c_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
                 end if
             end do
         end function test_lib_math_bessel_riccati_c_derivative_real
@@ -2756,10 +2864,12 @@ module lib_math_bessel
             integer :: fnu = 1
 
             complex(kind=8), dimension(n) :: ground_truth_c
+            complex(kind=8), dimension(n) :: ground_truth_c_n
             double precision :: ground_truth_e = 10.0_8**(-13.0_8)
 
             integer :: i
             double precision :: buffer
+            double precision :: buffer_y_n
 
             ! Values were generated with sageMath
             !
@@ -2786,6 +2896,7 @@ module lib_math_bessel
             ground_truth_c(5) = cmplx(1.17156387153814_8, +0.656016412602718_8, kind=8)
 
             c = lib_math_bessel_riccati_c_derivative_cmplx(x, fnu, n, c_n)
+            ground_truth_c_n = lib_math_bessel_riccati_c_cmplx(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_riccati_c_derivative_cmplx:"
@@ -2796,6 +2907,12 @@ module lib_math_bessel
                     rv = .false.
                 else
                     print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(c_n(i) - ground_truth_c_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
                 end if
             end do
         end function test_lib_math_bessel_riccati_c_derivative_cmplx
