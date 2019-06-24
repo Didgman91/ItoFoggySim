@@ -140,6 +140,50 @@ module lib_math_bessel
         module procedure lib_math_bessel_riccati_c_cmplx
     end interface
 
+    ! calculates the the Riccat Bessel function
+    !
+    ! symbol: Xi
+    !
+    ! Argument
+    ! ----
+    !   x: double precision .OR. complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \xi_{n}(\rho)= \sqrt{\frac{\pi \rho}{2}} J_{n+1 / 2}(\rho) + i \sqrt{\frac{\pi \rho}{2}} Y_{n+1 / 2}(\rho) $$
+    interface lib_math_riccati_xi
+        module procedure lib_math_bessel_riccati_xi_real
+        module procedure lib_math_bessel_riccati_xi_cmplx
+    end interface
+
+    ! calculates the the Riccat Bessel function
+    !
+    ! symbol: Zeta
+    !
+    ! Argument
+    ! ----
+    !   x: double precision .OR.complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \zeta_{n}(x)=x h_{n}^{(2)}(x)=\sqrt{\frac{\pi x}{2}} H_{n+\frac{1}{2}}^{(2)}(x)=S_{n}(x)+i C_{n}(x) $$
+    interface lib_math_riccati_zetta
+        module procedure lib_math_bessel_riccati_zetta_real
+        module procedure lib_math_bessel_riccati_zetta_cmplx
+    end interface
+
     ! Calculates the derivative of the spherical Bessel function of the first kind
     !
     ! symbol: j'_n
@@ -917,6 +961,39 @@ module lib_math_bessel
 
     ! calculates the the Riccat Bessel function
     !
+    ! symbol: Xi
+    !
+    ! Argument
+    ! ----
+    !   z: complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \xi_{n}(\rho)= \sqrt{\frac{\pi \rho}{2}} J_{n+1 / 2}(\rho) + i \sqrt{\frac{\pi \rho}{2}} Y_{n+1 / 2}(\rho) $$
+    !
+    ! Reference: Absorption and Scattering of Light by Small Particles Absorption and Scattering of Light by Small Particles (page 101)
+    !
+    function lib_math_bessel_riccati_xi_cmplx(z, fnu, n) result (rv)
+        implicit none
+        ! dummy
+        complex(kind=8), intent(in) :: z
+        integer(kind=4), intent(in) :: fnu
+        integer(kind=4), intent(in) :: n
+
+        complex(kind=8), dimension(n) :: rv
+
+        rv = z * lib_math_bessel_spherical_third_kind_1_cmplx(z, fnu, n)
+
+    end function lib_math_bessel_riccati_xi_cmplx
+
+    ! calculates the the Riccat Bessel function
+    !
     ! symbol: Zeta
     !
     ! Argument
@@ -973,6 +1050,39 @@ module lib_math_bessel
         rv(:) = cmplx(rv_1 * j(:), -rv_1 * y(:), kind=8)
 
     end function lib_math_bessel_riccati_zetta_real
+
+    ! calculates the the Riccat Bessel function
+    !
+    ! symbol: Zeta
+    !
+    ! Argument
+    ! ----
+    !   z: complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \zeta_{n}(x)=x h_{n}^{(2)}(x)=\sqrt{\frac{\pi x}{2}} H_{n+\frac{1}{2}}^{(2)}(x)=S_{n}(x)+i C_{n}(x) $$
+    !
+    ! Reference:
+    !
+    function lib_math_bessel_riccati_zetta_cmplx(z, fnu, n) result (rv)
+        implicit none
+        ! dummy
+        complex(kind=8), intent(in) :: z
+        integer(kind=4), intent(in) :: fnu
+        integer(kind=4), intent(in) :: n
+
+        complex(kind=8), dimension(n) :: rv
+
+        rv = z * lib_math_bessel_spherical_third_kind_2_cmplx(z, fnu, n)
+
+    end function lib_math_bessel_riccati_zetta_cmplx
 
     ! Calculates the derivative of the spherical Bessel function of the first kind
     !
@@ -1553,7 +1663,7 @@ module lib_math_bessel
     !
     ! Returns
     ! ----
-    !   S_n: array<double precision>
+    !   c_n: array<double precision>
     !       Riccati-Bessel function [fnu..fnu+n-1]
     !   rv: array<double precision>
     !
@@ -1591,6 +1701,112 @@ module lib_math_bessel
         end do
 
     end function lib_math_bessel_riccati_c_derivative_cmplx
+
+    ! Calculates the derivative of the Riccati-Bessel function
+    !
+    ! symbol: Xi'
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   xi_n: array<double precision>
+    !       Riccati-Bessel function [fnu..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \xi^\prime_n (x) = \frac{\partial}{\partial x}\left(x h_{n}^{(1)}(x)\right)=\frac{1}{2}\left(x h_{n-1}^{(1)}(x)+h_{n}^{(1)}(x)-x h_{n+1}^{(1)}(x)\right) $$
+    !
+    ! Reference: WolframAlpha
+    !           >>> derivative[x*SphericalHankelH1(n,x), x]
+    !
+    function lib_math_bessel_riccati_xi_derivative_real(x, fnu, n, xi_n) result (rv)
+        implicit none
+        ! dummy
+        double precision, intent(in) :: x
+        integer(kind=4), intent(in) :: fnu
+        integer(kind=4), intent(in) :: n
+        complex(kind=8), intent(inout), dimension(n) :: xi_n
+
+        complex(kind=8), dimension(n) :: rv
+
+        ! auxiliary
+        integer(kind=4) i
+        integer(kind=4) order
+        complex(kind=8), dimension(n+2) :: h_n
+        complex(kind=8), dimension(n+2) :: buffer_xi_n
+
+        order = fnu+n-1
+
+        h_n = lib_math_bessel_spherical_third_kind_1_real(x, fnu-1, n+2)
+
+        buffer_xi_n = x * h_n
+
+        xi_n = buffer_xi_n(fnu+1:order+1)
+
+        do i=2, n+1
+            rv(i-1) = (buffer_xi_n(i-1) + h_n(i) - buffer_xi_n(i+1)) / 2.0_8
+        end do
+
+    end function lib_math_bessel_riccati_xi_derivative_real
+
+    ! Calculates the derivative of the Riccati-Bessel function
+    !
+    ! symbol: Xi'
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   xi_n: array<double precision>
+    !       Riccati-Bessel function [fnu..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \xi^\prime_n (x) = \frac{\partial}{\partial x}\left(x h_{n}^{(1)}(x)\right)=\frac{1}{2}\left(x h_{n-1}^{(1)}(x)+h_{n}^{(1)}(x)-x h_{n+1}^{(1)}(x)\right) $$
+    !
+    ! Reference: WolframAlpha
+    !           >>> derivative[x*SphericalHankelH1(n,x), x]
+    !
+    function lib_math_bessel_riccati_xi_derivative_cmplx(x, fnu, n, xi_n) result (rv)
+        implicit none
+        ! dummy
+        complex(kind=8), intent(in) :: x
+        integer(kind=4), intent(in) :: fnu
+        integer(kind=4), intent(in) :: n
+        complex(kind=8), intent(inout), dimension(n) :: xi_n
+
+        complex(kind=8), dimension(n) :: rv
+
+        ! auxiliary
+        integer(kind=4) i
+        integer(kind=4) order
+        complex(kind=8), dimension(n+2) :: h_n
+        complex(kind=8), dimension(n+2) :: buffer_xi_n
+
+        order = fnu+n-1
+
+        h_n = lib_math_bessel_spherical_third_kind_1_cmplx(x, fnu-1, n+2)
+
+        buffer_xi_n = x * h_n
+
+        xi_n = buffer_xi_n(fnu+1:order+1)
+
+        do i=2, n+1
+            rv(i-1) = (buffer_xi_n(i-1) + h_n(i) - buffer_xi_n(i+1)) / 2.0_8
+        end do
+
+    end function lib_math_bessel_riccati_xi_derivative_cmplx
 
     function lib_math_bessel_test_functions() result (rv)
         implicit none
@@ -1644,9 +1860,9 @@ module lib_math_bessel
         if (.not. test_lib_math_bessel_riccati_c_derivative_real()) then
             rv = rv + 1
         end if
-!        if (.not. test_lib_math_bessel_riccati_xi_derivative_real()) then
-!            rv = rv + 1
-!        end if
+        if (.not. test_lib_math_bessel_riccati_xi_derivative_real()) then
+            rv = rv + 1
+        end if
 !        if (.not. test_lib_math_bessel_riccati_zetta_derivative_real()) then
 !            rv = rv + 1
 !        end if
@@ -1671,6 +1887,12 @@ module lib_math_bessel
         if (.not. test_lib_math_bessel_riccati_c_cmplx()) then
             rv = rv + 1
         end if
+        if (.not. test_lib_math_bessel_riccati_xi_cmplx()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_riccati_zetta_cmplx()) then
+            rv = rv + 1
+        end if
 
         ! test: derivatives of Bessel functions with complex argument
         if (.not. test_lib_math_bessel_spherical_first_kind_derivative_cmplx()) then
@@ -1689,6 +1911,9 @@ module lib_math_bessel
             rv = rv + 1
         end if
         if (.not. test_lib_math_bessel_riccati_c_derivative_cmplx()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_riccati_xi_derivative_cmplx()) then
             rv = rv + 1
         end if
 
@@ -2361,6 +2586,62 @@ module lib_math_bessel
             end do
         end function test_lib_math_bessel_riccati_xi_real
 
+        function test_lib_math_bessel_riccati_xi_cmplx() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            complex(kind=8) :: x = cmplx(4, 2)
+            complex(kind=8), dimension(n) :: xi
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_xi
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> S(n,x) = x*spherical_bessel_J(n,x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(S)
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0+2.0*I
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(S(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+
+            ground_truth_xi(1) = cmplx(0.0768227330105855_8, +0.130356496975417_8, kind=8)
+            ground_truth_xi(2) = cmplx(0.187622668955650_8, -0.0332939662833071_8, kind=8)
+            ground_truth_xi(3) = cmplx(0.0941529528034112_8, -0.257461797736550_8, kind=8)
+            ground_truth_xi(4) = cmplx(-0.236031793446459_8, -0.393059617510250_8, kind=8)
+            ground_truth_xi(5) = cmplx(-0.872763836766263_8, -0.237616899680087_8, kind=8)
+
+            xi = lib_math_bessel_riccati_xi_cmplx(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_xi_cmplx:"
+            do i=1, n
+                buffer = abs(xi(i) - ground_truth_xi(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_xi_cmplx
+
         function test_lib_math_bessel_riccati_zetta_real() result(rv)
             implicit none
             ! dummy
@@ -2416,6 +2697,62 @@ module lib_math_bessel
                 end if
             end do
         end function test_lib_math_bessel_riccati_zetta_real
+
+        function test_lib_math_bessel_riccati_zetta_cmplx() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            complex(kind=8) :: z = cmplx(4, 2)
+            complex(kind=8), dimension(n) :: zetta
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_zetta
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> S(n,x) = x*spherical_bessel_J(n,x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(S)
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0+2.0*I
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(S(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+
+            ground_truth_zetta(1) = cmplx(3.22841722621425_8, -5.99881236093076_8, kind=8)
+            ground_truth_zetta(2) = cmplx(5.72946272109030_8, +0.261996798846654_8, kind=8)
+            ground_truth_zetta(3) = cmplx(2.63204389429938_8, +3.39607779923226_8, kind=8)
+            ground_truth_zetta(4) = cmplx(0.332653190391413_8, +2.65008139406895_8, kind=8)
+            ground_truth_zetta(5) = cmplx(0.351805103067215_8, +1.07468083873957_8, kind=8)
+
+            zetta = lib_math_bessel_riccati_zetta_cmplx(z, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_zetta_cmplx:"
+            do i=1, n
+                buffer = abs(zetta(i) - ground_truth_zetta(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_zetta_cmplx
 
         function test_lib_math_bessel_spherical_first_kind_derivative_real() result (rv)
             implicit none
@@ -3170,6 +3507,140 @@ module lib_math_bessel
                 end if
             end do
         end function test_lib_math_bessel_riccati_c_derivative_cmplx
+
+        function test_lib_math_bessel_riccati_xi_derivative_real() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            double precision :: x = 4
+            complex(kind=8), dimension(n) :: xi
+            complex(kind=8), dimension(n) :: xi_n
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_xi
+            complex(kind=8), dimension(n) :: ground_truth_xi_n
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+            double precision :: buffer_y_n
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> Xi(n,x) = x*spherical_hankel1(n,x)
+            !  >>> Xi_(n,x) = derivative(Xi(n,x), x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(Xi_.simplify_full())
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(Xi_(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+            !  >>>
+            ground_truth_xi(1) = cmplx(-0.872913244567086_8, +0.423590270732654_8, kind=8)
+            ground_truth_xi(2) = cmplx(-0.0881243745060705_8, +0.901955185759200_8, kind=8)
+            ground_truth_xi(3) = cmplx(0.417403169220310_8, +0.692442327238452_8, kind=8)
+            ground_truth_xi(4) = cmplx(0.417403169220310_8, +0.692442327238452_8, kind=8)
+            ground_truth_xi(5) = cmplx(0.240744563812994_8, +1.74699614140159_8, kind=8)
+
+            xi = lib_math_bessel_riccati_xi_derivative_real(x, fnu, n, xi_n)
+            ground_truth_xi_n = lib_math_bessel_riccati_xi_real(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_xi_derivative_real:"
+            do i=1, n
+                buffer = abs(xi(i) - ground_truth_xi(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(xi_n(i) - ground_truth_xi_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_xi_derivative_real
+
+        function test_lib_math_bessel_riccati_xi_derivative_cmplx() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            complex(kind=8) :: x = cmplx(4, 2)
+            complex(kind=8), dimension(n) :: xi
+            complex(kind=8), dimension(n) :: xi_n
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_xi
+            complex(kind=8), dimension(n) :: ground_truth_xi_n
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+            double precision :: buffer_y_n
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> Xi(n,x) = x*spherical_hankel1(n,x)
+            !  >>> Xi_(n,x) = derivative(Xi(n,x), x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(Xi_.simplify_full())
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0+2.0*I
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(Xi_(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+            !  >>>
+            ground_truth_xi(1) = cmplx(-0.130822276356333_8, +0.0700720184713570_8, kind=8)
+            ground_truth_xi(2) = cmplx(0.00843245868498678_8, +0.181198617279870_8, kind=8)
+            ground_truth_xi(3) = cmplx(0.208369436594568_8, +0.149428998199646_8, kind=8)
+            ground_truth_xi(4) = cmplx(0.440202234564679_8, -0.0374268211069332_8, kind=8)
+            ground_truth_xi(5) = cmplx(0.755540493159848_8, -0.591824636213295_8, kind=8)
+
+            xi = lib_math_bessel_riccati_xi_derivative_cmplx(x, fnu, n, xi_n)
+            ground_truth_xi_n = lib_math_bessel_riccati_xi_cmplx(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_xi_derivative_cmplx:"
+            do i=1, n
+                buffer = abs(xi(i) - ground_truth_xi(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(xi_n(i) - ground_truth_xi_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_xi_derivative_cmplx
 
 !        function test_lib_math_bessel_riccati_xi_derivative_real() result(rv)
 !            implicit none
