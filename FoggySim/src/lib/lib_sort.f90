@@ -27,7 +27,7 @@ module lib_sort
         integer(kind=LIB_HPSORT_OLD_POS_INTEGER_KIND) :: buffer_old_position
 
         do i=1, n
-            ra_old_position(i) = i
+            ra_old_position(i) = int(i, kind=LIB_HPSORT_OLD_POS_INTEGER_KIND)
         end do
 
         if (n.lt.2) return

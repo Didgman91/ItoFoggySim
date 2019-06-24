@@ -1579,9 +1579,12 @@ module lib_tree
     ! copy of toolbox.reallocate_1d
     subroutine lib_tree_reallocate_1d_data_element_list(a,n)
         implicit none
+        ! dummy
         type(lib_tree_data_element),dimension(:),allocatable,intent(inout) :: a
-        type(lib_tree_data_element),dimension(:),allocatable :: temp
         integer,intent(in) :: n
+
+        ! auxiliary
+        type(lib_tree_data_element),dimension(:),allocatable :: temp
         integer :: ni_old
 
         ni_old = size(a)
@@ -1618,13 +1621,13 @@ module lib_tree
 #if (_FMM_DIMENSION_ == 2)
         if (m_mirror) then
             do i=1, list_length
-                element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
-                element_list(i)%point_x%x(2) = ((1.0 - 0.999) * i)/(1.0*list_length)
+                element_list(i)%point_x%x(1) = (0.999 * real(i))/(1.0*real(list_length))
+                element_list(i)%point_x%x(2) = ((1.0 - 0.999) * real(i))/(1.0*real(list_length))
             end do
         else
             do i=1, list_length
-                element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
-                element_list(i)%point_x%x(2) = (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(1) = (0.999 * real(i))/(1.0*real(list_length))
+                element_list(i)%point_x%x(2) = (0.999 * real(i))/(1.0*real(list_length))
             end do
         end if
 #elif (_FMM_DIMENSION_ == 3)
@@ -2293,7 +2296,6 @@ module lib_tree
             type(lib_tree_universal_index), dimension(:), allocatable :: uindex_i2
             type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_i2
 
-            integer(kind=1) :: i
             k = 1
 
 #if (_FMM_DIMENSION_ == 2)

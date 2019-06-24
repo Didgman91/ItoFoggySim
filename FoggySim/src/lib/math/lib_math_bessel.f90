@@ -7,42 +7,296 @@ module lib_math_bessel
     private
 
     ! --- interface ---
+    ! calculates the the spherical Bessel function of the first kind
+    !
+    ! symbol: j_n
+    !
+    ! Argument
+    ! ----
+    !   x: double precision .OR. complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ j_{n}(\rho)=\sqrt{\frac{\pi}{2 \rho}} J_{n+1 / 2}(\rho) $$
     interface lib_math_bessel_spherical_first_kind
         module procedure lib_math_bessel_spherical_first_kind_real
         module procedure lib_math_bessel_spherical_first_kind_cmplx
     end interface
 
+    ! calculates the the spherical Bessel function of the second kind
+    !
+    ! symbol: y_n
+    !
+    ! Argument
+    ! ----
+    !   x: double precision .OR. complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ y_{n}(\rho)=\sqrt{\frac{\pi}{2 \rho}} Y_{n+1 / 2}(\rho) $$
     interface lib_math_bessel_spherical_second_kind
         module procedure lib_math_bessel_spherical_second_kind_real
         module procedure lib_math_bessel_spherical_second_kind_cmplx
     end interface
 
+    ! calculates the the spherical Bessel function of the third kind
+    !
+    ! symbol: h_n^(1)
+    !
+    ! Argument
+    ! ----
+    !   x: double precision .OR. complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ h_{n}^{(1)}(\rho)=j_{n}(\rho)+i y_{n}(\rho) $$
     interface lib_math_hankel_spherical_1
         module procedure lib_math_bessel_spherical_third_kind_1_real
         module procedure lib_math_bessel_spherical_third_kind_1_cmplx
     end interface
 
+    ! calculates the the spherical Bessel function of the third kind
+    !
+    ! symbol: h_n^(2)
+    !
+    ! Argument
+    ! ----
+    !   x: double precision .OR. complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    !
+    ! LaTeX: $$ h_{n}^{(2)}(\rho)=j_{n}(\rho) - i y_{n}(\rho) $$
     interface lib_math_hankel_spherical_2
         module procedure lib_math_bessel_spherical_third_kind_2_real
+        module procedure lib_math_bessel_spherical_third_kind_2_cmplx
     end interface
 
+    ! calculates the the Riccati Bessel function
+    !
+    ! symbol: S
+    !
+    ! Argument
+    ! ----
+    !   x: double precision .OR. complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ S_{n}(z) \equiv z j_{n}(z)=\sqrt{\frac{\pi z}{2}} J_{n+1 / 2}(z) $$
+    interface lib_math_riccati_s
+        module procedure lib_math_bessel_riccati_s_real
+        module procedure lib_math_bessel_riccati_s_cmplx
+    end interface
+
+    ! calculates the the Riccat Bessel function
+    !
+    ! symbol: C
+    !
+    ! Argument
+    ! ----
+    !   x: double precision .OR. complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ C_{n}(z) \equiv-z n_{n}(z)=-\sqrt{\frac{\pi z}{2}} N_{n+1 / 2}(z) $$
+    interface lib_math_riccati_c
+        module procedure lib_math_bessel_riccati_c_real
+        module procedure lib_math_bessel_riccati_c_cmplx
+    end interface
+
+    ! Calculates the derivative of the spherical Bessel function of the first kind
+    !
+    ! symbol: j'_n
+    !
+    ! Argument
+    ! ----
+    !   x: double precision .OR. complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   j_n: array<double precision>
+    !       spherical Bessel function of the first kind [fnu..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    !
+    ! LaTeX: $$ \frac{\partial}{\partial x}\left(j_{n}(x)\right)=\frac{1}{2}\left(j_{n-1}(x)-\frac{j_{n}(x)+x j_{n+1}(x)}{x}\right) $$
     interface lib_math_bessel_spherical_first_kind_derivative
         module procedure lib_math_bessel_spherical_first_kind_derivative_real
+        module procedure lib_math_bessel_spherical_first_kind_derivative_cmplx
     end interface
 
+    ! Calculates the derivative of the spherical Bessel function of the second kind
+    !
+    ! symbol: y'_n
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   y_n: array<double precision>
+    !       spherical Bessel function of the second kind [fnu..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ y_{v}(z) \equiv \sqrt{\frac{\pi}{2 z}} Y_{v+1 / 2}(z) $$
     interface lib_math_bessel_spherical_second_kind_derivative
         module procedure lib_math_bessel_spherical_second_kind_derivative_real
+        module procedure lib_math_bessel_spherical_second_kind_derivative_cmplx
     end interface
 
-    interface lib_math_hankel_1_derivative
+    ! Calculates the derivative of the spherical Bessel function of the third kind 1
+    !
+    ! symbol: h'^(1)_n
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   h_1_n: array<double precision>
+    !       spherical Bessel function of the third kind 1 [fnu-1..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \frac{d}{d z} h_{n}^{(1)}(z)=\frac{1}{2}\left[h_{n-1}^{(1)}(z)-\frac{h_{n}^{(1)}(z)+z h_{n+1}^{(1)}(z)}{z}\right] $$
+    interface lib_math_hankel_spherical_1_derivative
         module procedure lib_math_bessel_spherical_third_kind_1_derivative_real
+        module procedure lib_math_bessel_spherical_third_kind_1_derivative_cmplx
     end interface
 
-    interface lib_math_hankel_2_derivative
+    ! Calculates the derivative of the spherical Bessel function of the third kind 1
+    !
+    ! symbol: h'^(2)_n
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   h_2_n: array<double precision>
+    !       spherical Bessel function of the third kind 2 [fnu-1..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \frac{d}{d z} h_{n}^{(2)}(z)=\frac{1}{2}\left[h_{n-1}^{(2)}(z)-\frac{h_{n}^{(2)}(z)+z h_{n+1}^{(2)}(z)}{z}\right] $$
+    interface lib_math_hankel_spherical_2_derivative
         module procedure lib_math_bessel_spherical_third_kind_2_derivative_real
+        module procedure lib_math_bessel_spherical_third_kind_2_derivative_cmplx
+    end interface
+
+    ! Calculates the derivative of the Riccati-Bessel function
+    !
+    ! symbol: S'
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   S_n: array<double precision>
+    !       Riccati-Bessel function [fnu..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$  S^\prime_n = -x j_{n+1}(x)+(n+1) j_{n}(x) $$
+    interface lib_math_riccati_s_derivative
+        module procedure lib_math_bessel_riccati_s_derivative_real
+        module procedure lib_math_bessel_riccati_s_derivative_cmplx
+    end interface
+
+    ! Calculates the derivative of the Riccati-Bessel function
+    !
+    ! symbol: C'
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   S_n: array<double precision>
+    !       Riccati-Bessel function [fnu..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ C^\prime_n = x y_{n+1}(x)-(n+1) y_{n}(x) $$
+    interface lib_math_riccati_c_derivative
+        module procedure lib_math_bessel_riccati_c_derivative_real
+        module procedure lib_math_bessel_riccati_c_derivative_cmplx
     end interface
 
     ! --- public functions ---
+    public :: lib_math_bessel_spherical_first_kind
+    public :: lib_math_bessel_spherical_second_kind
+    public :: lib_math_hankel_spherical_1
+    public :: lib_math_hankel_spherical_2
+    public :: lib_math_bessel_spherical_first_kind_derivative
+    public :: lib_math_bessel_spherical_second_kind_derivative
+    public :: lib_math_hankel_spherical_1_derivative
+    public :: lib_math_hankel_spherical_2_derivative
+    public :: lib_math_riccati_s_derivative
+    public :: lib_math_riccati_c_derivative
+
     public :: lib_math_bessel_test_functions
 
     ! --- paraemters ---
@@ -58,7 +312,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -106,7 +360,7 @@ module lib_math_bessel
     ! ----
     !   x: complex
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !   kode: integer, optional (std_value = 1)
@@ -162,7 +416,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -210,7 +464,7 @@ module lib_math_bessel
     ! ----
     !   x: complex
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !   kode: integer, optional (std_value = 1)
@@ -266,7 +520,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -320,7 +574,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -354,7 +608,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -408,7 +662,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -442,7 +696,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -490,7 +744,7 @@ module lib_math_bessel
     ! ----
     !   x: complex
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -523,7 +777,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -577,7 +831,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -610,7 +864,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -669,7 +923,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -728,7 +982,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -739,10 +993,10 @@ module lib_math_bessel
     !   rv: array<double precision>
     !
     !
-    ! LaTeX:
+    ! LaTeX: $$ \frac{\partial}{\partial x}\left(j_{n}(x)\right)=\frac{1}{2}\left(j_{n-1}(x)-\frac{j_{n}(x)+x j_{n+1}(x)}{x}\right) $$
     !
-    ! Reference:
-    !
+    ! Reference: WolframAlpha: https://www.wolframalpha.com/input/?i=derivative%5BSphericalBesselJ%5Bn,x%5D,+x%5D
+    !               >>> derivative[SphericalBesselJ[n,x], x]
     function lib_math_bessel_spherical_first_kind_derivative_real(x, fnu, n, j_n) result (rv)
         implicit none
         ! dummy
@@ -780,7 +1034,7 @@ module lib_math_bessel
     ! ----
     !   z: complex
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -791,10 +1045,10 @@ module lib_math_bessel
     !   rv: array<double precision>
     !
     !
-    ! LaTeX:
+    ! LaTeX: $$ \frac{\partial}{\partial x}\left(j_{n}(x)\right)=\frac{1}{2}\left(j_{n-1}(x)-\frac{j_{n}(x)+x j_{n+1}(x)}{x}\right) $$
     !
-    ! Reference:
-    !
+    ! Reference: WolframAlpha: https://www.wolframalpha.com/input/?i=derivative%5BSphericalBesselJ%5Bn,x%5D,+x%5D
+    !               >>> derivative[SphericalBesselJ[n,x], x]
     function lib_math_bessel_spherical_first_kind_derivative_cmplx(z, fnu, n, j_n) result (rv)
         implicit none
         ! dummy
@@ -834,7 +1088,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -885,7 +1139,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.0
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -938,7 +1192,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.1
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -983,7 +1237,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.1
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -1027,7 +1281,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.1
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -1072,7 +1326,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.1
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -1116,7 +1370,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.1
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -1168,7 +1422,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.1
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -1221,7 +1475,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.1
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
@@ -1293,7 +1547,7 @@ module lib_math_bessel
     ! ----
     !   x: double precision
     !   fnu: integer
-    !       ORDER OF INITIAL J FUNCTION, FNU.GE.1
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
     !   n: integer
     !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
     !
