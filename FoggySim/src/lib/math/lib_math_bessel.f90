@@ -179,9 +179,9 @@ module lib_math_bessel
     !   rv: array<double precision>
     !
     ! LaTeX: $$ \zeta_{n}(x)=x h_{n}^{(2)}(x)=\sqrt{\frac{\pi x}{2}} H_{n+\frac{1}{2}}^{(2)}(x)=S_{n}(x)+i C_{n}(x) $$
-    interface lib_math_riccati_zetta
-        module procedure lib_math_bessel_riccati_zetta_real
-        module procedure lib_math_bessel_riccati_zetta_cmplx
+    interface lib_math_riccati_zeta
+        module procedure lib_math_bessel_riccati_zeta_real
+        module procedure lib_math_bessel_riccati_zeta_cmplx
     end interface
 
     ! Calculates the derivative of the spherical Bessel function of the first kind
@@ -1012,7 +1012,7 @@ module lib_math_bessel
     !
     ! Reference:
     !
-    function lib_math_bessel_riccati_zetta_real(x, fnu, n) result (rv)
+    function lib_math_bessel_riccati_zeta_real(x, fnu, n) result (rv)
         implicit none
         ! dummy
         double precision, intent(in) :: x
@@ -1040,7 +1040,7 @@ module lib_math_bessel
 
 #ifdef _DEBUG_
         if (nz .ne. 0) then
-            print *, "lib_math_bessel_riccati_s_real: WARNING"
+            print *, "lib_math_bessel_riccati_zeta_real: WARNING"
             print *, "  number of components of Y set to zero due to underflow: ", nz
         end if
 #endif
@@ -1049,7 +1049,7 @@ module lib_math_bessel
 
         rv(:) = cmplx(rv_1 * j(:), -rv_1 * y(:), kind=8)
 
-    end function lib_math_bessel_riccati_zetta_real
+    end function lib_math_bessel_riccati_zeta_real
 
     ! calculates the the Riccat Bessel function
     !
@@ -1071,7 +1071,7 @@ module lib_math_bessel
     !
     ! Reference:
     !
-    function lib_math_bessel_riccati_zetta_cmplx(z, fnu, n) result (rv)
+    function lib_math_bessel_riccati_zeta_cmplx(z, fnu, n) result (rv)
         implicit none
         ! dummy
         complex(kind=8), intent(in) :: z
@@ -1082,7 +1082,7 @@ module lib_math_bessel
 
         rv = z * lib_math_bessel_spherical_third_kind_2_cmplx(z, fnu, n)
 
-    end function lib_math_bessel_riccati_zetta_cmplx
+    end function lib_math_bessel_riccati_zeta_cmplx
 
     ! Calculates the derivative of the spherical Bessel function of the first kind
     !
@@ -1808,6 +1808,112 @@ module lib_math_bessel
 
     end function lib_math_bessel_riccati_xi_derivative_cmplx
 
+    ! Calculates the derivative of the Riccati-Bessel function
+    !
+    ! symbol: Zeta'
+    !
+    ! Argument
+    ! ----
+    !   x: double precision
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   xi_n: array<double precision>
+    !       Riccati-Bessel function [fnu..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \zeta^\prime_n (x) = \frac{\partial}{\partial x}\left(x h_{n}^{(2)}(x)\right)=\frac{1}{2}\left(x h_{n-1}^{(2)}(x)+h_{n}^{(2)}(x)-x h_{n+1}^{(2)}(x)\right) $$
+    !
+    ! Reference: WolframAlpha
+    !           >>> derivative[x*SphericalHankelH1(n,x), x]
+    !
+    function lib_math_bessel_riccati_zeta_derivative_real(x, fnu, n, zeta_n) result (rv)
+        implicit none
+        ! dummy
+        double precision, intent(in) :: x
+        integer(kind=4), intent(in) :: fnu
+        integer(kind=4), intent(in) :: n
+        complex(kind=8), intent(inout), dimension(n) :: zeta_n
+
+        complex(kind=8), dimension(n) :: rv
+
+        ! auxiliary
+        integer(kind=4) i
+        integer(kind=4) order
+        complex(kind=8), dimension(n+2) :: h_n
+        complex(kind=8), dimension(n+2) :: buffer_zeta_n
+
+        order = fnu+n-1
+
+        h_n = lib_math_bessel_spherical_third_kind_2_real(x, fnu-1, n+2)
+
+        buffer_zeta_n = x * h_n
+
+        zeta_n = buffer_zeta_n(fnu+1:order+1)
+
+        do i=2, n+1
+            rv(i-1) = (buffer_zeta_n(i-1) + h_n(i) - buffer_zeta_n(i+1)) / 2.0_8
+        end do
+
+    end function lib_math_bessel_riccati_zeta_derivative_real
+
+    ! Calculates the derivative of the Riccati-Bessel function
+    !
+    ! symbol: Zeta'
+    !
+    ! Argument
+    ! ----
+    !   z: complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   xi_n: array<double precision>
+    !       Riccati-Bessel function [fnu..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \zeta^\prime_n (x) = \frac{\partial}{\partial x}\left(x h_{n}^{(2)}(x)\right)=\frac{1}{2}\left(x h_{n-1}^{(2)}(x)+h_{n}^{(2)}(x)-x h_{n+1}^{(2)}(x)\right) $$
+    !
+    ! Reference: WolframAlpha
+    !           >>> derivative[x*SphericalHankelH1(n,x), x]
+    !
+    function lib_math_bessel_riccati_zeta_derivative_cmplx(z, fnu, n, zeta_n) result (rv)
+        implicit none
+        ! dummy
+        complex(kind=8), intent(in) :: z
+        integer(kind=4), intent(in) :: fnu
+        integer(kind=4), intent(in) :: n
+        complex(kind=8), intent(inout), dimension(n) :: zeta_n
+
+        complex(kind=8), dimension(n) :: rv
+
+        ! auxiliary
+        integer(kind=4) i
+        integer(kind=4) order
+        complex(kind=8), dimension(n+2) :: h_n
+        complex(kind=8), dimension(n+2) :: buffer_zeta_n
+
+        order = fnu+n-1
+
+        h_n = lib_math_bessel_spherical_third_kind_2_cmplx(z, fnu-1, n+2)
+
+        buffer_zeta_n = z * h_n
+
+        zeta_n = buffer_zeta_n(fnu+1:order+1)
+
+        do i=2, n+1
+            rv(i-1) = (buffer_zeta_n(i-1) + h_n(i) - buffer_zeta_n(i+1)) / 2.0_8
+        end do
+
+    end function lib_math_bessel_riccati_zeta_derivative_cmplx
+
     function lib_math_bessel_test_functions() result (rv)
         implicit none
         ! dummy
@@ -1837,7 +1943,7 @@ module lib_math_bessel
         if (.not. test_lib_math_bessel_riccati_xi_real()) then
             rv = rv + 1
         end if
-        if (.not. test_lib_math_bessel_riccati_zetta_real()) then
+        if (.not. test_lib_math_bessel_riccati_zeta_real()) then
             rv = rv + 1
         end if
 
@@ -1863,9 +1969,9 @@ module lib_math_bessel
         if (.not. test_lib_math_bessel_riccati_xi_derivative_real()) then
             rv = rv + 1
         end if
-!        if (.not. test_lib_math_bessel_riccati_zetta_derivative_real()) then
-!            rv = rv + 1
-!        end if
+        if (.not. test_lib_math_bessel_riccati_zeta_derivative_real()) then
+            rv = rv + 1
+        end if
 
 
         ! test: Bessel functions with a complex argument
@@ -1890,7 +1996,7 @@ module lib_math_bessel
         if (.not. test_lib_math_bessel_riccati_xi_cmplx()) then
             rv = rv + 1
         end if
-        if (.not. test_lib_math_bessel_riccati_zetta_cmplx()) then
+        if (.not. test_lib_math_bessel_riccati_zeta_cmplx()) then
             rv = rv + 1
         end if
 
@@ -1914,6 +2020,9 @@ module lib_math_bessel
             rv = rv + 1
         end if
         if (.not. test_lib_math_bessel_riccati_xi_derivative_cmplx()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_riccati_zeta_derivative_cmplx()) then
             rv = rv + 1
         end if
 
@@ -2642,7 +2751,7 @@ module lib_math_bessel
             end do
         end function test_lib_math_bessel_riccati_xi_cmplx
 
-        function test_lib_math_bessel_riccati_zetta_real() result(rv)
+        function test_lib_math_bessel_riccati_zeta_real() result(rv)
             implicit none
             ! dummy
             logical :: rv
@@ -2652,10 +2761,10 @@ module lib_math_bessel
 
             ! auxiliary
             double precision :: x = 4
-            complex(kind=8), dimension(n) :: zetta
+            complex(kind=8), dimension(n) :: zeta
             integer :: fnu = 1
 
-            complex(kind=8), dimension(n) :: ground_truth_zetta
+            complex(kind=8), dimension(n) :: ground_truth_zeta
             double precision :: ground_truth_e = 10.0_8**(-13.0_8)
 
             integer :: i
@@ -2677,18 +2786,18 @@ module lib_math_bessel
             !  >>>     value = numerical_approx(S(i,x))
             !  >>>     print("n = {}: {}".format(i, value))
 
-            ground_truth_zetta(1) = cmplx(0.464442997036630_8, -0.920213400523831_8, kind=8)
-            ground_truth_zetta(2) = cmplx(1.10513474308540_8, -0.0365164295292615_8, kind=8)
-            ground_truth_zetta(3) = cmplx(0.916975431820121_8, +0.874567863612254_8, kind=8)
-            ground_truth_zetta(4) = cmplx(0.499572262599811_8, +1.56701019085071_8, kind=8)
-            ground_truth_zetta(5) = cmplx(0.207062159029454_8, +2.65120506580184_8, kind=8)
+            ground_truth_zeta(1) = cmplx(0.464442997036630_8, -0.920213400523831_8, kind=8)
+            ground_truth_zeta(2) = cmplx(1.10513474308540_8, -0.0365164295292615_8, kind=8)
+            ground_truth_zeta(3) = cmplx(0.916975431820121_8, +0.874567863612254_8, kind=8)
+            ground_truth_zeta(4) = cmplx(0.499572262599811_8, +1.56701019085071_8, kind=8)
+            ground_truth_zeta(5) = cmplx(0.207062159029454_8, +2.65120506580184_8, kind=8)
 
-            zetta = lib_math_bessel_riccati_zetta_real(x, fnu, n)
+            zeta = lib_math_bessel_riccati_zeta_real(x, fnu, n)
 
             rv = .true.
-            print *, "test_lib_math_bessel_riccati_zetta_real:"
+            print *, "test_lib_math_bessel_riccati_zeta_real:"
             do i=1, n
-                buffer = abs(zetta(i) - ground_truth_zetta(i))
+                buffer = abs(zeta(i) - ground_truth_zeta(i))
                 if (buffer .gt. ground_truth_e) then
                     print *, "  ", i , "difference: ", buffer, " : FAILED"
                     rv = .false.
@@ -2696,9 +2805,9 @@ module lib_math_bessel
                     print *, "  ", i, ": OK"
                 end if
             end do
-        end function test_lib_math_bessel_riccati_zetta_real
+        end function test_lib_math_bessel_riccati_zeta_real
 
-        function test_lib_math_bessel_riccati_zetta_cmplx() result(rv)
+        function test_lib_math_bessel_riccati_zeta_cmplx() result(rv)
             implicit none
             ! dummy
             logical :: rv
@@ -2708,10 +2817,10 @@ module lib_math_bessel
 
             ! auxiliary
             complex(kind=8) :: z = cmplx(4, 2)
-            complex(kind=8), dimension(n) :: zetta
+            complex(kind=8), dimension(n) :: zeta
             integer :: fnu = 1
 
-            complex(kind=8), dimension(n) :: ground_truth_zetta
+            complex(kind=8), dimension(n) :: ground_truth_zeta
             double precision :: ground_truth_e = 10.0_8**(-13.0_8)
 
             integer :: i
@@ -2733,18 +2842,18 @@ module lib_math_bessel
             !  >>>     value = numerical_approx(S(i,x))
             !  >>>     print("n = {}: {}".format(i, value))
 
-            ground_truth_zetta(1) = cmplx(3.22841722621425_8, -5.99881236093076_8, kind=8)
-            ground_truth_zetta(2) = cmplx(5.72946272109030_8, +0.261996798846654_8, kind=8)
-            ground_truth_zetta(3) = cmplx(2.63204389429938_8, +3.39607779923226_8, kind=8)
-            ground_truth_zetta(4) = cmplx(0.332653190391413_8, +2.65008139406895_8, kind=8)
-            ground_truth_zetta(5) = cmplx(0.351805103067215_8, +1.07468083873957_8, kind=8)
+            ground_truth_zeta(1) = cmplx(3.22841722621425_8, -5.99881236093076_8, kind=8)
+            ground_truth_zeta(2) = cmplx(5.72946272109030_8, +0.261996798846654_8, kind=8)
+            ground_truth_zeta(3) = cmplx(2.63204389429938_8, +3.39607779923226_8, kind=8)
+            ground_truth_zeta(4) = cmplx(0.332653190391413_8, +2.65008139406895_8, kind=8)
+            ground_truth_zeta(5) = cmplx(0.351805103067215_8, +1.07468083873957_8, kind=8)
 
-            zetta = lib_math_bessel_riccati_zetta_cmplx(z, fnu, n)
+            zeta = lib_math_bessel_riccati_zeta_cmplx(z, fnu, n)
 
             rv = .true.
-            print *, "test_lib_math_bessel_riccati_zetta_cmplx:"
+            print *, "test_lib_math_bessel_riccati_zeta_cmplx:"
             do i=1, n
-                buffer = abs(zetta(i) - ground_truth_zetta(i))
+                buffer = abs(zeta(i) - ground_truth_zeta(i))
                 if (buffer .gt. ground_truth_e) then
                     print *, "  ", i , "difference: ", buffer, " : FAILED"
                     rv = .false.
@@ -2752,7 +2861,7 @@ module lib_math_bessel
                     print *, "  ", i, ": OK"
                 end if
             end do
-        end function test_lib_math_bessel_riccati_zetta_cmplx
+        end function test_lib_math_bessel_riccati_zeta_cmplx
 
         function test_lib_math_bessel_spherical_first_kind_derivative_real() result (rv)
             implicit none
@@ -3642,117 +3751,139 @@ module lib_math_bessel
             end do
         end function test_lib_math_bessel_riccati_xi_derivative_cmplx
 
-!        function test_lib_math_bessel_riccati_xi_derivative_real() result(rv)
-!            implicit none
-!            ! dummy
-!            logical :: rv
-!
-!            ! parameter
-!            integer, parameter :: n = 5
-!
-!            ! auxiliary
-!            double precision :: x = 4
-!            complex(kind=8), dimension(n) :: xi
-!            integer :: fnu = 1
-!
-!            complex(kind=8), dimension(n) :: ground_truth_xi
-!            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
-!
-!            integer :: i
-!            double precision :: buffer
-!
-!            ! Values were generated with sageMath
-!            !
-!            ! source code:
-!            !  >>> var('x')
-!            !  >>> var('n')
-!            !  >>> S(n,x) = x*spherical_bessel_J(n,x)
-!            !  >>>
-!            !  >>> from IPython.display import Math
-!            !  >>> t = latex(S)
-!            !  >>> display(Math("""{}""".format(t)))
-!            !  >>>
-!            !  >>> x=4.0
-!            !  >>> for i in range(1,6):
-!            !  >>>     value = numerical_approx(S(i,x))
-!            !  >>>     print("n = {}: {}".format(i, value))
-!
-!            ground_truth_xi(1) = cmplx(0.464442997036630_8, +0.920213400523831_8, kind=8)
-!            ground_truth_xi(2) = cmplx(1.10513474308540_8, +0.0365164295292615_8, kind=8)
-!            ground_truth_xi(3) = cmplx(0.916975431820121_8, -0.874567863612254_8, kind=8)
-!            ground_truth_xi(4) = cmplx(0.499572262599811_8, -1.56701019085071_8, kind=8)
-!            ground_truth_xi(5) = cmplx(0.207062159029454_8, -2.65120506580184_8, kind=8)
-!
-!            xi = lib_math_bessel_riccati_xi_real(x, fnu, n)
-!
-!            rv = .true.
-!            print *, "test_lib_math_bessel_riccati_xi_derivative_real:"
-!            do i=1, n
-!                buffer = abs(xi(i) - ground_truth_xi(i))
-!                if (buffer .gt. ground_truth_e) then
-!                    print *, "  ", i , "difference: ", buffer, " : FAILED"
-!                    rv = .false.
-!                else
-!                    print *, "  ", i, ": OK"
-!                end if
-!            end do
-!        end function test_lib_math_bessel_riccati_xi_derivative_real
-!
-!        function test_lib_math_bessel_riccati_zetta_derivative_real() result(rv)
-!            implicit none
-!            ! dummy
-!            logical :: rv
-!
-!            ! parameter
-!            integer, parameter :: n = 5
-!
-!            ! auxiliary
-!            double precision :: x = 4
-!            complex(kind=8), dimension(n) :: zetta
-!            integer :: fnu = 1
-!
-!            complex(kind=8), dimension(n) :: ground_truth_zetta
-!            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
-!
-!            integer :: i
-!            double precision :: buffer
-!
-!            ! Values were generated with sageMath
-!            !
-!            ! source code:
-!            !  >>> var('x')
-!            !  >>> var('n')
-!            !  >>> S(n,x) = x*spherical_bessel_J(n,x)
-!            !  >>>
-!            !  >>> from IPython.display import Math
-!            !  >>> t = latex(S)
-!            !  >>> display(Math("""{}""".format(t)))
-!            !  >>>
-!            !  >>> x=4.0
-!            !  >>> for i in range(1,6):
-!            !  >>>     value = numerical_approx(S(i,x))
-!            !  >>>     print("n = {}: {}".format(i, value))
-!
-!            ground_truth_zetta(1) = cmplx(0.464442997036630_8, -0.920213400523831_8, kind=8)
-!            ground_truth_zetta(2) = cmplx(1.10513474308540_8, -0.0365164295292615_8, kind=8)
-!            ground_truth_zetta(3) = cmplx(0.916975431820121_8, +0.874567863612254_8, kind=8)
-!            ground_truth_zetta(4) = cmplx(0.499572262599811_8, +1.56701019085071_8, kind=8)
-!            ground_truth_zetta(5) = cmplx(0.207062159029454_8, +2.65120506580184_8, kind=8)
-!
-!            zetta = lib_math_bessel_riccati_zetta_real(x, fnu, n)
-!
-!            rv = .true.
-!            print *, "test_lib_math_bessel_riccati_zetta_derivative_real:"
-!            do i=1, n
-!                buffer = abs(zetta(i) - ground_truth_zetta(i))
-!                if (buffer .gt. ground_truth_e) then
-!                    print *, "  ", i , "difference: ", buffer, " : FAILED"
-!                    rv = .false.
-!                else
-!                    print *, "  ", i, ": OK"
-!                end if
-!            end do
-!        end function test_lib_math_bessel_riccati_zetta_derivative_real
+        function test_lib_math_bessel_riccati_zeta_derivative_real() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            double precision :: x = 4
+            complex(kind=8), dimension(n) :: zeta
+            complex(kind=8), dimension(n) :: zeta_n
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_zeta
+            complex(kind=8), dimension(n) :: ground_truth_zeta_n
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+            double precision :: buffer_y_n
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> Zeta(n,x) = x*spherical_hankel2(n,x)
+            !  >>> Zeta_(n,x) = derivative(Zeta(n,x), x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(Zeta_.simplify_full())
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(Zeta_(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+            !  >>>
+            ground_truth_zeta(1) = cmplx(-0.872913244567086_8, -0.423590270732654_8, kind=8)
+            ground_truth_zeta(2) = cmplx(-0.0881243745060704_8, -0.901955185759200_8, kind=8)
+            ground_truth_zeta(3) = cmplx(0.417403169220310_8, -0.692442327238452_8, kind=8)
+            ground_truth_zeta(4) = cmplx(0.417403169220310_8, -0.692442327238452_8, kind=8)
+            ground_truth_zeta(5) = cmplx(0.240744563812994_8, -1.74699614140159_8, kind=8)
+
+            zeta = lib_math_bessel_riccati_zeta_derivative_real(x, fnu, n, zeta_n)
+            ground_truth_zeta_n = lib_math_bessel_riccati_zeta_real(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_zeta_derivative_real:"
+            do i=1, n
+                buffer = abs(zeta(i) - ground_truth_zeta(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(zeta_n(i) - ground_truth_zeta_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_zeta_derivative_real
+
+        function test_lib_math_bessel_riccati_zeta_derivative_cmplx() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+
+            ! auxiliary
+            complex(kind=8) :: x = cmplx(4,2)
+            complex(kind=8), dimension(n) :: zeta
+            complex(kind=8), dimension(n) :: zeta_n
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_zeta
+            complex(kind=8), dimension(n) :: ground_truth_zeta_n
+            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+
+            integer :: i
+            double precision :: buffer
+            double precision :: buffer_y_n
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> var('x')
+            !  >>> var('n')
+            !  >>> Zeta(n,x) = x*spherical_hankel2(n,x)
+            !  >>> Zeta_(n,x) = derivative(Zeta(n,x), x)
+            !  >>>
+            !  >>> from IPython.display import Math
+            !  >>> t = latex(Zeta_.simplify_full())
+            !  >>> display(Math("""{}""".format(t)))
+            !  >>>
+            !  >>> x=4.0+I*2.0
+            !  >>> for i in range(1,6):
+            !  >>>     value = numerical_approx(Zeta_(i,x))
+            !  >>>     print("n = {}: {}".format(i, value))
+            !  >>>
+            ground_truth_zeta(1) = cmplx(-5.63785830279076_8, -3.30720518846181_8, kind=8)
+            ground_truth_zeta(2) = cmplx(0.884232778008798_8, -4.95771853625136_8, kind=8)
+            ground_truth_zeta(3) = cmplx(3.13141304474100_8, -0.986036712402890_8, kind=8)
+            ground_truth_zeta(4) = cmplx(1.30588878435867_8, +1.40907396013367_8, kind=8)
+            ground_truth_zeta(5) = cmplx(-0.556492332045588_8, +1.75130310686298_8, kind=8)
+
+            zeta = lib_math_bessel_riccati_zeta_derivative_cmplx(x, fnu, n, zeta_n)
+            ground_truth_zeta_n = lib_math_bessel_riccati_zeta_cmplx(x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_riccati_zeta_derivative_cmplx:"
+            do i=1, n
+                buffer = abs(zeta(i) - ground_truth_zeta(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(zeta_n(i) - ground_truth_zeta_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
+                end if
+            end do
+        end function test_lib_math_bessel_riccati_zeta_derivative_cmplx
 
     end function lib_math_bessel_test_functions
 
