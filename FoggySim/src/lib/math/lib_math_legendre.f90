@@ -1,10 +1,10 @@
-module lib_math_legendre_polynomial
+module lib_math_legendre
     use libmath
     implicit none
 
     private
 
-    public :: lib_math_legendre_polynomial_test_functions
+    public :: lib_math_legendre_test_functions
 
     contains
 
@@ -18,7 +18,7 @@ module lib_math_legendre_polynomial
         !       order of the polynomial, >= 0
         !   n: integer
         !       degree of the polynomial, >= 0
-        !   condon_shortly_phase: boolean, optional(std: false)
+        !   condon_shortley_phase: boolean, optional(std: false)
         !       true: with Condon–Shortley phase
         !       false: without Condon–Shortley phase
         !
@@ -35,6 +35,7 @@ module lib_math_legendre_polynomial
             double precision, intent(in) :: x
             integer(kind=4), intent(in) :: m
             integer(kind=4), intent(in) :: n
+
             double precision, intent(inout) :: pm(0:n)
             double precision, intent(inout) :: pd(0:n)
             logical, optional :: condon_shortley_phase
@@ -54,8 +55,36 @@ module lib_math_legendre_polynomial
 
         end subroutine lib_math_associated_legendre_polynomial
 
+        ! calculates the Legendre polynomial
+        !
+        ! Argument
+        ! ----
+        !   x: double precision
+        !       input value
+        !   n: integer
+        !       degree of the polynomial, >= 0
+        !
+        ! Results
+        ! ----
+        !   pm: double precision, dimension(0:n)
+        !       result of the Legendre polynomial
+        !   pd: double precision, dimension(0:n)
+        !       result of the deriviative of the Legendre polynomial
+        !
+        subroutine lib_math_legendre_polynomial(x, n, pn, pd)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: x
+            integer(kind=4), intent(in) :: n
 
-        function lib_math_legendre_polynomial_test_functions() result (rv)
+            double precision, dimension(0:n), intent(inout) :: pn
+            double precision, dimension(0:n), intent(inout) :: pd
+
+            call lpn ( n, x, pn, pd )
+
+        end subroutine lib_math_legendre_polynomial
+
+        function lib_math_legendre_test_functions() result (rv)
             implicit none
             ! dummy
             integer :: rv
@@ -65,6 +94,7 @@ module lib_math_legendre_polynomial
 
             rv = 0
 
+            ! associated Legendre Polynomial
             if (.not. test_lib_math_associated_legendre_polynomial_m1()) then
                 rv = rv + 1
             end if
@@ -77,6 +107,12 @@ module lib_math_legendre_polynomial
             if (.not. test_lib_math_associated_legendre_polynomial_m2_without_phase()) then
                 rv = rv + 1
             end if
+
+            ! Legendre Polynomial
+            if (.not. test_lib_math_legendre_polynomial()) then
+                rv = rv + 1
+            end if
+
 
             contains
 
@@ -98,6 +134,28 @@ module lib_math_legendre_polynomial
 
                 double precision :: buffer
 
+                ! Values were generated with sageMath
+                !
+                ! source code:
+                !  >>>  var('l')
+                !  >>>  var('m')
+                !  >>>  var('x')
+                !  >>>
+                !  >>>  m=1
+                !  >>>
+                !  >>>  P_d(l,x) = derivative(legendre_P(l,x), x, m)
+                !  >>>  P_a(l,x) = (-1)**m * (1-x**2)**(m/2) * P_d(l,x)
+                !  >>>  P_ad(l,x) = derivative(P_a(l,x), x).simplify_full()
+                !  >>>
+                !  >>>  x=0.2
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_a(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_ad(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
                 ground_truth_pm(0) = 0.000000000000000_8
                 ground_truth_pm(1) = -0.979795897113271_8
                 ground_truth_pm(2) = -0.587877538267963_8
@@ -160,6 +218,28 @@ module lib_math_legendre_polynomial
 
                 double precision :: buffer
 
+                ! Values were generated with sageMath
+                !
+                ! source code:
+                !  >>>  var('l')
+                !  >>>  var('m')
+                !  >>>  var('x')
+                !  >>>
+                !  >>>  m=1
+                !  >>>
+                !  >>>  P_d(l,x) = derivative(legendre_P(l,x), x, m)
+                !  >>>  P_a(l,x) = (1-x**2)**(m/2) * P_d(l,x)
+                !  >>>  P_ad(l,x) = derivative(P_a(l,x), x).simplify_full()
+                !  >>>
+                !  >>>  x=0.2
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_a(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_ad(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
                 ground_truth_pm(0) = -0.000000000000000_8
                 ground_truth_pm(1) = 0.979795897113271_8
                 ground_truth_pm(2) = 0.587877538267963_8
@@ -223,6 +303,28 @@ module lib_math_legendre_polynomial
 
                 double precision :: buffer
 
+                ! Values were generated with sageMath
+                !
+                ! source code:
+                !  >>>  var('l')
+                !  >>>  var('m')
+                !  >>>  var('x')
+                !  >>>
+                !  >>>  m=2
+                !  >>>
+                !  >>>  P_d(l,x) = derivative(legendre_P(l,x), x, m)
+                !  >>>  P_a(l,x) = (-1)**m * (1-x**2)**(m/2) * P_d(l,x)
+                !  >>>  P_ad(l,x) = derivative(P_a(l,x), x).simplify_full()
+                !  >>>
+                !  >>>  x=0.2
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_a(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_ad(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
                 ground_truth_pm(0) = 0.000000000000000_8
                 ground_truth_pm(1) = -1.06581410364015D-16
                 ground_truth_pm(2) = 2.88000000000000_8
@@ -285,6 +387,28 @@ module lib_math_legendre_polynomial
 
                 double precision :: buffer
 
+                ! Values were generated with sageMath
+                !
+                ! source code:
+                !  >>>  var('l')
+                !  >>>  var('m')
+                !  >>>  var('x')
+                !  >>>
+                !  >>>  m=2
+                !  >>>
+                !  >>>  P_d(l,x) = derivative(legendre_P(l,x), x, m)
+                !  >>>  P_a(l,x) = (1-x**2)**(m/2) * P_d(l,x)
+                !  >>>  P_ad(l,x) = derivative(P_a(l,x), x).simplify_full()
+                !  >>>
+                !  >>>  x=0.2
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_a(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_ad(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
                 ground_truth_pm(0) = 0.000000000000000_8
                 ground_truth_pm(1) = -1.06581410364015D-16
                 ground_truth_pm(2) = 2.88000000000000_8
@@ -329,6 +453,86 @@ module lib_math_legendre_polynomial
 
             end function test_lib_math_associated_legendre_polynomial_m2_without_phase
 
-        end function
+            function test_lib_math_legendre_polynomial() result (rv)
+                implicit none
+                ! dummy
+                logical :: rv
 
-end module lib_math_legendre_polynomial
+                ! auxiliary
+                integer(kind=4) :: i
+                double precision :: x
+                integer(kind=4), parameter :: n = 5
+                double precision, dimension(0:n) :: pm
+                double precision, dimension(0:n) :: pd
+
+                double precision, dimension(0:n) :: ground_truth_pm
+                double precision, dimension(0:n) :: ground_truth_pd
+
+                double precision :: buffer
+
+                ! Values were generated with sageMath
+                !
+                ! source code:
+                !  >>> var('l')
+                !  >>> var('x')
+                !  >>>
+                !  >>> P(l,x) = legendre_P(l,x)
+                !  >>> P_d(l,x) = derivative(legendre_P(l,x), x)
+                !  >>>
+                !  >>> x=0.4
+                !  >>>
+                !  >>> for i in range(0,6):
+                !  >>>     value = numerical_approx(P(i,x))
+                !  >>>     print("l = {}: {}".format(i, value))
+                !  >>>
+                !  >>> print("\nderivative:")
+                !  >>> for i in range(0,6):
+                !  >>>     value = numerical_approx(P_d(i,x))
+                !  >>>     print("l = {}: {}".format(i, value))
+                ground_truth_pm(0) = 1.00000000000000_8
+                ground_truth_pm(1) = 0.400000000000000_8
+                ground_truth_pm(2) = -0.260000000000000_8
+                ground_truth_pm(3) = -0.440000000000000_8
+                ground_truth_pm(4) = -0.113000000000000_8
+                ground_truth_pm(5) = 0.270640000000000_8
+
+                ground_truth_pd(0) = -0.000000000000000_8
+                ground_truth_pd(1) = 1.00000000000000_8
+                ground_truth_pd(2) = 1.20000000000000_8
+                ground_truth_pd(3) = -0.300000000000000_8
+                ground_truth_pd(4) = -1.88000000000000_8
+                ground_truth_pd(5) = -1.31700000000000_8
+
+                x = 0.4
+
+                call lib_math_legendre_polynomial(x, n, pm, pd)
+
+
+                rv = .true.
+                print *, "test_lib_math_legendre_polynomial:"
+                do i=0, n
+                    buffer = abs(pm(i) - ground_truth_pm(i))
+                    if (buffer .gt. ground_truth_e) then
+                        print *, "  ", i , "difference: ", buffer, " : FAILED"
+                        rv = .false.
+                    else
+                        print *, "  ", i, ": OK"
+                    end if
+                end do
+
+                print*, "  deriviation:"
+                do i=0, n
+                    buffer = abs(pd(i) - ground_truth_pd(i))
+                    if (buffer .gt. ground_truth_e) then
+                        print *, "  ", i , "difference: ", buffer, " : FAILED"
+                        rv = .false.
+                    else
+                        print *, "  ", i, ": OK"
+                    end if
+                end do
+
+            end function test_lib_math_legendre_polynomial
+
+        end function lib_math_legendre_test_functions
+
+end module lib_math_legendre

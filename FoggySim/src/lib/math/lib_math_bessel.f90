@@ -329,6 +329,54 @@ module lib_math_bessel
         module procedure lib_math_bessel_riccati_c_derivative_cmplx
     end interface
 
+    ! Calculates the derivative of the Riccati-Bessel function
+    !
+    ! symbol: Xi'
+    !
+    ! Argument
+    ! ----
+    !   x: double precision .OR. compelx
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   xi_n: array<double precision>
+    !       Riccati-Bessel function [fnu..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \xi^\prime_n (x) = \frac{\partial}{\partial x}\left(x h_{n}^{(1)}(x)\right)=\frac{1}{2}\left(x h_{n-1}^{(1)}(x)+h_{n}^{(1)}(x)-x h_{n+1}^{(1)}(x)\right) $$
+    interface lib_math_riccati_xi_derivative
+        module procedure lib_math_bessel_riccati_xi_derivative_real
+        module procedure lib_math_bessel_riccati_xi_derivative_cmplx
+    end interface
+
+    ! Calculates the derivative of the Riccati-Bessel function
+    !
+    ! symbol: Zeta'
+    !
+    ! Argument
+    ! ----
+    !   x: double precision .OR. complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.1
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   xi_n: array<double precision>
+    !       Riccati-Bessel function [fnu..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    ! LaTeX: $$ \zeta^\prime_n (x) = \frac{\partial}{\partial x}\left(x h_{n}^{(2)}(x)\right)=\frac{1}{2}\left(x h_{n-1}^{(2)}(x)+h_{n}^{(2)}(x)-x h_{n+1}^{(2)}(x)\right) $$
+    interface lib_math_riccati_zeta_derivative
+        module procedure lib_math_bessel_riccati_zeta_derivative_real
+        module procedure lib_math_bessel_riccati_zeta_derivative_cmplx
+    end interface
+
     ! --- public functions ---
     public :: lib_math_bessel_spherical_first_kind
     public :: lib_math_bessel_spherical_second_kind
@@ -340,6 +388,8 @@ module lib_math_bessel
     public :: lib_math_hankel_spherical_2_derivative
     public :: lib_math_riccati_s_derivative
     public :: lib_math_riccati_c_derivative
+    public :: lib_math_riccati_xi_derivative
+    public :: lib_math_riccati_zeta_derivative
 
     public :: lib_math_bessel_test_functions
 
