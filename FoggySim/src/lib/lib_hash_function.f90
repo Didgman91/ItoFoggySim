@@ -808,45 +808,45 @@ module lib_hash_function
     end function
 #endif
 
-    function hash_8_byte(a, max) result(hash)
-        implicit none
-        ! dummy
-        integer(kind=8) :: a
-        integer(kind=4) :: max
-        integer(kind=4) :: hash
+!    function hash_8_byte(a, max) result(hash)
+!        implicit none
+!        ! dummy
+!        integer(kind=8) :: a
+!        integer(kind=4) :: max
+!        integer(kind=4) :: hash
+!
+!        ! auxiliary
+!        integer(kind=8) :: idum
+!        idum = a
+!
+!        hash = int(numerical_recipes_ran(idum) * real((max-1)), 4)
+!
+!    end function hash_8_byte
 
-        ! auxiliary
-        integer(kind=8) :: idum
-        idum = a
-
-        hash = int(numerical_recipes_ran(idum) * real((max-1)), 4)
-
-    end function hash_8_byte
-
-    ! Numerical Recipes in F90
-    ! p. 1142
-    FUNCTION numerical_recipes_ran(idum)
-        IMPLICIT NONE
-        INTEGER, PARAMETER :: K4B=8!selected_int_kind(9)
-        INTEGER(K4B), INTENT(INOUT) :: idum
-        REAL :: numerical_recipes_ran
-        INTEGER(K4B), PARAMETER :: IA=16807,IM=2147483647,IQ=127773,IR=2836
-        REAL :: am
-        INTEGER(K4B):: ix=-1,iy=-1,k
-        if (idum <= 0 .or. iy < 0) then
-            am=nearest(1.0,-1.0)/IM
-            iy=ior(ieor(888889999,abs(idum)),1)
-            ix=ieor(777755555,abs(idum))
-            idum=abs(idum)+1
-        end if
-        ix=ieor(ix,ishft(ix,13))
-        ix=ieor(ix,ishft(ix,-17))
-        ix=ieor(ix,ishft(ix,5))
-        k=iy/IQ
-        iy=IA*(iy-k*IQ)-IR*k
-        if (iy < 0) iy=iy+IM
-        numerical_recipes_ran=am*ior(iand(IM,ieor(ix,iy)),1)
-    END FUNCTION numerical_recipes_ran
+!    ! Numerical Recipes in F90
+!    ! p. 1142
+!    FUNCTION numerical_recipes_ran(idum)
+!        IMPLICIT NONE
+!        INTEGER, PARAMETER :: K4B=8!selected_int_kind(9)
+!        INTEGER(K4B), INTENT(INOUT) :: idum
+!        REAL :: numerical_recipes_ran
+!        INTEGER(K4B), PARAMETER :: IA=16807,IM=2147483647,IQ=127773,IR=2836
+!        REAL :: am
+!        INTEGER(K4B):: ix=-1,iy=-1,k
+!        if (idum <= 0 .or. iy < 0) then
+!            am=nearest(1.0,-1.0)/IM
+!            iy=ior(ieor(888889999,abs(idum)),1)
+!            ix=ieor(777755555,abs(idum))
+!            idum=abs(idum)+1
+!        end if
+!        ix=ieor(ix,ishft(ix,13))
+!        ix=ieor(ix,ishft(ix,-17))
+!        ix=ieor(ix,ishft(ix,5))
+!        k=iy/IQ
+!        iy=IA*(iy-k*IQ)-IR*k
+!        if (iy < 0) iy=iy+IM
+!        numerical_recipes_ran=am*ior(iand(IM,ieor(ix,iy)),1)
+!    END FUNCTION numerical_recipes_ran
 
 
     ! ----------- test functions -----------
@@ -1012,46 +1012,46 @@ module lib_hash_function
 
         end function test_hashpp_kf_8_byte
 
-        function test_hash_8_byte() result(rv)
-            implicit none
-            ! dummy
-            logical :: rv
-
-            ! auxiliary
-            integer(kind=4) :: max
-            integer(kind=8) :: n
-            integer(kind=4) :: hash
-
-            max = 10
-            n = 74
-            hash = hash_8_byte(n,max)
-
-            n = -74
-            hash = hash_8_byte(n,max)
-
-!            n = 0
+!        function test_hash_8_byte() result(rv)
+!            implicit none
+!            ! dummy
+!            logical :: rv
+!
+!            ! auxiliary
+!            integer(kind=4) :: max
+!            integer(kind=8) :: n
+!            integer(kind=4) :: hash
+!
+!            max = 10
+!            n = 74
 !            hash = hash_8_byte(n,max)
-
-            n = 7
-            hash = hash_8_byte(int(-7,8),max)
-            hash = hash_8_byte(n,max)
-            n = 7
-            hash = hash_8_byte(int(-7,8),max)
-            hash = hash_8_byte(n,max)
-
-            n = 6
-            hash = hash_8_byte(int(-6,8),max)
-            hash = hash_8_byte(n,max)
-
-            n = 70
-            hash = hash_8_byte(n,max)
-
-            n = 7
-            hash = hash_8_byte(n,max)
-
-
-            rv = .true.
-        end function test_hash_8_byte
+!
+!            n = -74
+!            hash = hash_8_byte(n,max)
+!
+!!            n = 0
+!!            hash = hash_8_byte(n,max)
+!
+!            n = 7
+!            hash = hash_8_byte(int(-7,8),max)
+!            hash = hash_8_byte(n,max)
+!            n = 7
+!            hash = hash_8_byte(int(-7,8),max)
+!            hash = hash_8_byte(n,max)
+!
+!            n = 6
+!            hash = hash_8_byte(int(-6,8),max)
+!            hash = hash_8_byte(n,max)
+!
+!            n = 70
+!            hash = hash_8_byte(n,max)
+!
+!            n = 7
+!            hash = hash_8_byte(n,max)
+!
+!
+!            rv = .true.
+!        end function test_hash_8_byte
 
         function test_hash_fnv1a_8_byte() result(rv)
             implicit none
