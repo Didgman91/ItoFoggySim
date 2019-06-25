@@ -4,6 +4,10 @@ module lib_math_legendre
 
     private
 
+    ! --- public ---
+    public :: lib_math_associated_legendre_polynomial
+    public :: lib_math_legendre_polynomial
+
     public :: lib_math_legendre_test_functions
 
     contains
