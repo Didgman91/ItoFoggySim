@@ -6,7 +6,19 @@ module lib_mie_vector_spherical_harmonics
 
     private
 
+    ! --- public ---
+    public :: lib_mie_vector_spherical_harmonics_components
+
+    interface lib_mie_vector_spherical_harmonics_components
+        module procedure lib_mie_vector_spherical_harmonics_components_real
+    end interface
+
+    public :: lib_mie_vector_spherical_harmonics_test_functions
+
+    ! --- parameter ---
     integer(kind=1), parameter :: VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND = 4
+
+    double precision, parameter :: PI=4.D0*atan(1.D0)   ! maximum precision, platform independet
 
     contains
 
@@ -56,10 +68,10 @@ module lib_mie_vector_spherical_harmonics
             integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: n
             integer(kind=1) :: z_selector
 
-            type(list_spherical_coordinate_cmplx_type), dimension(m(2)-m(1)+1), intent(inout) :: M_emn
-            type(list_spherical_coordinate_cmplx_type), dimension(m(2)-m(1)+1), intent(inout) :: M_omn
-            type(list_spherical_coordinate_cmplx_type), dimension(m(2)-m(1)+1), intent(inout) :: N_emn
-            type(list_spherical_coordinate_cmplx_type), dimension(m(2)-m(1)+1), intent(inout) :: N_omn
+            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable, intent(inout) :: M_emn
+            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable, intent(inout) :: M_omn
+            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable, intent(inout) :: N_emn
+            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable, intent(inout) :: N_omn
 
             logical, optional :: not_calc_Memn
             logical, optional :: not_calc_Momn
@@ -135,24 +147,28 @@ module lib_mie_vector_spherical_harmonics
 
             ! --- init ---
             if (.not. m_not_calc_Memn) then
+                allocate(M_emn(m(2)-m(1)+1))
                 do i=1, number_of_members_m
                     allocate (M_emn(i)%coordinate(number_of_members_n))
                 end do
             end if
 
             if (.not. m_not_calc_Momn) then
+                allocate(M_omn(m(2)-m(1)+1))
                 do i=1, number_of_members_m
                     allocate (M_omn(i)%coordinate(number_of_members_n))
                 end do
             end if
 
             if (.not. m_not_calc_Nemn) then
+                allocate(N_emn(m(2)-m(1)+1))
                 do i=1, number_of_members_m
                     allocate (N_emn(i)%coordinate(number_of_members_n))
                 end do
             end if
 
             if (.not. m_not_calc_Nemn) then
+                allocate(N_omn(m(2)-m(1)+1))
                 do i=1, number_of_members_m
                     allocate (N_omn(i)%coordinate(number_of_members_n))
                 end do
@@ -360,5 +376,61 @@ module lib_mie_vector_spherical_harmonics
 
         end subroutine lib_mie_vector_spherical_harmonics_components_real
 
+
+        function lib_mie_vector_spherical_harmonics_test_functions() result (rv)
+            implicit none
+            ! dummy
+            integer :: rv
+
+            ! auxiliaray
+            double precision, parameter :: ground_truth_e = 10.0_8**(-6.0_8)
+
+            rv = 0
+
+            if (.not. test_lib_mie_vector_spherical_harmonics_components_real()) then
+                rv = rv + 1
+            end if
+
+            contains
+
+            function test_lib_mie_vector_spherical_harmonics_components_real() result (rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! auxiliary
+                double precision :: theta
+                double precision :: phi
+                double precision :: rho
+                integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: m
+                integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: n
+                integer(kind=1) :: z_selector
+
+                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_emn
+                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_omn
+                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_emn
+                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_omn
+
+!                logical :: not_calc_Memn
+!                logical :: not_calc_Momn
+!                logical :: not_calc_Nemn
+!                logical :: not_calc_Nomn
+
+                theta = PI / 2
+                phi = 0
+                rho = 100
+
+                z_selector = 3
+
+                m = (/ 1, 1 /)
+                n = (/ 1, 3 /)
+
+                call lib_mie_vector_spherical_harmonics_components_real(theta, phi, rho, m, n, z_selector, &
+                                                                        M_emn, M_omn, N_emn, N_omn)
+
+
+            end function
+
+        end function lib_mie_vector_spherical_harmonics_test_functions
 
 end module lib_mie_vector_spherical_harmonics

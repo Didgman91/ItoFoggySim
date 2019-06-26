@@ -11,6 +11,8 @@ program main
     use ml_fmm_math
     use lib_ml_fmm_type_operator
 
+    use lib_mie_vector_spherical_harmonics
+
     use light_scattering
     implicit none
 
@@ -33,6 +35,7 @@ program main
     error_counter = 0
     error_counter = error_counter + lib_math_bessel_test_functions()
     error_counter = error_counter + lib_math_legendre_test_functions()
+    error_counter = error_counter + lib_mie_vector_spherical_harmonics_test_functions()
     error_counter = error_counter + lib_sort_test_functions()
     error_counter = error_counter + lib_test_hash_function()
     error_counter = error_counter + lib_tree_hf_test_functions()

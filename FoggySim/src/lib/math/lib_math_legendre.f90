@@ -111,6 +111,9 @@ module lib_math_legendre
             if (.not. test_lib_math_associated_legendre_polynomial_m2_without_phase()) then
                 rv = rv + 1
             end if
+            if (.not. test_lib_math_associated_legendre_polynomial_m0()) then
+                rv = rv + 1
+            end if
 
             ! Legendre Polynomial
             if (.not. test_lib_math_legendre_polynomial()) then
@@ -456,6 +459,90 @@ module lib_math_legendre
                 end do
 
             end function test_lib_math_associated_legendre_polynomial_m2_without_phase
+
+            function test_lib_math_associated_legendre_polynomial_m0() result (rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! auxiliary
+                integer(kind=4) :: i
+                double precision :: x
+                integer(kind=4), parameter :: n = 5
+                integer(kind=4), parameter :: m = 0
+                double precision, dimension(0:n) :: pm
+                double precision, dimension(0:n) :: pd
+
+                double precision, dimension(0:n) :: ground_truth_pm
+                double precision, dimension(0:n) :: ground_truth_pd
+
+                double precision :: buffer
+
+                ! Values were generated with sageMath
+                !
+                ! source code:
+                !  >>>  var('l')
+                !  >>>  var('m')
+                !  >>>  var('x')
+                !  >>>
+                !  >>>  m=0
+                !  >>>
+                !  >>>  P_d(l,x) = derivative(legendre_P(l,x), x, m)
+                !  >>>  P_a(l,x) = (-1)**m * (1-x**2)**(m/2) * P_d(l,x)
+                !  >>>  P_ad(l,x) = derivative(P_a(l,x), x).simplify_full()
+                !  >>>
+                !  >>>  x=0.2
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_a(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_ad(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
+                ground_truth_pm(0) = 1.00000000000000_8
+                ground_truth_pm(1) = 0.200000000000000_8
+                ground_truth_pm(2) = -0.440000000000000_8
+                ground_truth_pm(3) = -0.280000000000000_8
+                ground_truth_pm(4) = 0.232000000000000_8
+                ground_truth_pm(5) = 0.307520000000000_8
+
+                ground_truth_pd(0) = -0.000000000000000_8
+                ground_truth_pd(1) = 1.00000000000000_8
+                ground_truth_pd(2) = 0.600000000000000_8
+                ground_truth_pd(3) = -1.20000000000000_8
+                ground_truth_pd(4) = -1.36000000000000_8
+                ground_truth_pd(5) = 0.888000000000000_8
+
+                x = 0.2
+
+                call lib_math_associated_legendre_polynomial(x, m, n, pm, pd, .true.)
+
+
+                rv = .true.
+                print *, "test_lib_math_associated_legendre_polynomial_m0:"
+                do i=0, n
+                    buffer = abs(pm(i) - ground_truth_pm(i))
+                    if (buffer .gt. ground_truth_e) then
+                        print *, "  ", i , "difference: ", buffer, " : FAILED"
+                        rv = .false.
+                    else
+                        print *, "  ", i, ": OK"
+                    end if
+                end do
+
+                print*, "  deriviation:"
+                do i=0, n
+                    buffer = abs(pd(i) - ground_truth_pd(i))
+                    if (buffer .gt. ground_truth_e) then
+                        print *, "  ", i , "difference: ", buffer, " : FAILED"
+                        rv = .false.
+                    else
+                        print *, "  ", i, ": OK"
+                    end if
+                end do
+
+            end function test_lib_math_associated_legendre_polynomial_m0
 
             function test_lib_math_legendre_polynomial() result (rv)
                 implicit none
