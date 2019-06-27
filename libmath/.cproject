@@ -93,27 +93,9 @@
                         					
                     </folderInfo>
                     					
-                    <folderInfo id="photran.managedbuild.config.gnu.fortran.exe.debug.158129180.1009121864" name="/" resourcePath="lapack/util">
-                        						
-                        <toolChain id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.70637610" name="GCC Fortran" superClass="photran.managedbuild.toolchain.gnu.fortran.exe.debug" unusedChildren="">
-                            							
-                            <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.256555485" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug.2135571687"/>
-                            							
-                            <tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.440541764" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.908803412"/>
-                            							
-                            <tool id="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.508222537" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.1656319768"/>
-                            							
-                            <tool id="photran.managedbuild.tool.gnu.assembler.exe.debug.505041407" name="GCC Assembler" superClass="photran.managedbuild.tool.gnu.assembler.exe.debug.220502999"/>
-                            						
-                        </toolChain>
-                        					
-                    </folderInfo>
-                    					
                     <sourceEntries>
                         						
                         <entry excluding="lapack|lpmns.f|specfun.f|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
-                        						
-                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="lapack"/>
                         					
                     </sourceEntries>
                     				
@@ -200,12 +182,6 @@
                     <sourceEntries>
                         						
                         <entry excluding="lapack|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
-                        						
-                        <entry excluding="util|complex16" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="lapack"/>
-                        						
-                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="lapack/complex16"/>
-                        						
-                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="lapack/util"/>
                         					
                     </sourceEntries>
                     				
@@ -304,12 +280,6 @@
                     <sourceEntries>
                         						
                         <entry excluding="lapack|lpmns.f|specfun.f|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
-                        						
-                        <entry excluding="util|complex16" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="lapack"/>
-                        						
-                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="lapack/complex16"/>
-                        						
-                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="lapack/util"/>
                         					
                     </sourceEntries>
                     				
