@@ -1,4 +1,4 @@
-module lib_math_types
+module lib_math_type
     implicit none
 
     type spherical_coordinate_real_type
@@ -21,4 +21,4 @@ module lib_math_types
         type(spherical_coordinate_cmplx_type), dimension(:), allocatable :: coordinate
     end type list_spherical_coordinate_cmplx_type
 
-end module lib_math_types
+end module lib_math_type

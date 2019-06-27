@@ -1,7 +1,7 @@
 module lib_mie_vector_spherical_harmonics
     use lib_math_bessel
     use lib_math_legendre
-    use lib_math_types
+    use lib_math_type
     implicit none
 
     private
@@ -86,8 +86,9 @@ module lib_mie_vector_spherical_harmonics
 
             double precision, dimension(m(2)-m(1)+1, n(2)-n(1)+1) :: p_mn
             double precision, dimension(m(2)-m(1)+1, n(2)-n(1)+1) :: p_dmn
-            double precision, dimension(n(2)-n(1)+1) :: buffer_p_n
-            double precision, dimension(n(2)-n(1)+1) :: buffer_p_dn
+            double precision, dimension(m(2)-m(1)+1, n(2)-n(1)+1) :: p_mn_divided_by_sin_theta
+            double precision, dimension(0:n(2)) :: buffer_p_n
+            double precision, dimension(0:n(2)) :: buffer_p_dn
 
             double precision, dimension(n(2)-n(1)+1) :: z_n_real
             complex(kind=8), dimension(n(2)-n(1)+1) :: z_n_cmplx
@@ -224,10 +225,13 @@ module lib_mie_vector_spherical_harmonics
             end select
 
             do i=1, number_of_members_m
-                call lib_math_associated_legendre_polynomial(cos_theta, i, n(2), buffer_p_n,  buffer_p_dn, .false.)
-                p_mn(i, :) = buffer_p_n(n(1):n(2))
+                call lib_math_associated_legendre_polynomial_theta(theta, i, n(2), buffer_p_n,  buffer_p_dn, .false.)
+                p_mn_divided_by_sin_theta(i, :) = buffer_p_n(n(1):n(2))
                 ! final step of the calculation of >>> derivation[LegendreP[l, m, cos (x)], x]
                 p_dmn(i, :) = minus_sin_theta * buffer_p_dn(n(1):n(2))
+
+                call lib_math_associated_legendre_polynomial(sin_theta, i, n(2), buffer_p_n,  buffer_p_dn, .false.)
+                p_mn(i, :) = buffer_p_n(n(1):n(2))
             end do
 
 
@@ -239,10 +243,10 @@ module lib_mie_vector_spherical_harmonics
                         ! z = [j_n, y_n] ==> z: real
                         do i=1, number_of_members_m
                             do ii=1, number_of_members_n
-                                buffer_real = - m_divided_by_sin_theta(i) * sin_m_phi(i) * p_mn(i, ii) * z_n_real(ii)
+                                buffer_real = -i * sin_m_phi(i) * p_mn_divided_by_sin_theta(i, ii) * z_n_real(ii)
                                 M_emn(i)%coordinate(ii)%theta = cmplx(buffer_real, 0, kind=8)
 
-                                buffer_real = - cos_m_phi(i) * p_dmn(i, ii) * z_n_real(ii)
+                                buffer_real = -cos_m_phi(i) * p_dmn(i, ii) * z_n_real(ii)
                                 M_emn(i)%coordinate(ii)%phi = cmplx(buffer_real, 0, kind=8)
 
                                 M_emn(i)%coordinate(ii)%rho = cmplx(0,0, kind=8)
@@ -252,7 +256,7 @@ module lib_mie_vector_spherical_harmonics
                         ! z = [h^(1)_n, h^(2)_n] ==> z: complex
                         do i=1, number_of_members_m
                             do ii=1, number_of_members_n
-                                buffer_real = - m_divided_by_sin_theta(i) * sin_m_phi(i) * p_mn(i, ii)
+                                buffer_real = -i * sin_m_phi(i) * p_mn_divided_by_sin_theta(i, ii)
                                 buffer_cmplx = buffer_real * z_n_cmplx(ii)
                                 M_emn(i)%coordinate(ii)%theta = buffer_cmplx
 
@@ -273,7 +277,7 @@ module lib_mie_vector_spherical_harmonics
                         ! z = [j_n, y_n] ==> z: real
                         do i=1, number_of_members_m
                             do ii=1, number_of_members_n
-                                buffer_real = m_divided_by_sin_theta(i) * cos_m_phi(i) * p_mn(i, ii) * z_n_real(ii)
+                                buffer_real = i * cos_m_phi(i) * p_mn_divided_by_sin_theta(i, ii) * z_n_real(ii)
                                 M_omn(i)%coordinate(ii)%theta = cmplx(buffer_real, 0, kind=8)
 
                                 buffer_real = - sin_m_phi(i) * p_dmn(i, ii) * z_n_real(ii)
@@ -286,7 +290,7 @@ module lib_mie_vector_spherical_harmonics
                         ! z = [h^(1)_n, h^(2)_n] ==> z: complex
                         do i=1, number_of_members_m
                             do ii=1, number_of_members_n
-                                buffer_real = m_divided_by_sin_theta(i) * cos_m_phi(i) * p_mn(i, ii)
+                                buffer_real = i * cos_m_phi(i) * p_mn_divided_by_sin_theta(i, ii)
                                 buffer_cmplx = buffer_real * z_n_cmplx(ii)
                                 M_omn(i)%coordinate(ii)%theta = buffer_cmplx
 
@@ -336,8 +340,7 @@ module lib_mie_vector_spherical_harmonics
                         end do
                 end select
             end if
-
-            ! N_omn
+           ! N_omn
             if (.not. m_not_calc_Nomn) then
                 select case (z_selector)
                     case (1,2)
@@ -417,7 +420,7 @@ module lib_mie_vector_spherical_harmonics
 !                logical :: not_calc_Nemn
 !                logical :: not_calc_Nomn
 
-                theta = PI / 2
+                theta = 0
                 phi = 0
                 rho = 100
 

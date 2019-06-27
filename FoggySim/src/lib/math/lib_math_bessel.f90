@@ -100,6 +100,8 @@ module lib_math_bessel
     !
     ! symbol: S
     !
+    ! Formula: S = x * j_n(x)
+    !
     ! Argument
     ! ----
     !   x: double precision .OR. complex
@@ -121,6 +123,8 @@ module lib_math_bessel
     ! calculates the the Riccat Bessel function
     !
     ! symbol: C
+    !
+    ! Formula: C = -x * y_n(x)
     !
     ! Argument
     ! ----
@@ -144,6 +148,8 @@ module lib_math_bessel
     !
     ! symbol: Xi
     !
+    ! Formula: Xi = x * h^(1)_n(x)
+    !
     ! Argument
     ! ----
     !   x: double precision .OR. complex
@@ -165,6 +171,8 @@ module lib_math_bessel
     ! calculates the the Riccat Bessel function
     !
     ! symbol: Zeta
+    !
+    ! Formula: Zeta = x * h^(2)_n(x)
     !
     ! Argument
     ! ----
@@ -285,6 +293,8 @@ module lib_math_bessel
     !
     ! symbol: S'
     !
+    ! Formula: S' = [ x * j_n(x) ]'
+    !
     ! Argument
     ! ----
     !   x: double precision
@@ -308,6 +318,8 @@ module lib_math_bessel
     ! Calculates the derivative of the Riccati-Bessel function
     !
     ! symbol: C'
+    !
+    ! Formula: C' = [ -x * y_n(x) ]'
     !
     ! Argument
     ! ----
@@ -333,6 +345,8 @@ module lib_math_bessel
     !
     ! symbol: Xi'
     !
+    ! Formula: Xi' = [ x * h^(1)_n(x) ]'
+    !
     ! Argument
     ! ----
     !   x: double precision .OR. compelx
@@ -356,6 +370,8 @@ module lib_math_bessel
     ! Calculates the derivative of the Riccati-Bessel function
     !
     ! symbol: Zeta'
+    !
+    ! Formula: Zeta' = [ x * h^(2)_n(x) ]'
     !
     ! Argument
     ! ----
