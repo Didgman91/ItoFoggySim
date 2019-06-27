@@ -323,7 +323,7 @@ module lib_mie_vector_spherical_harmonics
                             do ii=1, number_of_members_n
                                 buffer_real = cos_m_phi(i) * ii*(ii+1) * p_mn(i, ii)
                                 buffer_cmplx = z_divided_by_rho_cmplx(ii) * buffer_real
-                                N_emn(i)%coordinate(ii)%rho = cmplx(buffer_real, 0, kind=8)
+                                N_emn(i)%coordinate(ii)%rho = buffer_cmplx
 
                                 buffer_real = cos_m_phi(i) * p_dmn(i, ii) / rho
                                 buffer_cmplx = buffer_real * r_d_cmplx(ii)
@@ -331,7 +331,7 @@ module lib_mie_vector_spherical_harmonics
 
                                 buffer_real = - i * sin_m_phi(i) * p_mn(i, ii) / (sin_theta * rho)
                                 buffer_cmplx = buffer_real * r_d_cmplx(ii)
-                                N_emn(i)%coordinate(ii)%phi = cmplx(buffer_real,0, kind=8)
+                                N_emn(i)%coordinate(ii)%phi = buffer_cmplx
                             end do
                         end do
                 end select
@@ -360,7 +360,7 @@ module lib_mie_vector_spherical_harmonics
                             do ii=1, number_of_members_n
                                 buffer_real = sin_m_phi(i) * ii*(ii+1) * p_mn(i, ii)
                                 buffer_cmplx = z_divided_by_rho_cmplx(ii) * buffer_real
-                                N_omn(i)%coordinate(ii)%rho = cmplx(buffer_real, 0, kind=8)
+                                N_omn(i)%coordinate(ii)%rho = buffer_cmplx
 
                                 buffer_real = sin_m_phi(i) * p_dmn(i, ii) / rho
                                 buffer_cmplx = buffer_real * r_d_cmplx(ii)
@@ -373,6 +373,7 @@ module lib_mie_vector_spherical_harmonics
                         end do
                 end select
             end if
+
 
         end subroutine lib_mie_vector_spherical_harmonics_components_real
 
