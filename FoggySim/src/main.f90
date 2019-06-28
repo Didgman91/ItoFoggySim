@@ -34,6 +34,7 @@ program main
 
 
     error_counter = 0
+    error_counter = error_counter + lib_math_type_operator_test_functions()
     error_counter = error_counter + lib_math_bessel_test_functions()
     error_counter = error_counter + lib_math_legendre_test_functions()
     error_counter = error_counter + lib_mie_vector_spherical_harmonics_test_functions()

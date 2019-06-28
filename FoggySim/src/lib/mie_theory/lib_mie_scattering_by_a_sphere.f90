@@ -71,8 +71,6 @@ module lib_mie_scattering_by_a_sphere
 
             ! auxiliary
             double precision :: buffer_real
-            complex(kind=8) :: buffer_cmplx
-            type(spherical_coordinate_cmplx_type) :: buffer_spher
             integer(kind=4) :: i
             double precision :: mu
             double precision :: mu1
@@ -215,6 +213,89 @@ module lib_mie_scattering_by_a_sphere
 
         end subroutine get_coefficients_a_b_real
 
+        ! calculates the scattering coefficients
+        !
+        ! HINT: The refractive index has only a real value.
+        !
+        ! Arguments
+        ! ----
+        !   x: double precision
+        !       size parameter: x = k*r = 2 * PI * N * r / lambda
+        !       k: wavenumber
+        !       r: distance
+        !       N: refractive index of the medium
+        !       lambda: wave length
+        !   m: double precision
+        !       relative refractive index: m = N_1 / N
+        !       N_1: refractive index of the particle
+        !       N: refractive index of the medium
+        !   mu: double precision
+        !       permeability of the medium
+        !   mu1: double precision
+        !       permeability of the particle
+        !   n: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       HINT: first element .le. second element
+        !
+        ! Reference: Absorption and Scattering of Light by Small Particles, eq. 4.52, 4.53
+        subroutine get_coefficients_a_b_cmplx(x, m, mu, mu1, n, a_n, b_n)
+            implicit none
+            ! dummy
+            double precision :: x
+            complex(kind=8) :: m
+            double precision :: mu
+            double precision :: mu1
+            integer(kind=4), dimension(2) :: n
+
+            complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+            complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+            ! auxiliary
+            complex(kind=8), dimension(n(2)-n(1)+1) :: numerator
+            complex(kind=8), dimension(n(2)-n(1)+1) :: denominator
+
+            double precision, dimension(n(2)-n(1)+1) :: j_n_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: j_n_mx
+            double precision, dimension(n(2)-n(1)+1) :: s_n_x
+            double precision, dimension(n(2)-n(1)+1) :: s_dn_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: s_n_mx
+            complex(kind=8), dimension(n(2)-n(1)+1) :: s_dn_mx
+
+            complex(kind=8), dimension(n(2)-n(1)+1) :: h_n_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: xi_n_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: xi_dn_x
+
+            complex(kind=8) :: mx
+
+            integer(kind=4) :: number_of_n
+
+            number_of_n = n(2) - n(1) + 1
+
+            mx = m*x
+
+            s_dn_x = lib_math_riccati_s_derivative(x, n(1), number_of_n, s_n_x)
+            j_n_x = s_n_x / x
+
+            s_dn_mx = lib_math_riccati_s_derivative(mx, n(1), number_of_n, s_n_mx)
+            j_n_mx = s_n_mx / mx
+
+            xi_dn_x = lib_math_riccati_xi_derivative(x, n(1), number_of_n, xi_n_x)
+            h_n_x = xi_n_x / x
+
+
+            numerator = mu * m*m * j_n_mx * s_dn_x - mu1 * j_n_x * s_dn_mx
+            denominator = mu * m*m * j_n_mx * xi_dn_x - mu1 * h_n_x * s_dn_mx
+
+            a_n = numerator / denominator
+
+            numerator = mu1 * j_n_mx * s_dn_x - mu * j_n_x * s_dn_mx
+            denominator = mu1 * j_n_mx * xi_dn_x - mu * h_n_x * s_dn_mx
+
+            b_n = numerator / denominator
+
+        end subroutine get_coefficients_a_b_cmplx
+
         function lib_mie_scattering_by_a_sphere_test_functions() result (rv)
             implicit none
             ! dummy
@@ -225,16 +306,64 @@ module lib_mie_scattering_by_a_sphere
 
             rv = 0
 
+            if (.not. test_get_coefficients_a_b_cmplx()) then
+                rv = rv + 1
+            end if
             if (.not. test_get_e_field_scattered()) then
                 rv = rv + 1
             end if
 
             contains
 
-                function test_get_coefficients_a_b_real() result (rv)
+                function test_get_coefficients_a_b_cmplx() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+
+                    double precision :: x
+                    complex(kind=8) :: m
+                    double precision :: mu
+                    double precision :: mu1
+                    integer(kind=4), dimension(2), parameter :: n = (/1, 1/)
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_b_n
+
+                    ! Reference: Electromagnetic scattering on spherical polydispersions, D.Deirmendjian, p. 27
+                    m = cmplx(1.28, -1.37, kind=8)
+                    x=20
+                    ground_truth_a_n(1) = cmplx(-0.22686_8+0.5_8, -0.12863_8, kind=8)
+                    ground_truth_b_n(1) = cmplx(0.22864_8+0.5_8, 0.13377_8, kind=8)
+
+                    call get_coefficients_a_b_cmplx(x, m, mu, mu1, n, a_n, b_n)
+
+                    rv = .true.
+                    print *, "test_get_coefficients_a_b_cmplx:"
+                    do i=n(1), n(2)
+                        buffer = abs(a_n(i) - ground_truth_a_n(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  a_n: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  a_n: ", i, ": OK"
+                        end if
+
+                        buffer = abs(b_n(i) - ground_truth_b_n(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  b_n: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  b_n: ", i, ": OK"
+                        end if
+                    end do
+
                 end function
 
                 function test_get_e_field_scattered() result (rv)
