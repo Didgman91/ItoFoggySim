@@ -1,6 +1,5 @@
 program main
-    use lib_math_bessel
-    use lib_math_legendre
+    use lib_math_public
     use lib_data_types
     use lib_tree
     use lib_tree_helper_functions
@@ -12,6 +11,8 @@ program main
     use lib_ml_fmm_type_operator
 
     use lib_mie_vector_spherical_harmonics
+
+    use lib_mie_scattering_by_a_sphere
 
     use light_scattering
     implicit none
@@ -36,6 +37,7 @@ program main
     error_counter = error_counter + lib_math_bessel_test_functions()
     error_counter = error_counter + lib_math_legendre_test_functions()
     error_counter = error_counter + lib_mie_vector_spherical_harmonics_test_functions()
+    error_counter = error_counter + lib_mie_scattering_by_a_sphere_test_functions()
     error_counter = error_counter + lib_sort_test_functions()
     error_counter = error_counter + lib_test_hash_function()
     error_counter = error_counter + lib_tree_hf_test_functions()
