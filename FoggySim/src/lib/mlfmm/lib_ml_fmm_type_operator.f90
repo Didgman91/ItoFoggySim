@@ -33,8 +33,7 @@ module lib_ml_fmm_type_operator
 
     ! ----- operator -----
     interface operator (+)
-        module procedure m_coefficient_add
-!        module procedure m_procedures%m_coefficient_add
+        module procedure lib_ml_fmm_type_operator_coefficient_add
         module procedure lib_ml_fmm_type_operator_v_add
         module procedure lib_ml_fmm_type_operator_v_add_0D
     end interface
@@ -45,22 +44,22 @@ module lib_ml_fmm_type_operator
     end interface
 
     interface operator (*)
-        module procedure m_u_dot_coefficient
+        module procedure lib_ml_fmm_u_dot_coefficient_operator
     end interface
 
     interface operator (.eq.)
-        module procedure m_coefficient_eq
+        module procedure lib_ml_fmm_coefficient_eq
     end interface
 
     interface operator (.ne.)
-        module procedure m_coefficient_ne
+        module procedure lib_ml_fmm_coefficient_ne
     end interface
 
     ! Sum_q=0_p-1[C_q R_q(y_j − x_∗)] = C o R(y_j − x_∗)
     !                                     ^ cor-operator
     ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, p. 6
     interface operator (.CoR.)
-        module procedure m_cor
+        module procedure lib_ml_fmm_cor_operator
     end interface
 
     ! ----- interfaces -----
@@ -439,6 +438,7 @@ module lib_ml_fmm_type_operator
     end type
 
     ! ----- member procedures -----
+#ifdef __GFORTRAN__
     procedure(ml_fmm_coefficient_add_operator), pointer :: m_coefficient_add => null()
     procedure(ml_fmm_u_dot_coefficient_operator), pointer :: m_u_dot_coefficient => null()
     procedure(ml_fmm_cor_operator), pointer :: m_cor => null()
@@ -451,6 +451,20 @@ module lib_ml_fmm_type_operator
     procedure(ml_fmm_v_add_0D_operator), pointer :: m_v_add_0D => null()
     procedure(ml_fmm_v_sub_operator), pointer :: m_v_sub => null()
     procedure(ml_fmm_v_sub_0D_operator), pointer :: m_v_sub_0D => null()
+#else
+    procedure(ml_fmm_coefficient_add_operator), pointer :: m_coefficient_add
+    procedure(ml_fmm_u_dot_coefficient_operator), pointer :: m_u_dot_coefficient
+    procedure(ml_fmm_cor_operator), pointer :: m_cor
+    procedure(ml_fmm_coefficient_set_zero), pointer :: m_coefficient_set_zero
+!    procedure(ml_fmm_allocate_coefficient_list), pointer :: m_allocate_coefficient_list
+    procedure(ml_fmm_set_coefficient), pointer :: m_set_coefficient
+    procedure(ml_fmm_get_coefficient), pointer :: m_get_coefficient
+#endif
+
+    procedure(ml_fmm_v_add_operator), pointer :: m_v_add
+    procedure(ml_fmm_v_add_0D_operator), pointer :: m_v_add_0D
+    procedure(ml_fmm_v_sub_operator), pointer :: m_v_sub
+    procedure(ml_fmm_v_sub_0D_operator), pointer :: m_v_sub_0D
 
 !    procedure(ml_fmm_deallocate_coefficient_list), pointer :: m_deallocate_coefficient_list => null()
     procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_eq => null()
@@ -585,6 +599,16 @@ module lib_ml_fmm_type_operator
                 print *, "  m_get_coefficient is not associated"
             end if
         end function
+        
+        function lib_ml_fmm_type_operator_coefficient_add(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            type (lib_ml_fmm_coefficient), intent(in) :: lhs, rhs
+            type (lib_ml_fmm_coefficient) :: rv
+            
+            rv = m_coefficient_add(lhs, rhs)
+            
+        end function
 
         function lib_ml_fmm_type_operator_v_add(lhs, rhs) result(rv)
             use ml_fmm_type
@@ -649,5 +673,51 @@ module lib_ml_fmm_type_operator
                 print *, "  m_v_sub_0d is not associated"
             end if
         end function
+        
+        function lib_ml_fmm_u_dot_coefficient_operator(lhs,rhs) result (rv)
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type (lib_ml_fmm_v), intent(in) :: lhs
+            type (lib_ml_fmm_coefficient), intent(in) :: rhs
+            type (lib_ml_fmm_coefficient) :: rv
+            
+            rv = m_u_dot_coefficient(lhs, rhs)
+            
+        end function lib_ml_fmm_u_dot_coefficient_operator
+        
+        function lib_ml_fmm_coefficient_eq(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            type(lib_ml_fmm_coefficient), intent(in) :: lhs
+            type(lib_ml_fmm_coefficient), intent(in) :: rhs
+            logical :: rv
+            
+            rv = m_coefficient_eq(lhs, rhs)
+            
+        end function lib_ml_fmm_coefficient_eq
+        
+        function lib_ml_fmm_coefficient_ne(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            type(lib_ml_fmm_coefficient), intent(in) :: lhs
+            type(lib_ml_fmm_coefficient), intent(in) :: rhs
+            logical :: rv
+            
+            rv = m_coefficient_ne(lhs, rhs)
+            
+        end function lib_ml_fmm_coefficient_ne
+        
+        function lib_ml_fmm_cor_operator(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_coefficient), intent(in) :: lhs
+            type(lib_tree_spatial_point), intent(in) :: rhs
+            type(lib_ml_fmm_v) :: rv
+            
+            rv = m_cor(lhs, rhs)
+            
+        end function lib_ml_fmm_cor_operator
 
 end module lib_ml_fmm_type_operator

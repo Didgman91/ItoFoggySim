@@ -11,7 +11,7 @@ C***END PROLOGUE  ZWRSK
 C     COMPLEX CINU,CSCL,CT,CW,C1,C2,RCT,ST,Y,ZR
       DOUBLE PRECISION ACT, ACW, ALIM, ASCLE, CINUI, CINUR, CSCLR, CTI,
      * CTR, CWI, CWR, C1I, C1R, C2I, C2R, ELIM, FNU, PTI, PTR, RACT,
-     * STI, STR, TOL, YI, YR, ZRI, ZRR, ZABS, D1MACH
+     * STI, STR, TOL, YI, YR, ZRI, ZRR, ZABS_amos, D1MACH
       INTEGER I, KODE, N, NW, NZ
       DIMENSION YR(N), YI(N), CWR(2), CWI(2)
 C-----------------------------------------------------------------------
