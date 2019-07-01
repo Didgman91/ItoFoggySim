@@ -395,6 +395,14 @@ module lib_mie_vector_spherical_harmonics
                 rv = rv + 1
             end if
 
+            print *, "----lib_mie_vector_spherical_harmonics_test_functions----"
+            if (rv == 0) then
+                print *, "lib_mie_vector_spherical_harmonics_test_functions tests: OK"
+            else
+                print *, rv,"lib_mie_vector_spherical_harmonics_test_functions test(s) FAILED"
+            end if
+            print *, "---------------------------------------------------------"
+
             contains
 
             function test_lib_mie_vector_spherical_harmonics_components_real() result (rv)

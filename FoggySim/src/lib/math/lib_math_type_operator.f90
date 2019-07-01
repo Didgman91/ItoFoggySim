@@ -649,6 +649,50 @@ module lib_math_type_operator
             if (.not. test_lib_math_list_spherical_operator_add_array()) then
                 rv = rv + 1
             end if
+            if (.not. test_lib_math_list_spherical_operator_sub_array()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_spherical_operator_0d_add_array()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_spherical_operator_array_add_0d()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_spherical_operator_array_sub_0d()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_spherical_operator_array_real_mul_array()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_spherical_operator_array_cmplx_mul_array()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_spherical_operator_real_mul_array()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_spherical_operator_cmplx_mul_array()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_spherical_operator_array_divide_by_r_array()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_spherical_operator_array_divide_by_c_array()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_spherical_operator_array_divide_by_real()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_spherical_operator_array_divide_by_cmplx()) then
+                rv = rv + 1
+            end if
+
+            print *, "--------lib_math_type_operator_test_functions--------"
+            if (rv == 0) then
+                print *, "lib_math_type_operator_test_functions tests: OK"
+            else
+                print *, rv,"lib_math_type_operator_test_functions test(s) FAILED"
+            end if
+            print *, "-----------------------------------------------------"
 
             contains
 
@@ -697,6 +741,7 @@ module lib_math_type_operator
                         else
                             print *, "  ", counter, "OK"
                         end if
+                        rv = .true.
                     end if
                 end function evaluate
 
@@ -754,6 +799,648 @@ module lib_math_type_operator
                     end do
 
                 end function test_lib_math_list_spherical_operator_add_array
+
+                function test_lib_math_list_spherical_operator_sub_array() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_spherical_coordinate_cmplx_type) :: lhs
+                    type (list_spherical_coordinate_cmplx_type) :: rhs
+                    type (list_spherical_coordinate_cmplx_type) :: value
+
+                    type (list_spherical_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_1()
+                    lhs%coordinate(2) = get_test_values_1()
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_1()
+                    rhs%coordinate(2) = get_test_values_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%phi = cmplx(0,0, kind=8)
+                    ground_truth_value%coordinate(1)%rho = cmplx(0,0, kind=8)
+                    ground_truth_value%coordinate(1)%theta = cmplx(0,0, kind=8)
+
+                    ground_truth_value%coordinate(2)%phi = cmplx(-5,-3, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(-1,1, kind=8)
+                    ground_truth_value%coordinate(2)%theta = cmplx(3,5, kind=8)
+
+                    value = lib_math_list_spherical_operator_sub_array(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_spherical_operator_sub_array:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
+                        rv = evaluate(buffer, i, 'phi')
+
+                        buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
+                        rv = evaluate(buffer, i, "rho")
+
+                        buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+                    end do
+
+                end function test_lib_math_list_spherical_operator_sub_array
+
+                function test_lib_math_list_spherical_operator_0d_add_array() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (spherical_coordinate_cmplx_type) :: lhs
+                    type (list_spherical_coordinate_cmplx_type) :: rhs
+                    type (list_spherical_coordinate_cmplx_type) :: value
+
+                    type (list_spherical_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs = get_test_values_1()
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_1()
+                    rhs%coordinate(2) = get_test_values_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%phi = cmplx(2,4, kind=8)
+                    ground_truth_value%coordinate(1)%rho = cmplx(6,8, kind=8)
+                    ground_truth_value%coordinate(1)%theta = cmplx(10,12, kind=8)
+
+                    ground_truth_value%coordinate(2)%phi = cmplx(7,7, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(7,7, kind=8)
+                    ground_truth_value%coordinate(2)%theta = cmplx(7,7, kind=8)
+
+                    value = lib_math_list_spherical_operator_0d_add_array(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_spherical_operator_0d_add_array:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
+                        rv = evaluate(buffer, i, 'phi')
+
+                        buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
+                        rv = evaluate(buffer, i, "rho")
+
+                        buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+                    end do
+
+                end function test_lib_math_list_spherical_operator_0d_add_array
+
+                function test_lib_math_list_spherical_operator_array_add_0d() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_spherical_coordinate_cmplx_type) :: lhs
+                    type (spherical_coordinate_cmplx_type) :: rhs
+                    type (list_spherical_coordinate_cmplx_type) :: value
+
+                    type (list_spherical_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_1()
+                    lhs%coordinate(2) = get_test_values_2()
+
+                    ! rhs
+                    rhs = get_test_values_1()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%phi = cmplx(2,4, kind=8)
+                    ground_truth_value%coordinate(1)%rho = cmplx(6,8, kind=8)
+                    ground_truth_value%coordinate(1)%theta = cmplx(10,12, kind=8)
+
+                    ground_truth_value%coordinate(2)%phi = cmplx(7,7, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(7,7, kind=8)
+                    ground_truth_value%coordinate(2)%theta = cmplx(7,7, kind=8)
+
+                    value = lib_math_list_spherical_operator_array_add_0d(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_spherical_operator_array_add_0d:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
+                        rv = evaluate(buffer, i, 'phi')
+
+                        buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
+                        rv = evaluate(buffer, i, "rho")
+
+                        buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+                    end do
+
+                end function test_lib_math_list_spherical_operator_array_add_0d
+
+                function test_lib_math_list_spherical_operator_array_sub_0d() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_spherical_coordinate_cmplx_type) :: lhs
+                    type (spherical_coordinate_cmplx_type) :: rhs
+                    type (list_spherical_coordinate_cmplx_type) :: value
+
+                    type (list_spherical_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_1()
+                    lhs%coordinate(2) = get_test_values_2()
+
+                    ! rhs
+                    rhs = get_test_values_1()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%phi = cmplx(0,0, kind=8)
+                    ground_truth_value%coordinate(1)%rho = cmplx(0,0, kind=8)
+                    ground_truth_value%coordinate(1)%theta = cmplx(0,0, kind=8)
+
+                    ground_truth_value%coordinate(2)%phi = cmplx(5,3, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(1,-1, kind=8)
+                    ground_truth_value%coordinate(2)%theta = cmplx(-3,-5, kind=8)
+
+                    value = lib_math_list_spherical_operator_array_sub_0d(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_spherical_operator_array_sub_0d:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
+                        rv = evaluate(buffer, i, 'phi')
+
+                        buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
+                        rv = evaluate(buffer, i, "rho")
+
+                        buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+                    end do
+
+                end function test_lib_math_list_spherical_operator_array_sub_0d
+
+                function test_lib_math_list_spherical_operator_array_real_mul_array() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    real(kind=lib_math_type_kind), dimension(d) :: lhs
+                    type (list_spherical_coordinate_cmplx_type)  :: rhs
+                    type (list_spherical_coordinate_cmplx_type) :: value
+
+                    type (list_spherical_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs(1) = 2.0
+                    lhs(2) = 5.0
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_1()
+                    rhs%coordinate(2) = get_test_values_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%phi = cmplx(2,4, kind=8)
+                    ground_truth_value%coordinate(1)%rho = cmplx(6,8, kind=8)
+                    ground_truth_value%coordinate(1)%theta = cmplx(10,12, kind=8)
+
+                    ground_truth_value%coordinate(2)%phi = cmplx(30,25, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(20,15, kind=8)
+                    ground_truth_value%coordinate(2)%theta = cmplx(10,5, kind=8)
+
+                    value = lib_math_list_spherical_operator_array_real_mul_array(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_spherical_operator_array_real_mul_array:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
+                        rv = evaluate(buffer, i, 'phi')
+
+                        buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
+                        rv = evaluate(buffer, i, "rho")
+
+                        buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+                    end do
+
+                end function test_lib_math_list_spherical_operator_array_real_mul_array
+
+                function test_lib_math_list_spherical_operator_array_cmplx_mul_array() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    complex(kind=lib_math_type_kind), dimension(d) :: lhs
+                    type (list_spherical_coordinate_cmplx_type) :: rhs
+                    type (list_spherical_coordinate_cmplx_type) :: value
+
+                    type (list_spherical_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs(1) = cmplx(0, 1, kind=8)
+                    lhs(2) = cmplx(2, 0, kind=8)
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_1()
+                    rhs%coordinate(2) = get_test_values_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%phi = cmplx(-2,1, kind=8)
+                    ground_truth_value%coordinate(1)%rho = cmplx(-4,3, kind=8)
+                    ground_truth_value%coordinate(1)%theta = cmplx(-6,5, kind=8)
+
+                    ground_truth_value%coordinate(2)%phi = cmplx(12,10, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(8,6, kind=8)
+                    ground_truth_value%coordinate(2)%theta = cmplx(4,2, kind=8)
+
+                    value = lib_math_list_spherical_operator_array_cmplx_mul_array(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_spherical_operator_array_cmplx_mul_array:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
+                        rv = evaluate(buffer, i, 'phi')
+
+                        buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
+                        rv = evaluate(buffer, i, "rho")
+
+                        buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+                    end do
+
+                end function test_lib_math_list_spherical_operator_array_cmplx_mul_array
+
+                function test_lib_math_list_spherical_operator_real_mul_array() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    real(kind=lib_math_type_kind) :: lhs
+                    type (list_spherical_coordinate_cmplx_type) :: rhs
+                    type (list_spherical_coordinate_cmplx_type) :: value
+
+                    type (list_spherical_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs = 4
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_1()
+                    rhs%coordinate(2) = get_test_values_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%phi = cmplx(4,8, kind=8)
+                    ground_truth_value%coordinate(1)%rho = cmplx(12,16, kind=8)
+                    ground_truth_value%coordinate(1)%theta = cmplx(20,24, kind=8)
+
+                    ground_truth_value%coordinate(2)%phi = cmplx(24,20, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(16,12, kind=8)
+                    ground_truth_value%coordinate(2)%theta = cmplx(8,4, kind=8)
+
+                    value = lib_math_list_spherical_operator_real_mul_array(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_spherical_operator_real_mul_array:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
+                        rv = evaluate(buffer, i, 'phi')
+
+                        buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
+                        rv = evaluate(buffer, i, "rho")
+
+                        buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+                    end do
+
+                end function test_lib_math_list_spherical_operator_real_mul_array
+
+                function test_lib_math_list_spherical_operator_cmplx_mul_array() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    complex(kind=lib_math_type_kind) :: lhs
+                    type (list_spherical_coordinate_cmplx_type) :: rhs
+                    type (list_spherical_coordinate_cmplx_type) :: value
+
+                    type (list_spherical_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs = cmplx(0, 4, kind=8)
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_1()
+                    rhs%coordinate(2) = get_test_values_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%phi = cmplx(-8,4, kind=8)
+                    ground_truth_value%coordinate(1)%rho = cmplx(-16,12, kind=8)
+                    ground_truth_value%coordinate(1)%theta = cmplx(-24,20, kind=8)
+
+                    ground_truth_value%coordinate(2)%phi = cmplx(-20,24, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(-12,16, kind=8)
+                    ground_truth_value%coordinate(2)%theta = cmplx(-4,8, kind=8)
+
+                    value = lib_math_list_spherical_operator_cmplx_mul_array(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_spherical_operator_cmplx_mul_array:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
+                        rv = evaluate(buffer, i, 'phi')
+
+                        buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
+                        rv = evaluate(buffer, i, "rho")
+
+                        buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+                    end do
+
+                end function test_lib_math_list_spherical_operator_cmplx_mul_array
+
+                function test_lib_math_list_spherical_operator_array_divide_by_r_array() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_spherical_coordinate_cmplx_type) :: lhs
+                    real(kind=lib_math_type_kind), dimension(d) :: rhs
+                    type (list_spherical_coordinate_cmplx_type) :: value
+
+                    type (list_spherical_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_1()
+                    lhs%coordinate(2) = get_test_values_2()
+
+                    ! rhs
+                    rhs(1) = 2.0
+                    rhs(2) = 4.0
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%phi = cmplx(0.5,1, kind=8)
+                    ground_truth_value%coordinate(1)%rho = cmplx(1.5,2, kind=8)
+                    ground_truth_value%coordinate(1)%theta = cmplx(2.5,3, kind=8)
+
+                    ground_truth_value%coordinate(2)%phi = cmplx(1.5,1.25, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(1,0.625, kind=8)
+                    ground_truth_value%coordinate(2)%theta = cmplx(0.5,0.25, kind=8)
+
+                    value = lib_math_list_spherical_operator_array_divide_by_real_array(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_spherical_operator_array_divide_by_r_array:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
+                        rv = evaluate(buffer, i, 'phi')
+
+                        buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
+                        rv = evaluate(buffer, i, "rho")
+
+                        buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+                    end do
+
+                end function test_lib_math_list_spherical_operator_array_divide_by_r_array
+
+                function test_lib_math_list_spherical_operator_array_divide_by_c_array() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_spherical_coordinate_cmplx_type) :: lhs
+                    complex(kind=lib_math_type_kind), dimension(d) :: rhs
+                    type (list_spherical_coordinate_cmplx_type) :: value
+
+                    type (list_spherical_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_1()
+                    lhs%coordinate(2) = get_test_values_2()
+
+                    ! rhs
+                    rhs(1) = cmplx(0, 2, kind=8)
+                    rhs(2) = cmplx(0, 4, kind=8)
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%phi = cmplx(1, -0.5, kind=8)
+                    ground_truth_value%coordinate(1)%rho = cmplx(2, -1.5, kind=8)
+                    ground_truth_value%coordinate(1)%theta = cmplx(3, -2.5, kind=8)
+
+                    ground_truth_value%coordinate(2)%phi = cmplx(1.25, -1.5, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(0.625, -1, kind=8)
+                    ground_truth_value%coordinate(2)%theta = cmplx(0.25, -0.5, kind=8)
+
+                    value = lib_math_list_spherical_operator_array_divide_by_cmplx_array(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_spherical_operator_array_divide_by_c_array:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
+                        rv = evaluate(buffer, i, 'phi')
+
+                        buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
+                        rv = evaluate(buffer, i, "rho")
+
+                        buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+                    end do
+
+                end function test_lib_math_list_spherical_operator_array_divide_by_c_array
+
+                function test_lib_math_list_spherical_operator_array_divide_by_real() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_spherical_coordinate_cmplx_type) :: lhs
+                    real(kind=lib_math_type_kind) :: rhs
+                    type (list_spherical_coordinate_cmplx_type) :: value
+
+                    type (list_spherical_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_1()
+                    lhs%coordinate(2) = get_test_values_2()
+
+                    ! rhs
+                    rhs = 2
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%phi = cmplx(0.5, 1, kind=8)
+                    ground_truth_value%coordinate(1)%rho = cmplx(1.5, 2, kind=8)
+                    ground_truth_value%coordinate(1)%theta = cmplx(2.5, 3, kind=8)
+
+                    ground_truth_value%coordinate(2)%phi = cmplx(3, 2.5, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(2, 1.5, kind=8)
+                    ground_truth_value%coordinate(2)%theta = cmplx(1, 0.5, kind=8)
+
+                    value = lib_math_list_spherical_operator_array_divide_by_real(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_spherical_operator_array_divide_by_real:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
+                        rv = evaluate(buffer, i, 'phi')
+
+                        buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
+                        rv = evaluate(buffer, i, "rho")
+
+                        buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+                    end do
+
+                end function test_lib_math_list_spherical_operator_array_divide_by_real
+
+                function test_lib_math_list_spherical_operator_array_divide_by_cmplx() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_spherical_coordinate_cmplx_type) :: lhs
+                    complex(kind=lib_math_type_kind) :: rhs
+                    type (list_spherical_coordinate_cmplx_type) :: value
+
+                    type (list_spherical_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_1()
+                    lhs%coordinate(2) = get_test_values_2()
+
+                    ! rhs
+                    rhs = cmplx(0, 2, kind=8)
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%phi = cmplx(1, -0.5, kind=8)
+                    ground_truth_value%coordinate(1)%rho = cmplx(2, -1.5, kind=8)
+                    ground_truth_value%coordinate(1)%theta = cmplx(3, -2.5, kind=8)
+
+                    ground_truth_value%coordinate(2)%phi = cmplx(2.5, -3, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(1.25, -2, kind=8)
+                    ground_truth_value%coordinate(2)%theta = cmplx(0.5, -1, kind=8)
+
+                    value = lib_math_list_spherical_operator_array_divide_by_cmplx(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_spherical_operator_array_divide_by_cmplx:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
+                        rv = evaluate(buffer, i, 'phi')
+
+                        buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
+                        rv = evaluate(buffer, i, "rho")
+
+                        buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+                    end do
+
+                end function test_lib_math_list_spherical_operator_array_divide_by_cmplx
 
         end function lib_math_type_operator_test_functions
 

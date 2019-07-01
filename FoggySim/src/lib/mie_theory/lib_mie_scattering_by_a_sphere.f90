@@ -313,6 +313,14 @@ module lib_mie_scattering_by_a_sphere
                 rv = rv + 1
             end if
 
+            print *, "----lib_mie_scattering_by_a_sphere_test_functions----"
+            if (rv == 0) then
+                print *, "lib_mie_scattering_by_a_sphere_test_functions tests: OK"
+            else
+                print *, rv,"lib_mie_scattering_by_a_sphere_test_functions test(s) FAILED"
+            end if
+            print *, "---------------------------------------------------------"
+
             contains
 
                 function test_get_coefficients_a_b_cmplx() result (rv)
