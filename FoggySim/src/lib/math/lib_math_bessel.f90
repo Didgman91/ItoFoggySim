@@ -1,7 +1,6 @@
 #define _DEBUG_
 
 module lib_math_bessel
-    use libmath
     implicit none
 
     private

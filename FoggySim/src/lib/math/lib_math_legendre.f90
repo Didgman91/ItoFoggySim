@@ -1,5 +1,4 @@
 module lib_math_legendre
-    use libmath
     implicit none
 
     private
