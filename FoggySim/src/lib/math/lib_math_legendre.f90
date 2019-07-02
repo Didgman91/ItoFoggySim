@@ -1,5 +1,5 @@
 module lib_math_legendre
-    use libmath
+    use lib_math_factorial
     implicit none
 
     private
@@ -64,68 +64,474 @@ module lib_math_legendre
         !
         ! Formula
         ! ----
-        !   pm = P_ml(cos(theta)) / sin(theta)
+        !   pm = P_1l(cos(theta)) / sin(theta)
         !
-        !   pd = derivation[P_ml(cos(theta)), theta ]
+        !   pd = derivation[P_1l(cos(theta)), theta ]
         !
         !
         ! Argument
         ! ----
         !   theta: double precision
         !       input value
-        !   m: integer
-        !       order of the polynomial, >= 0
-        !   n: integer
-        !       degree of the polynomial, >= 0
+        !   n_max: integer
+        !       maximum degree of the polynomial, > 0
         !   condon_shortley_phase: boolean, optional(std: false)
         !       true: with Condon–Shortley phase
         !       false: without Condon–Shortley phase
         !
         ! Results
         ! ----
-        !   pm: double precision, dimension(0:n)
-        !       result of the associated Legendre polynomial
-        !   pd: double precision, dimension(0:n)
+        !   pi_mn: double precision, dimension(n, -n:n)
+        !       result of the associated Legendre polynomial (cos(theta)) / sin(theta)
+        !       1st-dimension: degree n of the associated Legendre function
+        !       2nd-dimension: order m of the associated Legendre function
+        !   tau_mn: double precision, dimension(n, -n:n)
         !       result of the deriviative of the associated Legendre polynomial
+        !       1st-dimension: degree n of the deriviative of the associated Legendre function
+        !       2nd-dimension: order m of the deriviative of the associated Legendre function
         !
-        subroutine lib_math_associated_legendre_polynomial_theta(theta, m, n, pm, pd, condon_shortley_phase)
+        !
+        ! Formula
+        ! ----
+        !   pi_mn
+        !       LaTeX: $$ \pi_{m n}(\cos \theta)=\frac{m}{\sin \theta} P_{n}^{m}(\cos \theta) $$
+        !
+        !   tau_mn
+        !       LaTeX: $$ \tau_{m n}(\cos \theta)=\frac{d}{d \theta} P_{n}^{m}(\cos \theta) $$
+        !
+        ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, Appendix A
+        !
+        !
+        subroutine lib_math_associated_legendre_polynomial_theta(theta, n_max, pi_nm, tau_nm)
             implicit none
             ! dummy
             double precision, intent(in) :: theta
-            integer(kind=4), intent(in) :: m
-            integer(kind=4), intent(in) :: n
+            integer(kind=4), intent(in) :: n_max
 
-            double precision, intent(inout) :: pm(0:n)
-            double precision, intent(inout) :: pd(0:n)
-            logical, optional :: condon_shortley_phase
+            real(kind=8), dimension(0:n_max, -n_max:n_max), intent(inout) :: pi_nm
+            real(kind=8), dimension(0:n_max, -n_max:n_max), intent(inout) :: tau_nm
 
             ! auxiliary
-            double precision :: cos_theta
-            double precision :: sin_theta
+            logical :: func_rv
+            integer(kind=4) :: n
+            integer(kind=4) :: m
 
-            cos_theta = cos(theta)
-            sin_theta = sin(theta)
+            real(kind=8), dimension(0:n_max, -n_max:n_max+1) :: m_pi_nm
 
-            call LPMNS(m, n, cos_theta, pm, pd)
+            real(kind=8) :: x
 
-            pm = pm / sin_theta
+            x = cos(theta)
 
-            if (m .eq. 1) then
-                pm(0) = 0.0_8
-                pm(1) = 1.0_8
-            end if
+            ! Recurrence Formulas for pi_mn, tau_mn
+            ! where -1 .le. x .le. 1
+            ! Special Values, eq. A6
+            m_pi_nm(0,0) = 0.0_8
+            m_pi_nm(1,0) = 0
+            m_pi_nm(0,1) = 0
+            m_pi_nm(1,1) = 1
 
+            tau_nm(0,0) = 0
+            tau_nm(1,0) = -sqrt(1.0_8-x*x)
+            tau_nm(0,1) = 0
+            tau_nm(1,1) = x
 
-            if (present(condon_shortley_phase)) then
-                if (condon_shortley_phase) then
-                    if (IAND(m, 1) .eq. 1) then
-                        pm = -pm
-                        pd = -pd
+            if (x .eq. 1.0_8) then
+                ! Special Values, eq. 7
+                m_pi_nm = 0
+                tau_nm = 0
+                do n = 1, n_max
+                    m_pi_nm(n, -1) = 0.5_8
+                    m_pi_nm(n, 1) = real(n*(n + 1), kind=8) / 2.0_8
+
+                    tau_nm(n, -1) = -0.5_8
+                    tau_nm(n, 1) = real(n*(n + 1), kind=8) / 2.0_8
+                end do
+            else if (x .eq. -1.0_8) then
+                ! Special Values, eq. 7
+                m_pi_nm = 0
+                tau_nm = 0
+                do n = 1, n_max
+                    m_pi_nm(n, -1) = 0.5_8
+                    tau_nm(n, -1) = -0.5_8
+                    ! check if n+1 is even or odd
+                    if (IAND(n+1_4, 1_4) .eq. 1) then
+                        ! n+1 is odd
+                        m_pi_nm(n, -1) = -m_pi_nm(n, -1)
+                    else
+                        ! n+1 is even
+                        ! --> n is odd
+                        tau_nm(n, -1) = -tau_nm(n, -1)
                     end if
-!                    pm = (-1.0_8)**m * pm
-!                    pd = (-1.0_8)**m * pd
-                end if
+
+                    m_pi_nm(n, 1) = real(n*(n + 1), kind=8) / 2.0_8
+                    tau_nm(n, 1) = real(n*(n + 1), kind=8) / 2.0_8
+                    ! check if n+1 is even or odd
+                    if (IAND(n+1_4, 1_4) .eq. 1) then
+                        ! is odd
+                        m_pi_nm(n, -1) = -m_pi_nm(n, -1)
+                    else
+                        ! n+1 is even
+                        ! --> n is odd
+                        tau_nm(n, 1) = -tau_nm(n, 1)
+                    end if
+                end do
+            else
+                ! Recurrence Relations eq. A2, A3, A4, A5
+                ! eq. A3: Electromagnetic scattering by an aggregate of spheres: errata
+
+                ! Calculation of pi_mn
+                ! ----
+                !
+                ! Step 1
+                ! -----
+                !        __|0 --> n                 n_max|
+                !    n_max -------------------------------
+                ! m        |  ^  |  ^  |     |     |     |
+                !  ^       |--|-----|--------------------|   pi_m+1,n
+                !  |       |  |  |  |  |     |     |     |
+                !          |-----------------------------|
+                !          |  0  |  1  |     |     |     |
+                !          |-----------------------------|
+                !      0 --|  0  |  0  |     |     |     |
+                !          |-----------------------------|
+                !          |     |     |     |     |     |
+                !          |-----------------------------|
+                !          |     |     |     |     |     |
+                !          |-----------------------------|
+                !          |     |     |     |     |     |
+                !  -n_max__-------------------------------
+                !
+                do n=0, 1
+                    do m=2, n_max
+                        func_rv = set_pi_m_plus_1_n(x, m, n, m_pi_nm)
+                    end do
+                end do
+
+                ! Step 2
+                ! -----
+                !        __|0 --> n                 n_max|
+                !    n_max -------------------------------
+                ! m        |  x  |  x  |     |     |     |
+                !  ^       |-----------------------------|
+                !  |       |  x  |  x  |     |     |     |
+                !          |-----------------------------|
+                !          |  0  |  1  |     |     |     |
+                !          |-----------------------------|
+                !      0 --|  0  |  0  |     |     |     |
+                !          |-----------------------------|
+                !          |  |  |  |  |     |     |     |
+                !          |--|-----|--------------------|
+                !          |  |  |  |  |     |     |     |   pi_-m,n
+                !          |--|-----|--------------------|
+                !          |  V  |  V  |     |     |     |
+                !  -n_max__-------------------------------             x: calculated element
+                !
+                do n=0, 1
+                    do m=1, n_max
+                        func_rv = set_pi_minus_m_n(m, n, m_pi_nm)
+                    end do
+                end do
+
+                ! Step 3
+                ! -----
+                !        __|0 --> n                 n_max|
+                !    n_max -------------------------------
+                ! m        |  x  |  x  |  ------------>  |
+                !  ^       |-----------------------------|
+                !  |       |  x  |  x  |  ------------>  |
+                !          |-----------------------------|
+                !          |  0  |  1  |  ------------>  |
+                !          |-----------------------------|
+                !      0 --|  0  |  0  |  ------------>  |
+                !          |-----------------------------|
+                !          |  x  |  x  |  ------------>  |
+                !          |-----------------------------|
+                !          |  x  |  x  |  ------------>  |   pi_m,n+1
+                !          |-----------------------------|
+                !          |  x  |  x  |  ------------>  |
+                !  -n_max__-------------------------------             x: calculated element
+                !
+                do n=1, n_max-1
+                    do m=-n_max, n_max+1
+                        func_rv = set_pi_m_n_plus_1(x, m, n, m_pi_nm)
+                    end do
+                end do
+
+                ! Calculation of tau_mn
+                ! ----
+                !
+                ! Step 1
+                ! -----
+                !        __|0 --> n                 n_max|
+                !    n_max -------------------------------
+                ! m        |     |     |     |     |     |
+                !  ^       |-----------------------------|
+                !  |       |     |     |     |     |     |
+                !          |-----------------------------|
+                !          |  0  |  x  |     |     |     |
+                !          |-----------------------------|
+                !      0 --|  0  |  x  -------------->   |   tau_0,n+1
+                !          |-----------------------------|
+                !          |     |     |     |     |     |
+                !          |-----------------------------|
+                !          |     |     |     |     |     |
+                !          |-----------------------------|
+                !          |     |     |     |     |     |
+                !  -n_max__-------------------------------             x: calculated element
+                !
+                do n=2, n_max-1
+                    func_rv = set_tau_0_n_plus_1(x, n, tau_nm)
+                end do
+
+                ! Step 2
+                ! -----
+                !        __|0 --> n                 n_max|
+                !    n_max -------------------------------
+                ! m        |  ^  |  ^  |  ^  |  ^  |  ^  |
+                !  ^       |--|-----|-----|-----|-----|--|
+                !  |       |  |  |  |  |  |  |  |  |  |  |   tau_mn
+                !          |--------------|-----|-----|--|
+                !          |  0  |  x  |  |  |  |  |  |  |
+                !          |-----------------------------|
+                !      0 --|  0  |  x  |  x  |  x  |  x  |
+                !          |-----------------------------|
+                !          |     |     |     |     |     |
+                !          |-----------------------------|
+                !          |     |     |     |     |     |
+                !          |-----------------------------|
+                !          |     |     |     |     |     |
+                !  -n_max__-------------------------------             x: calculated element
+                !
+                do n=0, 1
+                    do m=2, n_max
+                        func_rv = set_tau_m_n(x, m, n, m_pi_nm, tau_nm)
+                    end do
+                end do
+
+                do n=2, n_max
+                    do m=1, n_max
+                        func_rv = set_tau_m_n(x, m, n, m_pi_nm, tau_nm)
+                    end do
+                end do
+
+                ! Step 3
+                ! -----
+                !        __|0 --> n                 n_max|
+                !    n_max -------------------------------
+                ! m        |  x  |  x  |  x  |  x  |  x  |
+                !  ^       |-----------------------------|
+                !  |       |  x  |  x  |  x  |  x  |  x  |
+                !          |-----------------------------|
+                !          |  0  |  x  |  x  |  x  |  x  |
+                !          |-----------------------------|
+                !      0 --|  0  |  x  |  x  |  x  |  x  |
+                !          |-----------------------------|
+                !          |  |  |  |  |  |  |  |  |  |  |
+                !          |--|-----|-----|-----|-----|--|
+                !          |  |  |  |  |  |  |  |  |  |  |
+                !          |--|-----|-----|-----|-----|--|
+                !          |  V  |  V  |  V  |  V  |  V  |
+                !  -n_max__-------------------------------             x: calculated element
+                !
+                do n=0, n_max
+                    do m=1, n_max
+                        func_rv = set_tau_minus_m_n(m, n, tau_nm)
+                    end do
+                end do
+
             end if
+
+            pi_nm = m_pi_nm(0:n_max, -n_max:n_max)
+
+                        ! reference: Absorption and Scattering of Light by smal particles eq. 4.47
+            !  --> m=1
+!            pm(0) = 0
+!            pm(1) = 1
+!            do i=2, n
+!                pm(i) = (2*n - 1)/(n - 1) * cos_theta * pm(i-1) - n/(n - 1) * pm(i-2)
+!                pd(i) = i * cos_theta * pm(i) - (n + 1) * pm(i-1)
+!            end do
+
+!            if (present(condon_shortley_phase)) then
+!                if (condon_shortley_phase) then
+!                    if (IAND(m, 1) .eq. 1) then
+!                        pm = -pm
+!                        pd = -pd
+!                    end if
+!                end if
+!            end if
+
+            contains
+
+                ! first line of eq. A1
+                ! Restriction
+                ! ----
+                !   - pi_nm(n, m) has to be known
+                !   - pi_nm(n-1, m) has to be known
+                function set_pi_m_n_plus_1(x, m, n, pi_nm) result (rv)
+                    implicit none
+                    ! dummy
+                    real(kind=8) :: x
+                    integer(kind=4) :: m
+                    integer(kind=4) :: n
+                    real(kind=8), dimension(0:n_max, -n_max:n_max+1), intent(inout) :: pi_nm
+
+                    logical :: rv
+
+                    ! auxiliaray
+                    real(kind=8) :: denominator
+
+                    denominator = n - m + 1
+
+                    pi_nm(n+1, m) = (2*n + 1) / denominator * x * pi_nm(n,m) &
+                                    -(n + m) / denominator * pi_nm(n-1, m)
+
+                    rv = .true.
+                end function
+
+                ! second line of eq. A1
+                ! Restriction
+                ! ----
+                !   - m .ne. 1
+                !   - pi_nm(n, m) has to be known
+                !   - pi_nm(n, m-1) has to be known
+                function set_pi_m_plus_1_n(x, m, n, pi_nm) result (rv)
+                    implicit none
+                    ! dummy
+                    real(kind=8) :: x
+                    integer(kind=4) :: m
+                    integer(kind=4) :: n
+                    real(kind=8), dimension(0:n_max, -n_max:n_max+1), intent(inout) :: pi_nm
+
+                    logical :: rv
+
+                    pi_nm(n, m+1) = 2*(m + 1)*x / sqrt(1 - x*x) * pi_nm(n,m) &
+                                    -(m - 1)*(n + m)*(n - m + 1)/(m - 1) * pi_nm(n,m-1)
+
+                    rv = .true.
+                end function
+
+                ! eq. A2
+                ! Restriction
+                ! ----
+                !   - n .nq. 1
+                !   - pi_nm(n-1, n-1) has to be known
+                function set_pi_n_n(x, n, pi_nm) result (rv)
+                    implicit none
+                    ! dummy
+                    real(kind=8) :: x
+                    integer(kind=4) :: n
+                    real(kind=8), dimension(0:n_max, -n_max:n_max+1), intent(inout) :: pi_nm
+
+                    logical :: rv
+
+                    pi_nm(n,n) = sqrt(1 - x) * n*(2*n - 1)/(n - 1) * pi_nm(n-1,n-1)
+
+                    rv = .true.
+                end function
+
+                ! first line of eq. A4
+                !
+                ! Restriction
+                ! ----
+                !   - pi_nm(n, m) has to be known
+                function set_pi_minus_m_n(m,n,pi_nm) result (rv)
+                    implicit none
+                    ! dummy
+                    integer(kind=4) :: m
+                    integer(kind=4) :: n
+                    real(kind=8), dimension(0:n_max, -n_max:n_max+1), intent(inout) :: pi_nm
+
+                    logical :: rv
+
+                    if (pi_nm(n, m) .eq. 0.0_8) then
+                        pi_nm(n, -m) = 0.0_8
+                    else
+                        pi_nm(n, -m) = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m) * pi_nm(n,m)
+                        ! check if m+1 is even or odd
+                        if (IAND(m+1_4, 1_4) .eq. 1) then
+                            ! m+1 is odd
+                            pi_nm(n, -m) = -pi_nm(n, -m)
+                        end if
+                    end if
+
+                    rv = .true.
+                end function
+
+                ! first line eq. A3
+                !
+                ! Restriction
+                ! ----
+                !   - m .ne. 0
+                !   - pi_nm(n+1, m) has to be known
+                !   - pi_nm(n, m) has to be known
+                function set_tau_m_n(x, m, n, pi_nm, tau_nm) result (rv)
+                    implicit none
+                    ! dummy
+                    real(kind=8) :: x
+                    integer(kind=4) :: m
+                    integer(kind=4) :: n
+                    real(kind=8), dimension(0:n_max, -n_max:n_max+1), intent(inout) :: pi_nm
+                    real(kind=8), dimension(0:n_max, -n_max:n_max), intent(inout) :: tau_nm
+
+                    logical :: rv
+
+                    tau_nm(n,m) = (n - m + 1)/m * pi_nm(n, m+1) - (n + 1)/m * x * pi_nm(n, m)
+
+                    rv = .true.
+                end function
+
+                ! second line eq. A3
+                !
+                ! eq. A3: Electromagnetic scattering by an aggregate of spheres: errata
+                !
+                ! Restriction
+                ! ----
+                !   - n .ne. 0
+                !   - tau_nm(n, m) has to be known
+                !   - tau_nm(n-1, m) has to be known
+                function set_tau_0_n_plus_1(x, n, tau_nm) result (rv)
+                    implicit none
+                    ! dummy
+                    real(kind=8) :: x
+                    integer(kind=4) :: n
+                    real(kind=8), dimension(0:n_max, -n_max:n_max), intent(inout) :: tau_nm
+
+                    logical :: rv
+
+                    tau_nm(n+1,0) = (2*n + 1)/n * x * tau_nm(n, 0) &
+                                    - n/(n + 1) * tau_nm(n-1, 0)
+
+                    rv = .true.
+                end function
+
+                ! first line eq. A5
+                !
+                ! Restriction
+                ! ----
+                !   - tau_nm(n, m) has to be known
+                function set_tau_minus_m_n(m, n, tau_nm) result (rv)
+                    implicit none
+                    ! dummy
+                    integer(kind=4) :: m
+                    integer(kind=4) :: n
+                    real(kind=8), dimension(0:n_max, -n_max:n_max), intent(inout) :: tau_nm
+
+                    logical :: rv
+
+                    if (pi_nm(n, m) .eq. 0.0_8) then
+                        tau_nm(n, -m) = 0.0_8
+                    else
+                        tau_nm(n, -m) = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m) * tau_nm(n,m)
+                        ! check if m is even or odd
+                        if (IAND(m, 1_4) .eq. 1) then
+                            ! m is odd
+                            tau_nm(n, -m) = -tau_nm(n, -m)
+                        end if
+                    end if
+
+                    rv = .true.
+                end function
 
         end subroutine lib_math_associated_legendre_polynomial_theta
 
@@ -184,7 +590,7 @@ module lib_math_legendre
             if (.not. test_lib_math_associated_legendre_polynomial_m0()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_math_associated_legendre_polynomial_theta_m1_without_p()) then
+            if (.not. test_lib_math_associated_legendre_polynomial_theta_m1()) then
                 rv = rv + 1
             end if
 
@@ -617,21 +1023,23 @@ module lib_math_legendre
 
             end function test_lib_math_associated_legendre_polynomial_m0
 
-            function test_lib_math_associated_legendre_polynomial_theta_m1_without_p() result(rv)
+            function test_lib_math_associated_legendre_polynomial_theta_m1() result(rv)
                 implicit none
                 ! dummy
                 logical :: rv
 
+                ! parameter
+                integer(kind=4), parameter :: n_max = 5
+
                 ! auxiliary
                 integer(kind=4) :: i
                 double precision :: theta
-                integer(kind=4), parameter :: n = 5
-                integer(kind=4), parameter :: m = 1
-                double precision, dimension(0:n) :: pm
-                double precision, dimension(0:n) :: pd
 
-                double precision, dimension(0:n) :: ground_truth_pm
-                double precision, dimension(0:n) :: ground_truth_pd
+                real(kind=8), dimension(0:n_max, -n_max:n_max) :: pi_nm
+                real(kind=8), dimension(0:n_max, -n_max:n_max) :: tau_nm
+
+                double precision, dimension(0:n_max) :: ground_truth_pi_n1
+                double precision, dimension(0:n_max) :: ground_truth_tau_n1
 
                 double precision :: buffer
 
@@ -653,24 +1061,24 @@ module lib_math_legendre
                 !  >>>  for i in range(0,6):
                 !  >>>      value = numerical_approx(P_ad(i,x))
                 !  >>>      print("l = {}: {}".format(i, value))
-                ground_truth_pd(0) = 0.000000000000000_8
-                ground_truth_pd(1) = -4.93315487558688_8
-                ground_truth_pd(2) = -13.9084526582466_8
-                ground_truth_pd(3) = -25.2179729025493_8
-                ground_truth_pd(4) = -36.4802655764097_8
-                ground_truth_pd(5) = -44.8436276630205_8
+                ground_truth_tau_n1(0) = 0.000000000000000_8
+                ground_truth_tau_n1(1) = -4.93315487558688_8
+                ground_truth_tau_n1(2) = -13.9084526582466_8
+                ground_truth_tau_n1(3) = -25.2179729025493_8
+                ground_truth_tau_n1(4) = -36.4802655764097_8
+                ground_truth_tau_n1(5) = -44.8436276630205_8
 
-                theta = 0.2
+                theta = 0.2_8
 
-                call genlgp(theta, ground_truth_pm, n+1)
+                call genlgp(theta, ground_truth_pi_n1, n_max+1)
 
-                call lib_math_associated_legendre_polynomial_theta(theta, m, n, pm, pd, .false.)
+                call lib_math_associated_legendre_polynomial_theta(theta, n_max, pi_nm, tau_nm)
 
 
                 rv = .true.
-                print *, "test_lib_math_associated_legendre_polynomial_m0:"
-                do i=0, n
-                    buffer = abs(pm(i) - ground_truth_pm(i))
+                print *, "test_lib_math_associated_legendre_polynomial_theta_m1:"
+                do i=0, n_max
+                    buffer = abs(pi_nm(i, 1) - ground_truth_pi_n1(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
                         rv = .false.
@@ -680,8 +1088,8 @@ module lib_math_legendre
                 end do
 
                 print*, "  deriviation:"
-                do i=0, n
-                    buffer = abs(pd(i) - ground_truth_pd(i))
+                do i=0, n_max
+                    buffer = abs(tau_nm(i, 1) - ground_truth_tau_n1(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
                         rv = .false.
@@ -690,7 +1098,7 @@ module lib_math_legendre
                     end if
                 end do
 
-            end function test_lib_math_associated_legendre_polynomial_theta_m1_without_p
+            end function test_lib_math_associated_legendre_polynomial_theta_m1
 
             subroutine genlgp(theta,pnmllg,nc)
                   implicit none

@@ -155,7 +155,7 @@ module lib_mie_scattering_by_a_sphere
         !       second element: last index
         !       HINT: first element .le. second element
         !
-        ! Reference: Absorption and Scattering of Light by Small Particles, eq. 4.52, 4.53
+        ! Reference: Absorption and Scattering of Light by Small Particles, eq. (4.53)
         subroutine get_coefficients_a_b_real(x, m, mu, mu1, n, a_n, b_n)
             implicit none
             ! dummy
@@ -238,7 +238,7 @@ module lib_mie_scattering_by_a_sphere
         !       second element: last index
         !       HINT: first element .le. second element
         !
-        ! Reference: Absorption and Scattering of Light by Small Particles, eq. 4.52, 4.53
+        ! Reference: Absorption and Scattering of Light by Small Particles, eq. (4.53)
         subroutine get_coefficients_a_b_cmplx(x, m, mu, mu1, n, a_n, b_n)
             implicit none
             ! dummy
