@@ -52,12 +52,6 @@
 		<Filter Name="lib">
 		<Filter Name="light_scattering_by_particles">
 		<File RelativePath=".\src\lib\light_scattering_by_particles\light_scattering.f90"/></Filter>
-		<Filter Name="math">
-		<File RelativePath=".\src\lib\math\lib_math_bessel.f90"/>
-		<File RelativePath=".\src\lib\math\lib_math_legendre.f90"/>
-		<File RelativePath=".\src\lib\math\lib_math_public.f90"/>
-		<File RelativePath=".\src\lib\math\lib_math_type.f90"/>
-		<File RelativePath=".\src\lib\math\lib_math_type_operator.f90"/></Filter>
 		<Filter Name="mie_theory">
 		<File RelativePath=".\src\lib\mie_theory\lib_mie_scattering_by_a_sphere.f90"/>
 		<File RelativePath=".\src\lib\mie_theory\lib_mie_vector_spherical_harmonics.f90"/></Filter>

@@ -1,4 +1,5 @@
 module libmath
+    use lib_math_public
     implicit none
 
 !    public :: libmath_hello
