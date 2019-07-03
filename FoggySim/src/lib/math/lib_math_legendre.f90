@@ -6,6 +6,7 @@ module lib_math_legendre
 
     ! --- public ---
     public :: lib_math_associated_legendre_polynomial
+    public :: lib_math_associated_legendre_polynomial_with_negative_m
     public :: lib_math_associated_legendre_polynomial_theta
     public :: lib_math_legendre_polynomial
 
@@ -59,6 +60,75 @@ module lib_math_legendre
             end if
 
         end subroutine lib_math_associated_legendre_polynomial
+
+        ! calculates the associated Legendre polynomial
+        !
+        ! Argument
+        ! ----
+        !   x: double precision
+        !       input value
+        !   m: integer
+        !       order of the polynomial, >= 0
+        !   n: integer
+        !       degree of the polynomial, >= 0
+        !   condon_shortley_phase: boolean, optional(std: false)
+        !       true: with Condon–Shortley phase
+        !       false: without Condon–Shortley phase
+        !
+        ! Results
+        ! ----
+        !   pm: double precision, dimension(2, 0:n)
+        !       pm(1,:): result of the associated Legendre polynomial with a negativ m
+        !       pm(2,:): result of the associated Legendre polynomial with a positiv m
+        !   pd: double precision, dimension(2, 0:n)
+        !       pd(1,:): result of the deriviative of the associated Legendre polynomial with a negativ m
+        !       pd(2,:): result of the deriviative of the associated Legendre polynomial with a positiv m
+        !
+        subroutine lib_math_associated_legendre_polynomial_with_negative_m(x, m, n, pm, pd, condon_shortley_phase)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: x
+            integer(kind=4), intent(in) :: m
+            integer(kind=4), intent(in) :: n
+
+            double precision, dimension(2, 0:n), intent(inout) :: pm
+            double precision, dimension(2, 0:n), intent(inout) :: pd
+            logical, optional :: condon_shortley_phase
+
+            ! auxiliary
+            double precision, dimension(0:n) :: buffer_pm
+            double precision, dimension(0:n) :: buffer_pd
+            real(kind=8) :: buffer
+
+            call LPMNS(m, n, x, buffer_pm, buffer_pd)
+
+            pm(2, :) = buffer_pm
+            pd(2, :) = buffer_pd
+
+            ! calculation with negative m
+            buffer = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n, m)
+
+            if ( IAND(m, 1) .eq. 1) then
+                ! m is odd
+                buffer = -buffer
+            end if
+
+            pm(1, :) = buffer * pm(2, :)
+            pd(1, :) = buffer * pd(2, :)
+
+            if (present(condon_shortley_phase)) then
+                if (condon_shortley_phase) then
+                    if (IAND(m, 1) .eq. 1) then
+                        ! m is odd
+                        pm(2,:) = -pm(2,:)
+                        pd(2,:) = -pd(2,:)
+                    end if
+!                    pm = (-1.0_8)**m * pm
+!                    pd = (-1.0_8)**m * pd
+                end if
+            end if
+
+        end subroutine lib_math_associated_legendre_polynomial_with_negative_m
 
         ! calculates the associated Legendre polynomial
         !
@@ -339,13 +409,14 @@ module lib_math_legendre
                     end do
                 end do
 
+!                ! Remove the factor from the definition (eq. A1) of tau to obtain
+!                ! only the derivative of the associated Legendre polynomial.
+!                tau_nm = tau_nm / (-sqrt(1-x*x))
             end if
 
             pi_nm = m_pi_nm(0:n_max, -n_max:n_max)
 
-            tau_nm = tau_nm / (-sqrt(1-x*x))
-
-                        ! reference: Absorption and Scattering of Light by smal particles eq. 4.47
+            ! reference: Absorption and Scattering of Light by smal particles eq. 4.47
             !  --> m=1
 !            pm(0) = 0
 !            pm(1) = 1
@@ -496,7 +567,15 @@ module lib_math_legendre
 
                     logical :: rv
 
-                    tau_nm(n,m) = (n - m + 1)/m * pi_nm(n+1, m) - (n + 1)/m * x * pi_nm(n, m)
+                    tau_nm(n,m) = 0.0_8
+
+                    if (pi_nm(n+1, m) .ne. 0.0_8) then
+                        tau_nm(n,m) = (n - m + 1)/m * pi_nm(n+1, m)
+                    end if
+
+                    if (pi_nm(n, m) .ne. 0.0_8) then
+                         tau_nm(n,m) = tau_nm(n,m) - (n + 1)/m * x * pi_nm(n, m)
+                    end if
 
                     rv = .true.
                 end function
@@ -519,8 +598,15 @@ module lib_math_legendre
 
                     logical :: rv
 
-                    tau_nm(n+1,0) = (2*n + 1)/n * x * tau_nm(n, 0) &
-                                    - (n + 1)/n * tau_nm(n-1, 0)
+                    tau_nm(n+1,0) = 0.0_8
+
+                    if (tau_nm(n, 0) .ne. 0.0_8) then
+                        tau_nm(n+1,0) = (2*n + 1)/n * x * tau_nm(n, 0)
+                    end if
+
+                    if (tau_nm(n-1, 0) .ne. 0.0_8) then
+                        tau_nm(n+1,0) = tau_nm(n+1,0) - (n + 1)/n * tau_nm(n-1, 0)
+                    end if
 
                     rv = .true.
                 end function
@@ -539,7 +625,7 @@ module lib_math_legendre
 
                     logical :: rv
 
-                    if (pi_nm(n, m) .eq. 0.0_8) then
+                    if (tau_nm(n, m) .eq. 0.0_8) then
                         tau_nm(n, -m) = 0.0_8
                     else
                         tau_nm(n, -m) = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m) * tau_nm(n,m)
@@ -610,7 +696,10 @@ module lib_math_legendre
             if (.not. test_lib_math_associated_legendre_polynomial_m0()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_math_associated_legendre_polynomial_theta_m1()) then
+!            if (.not. test_lib_math_associated_legendre_polynomial_theta_m1()) then
+!                rv = rv + 1
+!            end if
+            if (.not. test_lib_math_associated_legendre_polynomial_theta_n0_3()) then
                 rv = rv + 1
             end if
 
@@ -1152,6 +1241,99 @@ module lib_math_legendre
             10    continue
                   return
           end subroutine genlgp
+
+          function test_lib_math_associated_legendre_polynomial_theta_n0_3() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! parameter
+                integer(kind=4), parameter :: n_max = 3
+
+                ! auxiliary
+                integer(kind=4) :: i
+                integer(kind=4) :: ii
+                double precision :: theta
+
+                real(kind=8), dimension(0:n_max, -n_max:n_max) :: pi_nm
+                real(kind=8), dimension(0:n_max, -n_max:n_max) :: tau_nm
+
+                double precision, dimension(0:n_max, -n_max:n_max) :: ground_truth_pi_nm
+                double precision, dimension(0:n_max, -n_max:n_max) :: ground_truth_tau_nm
+
+                double precision :: buffer
+
+                ! Values were generated with WolframAplpha
+                !
+                ! source code:
+                !  >>>  N[m*LegendreP[n, m, cos (t)]/sin (t), 16], where n = 0, m = [-2, -1, 0, 1, 2], t = 2
+                !  >>>  N[m*LegendreP[n, m, cos (t)]/sin (t), 16], where n = 1, m = [-2, -1, 0, 1, 2], t = 2
+                !  >>>  N[m*LegendreP[n, m, cos (t)]/sin (t), 16], where n = 2, m = [-2, -1, 0, 1, 2], t = 2
+
+                ground_truth_pi_nm(0, -3) = 2.077165092735346_8
+                ground_truth_pi_nm(0, -2) = -2.667464736243829_8
+                ground_truth_pi_nm(0, -1) = 1.712759410407380_8
+                ground_truth_pi_nm(0,  0) = 0_8
+                ground_truth_pi_nm(0,  1) = 0_8
+                ground_truth_pi_nm(0,  2) = 0_8
+                ground_truth_pi_nm(0,  3) = 0_8
+
+                ground_truth_pi_nm(1, -3) = 1.341772398969518_8
+                ground_truth_pi_nm(1, -2) = -1.408290820299577_8
+                ground_truth_pi_nm(1, -1) = 0.5000000000000000_8
+                ground_truth_pi_nm(1,  0) = 0_8
+                ground_truth_pi_nm(1,  1) = 1.000000000000000_8
+                ground_truth_pi_nm(1,  2) = 0_8
+                ground_truth_pi_nm(1,  3) = 0_8
+
+                ground_truth_pi_nm(2, -3) = 0.4958414335756772_8
+                ground_truth_pi_nm(2, -2) = -0.2273243567064204_8
+                ground_truth_pi_nm(2, -1) = -0.2080734182735712_8
+                ground_truth_pi_nm(2,  0) = 0_8
+                ground_truth_pi_nm(2,  1) = -1.248440509641427_8
+                ground_truth_pi_nm(2,  2) = 5.455784560954090_8
+                ground_truth_pi_nm(2,  3) = 0_8
+
+                ground_truth_pi_nm(3, -3) = 0.05167636315198787_8
+                ground_truth_pi_nm(3, -2) = 0.09460031191349103_8
+                ground_truth_pi_nm(3, -1) = -0.01676363151987872_8
+                ground_truth_pi_nm(3,  0) = 0_8
+                ground_truth_pi_nm(3,  1) = -0.2011635782385447_8
+                ground_truth_pi_nm(3,  2) = -11.35203742961892_8
+                ground_truth_pi_nm(3,  3) = 37.20698146943127_8
+
+                theta = 2.0_8
+
+                call lib_math_associated_legendre_polynomial_theta(theta, n_max, pi_nm, tau_nm)
+
+
+                rv = .true.
+                print *, "test_lib_math_associated_legendre_polynomial_theta_m1:"
+                do i=0, n_max
+                    do ii=-n_max, n_max
+                        buffer = abs(pi_nm(i, ii) - ground_truth_pi_nm(i, ii))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  n: ", i, " m: ", ii , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  n: ", i, " m: ", ii, "OK"
+                        end if
+                    end do
+                    print*, ""
+                end do
+
+!                print*, "  deriviation:"
+!                do i=0, n_max
+!                    buffer = abs(tau_nm(i, 1) - ground_truth_tau_n1(i))
+!                    if (buffer .gt. ground_truth_e) then
+!                        print *, "  ", i , "difference: ", buffer, " : FAILED"
+!                        rv = .false.
+!                    else
+!                        print *, "  ", i, ": OK"
+!                    end if
+!                end do
+
+            end function test_lib_math_associated_legendre_polynomial_theta_n0_3
 
             function test_lib_math_legendre_polynomial() result (rv)
                 implicit none
