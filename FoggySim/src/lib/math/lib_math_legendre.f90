@@ -116,7 +116,7 @@ module lib_math_legendre
             integer(kind=4) :: n
             integer(kind=4) :: m
 
-            real(kind=8), dimension(0:n_max, -n_max:n_max+1) :: m_pi_nm
+            real(kind=8), dimension(0:n_max+1, -n_max:n_max) :: m_pi_nm
 
             real(kind=8) :: x
 
@@ -202,7 +202,7 @@ module lib_math_legendre
                 !  -n_max__-------------------------------
                 !
                 do n=0, 1
-                    do m=2, n_max
+                    do m=2, n_max-1
                         func_rv = set_pi_m_plus_1_n(x, m, n, m_pi_nm)
                     end do
                 end do
@@ -251,8 +251,8 @@ module lib_math_legendre
                 !          |  x  |  x  |  ------------>  |
                 !  -n_max__-------------------------------             x: calculated element
                 !
-                do n=1, n_max-1
-                    do m=-n_max, n_max+1
+                do n=1, n_max
+                    do m=-n_max, n_max
                         func_rv = set_pi_m_n_plus_1(x, m, n, m_pi_nm)
                     end do
                 end do
@@ -343,6 +343,8 @@ module lib_math_legendre
 
             pi_nm = m_pi_nm(0:n_max, -n_max:n_max)
 
+            tau_nm = tau_nm / (-sqrt(1-x*x))
+
                         ! reference: Absorption and Scattering of Light by smal particles eq. 4.47
             !  --> m=1
 !            pm(0) = 0
@@ -374,7 +376,7 @@ module lib_math_legendre
                     real(kind=8) :: x
                     integer(kind=4) :: m
                     integer(kind=4) :: n
-                    real(kind=8), dimension(0:n_max, -n_max:n_max+1), intent(inout) :: pi_nm
+                    real(kind=8), dimension(0:n_max+1, -n_max:n_max), intent(inout) :: pi_nm
 
                     logical :: rv
 
@@ -383,8 +385,17 @@ module lib_math_legendre
 
                     denominator = n - m + 1
 
-                    pi_nm(n+1, m) = (2*n + 1) / denominator * x * pi_nm(n,m) &
-                                    -(n + m) / denominator * pi_nm(n-1, m)
+                    pi_nm(n+1, m) = 0.0_8
+
+                    if (pi_nm(n,m) .ne. 0.0_8) then
+                        pi_nm(n+1, m) = (2*n + 1) / denominator * x * pi_nm(n,m)
+                    end if
+                    if (pi_nm(n-1,m) .ne. 0.0_8) then
+                        pi_nm(n+1, m) =pi_nm(n+1, m) - (n + m) / denominator * pi_nm(n-1, m)
+                    end if
+
+!                    pi_nm(n+1, m) = (2*n + 1) / denominator * x * pi_nm(n,m) &
+!                                    -(n + m) / denominator * pi_nm(n-1, m)
 
                     rv = .true.
                 end function
@@ -401,12 +412,21 @@ module lib_math_legendre
                     real(kind=8) :: x
                     integer(kind=4) :: m
                     integer(kind=4) :: n
-                    real(kind=8), dimension(0:n_max, -n_max:n_max+1), intent(inout) :: pi_nm
+                    real(kind=8), dimension(0:n_max+1, -n_max:n_max), intent(inout) :: pi_nm
 
                     logical :: rv
 
-                    pi_nm(n, m+1) = 2*(m + 1)*x / sqrt(1 - x*x) * pi_nm(n,m) &
-                                    -(m - 1)*(n + m)*(n - m + 1)/(m - 1) * pi_nm(n,m-1)
+                    pi_nm(n, m+1) = 0.0_8
+
+                    if (pi_nm(n,m) .ne. 0.0_8) then
+                        pi_nm(n, m+1) = 2*(m + 1)*x / sqrt(1 - x*x) * pi_nm(n,m)
+                    end if
+                    if (pi_nm(n,m-1) .ne. 0.0_8) then
+                        pi_nm(n, m+1) = pi_nm(n, m+1) - (m - 1)*(n + m)*(n - m + 1)/(m - 1) * pi_nm(n,m-1)
+                    end if
+
+!                    pi_nm(n, m+1) = 2*(m + 1)*x / sqrt(1 - x*x) * pi_nm(n,m) &
+!                                    -(m - 1)*(n + m)*(n - m + 1)/(m - 1) * pi_nm(n,m-1)
 
                     rv = .true.
                 end function
@@ -421,7 +441,7 @@ module lib_math_legendre
                     ! dummy
                     real(kind=8) :: x
                     integer(kind=4) :: n
-                    real(kind=8), dimension(0:n_max, -n_max:n_max+1), intent(inout) :: pi_nm
+                    real(kind=8), dimension(0:n_max+1, -n_max:n_max), intent(inout) :: pi_nm
 
                     logical :: rv
 
@@ -440,7 +460,7 @@ module lib_math_legendre
                     ! dummy
                     integer(kind=4) :: m
                     integer(kind=4) :: n
-                    real(kind=8), dimension(0:n_max, -n_max:n_max+1), intent(inout) :: pi_nm
+                    real(kind=8), dimension(0:n_max+1, -n_max:n_max), intent(inout) :: pi_nm
 
                     logical :: rv
 
@@ -471,19 +491,19 @@ module lib_math_legendre
                     real(kind=8) :: x
                     integer(kind=4) :: m
                     integer(kind=4) :: n
-                    real(kind=8), dimension(0:n_max, -n_max:n_max+1), intent(inout) :: pi_nm
+                    real(kind=8), dimension(0:n_max+1, -n_max:n_max), intent(inout) :: pi_nm
                     real(kind=8), dimension(0:n_max, -n_max:n_max), intent(inout) :: tau_nm
 
                     logical :: rv
 
-                    tau_nm(n,m) = (n - m + 1)/m * pi_nm(n, m+1) - (n + 1)/m * x * pi_nm(n, m)
+                    tau_nm(n,m) = (n - m + 1)/m * pi_nm(n+1, m) - (n + 1)/m * x * pi_nm(n, m)
 
                     rv = .true.
                 end function
 
                 ! second line eq. A3
                 !
-                ! eq. A3: Electromagnetic scattering by an aggregate of spheres: errata
+                ! eq. A3: Electromagnetic scattering by an aggregate of spheres: errata 2001
                 !
                 ! Restriction
                 ! ----
@@ -500,7 +520,7 @@ module lib_math_legendre
                     logical :: rv
 
                     tau_nm(n+1,0) = (2*n + 1)/n * x * tau_nm(n, 0) &
-                                    - n/(n + 1) * tau_nm(n-1, 0)
+                                    - (n + 1)/n * tau_nm(n-1, 0)
 
                     rv = .true.
                 end function
