@@ -462,7 +462,7 @@ module lib_math_legendre
                         pi_nm(n+1, m) = (2*n + 1) / denominator * x * pi_nm(n,m)
                     end if
                     if (pi_nm(n-1,m) .ne. 0.0_8) then
-                        pi_nm(n+1, m) =pi_nm(n+1, m) - (n + m) / denominator * pi_nm(n-1, m)
+                        pi_nm(n+1, m) = pi_nm(n+1, m) - (n + m) / denominator * pi_nm(n-1, m)
                     end if
 
 !                    pi_nm(n+1, m) = (2*n + 1) / denominator * x * pi_nm(n,m) &
@@ -493,7 +493,7 @@ module lib_math_legendre
                         pi_nm(n, m+1) = 2*(m + 1)*x / sqrt(1 - x*x) * pi_nm(n,m)
                     end if
                     if (pi_nm(n,m-1) .ne. 0.0_8) then
-                        pi_nm(n, m+1) = pi_nm(n, m+1) - (m - 1)*(n + m)*(n - m + 1)/(m - 1) * pi_nm(n,m-1)
+                        pi_nm(n, m+1) = pi_nm(n, m+1) - (m + 1)*(n + m)*(n - m + 1)/(m - 1) * pi_nm(n,m-1)
                     end if
 
 !                    pi_nm(n, m+1) = 2*(m + 1)*x / sqrt(1 - x*x) * pi_nm(n,m) &
@@ -1308,7 +1308,7 @@ module lib_math_legendre
 
 
                 rv = .true.
-                print *, "test_lib_math_associated_legendre_polynomial_theta_m1:"
+                print *, "test_lib_math_associated_legendre_polynomial_theta_n0_3:"
                 do i=0, n_max
                     do ii=-n_max, n_max
                         buffer = abs(pi_nm(i, ii) - ground_truth_pi_nm(i, ii))
