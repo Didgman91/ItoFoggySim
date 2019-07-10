@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectType="typeStaticLibrary" ProjectCreator="Intel Fortran" Keyword="Static Library" Version="11.0" ProjectIdGuid="{73305E33-7828-4CE2-BD66-ABA3541421C0}">
+	<Platforms>
+		<Platform Name="Win32"/>
+		<Platform Name="x64"/></Platforms>
+	<Configurations>
+		<Configuration Name="Debug|Win32" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFLibrarianTool"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/></Configuration>
+		<Configuration Name="Release|Win32" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" RuntimeLibrary="rtMultiThreadedDLL"/>
+				<Tool Name="VFLibrarianTool"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/></Configuration>
+		<Configuration Name="Debug|x64" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFLibrarianTool"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/></Configuration>
+		<Configuration Name="Release|x64" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" RuntimeLibrary="rtMultiThreadedDLL"/>
+				<Tool Name="VFLibrarianTool"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/></Configuration></Configurations>
+	<Files>
+		<Filter Name="Header Files" Filter="fi;fd"/>
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+		<Filter Name="external">
+		<Filter Name="amos">
+		<File RelativePath="src\external\amos\d1mach.f"/>
+		<File RelativePath="src\external\amos\d9lgmc.f"/>
+		<File RelativePath="src\external\amos\dasyjy.f"/>
+		<File RelativePath="src\external\amos\dbesj.f"/>
+		<File RelativePath="src\external\amos\dbesy.f"/>
+		<File RelativePath="src\external\amos\dbsynu.f"/>
+		<File RelativePath="src\external\amos\dcsevl.f"/>
+		<File RelativePath="src\external\amos\dgamlm.f"/>
+		<File RelativePath="src\external\amos\dgamln.f"/>
+		<File RelativePath="src\external\amos\dgamma.f"/>
+		<File RelativePath="src\external\amos\djairy.f"/>
+		<File RelativePath="src\external\amos\dlngam.f"/>
+		<File RelativePath="src\external\amos\dyairy.f"/>
+		<File RelativePath="src\external\amos\fdump.f"/>
+		<File RelativePath="src\external\amos\i1mach.f"/>
+		<File RelativePath="src\external\amos\initds.f"/>
+		<File RelativePath="src\external\amos\j4save.f"/>
+		<File RelativePath="src\external\amos\xercnt.f"/>
+		<File RelativePath="src\external\amos\xerhlt.f"/>
+		<File RelativePath="src\external\amos\xermsg.f"/>
+		<File RelativePath="src\external\amos\xerprn.f"/>
+		<File RelativePath="src\external\amos\xerror.f"/>
+		<File RelativePath="src\external\amos\xersve.f"/>
+		<File RelativePath="src\external\amos\xgetua.f"/>
+		<File RelativePath="src\external\amos\zabs_amos.f"/>
+		<File RelativePath="src\external\amos\zacai.f"/>
+		<File RelativePath="src\external\amos\zacon.f"/>
+		<File RelativePath="src\external\amos\zairy.f"/>
+		<File RelativePath="src\external\amos\zasyi.f"/>
+		<File RelativePath="src\external\amos\zbesh.f"/>
+		<File RelativePath="src\external\amos\zbesj.f"/>
+		<File RelativePath="src\external\amos\zbesy.f"/>
+		<File RelativePath="src\external\amos\zbinu.f"/>
+		<File RelativePath="src\external\amos\zbknu.f"/>
+		<File RelativePath="src\external\amos\zbuni.f"/>
+		<File RelativePath="src\external\amos\zbunk.f"/>
+		<File RelativePath="src\external\amos\zdiv.f"/>
+		<File RelativePath="src\external\amos\zexp.f"/>
+		<File RelativePath="src\external\amos\zkscl.f"/>
+		<File RelativePath="src\external\amos\zlog.f"/>
+		<File RelativePath="src\external\amos\zmlri.f"/>
+		<File RelativePath="src\external\amos\zmlt.f"/>
+		<File RelativePath="src\external\amos\zrati.f"/>
+		<File RelativePath="src\external\amos\zs1s2.f"/>
+		<File RelativePath="src\external\amos\zseri.f"/>
+		<File RelativePath="src\external\amos\zshch.f"/>
+		<File RelativePath="src\external\amos\zsqrt.f"/>
+		<File RelativePath="src\external\amos\zuchk.f"/>
+		<File RelativePath="src\external\amos\zunhj.f"/>
+		<File RelativePath="src\external\amos\zuni1.f"/>
+		<File RelativePath="src\external\amos\zuni2.f"/>
+		<File RelativePath="src\external\amos\zunik.f"/>
+		<File RelativePath="src\external\amos\zunk1.f"/>
+		<File RelativePath="src\external\amos\zunk2.f"/>
+		<File RelativePath="src\external\amos\zuoik.f"/>
+		<File RelativePath="src\external\amos\zwrsk.f"/></Filter>
+		<File RelativePath="src\external\special_functions.f90"/></Filter>
+		<Filter Name="math">
+		<File RelativePath=".\src\math\lib_math_bessel.f90"/>
+		<File RelativePath=".\src\math\lib_math_legendre.f90"/>
+		<File RelativePath=".\src\math\lib_math_public.f90"/>
+		<File RelativePath=".\src\math\lib_math_type.f90"/>
+		<File RelativePath=".\src\math\lib_math_type_operator.f90"/></Filter>
+		<File RelativePath="src\libmath.f90"/></Filter></Files>
+	<Globals/></VisualStudioProject>
