@@ -1,3 +1,6 @@
+#define _DEBUG_
+
+
 module lib_mie_vector_spherical_harmonics
     use libmath
     implicit none
@@ -204,6 +207,17 @@ module lib_mie_vector_spherical_harmonics
                             M_mn(i)%coordinate(ii)%phi = buffer_cmplx
 
                             M_mn(i)%coordinate(ii)%rho = cmplx(0,0, kind=8)
+#ifdef _DEBUG_
+                    if (isnan(real(M_mn(i)%coordinate(ii)%rho))   .or. isnan(aimag(M_mn(i)%coordinate(ii)%rho)) .or. &
+                        isnan(real(M_mn(i)%coordinate(ii)%phi))   .or. isnan(aimag(M_mn(i)%coordinate(ii)%phi)) .or. &
+                        isnan(real(M_mn(i)%coordinate(ii)%theta)) .or. isnan(aimag(M_mn(i)%coordinate(ii)%theta)) ) then
+                        print *, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                        print *, "  M_mn(i)%coordinate(ii) is NaN"
+                        print *, "  m = ", i
+                        print *, "  n = ", ii
+                        print *, "  z_selector: ", z_selector
+                    end if
+#endif
                         end do
                     end do
                 case (3,4)
@@ -218,6 +232,17 @@ module lib_mie_vector_spherical_harmonics
                             M_mn(i)%coordinate(ii)%phi = buffer_cmplx
 
                             M_mn(i)%coordinate(ii)%rho = cmplx(0,0, kind=8)
+#ifdef _DEBUG_
+                    if (isnan(real(M_mn(i)%coordinate(ii)%rho))   .or. isnan(aimag(M_mn(i)%coordinate(ii)%rho)) .or. &
+                        isnan(real(M_mn(i)%coordinate(ii)%phi))   .or. isnan(aimag(M_mn(i)%coordinate(ii)%phi)) .or. &
+                        isnan(real(M_mn(i)%coordinate(ii)%theta)) .or. isnan(aimag(M_mn(i)%coordinate(ii)%theta)) ) then
+                        print *, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                        print *, "  M_mn(i)%coordinate(ii) is NaN"
+                        print *, "  m = ", i
+                        print *, "  n = ", ii
+                        print *, "  z_selector: ", z_selector
+                    end if
+#endif
                         end do
                     end do
             end select
@@ -242,6 +267,17 @@ module lib_mie_vector_spherical_harmonics
                             N_mn(i)%coordinate(ii)%theta = tau_nm(n(1)+ii-1, m(1)+i-1) * buffer_cmplx
 
                             N_mn(i)%coordinate(ii)%phi = cmplx(0, pi_nm(n(1)+ii-1, m(1)+i-1), kind=8) * buffer_cmplx
+#ifdef _DEBUG_
+                    if (isnan(real(N_mn(i)%coordinate(ii)%rho))   .or. isnan(aimag(N_mn(i)%coordinate(ii)%rho)) .or. &
+                        isnan(real(N_mn(i)%coordinate(ii)%phi))   .or. isnan(aimag(N_mn(i)%coordinate(ii)%phi)) .or. &
+                        isnan(real(N_mn(i)%coordinate(ii)%theta)) .or. isnan(aimag(N_mn(i)%coordinate(ii)%theta)) ) then
+                        print *, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                        print *, "  N_mn(i)%coordinate(ii) is NaN"
+                        print *, "  m = ", i
+                        print *, "  n = ", ii
+                        print *, "  z_selector: ", z_selector
+                    end if
+#endif
                         end do
                     end do
                 case (3,4)
@@ -261,6 +297,17 @@ module lib_mie_vector_spherical_harmonics
                             N_mn(i)%coordinate(ii)%theta = tau_nm(n(1)+ii-1, m(1)+i-1) * buffer_cmplx
 
                             N_mn(i)%coordinate(ii)%phi = cmplx(0, pi_nm(n(1)+ii-1, m(1)+i-1), kind=8) * buffer_cmplx
+#ifdef _DEBUG_
+                    if (isnan(real(N_mn(i)%coordinate(ii)%rho))   .or. isnan(aimag(N_mn(i)%coordinate(ii)%rho)) .or. &
+                        isnan(real(N_mn(i)%coordinate(ii)%phi))   .or. isnan(aimag(N_mn(i)%coordinate(ii)%phi)) .or. &
+                        isnan(real(N_mn(i)%coordinate(ii)%theta)) .or. isnan(aimag(N_mn(i)%coordinate(ii)%theta)) ) then
+                        print *, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                        print *, "  N_mn(i)%coordinate(ii) is NaN"
+                        print *, "  m = ", i
+                        print *, "  n = ", ii
+                        print *, "  z_selector: ", z_selector
+                    end if
+#endif
                         end do
                     end do
             end select

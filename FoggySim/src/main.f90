@@ -1,5 +1,5 @@
 program main
-    use lib_math_public
+    use libmath
     use lib_data_types
     use lib_tree
     use lib_tree_helper_functions
