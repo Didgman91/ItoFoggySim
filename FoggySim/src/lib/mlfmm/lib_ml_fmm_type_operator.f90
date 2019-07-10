@@ -461,11 +461,6 @@ module lib_ml_fmm_type_operator
     procedure(ml_fmm_get_coefficient), pointer :: m_get_coefficient
 #endif
 
-    procedure(ml_fmm_v_add_operator), pointer :: m_v_add
-    procedure(ml_fmm_v_add_0D_operator), pointer :: m_v_add_0D
-    procedure(ml_fmm_v_sub_operator), pointer :: m_v_sub
-    procedure(ml_fmm_v_sub_0D_operator), pointer :: m_v_sub_0D
-
 !    procedure(ml_fmm_deallocate_coefficient_list), pointer :: m_deallocate_coefficient_list => null()
     procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_eq => null()
     procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_ne => null()

@@ -38,7 +38,7 @@ program main
     error_counter = error_counter + lib_math_factorial_test_functions()
     error_counter = error_counter + lib_math_type_operator_test_functions()
     error_counter = error_counter + lib_math_bessel_test_functions()
-    !error_counter = error_counter + lib_math_legendre_test_functions()
+    error_counter = error_counter + lib_math_legendre_test_functions()
     !error_counter = error_counter + lib_mie_vector_spherical_harmonics_test_functions()
     !error_counter = error_counter + lib_mie_scattering_by_a_sphere_test_functions()
     error_counter = error_counter + lib_sort_test_functions()
