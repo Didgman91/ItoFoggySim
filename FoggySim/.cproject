@@ -181,8 +181,6 @@
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/light_scattering_by_particles"/>
                         						
-                        <entry excluding="special_functions" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/math"/>
-                        						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/mie_theory"/>
                         						
                         <entry excluding="config" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/mlfmm"/>
@@ -302,8 +300,6 @@
                         <entry excluding="math|tree|mlfmm|mie_theory|light_scattering_by_particles" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/light_scattering_by_particles"/>
-                        						
-                        <entry excluding="special_functions" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/math"/>
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/mie_theory"/>
                         						
@@ -496,8 +492,6 @@
                         <entry excluding="math|tree|mlfmm|mie_theory|light_scattering_by_particles" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/light_scattering_by_particles"/>
-                        						
-                        <entry excluding="special_functions" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/math"/>
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/mie_theory"/>
                         						

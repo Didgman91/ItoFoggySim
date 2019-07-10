@@ -1,6 +1,5 @@
 program main
-    use lib_math_bessel
-    use lib_math_legendre
+    use libmath
     use lib_data_types
     use lib_tree
     use lib_tree_helper_functions
@@ -12,6 +11,8 @@ program main
     use lib_ml_fmm_type_operator
 
     use lib_mie_vector_spherical_harmonics
+
+    use lib_mie_scattering_by_a_sphere
 
     use light_scattering
     implicit none
@@ -29,13 +30,17 @@ program main
 !        cmr = 1.33    ! water: 1.33
 !        cmi = 0       ! water: 0
 !        npnts = 10
-    !call S2(1, 2*3.14159265358979*10, 1.33, 0.0, 10)
+!   call S2(1, 2*3.14159265358979*10, 1.33, 0.0, 10)
+    call S2(1, 10.0, 1.28, -1.37, 10)
 
 
     error_counter = 0
+    error_counter = error_counter + lib_math_factorial_test_functions()
+    error_counter = error_counter + lib_math_type_operator_test_functions()
     error_counter = error_counter + lib_math_bessel_test_functions()
     error_counter = error_counter + lib_math_legendre_test_functions()
     error_counter = error_counter + lib_mie_vector_spherical_harmonics_test_functions()
+    error_counter = error_counter + lib_mie_scattering_by_a_sphere_test_functions()
     error_counter = error_counter + lib_sort_test_functions()
     error_counter = error_counter + lib_test_hash_function()
     error_counter = error_counter + lib_tree_hf_test_functions()
