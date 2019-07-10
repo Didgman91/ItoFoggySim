@@ -69,12 +69,13 @@ module lib_mie_vector_spherical_harmonics
         subroutine lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, rho, m, n, z_selector, &
                                                       M_mn, N_mn)
             implicit none
+            
             ! dummy
             double precision, intent(in) :: theta
             double precision, intent(in) :: phi
             double precision, intent(in) :: rho
-            integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: m
-            integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: n
+            integer(kind=4), dimension(2) :: m
+            integer(kind=4), dimension(2) :: n
             integer(kind=1) :: z_selector
 
             type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable, intent(inout) :: M_mn

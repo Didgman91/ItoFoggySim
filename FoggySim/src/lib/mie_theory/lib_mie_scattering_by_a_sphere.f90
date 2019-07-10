@@ -6,7 +6,7 @@
 #define _DEBUG_
 
 module lib_mie_scattering_by_a_sphere
-    use lib_math_public
+    use libmath
     use lib_mie_vector_spherical_harmonics
     implicit none
 

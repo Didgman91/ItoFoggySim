@@ -477,3 +477,6 @@ pre_calc
 TEST/**
 
 Debug_WIN
+
+# Visual Studio
+*.u2d
