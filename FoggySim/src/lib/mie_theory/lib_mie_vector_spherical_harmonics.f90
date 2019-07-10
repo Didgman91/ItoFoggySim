@@ -1,7 +1,5 @@
 module lib_mie_vector_spherical_harmonics
-    use lib_math_bessel
-    use lib_math_legendre
-    use lib_math_type
+    use libmath
     implicit none
 
     private
@@ -20,8 +18,6 @@ module lib_mie_vector_spherical_harmonics
 
     ! --- parameter ---
     integer(kind=1), parameter :: VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND = 4
-
-    double precision, parameter :: PI=4.D0*atan(1.D0)   ! maximum precision, platform independet
 
     contains
 
@@ -93,11 +89,11 @@ module lib_mie_vector_spherical_harmonics
             double precision, dimension(0:n(2), -n(2):n(2)) :: p_nm
             double precision, dimension(0:n(2), -n(2):n(2)) :: p_d_nm
 
-            double precision, dimension(0:n(2)) :: buffer_p_n
-            double precision, dimension(0:n(2)) :: buffer_p_d_n
+            double precision, dimension(n(2)-n(1)+1) :: buffer_p_n
+            double precision, dimension(n(2)-n(1)+1) :: buffer_p_d_n
 
-            double precision, dimension(2, 0:n(2)) :: buffer_p_n_m_neg
-            double precision, dimension(2, 0:n(2)) :: buffer_p_d_n_m_neg
+            double precision, dimension(2, n(2)-n(1)+1) :: buffer_p_n_m_neg
+            double precision, dimension(2, n(2)-n(1)+1) :: buffer_p_d_n_m_neg
 
             double precision, dimension(n(2)-n(1)+1) :: z_n_real
             complex(kind=8), dimension(n(2)-n(1)+1) :: z_n_cmplx
@@ -183,10 +179,10 @@ module lib_mie_vector_spherical_harmonics
 
             call lib_math_associated_legendre_polynomial_theta(theta, n(2), pi_nm, tau_nm)
 
-            call lib_math_associated_legendre_polynomial(sin_theta, 0, n(2), buffer_p_n, buffer_p_d_n, .false.)
+            call lib_math_associated_legendre_polynomial(sin_theta, 0, n(1), number_of_members_n, buffer_p_n, buffer_p_d_n, .false.)
             p_nm(:, 0) = buffer_p_n
             do i=1, m(2)
-                call lib_math_associated_legendre_polynomial_with_negative_m(sin_theta, m(1)+i, n(2), &
+                call lib_math_associated_legendre_polynomial_with_negative_m(sin_theta, i, n(1), number_of_members_n, &
                                                                              buffer_p_n_m_neg, buffer_p_d_n_m_neg, .false.)
                 p_nm(:, i) = buffer_p_n_m_neg(2, :)
                 p_nm(:,-i) = buffer_p_n_m_neg(1, :)

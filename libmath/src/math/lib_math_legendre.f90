@@ -807,7 +807,7 @@ module lib_math_legendre
 
                 rv = .true.
                 print *, "test_lib_math_associated_legendre_polynomial_m1:"
-                do i=0, n
+                do i=1, n
                     buffer = abs(pm(i) - ground_truth_pm(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -818,7 +818,7 @@ module lib_math_legendre
                 end do
 
                 print*, "  deriviation:"
-                do i=0, n
+                do i=1, n
                     buffer = abs(pd(i) - ground_truth_pd(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -1440,7 +1440,7 @@ module lib_math_legendre
 
                 rv = .true.
                 print *, "test_lib_math_legendre_polynomial:"
-                do i=fnu, n
+                do i=1, n
                     buffer = abs(pm(i) - ground_truth_pm(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -1451,7 +1451,7 @@ module lib_math_legendre
                 end do
 
                 print*, "  deriviation:"
-                do i=fnu, n
+                do i=1, n
                     buffer = abs(pd(i) - ground_truth_pd(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
