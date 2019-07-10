@@ -9,6 +9,7 @@ module lib_math_type_operator
     public :: operator (-)
     public :: operator (*)
     public :: operator (/)
+    public :: spherical_abs
 
     public :: lib_math_type_operator_test_functions
 
@@ -57,6 +58,10 @@ module lib_math_type_operator
         module procedure lib_math_list_spherical_operator_array_divide_by_cmplx_array
         module procedure lib_math_list_spherical_operator_array_divide_by_real
         module procedure lib_math_list_spherical_operator_array_divide_by_cmplx
+    end interface
+
+    interface spherical_abs
+        module procedure lib_math_spherical_operator_abs_cmplx
     end interface
 
 
@@ -164,6 +169,17 @@ module lib_math_type_operator
             rv%rho = lhs%rho / rhs
             rv%phi = lhs%phi / rhs
             rv%theta = lhs%theta / rhs
+
+        end function
+
+        function lib_math_spherical_operator_abs_cmplx(rhs) result(rv)
+            implicit none
+            ! dummy
+            type (spherical_coordinate_cmplx_type), intent(in) :: rhs
+
+            complex(kind=8) :: rv
+
+            rv = sqrt(rhs%rho*rhs%rho + rhs%phi*rhs%phi + rhs%theta*rhs%theta)
 
         end function
 

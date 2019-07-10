@@ -22,31 +22,41 @@ module lib_math_legendre
         !       input value
         !   m: integer
         !       order of the polynomial, >= 0
+        !   fnu: integer
+        !       degree of initial function, fnu .GE. 0
         !   n: integer
-        !       degree of the polynomial, >= 0
+        !       number of members of the sequence, n .GE. 1
         !   condon_shortley_phase: boolean, optional(std: false)
         !       true: with Condon–Shortley phase
         !       false: without Condon–Shortley phase
         !
         ! Results
         ! ----
-        !   pm: double precision, dimension(0:n)
+        !   pm: double precision, dimension(n)
         !       result of the associated Legendre polynomial
-        !   pd: double precision, dimension(0:n)
+        !   pd: double precision, dimension(n)
         !       result of the deriviative of the associated Legendre polynomial
         !
-        subroutine lib_math_associated_legendre_polynomial(x, m, n, pm, pd, condon_shortley_phase)
+        subroutine lib_math_associated_legendre_polynomial(x, m, fnu, n, pm, pd, condon_shortley_phase)
             implicit none
             ! dummy
             double precision, intent(in) :: x
             integer(kind=4), intent(in) :: m
+            integer(kind=4), intent(in) :: fnu
             integer(kind=4), intent(in) :: n
 
-            double precision, intent(inout) :: pm(0:n)
-            double precision, intent(inout) :: pd(0:n)
+            double precision, intent(inout) :: pm(n)
+            double precision, intent(inout) :: pd(n)
             logical, optional :: condon_shortley_phase
 
-            call LPMNS(m, n, x, pm, pd)
+            ! auxiliary
+            double precision, dimension(0:n+1) :: buffer_pm
+            double precision, dimension(0:n+1) :: buffer_pd
+
+            call LPMNS(m, n+1, x, buffer_pm, buffer_pd)
+
+            pm = buffer_pm(fnu:fnu+n-1)
+            pd = buffer_pd(fnu:fnu+n-1)
 
             if (present(condon_shortley_phase)) then
                 if (condon_shortley_phase) then
@@ -69,52 +79,64 @@ module lib_math_legendre
         !       input value
         !   m: integer
         !       order of the polynomial, >= 0
+        !   fnu: integer
+        !       degree of initial function, fnu .GE. 0
         !   n: integer
-        !       degree of the polynomial, >= 0
+        !       number of members of the sequence, n .GE. 1
         !   condon_shortley_phase: boolean, optional(std: false)
         !       true: with Condon–Shortley phase
         !       false: without Condon–Shortley phase
         !
         ! Results
         ! ----
-        !   pm: double precision, dimension(2, 0:n)
+        !   pm: double precision, dimension(2, n)
         !       pm(1,:): result of the associated Legendre polynomial with a negativ m
         !       pm(2,:): result of the associated Legendre polynomial with a positiv m
-        !   pd: double precision, dimension(2, 0:n)
+        !   pd: double precision, dimension(2, n)
         !       pd(1,:): result of the deriviative of the associated Legendre polynomial with a negativ m
         !       pd(2,:): result of the deriviative of the associated Legendre polynomial with a positiv m
         !
-        subroutine lib_math_associated_legendre_polynomial_with_negative_m(x, m, n, pm, pd, condon_shortley_phase)
+        subroutine lib_math_associated_legendre_polynomial_with_negative_m(x, m, fnu, n, pm, pd, condon_shortley_phase)
             implicit none
             ! dummy
             double precision, intent(in) :: x
             integer(kind=4), intent(in) :: m
+            integer(kind=4), intent(in) :: fnu
             integer(kind=4), intent(in) :: n
 
-            double precision, dimension(2, 0:n), intent(inout) :: pm
-            double precision, dimension(2, 0:n), intent(inout) :: pd
+            double precision, dimension(2, n), intent(inout) :: pm
+            double precision, dimension(2, n), intent(inout) :: pd
             logical, optional :: condon_shortley_phase
 
             ! auxiliary
-            double precision, dimension(0:n) :: buffer_pm
-            double precision, dimension(0:n) :: buffer_pd
+            integer :: i
+            double precision, dimension(0:n+1) :: buffer_pm
+            double precision, dimension(0:n+1) :: buffer_pd
             real(kind=8) :: buffer
 
-            call LPMNS(m, n, x, buffer_pm, buffer_pd)
+            call LPMNS(m, n+1, x, buffer_pm, buffer_pd)
 
-            pm(2, :) = buffer_pm
-            pd(2, :) = buffer_pd
+            pm(2, :) = buffer_pm(fnu:fnu+n-1)
+            pd(2, :) = buffer_pd(fnu:fnu+n-1)
 
             ! calculation with negative m
-            buffer = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n, m)
 
-            if ( IAND(m, 1) .eq. 1) then
-                ! m is odd
-                buffer = -buffer
-            end if
+            do i=1, n
+                if (fnu .eq. 0 .and. i .eq. 1) then
+                    pm(1, 1) = pm(2, 1)
+                    pd(1, 1) = pd(2, 1)
+                else
+                    buffer = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(fnu+i-1, m)
 
-            pm(1, :) = buffer * pm(2, :)
-            pd(1, :) = buffer * pd(2, :)
+                    if ( IAND(m, 1) .eq. 1) then
+                        ! m is odd
+                        buffer = -buffer
+                    end if
+
+                    pm(1, i) = buffer * pm(2, i)
+                    pd(1, i) = buffer * pd(2, i)
+                end if
+            end do
 
             if (present(condon_shortley_phase)) then
                 if (condon_shortley_phase) then
@@ -647,8 +669,10 @@ module lib_math_legendre
         ! ----
         !   x: double precision
         !       input value
+        !   fnu: integer
+        !       degree of initial function, fnu .GE. 0
         !   n: integer
-        !       degree of the polynomial, >= 0
+        !       number of members of the sequence, n .GE. 1
         !
         ! Results
         ! ----
@@ -657,16 +681,24 @@ module lib_math_legendre
         !   pd: double precision, dimension(0:n)
         !       result of the deriviative of the Legendre polynomial
         !
-        subroutine lib_math_legendre_polynomial(x, n, pn, pd)
+        subroutine lib_math_legendre_polynomial(x, fnu, n, pn, pd)
             implicit none
             ! dummy
             double precision, intent(in) :: x
+            integer(kind=4), intent(in) :: fnu
             integer(kind=4), intent(in) :: n
 
-            double precision, dimension(0:n), intent(inout) :: pn
-            double precision, dimension(0:n), intent(inout) :: pd
+            double precision, dimension(n), intent(inout) :: pn
+            double precision, dimension(n), intent(inout) :: pd
 
-            call lpn ( n, x, pn, pd )
+            ! auxiliary
+            double precision, dimension(0:n) :: buffer_pn
+            double precision, dimension(0:n) :: buffer_pd
+
+            call lpn ( n, x, buffer_pn, buffer_pd )
+
+            pn = buffer_pn(fnu:fnu+n-1)
+            pd = buffer_pd(fnu:fnu+n-1)
 
         end subroutine lib_math_legendre_polynomial
 
@@ -716,16 +748,19 @@ module lib_math_legendre
                 ! dummy
                 logical :: rv
 
+                ! parameter
+                integer(kind=4), parameter :: fnu = 0
+                integer(kind=4), parameter :: n = 6
+                integer(kind=4), parameter :: m = 1
+
                 ! auxiliary
                 integer(kind=4) :: i
                 double precision :: x
-                integer(kind=4), parameter :: n = 5
-                integer(kind=4), parameter :: m = 1
-                double precision, dimension(0:n) :: pm
-                double precision, dimension(0:n) :: pd
+                double precision, dimension(n) :: pm
+                double precision, dimension(n) :: pd
 
-                double precision, dimension(0:n) :: ground_truth_pm
-                double precision, dimension(0:n) :: ground_truth_pd
+                double precision, dimension(n) :: ground_truth_pm
+                double precision, dimension(n) :: ground_truth_pd
 
                 double precision :: buffer
 
@@ -751,23 +786,23 @@ module lib_math_legendre
                 !  >>>  for i in range(0,6):
                 !  >>>      value = numerical_approx(P_ad(i,x))
                 !  >>>      print("l = {}: {}".format(i, value))
-                ground_truth_pm(0) = 0.000000000000000_8
-                ground_truth_pm(1) = -0.979795897113271_8
-                ground_truth_pm(2) = -0.587877538267963_8
-                ground_truth_pm(3) = 1.17575507653593_8
-                ground_truth_pm(4) = 1.33252242007405_8
-                ground_truth_pm(5) = -0.870058756636585_8
+                ground_truth_pm(1) = 0.000000000000000_8
+                ground_truth_pm(2) = -0.979795897113271_8
+                ground_truth_pm(3) = -0.587877538267963_8
+                ground_truth_pm(4) = 1.17575507653593_8
+                ground_truth_pm(5) = 1.33252242007405_8
+                ground_truth_pm(6) = -0.870058756636585_8
 
-                ground_truth_pd(0) = -0.000000000000000_8
-                ground_truth_pd(1) = 0.204124145231932_8
-                ground_truth_pd(2) = -2.81691320420066_8
-                ground_truth_pd(3) = -3.18433666561813_8
-                ground_truth_pd(4) = 5.01328900689624_8
-                ground_truth_pd(5) = 9.23457633029258_8
+                ground_truth_pd(1) = -0.000000000000000_8
+                ground_truth_pd(2) = 0.204124145231932_8
+                ground_truth_pd(3) = -2.81691320420066_8
+                ground_truth_pd(4) = -3.18433666561813_8
+                ground_truth_pd(5) = 5.01328900689624_8
+                ground_truth_pd(6) = 9.23457633029258_8
 
                 x = 0.2
 
-                call lib_math_associated_legendre_polynomial(x, m, n, pm, pd, .true.)
+                call lib_math_associated_legendre_polynomial(x, m, fnu, n, pm, pd, .true.)
 
 
                 rv = .true.
@@ -800,16 +835,19 @@ module lib_math_legendre
                 ! dummy
                 logical :: rv
 
+                ! parameter
+                integer(kind=4), parameter :: fnu = 0
+                integer(kind=4), parameter :: n = 6
+                integer(kind=4), parameter :: m = 1
+
                 ! auxiliary
                 integer(kind=4) :: i
                 double precision :: x
-                integer(kind=4), parameter :: n = 5
-                integer(kind=4), parameter :: m = 1
-                double precision, dimension(0:n) :: pm
-                double precision, dimension(0:n) :: pd
+                double precision, dimension(n) :: pm
+                double precision, dimension(n) :: pd
 
-                double precision, dimension(0:n) :: ground_truth_pm
-                double precision, dimension(0:n) :: ground_truth_pd
+                double precision, dimension(n) :: ground_truth_pm
+                double precision, dimension(n) :: ground_truth_pd
 
                 double precision :: buffer
 
@@ -835,29 +873,29 @@ module lib_math_legendre
                 !  >>>  for i in range(0,6):
                 !  >>>      value = numerical_approx(P_ad(i,x))
                 !  >>>      print("l = {}: {}".format(i, value))
-                ground_truth_pm(0) = -0.000000000000000_8
-                ground_truth_pm(1) = 0.979795897113271_8
-                ground_truth_pm(2) = 0.587877538267963_8
-                ground_truth_pm(3) = -1.17575507653593_8
-                ground_truth_pm(4) = -1.33252242007405_8
-                ground_truth_pm(5) = 0.870058756636585_8
+                ground_truth_pm(1) = -0.000000000000000_8
+                ground_truth_pm(2) = 0.979795897113271_8
+                ground_truth_pm(3) = 0.587877538267963_8
+                ground_truth_pm(4) = -1.17575507653593_8
+                ground_truth_pm(5) = -1.33252242007405_8
+                ground_truth_pm(6) = 0.870058756636585_8
 
-                ground_truth_pd(0) = 0.000000000000000_8
-                ground_truth_pd(1) = -0.204124145231932_8
-                ground_truth_pd(2) = 2.81691320420066_8
-                ground_truth_pd(3) = 3.18433666561813_8
-                ground_truth_pd(4) = -5.01328900689624_8
-                ground_truth_pd(5) = -9.23457633029258_8
+                ground_truth_pd(1) = 0.000000000000000_8
+                ground_truth_pd(2) = -0.204124145231932_8
+                ground_truth_pd(3) = 2.81691320420066_8
+                ground_truth_pd(4) = 3.18433666561813_8
+                ground_truth_pd(5) = -5.01328900689624_8
+                ground_truth_pd(6) = -9.23457633029258_8
 
                 x = 0.2
 
 !                call lib_math_associated_legendre_polynomial(x, m, n, pm, pd, .false.)
-                call lib_math_associated_legendre_polynomial(x, m, n, pm, pd)
+                call lib_math_associated_legendre_polynomial(x, m, fnu, n, pm, pd)
 
 
                 rv = .true.
                 print *, "test_lib_math_associated_legendre_polynomial_m1_without_phase:"
-                do i=0, n
+                do i=1, n
                     buffer = abs(pm(i) - ground_truth_pm(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -868,7 +906,7 @@ module lib_math_legendre
                 end do
 
                 print*, "  deriviation:"
-                do i=0, n
+                do i=1, n
                     buffer = abs(pd(i) - ground_truth_pd(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -885,16 +923,19 @@ module lib_math_legendre
                 ! dummy
                 logical :: rv
 
+                ! parameter
+                integer(kind=4), parameter :: fnu = 0
+                integer(kind=4), parameter :: n = 6
+                integer(kind=4), parameter :: m = 2
+
                 ! auxiliary
                 integer(kind=4) :: i
                 double precision :: x
-                integer(kind=4), parameter :: n = 5
-                integer(kind=4), parameter :: m = 2
-                double precision, dimension(0:n) :: pm
-                double precision, dimension(0:n) :: pd
+                double precision, dimension(n) :: pm
+                double precision, dimension(n) :: pd
 
-                double precision, dimension(0:n) :: ground_truth_pm
-                double precision, dimension(0:n) :: ground_truth_pd
+                double precision, dimension(n) :: ground_truth_pm
+                double precision, dimension(n) :: ground_truth_pd
 
                 double precision :: buffer
 
@@ -920,28 +961,28 @@ module lib_math_legendre
                 !  >>>  for i in range(0,6):
                 !  >>>      value = numerical_approx(P_ad(i,x))
                 !  >>>      print("l = {}: {}".format(i, value))
-                ground_truth_pm(0) = 0.000000000000000_8
-                ground_truth_pm(1) = -1.06581410364015D-16
-                ground_truth_pm(2) = 2.88000000000000_8
+                ground_truth_pm(1) = 0.000000000000000_8
+                ground_truth_pm(2) = -1.06581410364015D-16
                 ground_truth_pm(3) = 2.88000000000000_8
-                ground_truth_pm(4) = -5.18400000000000_8
-                ground_truth_pm(5) = -8.87040000000000_8
+                ground_truth_pm(4) = 2.88000000000000_8
+                ground_truth_pm(5) = -5.18400000000000_8
+                ground_truth_pm(6) = -8.87040000000000_8
 
-                ground_truth_pd(0) = -0.000000000000000_8
-                ground_truth_pd(1) = 4.81867632215780D-16
-                ground_truth_pd(2) = -1.20000000000000_8
-                ground_truth_pd(3) = 13.2000000000000_8
-                ground_truth_pd(4) = 22.3200000000000_8
-                ground_truth_pd(5) = -28.5600000000000_8
+                ground_truth_pd(1) = -0.000000000000000_8
+                ground_truth_pd(2) = 4.81867632215780D-16
+                ground_truth_pd(3) = -1.20000000000000_8
+                ground_truth_pd(4) = 13.2000000000000_8
+                ground_truth_pd(5) = 22.3200000000000_8
+                ground_truth_pd(6) = -28.5600000000000_8
 
                 x = 0.2
 
-                call lib_math_associated_legendre_polynomial(x, m, n, pm, pd, .true.)
+                call lib_math_associated_legendre_polynomial(x, m, fnu, n, pm, pd, .true.)
 
 
                 rv = .true.
                 print *, "test_lib_math_associated_legendre_polynomial_m2:"
-                do i=0, n
+                do i=1, n
                     buffer = abs(pm(i) - ground_truth_pm(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -952,7 +993,7 @@ module lib_math_legendre
                 end do
 
                 print*, "  deriviation:"
-                do i=0, n
+                do i=1, n
                     buffer = abs(pd(i) - ground_truth_pd(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -969,16 +1010,19 @@ module lib_math_legendre
                 ! dummy
                 logical :: rv
 
+                ! parameter
+                integer(kind=4), parameter :: fnu = 0
+                integer(kind=4), parameter :: n = 6
+                integer(kind=4), parameter :: m = 2
+
                 ! auxiliary
                 integer(kind=4) :: i
                 double precision :: x
-                integer(kind=4), parameter :: n = 5
-                integer(kind=4), parameter :: m = 2
-                double precision, dimension(0:n) :: pm
-                double precision, dimension(0:n) :: pd
+                double precision, dimension(n) :: pm
+                double precision, dimension(n) :: pd
 
-                double precision, dimension(0:n) :: ground_truth_pm
-                double precision, dimension(0:n) :: ground_truth_pd
+                double precision, dimension(n) :: ground_truth_pm
+                double precision, dimension(n) :: ground_truth_pd
 
                 double precision :: buffer
 
@@ -1004,28 +1048,28 @@ module lib_math_legendre
                 !  >>>  for i in range(0,6):
                 !  >>>      value = numerical_approx(P_ad(i,x))
                 !  >>>      print("l = {}: {}".format(i, value))
-                ground_truth_pm(0) = 0.000000000000000_8
-                ground_truth_pm(1) = -1.06581410364015D-16
-                ground_truth_pm(2) = 2.88000000000000_8
+                ground_truth_pm(1) = 0.000000000000000_8
+                ground_truth_pm(2) = -1.06581410364015D-16
                 ground_truth_pm(3) = 2.88000000000000_8
-                ground_truth_pm(4) = -5.18400000000000_8
-                ground_truth_pm(5) = -8.87040000000000_8
+                ground_truth_pm(4) = 2.88000000000000_8
+                ground_truth_pm(5) = -5.18400000000000_8
+                ground_truth_pm(6) = -8.87040000000000_8
 
-                ground_truth_pd(0) = -0.000000000000000_8
-                ground_truth_pd(1) = 4.81867632215780D-16
-                ground_truth_pd(2) = -1.20000000000000_8
-                ground_truth_pd(3) = 13.2000000000000_8
-                ground_truth_pd(4) = 22.3200000000000_8
-                ground_truth_pd(5) = -28.5600000000000_8
+                ground_truth_pd(1) = -0.000000000000000_8
+                ground_truth_pd(2) = 4.81867632215780D-16
+                ground_truth_pd(3) = -1.20000000000000_8
+                ground_truth_pd(4) = 13.2000000000000_8
+                ground_truth_pd(5) = 22.3200000000000_8
+                ground_truth_pd(6) = -28.5600000000000_8
 
                 x = 0.2
 
-                call lib_math_associated_legendre_polynomial(x, m, n, pm, pd, .false.)
+                call lib_math_associated_legendre_polynomial(x, m, fnu, n, pm, pd, .false.)
 
 
                 rv = .true.
                 print *, "test_lib_math_associated_legendre_polynomial_m2_without_phase:"
-                do i=0, n
+                do i=1, n
                     buffer = abs(pm(i) - ground_truth_pm(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -1036,7 +1080,7 @@ module lib_math_legendre
                 end do
 
                 print*, "  deriviation:"
-                do i=0, n
+                do i=1, n
                     buffer = abs(pd(i) - ground_truth_pd(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -1053,16 +1097,19 @@ module lib_math_legendre
                 ! dummy
                 logical :: rv
 
+                ! parameter
+                integer(kind=4), parameter :: fnu = 0
+                integer(kind=4), parameter :: n = 6
+                integer(kind=4), parameter :: m = 0
+
                 ! auxiliary
                 integer(kind=4) :: i
                 double precision :: x
-                integer(kind=4), parameter :: n = 5
-                integer(kind=4), parameter :: m = 0
-                double precision, dimension(0:n) :: pm
-                double precision, dimension(0:n) :: pd
+                double precision, dimension(n) :: pm
+                double precision, dimension(n) :: pd
 
-                double precision, dimension(0:n) :: ground_truth_pm
-                double precision, dimension(0:n) :: ground_truth_pd
+                double precision, dimension(n) :: ground_truth_pm
+                double precision, dimension(n) :: ground_truth_pd
 
                 double precision :: buffer
 
@@ -1088,28 +1135,28 @@ module lib_math_legendre
                 !  >>>  for i in range(0,6):
                 !  >>>      value = numerical_approx(P_ad(i,x))
                 !  >>>      print("l = {}: {}".format(i, value))
-                ground_truth_pm(0) = 1.00000000000000_8
-                ground_truth_pm(1) = 0.200000000000000_8
-                ground_truth_pm(2) = -0.440000000000000_8
-                ground_truth_pm(3) = -0.280000000000000_8
-                ground_truth_pm(4) = 0.232000000000000_8
-                ground_truth_pm(5) = 0.307520000000000_8
+                ground_truth_pm(1) = 1.00000000000000_8
+                ground_truth_pm(2) = 0.200000000000000_8
+                ground_truth_pm(3) = -0.440000000000000_8
+                ground_truth_pm(4) = -0.280000000000000_8
+                ground_truth_pm(5) = 0.232000000000000_8
+                ground_truth_pm(6) = 0.307520000000000_8
 
-                ground_truth_pd(0) = -0.000000000000000_8
-                ground_truth_pd(1) = 1.00000000000000_8
-                ground_truth_pd(2) = 0.600000000000000_8
-                ground_truth_pd(3) = -1.20000000000000_8
-                ground_truth_pd(4) = -1.36000000000000_8
-                ground_truth_pd(5) = 0.888000000000000_8
+                ground_truth_pd(1) = -0.000000000000000_8
+                ground_truth_pd(2) = 1.00000000000000_8
+                ground_truth_pd(3) = 0.600000000000000_8
+                ground_truth_pd(4) = -1.20000000000000_8
+                ground_truth_pd(5) = -1.36000000000000_8
+                ground_truth_pd(6) = 0.888000000000000_8
 
                 x = 0.2
 
-                call lib_math_associated_legendre_polynomial(x, m, n, pm, pd, .true.)
+                call lib_math_associated_legendre_polynomial(x, m, fnu, n, pm, pd, .true.)
 
 
                 rv = .true.
                 print *, "test_lib_math_associated_legendre_polynomial_m0:"
-                do i=0, n
+                do i=1, n
                     buffer = abs(pm(i) - ground_truth_pm(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -1120,7 +1167,7 @@ module lib_math_legendre
                 end do
 
                 print*, "  deriviation:"
-                do i=0, n
+                do i=1, n
                     buffer = abs(pd(i) - ground_truth_pd(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -1343,12 +1390,13 @@ module lib_math_legendre
                 ! auxiliary
                 integer(kind=4) :: i
                 double precision :: x
-                integer(kind=4), parameter :: n = 5
-                double precision, dimension(0:n) :: pm
-                double precision, dimension(0:n) :: pd
+                integer(kind=4), parameter :: fnu = 0
+                integer(kind=4), parameter :: n = 6
+                double precision, dimension(n) :: pm
+                double precision, dimension(n) :: pd
 
-                double precision, dimension(0:n) :: ground_truth_pm
-                double precision, dimension(0:n) :: ground_truth_pd
+                double precision, dimension(n) :: ground_truth_pm
+                double precision, dimension(n) :: ground_truth_pd
 
                 double precision :: buffer
 
@@ -1371,28 +1419,28 @@ module lib_math_legendre
                 !  >>> for i in range(0,6):
                 !  >>>     value = numerical_approx(P_d(i,x))
                 !  >>>     print("l = {}: {}".format(i, value))
-                ground_truth_pm(0) = 1.00000000000000_8
-                ground_truth_pm(1) = 0.400000000000000_8
-                ground_truth_pm(2) = -0.260000000000000_8
-                ground_truth_pm(3) = -0.440000000000000_8
-                ground_truth_pm(4) = -0.113000000000000_8
-                ground_truth_pm(5) = 0.270640000000000_8
+                ground_truth_pm(1) = 1.00000000000000_8
+                ground_truth_pm(2) = 0.400000000000000_8
+                ground_truth_pm(3) = -0.260000000000000_8
+                ground_truth_pm(4) = -0.440000000000000_8
+                ground_truth_pm(5) = -0.113000000000000_8
+                ground_truth_pm(6) = 0.270640000000000_8
 
-                ground_truth_pd(0) = -0.000000000000000_8
-                ground_truth_pd(1) = 1.00000000000000_8
-                ground_truth_pd(2) = 1.20000000000000_8
-                ground_truth_pd(3) = -0.300000000000000_8
-                ground_truth_pd(4) = -1.88000000000000_8
-                ground_truth_pd(5) = -1.31700000000000_8
+                ground_truth_pd(1) = -0.000000000000000_8
+                ground_truth_pd(2) = 1.00000000000000_8
+                ground_truth_pd(3) = 1.20000000000000_8
+                ground_truth_pd(4) = -0.300000000000000_8
+                ground_truth_pd(5) = -1.88000000000000_8
+                ground_truth_pd(6) = -1.31700000000000_8
 
                 x = 0.4
 
-                call lib_math_legendre_polynomial(x, n, pm, pd)
+                call lib_math_legendre_polynomial(x, fnu, n, pm, pd)
 
 
                 rv = .true.
                 print *, "test_lib_math_legendre_polynomial:"
-                do i=0, n
+                do i=fnu, n
                     buffer = abs(pm(i) - ground_truth_pm(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -1403,7 +1451,7 @@ module lib_math_legendre
                 end do
 
                 print*, "  deriviation:"
-                do i=0, n
+                do i=fnu, n
                     buffer = abs(pd(i) - ground_truth_pd(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
