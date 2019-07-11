@@ -538,7 +538,7 @@ module lib_math_legendre
 
                     logical :: rv
 
-                    pi_nm(n,n) = sqrt(1 - x) * n*(2*n - 1)/(n - 1) * pi_nm(n-1,n-1)
+                    pi_nm(n,n) = sqrt(1 - x*x) * n*(2*n - 1)/(n - 1) * pi_nm(n-1,n-1)
 
                     rv = .true.
                 end function
