@@ -692,8 +692,8 @@ module lib_math_legendre
             double precision, dimension(n), intent(inout) :: pd
 
             ! auxiliary
-            double precision, dimension(0:n) :: buffer_pn
-            double precision, dimension(0:n) :: buffer_pd
+            double precision, dimension(0:fnu+n-1) :: buffer_pn
+            double precision, dimension(0:fnu+n-1) :: buffer_pd
 
             call lpn ( n, x, buffer_pn, buffer_pd )
 
