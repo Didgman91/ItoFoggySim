@@ -688,17 +688,30 @@ module lib_math_legendre
             integer(kind=4), intent(in) :: fnu
             integer(kind=4), intent(in) :: n
 
-            double precision, dimension(n), intent(inout) :: pn
-            double precision, dimension(n), intent(inout) :: pd
+            double precision, dimension(:), allocatable, intent(inout) :: pn
+            double precision, dimension(:), allocatable, intent(inout) :: pd
 
+            interface
+                subroutine lpn ( n, x, pn, pd )
+                    ! dummy
+                    integer ( kind = 4 ), intent(in) :: n
+                    real ( kind = 8 ), intent(in) :: x
+                    real ( kind = 8 ), dimension(:), allocatable, intent(inout) :: pd
+                    real ( kind = 8 ), dimension(:), allocatable, intent(inout) :: pn
+                end subroutine
+            end interface
+            
             ! auxiliary
-            double precision, dimension(0:fnu+n-1) :: buffer_pn
-            double precision, dimension(0:fnu+n-1) :: buffer_pd
-
+            double precision, dimension(:), allocatable :: buffer_pn
+            double precision, dimension(:), allocatable :: buffer_pd
+            
+            !allocate( buffer_pd(0:fnu+n-1) )
+            !allocate( buffer_pn(0:fnu+n-1) )
+            
             call lpn ( n, x, buffer_pn, buffer_pd )
 
-            pn = buffer_pn(fnu:fnu+n-1)
-            pd = buffer_pd(fnu:fnu+n-1)
+            pn = buffer_pn(fnu:fnu+n-1_4)
+            pd = buffer_pd(fnu:fnu+n-1_4)
 
         end subroutine lib_math_legendre_polynomial
 
@@ -1392,8 +1405,8 @@ module lib_math_legendre
                 double precision :: x
                 integer(kind=4), parameter :: fnu = 0
                 integer(kind=4), parameter :: n = 6
-                double precision, dimension(n) :: pm
-                double precision, dimension(n) :: pd
+                double precision, dimension(:), allocatable :: pm
+                double precision, dimension(:), allocatable :: pd
 
                 double precision, dimension(n) :: ground_truth_pm
                 double precision, dimension(n) :: ground_truth_pd

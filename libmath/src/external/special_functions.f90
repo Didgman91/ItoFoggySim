@@ -19460,15 +19460,31 @@ subroutine lpn ( n, x, pn, pd )
 !
   implicit none
 
-  integer ( kind = 4 ) n
+  ! dummy
+  integer ( kind = 4 ), intent(in) :: n
+  real ( kind = 8 ), intent(in) :: x
+  real ( kind = 8 ), dimension(:), allocatable, intent(inout) :: pd
+  real ( kind = 8 ), dimension(:), allocatable, intent(inout) :: pn
 
+  ! auxiliary
   integer ( kind = 4 ) k
   real ( kind = 8 ) p0
   real ( kind = 8 ) p1
-  real ( kind = 8 ) pd(0:n)
   real ( kind = 8 ) pf
-  real ( kind = 8 ) pn(0:n)
-  real ( kind = 8 ) x
+  integer  status
+  
+  if (allocated(pd) ) then
+      deallocate(pd)
+  end if
+  if (allocated(pn) ) then
+      deallocate(pn)
+  end if
+  
+  allocate( pd(0:n), stat=status )
+  if (status .ne. 0) then 
+      print*, "special_function lpn: ERROR"
+  end if
+  allocate( pn(0:n) )
 
   pn(0) = 1.0D+00
   pn(1) = x
