@@ -1,5 +1,6 @@
 module lib_math_legendre
     use lib_math_factorial
+    use lib_math_type
     implicit none
 
     private
@@ -1508,7 +1509,14 @@ module lib_math_legendre
                 double precision, dimension(0:n_max, -n_max:n_max) :: ground_truth_pi_nm
                 double precision, dimension(0:n_max, -n_max:n_max) :: ground_truth_tau_nm
 
+                type(list_list_real) :: ground_truth_pi_nm_e
+
                 double precision :: buffer
+
+                allocate( ground_truth_pi_nm_e%item(0:n_max) )
+                do i=0, n_max
+                    allocate (ground_truth_pi_nm_e%item(i)%item(-i:i) )
+                end do
 
                 ! Values were generated with WolframAplpha
                 !

@@ -23,4 +23,12 @@ module lib_math_type
         type(spherical_coordinate_cmplx_type), dimension(:), allocatable :: coordinate
     end type list_spherical_coordinate_cmplx_type
 
+    type list_real
+        real(kind=lib_math_type_kind), dimension(:), allocatable :: item
+    end type
+
+    type list_list_real
+        type(list_real), dimension(:), allocatable :: item
+    end type
+
 end module lib_math_type
