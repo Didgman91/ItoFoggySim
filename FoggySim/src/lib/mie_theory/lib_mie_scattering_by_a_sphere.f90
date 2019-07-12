@@ -209,6 +209,7 @@ module lib_mie_scattering_by_a_sphere
             type(spherical_coordinate_cmplx_type), dimension(n(2)-n(1)+1) :: e_field_n_s
 
             m = (/-n(2),n(2)/)
+!            m = (/1,1/)
 
             mu = 1
             mu1 = 1
@@ -221,9 +222,9 @@ module lib_mie_scattering_by_a_sphere
                                                                        M_mn, N_mn)
             ! eq. (5)
             do i=n(1), n(2)
-                do ii=m(1), m(2)
+                do ii=-i, i
                     buffer_real = abs(e_field_0) * (2*i+1) * &
-                                    lib_math_factorial_get_factorial(i-ii) / lib_math_factorial_get_factorial(i+ii)! lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(i, ii)
+                                    lib_math_factorial_get_factorial(i-ii) / lib_math_factorial_get_factorial(i+ii)
 #ifdef _DEBUG_
                     if (isnan(buffer_real)) then
                         print *, "get_e_field_scattered_xu: ERROR"
@@ -548,7 +549,7 @@ module lib_mie_scattering_by_a_sphere
                     ! parameter
                     double precision, parameter :: start_angle = 0
                     double precision, parameter :: stop_angle = 180
-                    integer(kind=8), parameter :: number_of_values = 360
+                    integer(kind=8), parameter :: number_of_values = 720
 
                     ! auxiliary
                     integer(kind=4) :: i
@@ -570,8 +571,8 @@ module lib_mie_scattering_by_a_sphere
                     real(kind=8), dimension(number_of_values) :: i_field_s
 
                     phi = 0.0
-                    rho = 100
-                    rho_particle = 10
+                    rho = 50
+                    rho_particle = 50
 
                     e_field_0 = 1
                     n_particle = 1.5
@@ -592,15 +593,33 @@ module lib_mie_scattering_by_a_sphere
 
 
 
-                    ! write e_field_s values to csv
+                    ! write to csv
                     header(1) = "degree"
                     header(2) = "i_field_s"
                     u = 99
                     open(unit=u, file="i_field_s.csv", status='unknown')
-
                     rv = write_csv(u, header, degree_list, i_field_s)
-
                     close(u)
+
+                    header(1) = "degree"
+                    header(2) = "e_field_s_rho"
+                    open(unit=u, file="e_field_s_rho.csv", status='unknown')
+                    rv = write_csv(u, header, degree_list &
+                                            , real(e_field_s(:)%rho))
+                    close(u)
+
+                    header(2) = "e_field_s_theta"
+                    open(unit=u, file="e_field_s_theta.csv", status='unknown')
+                    rv = write_csv(u, header, degree_list &
+                                            , real(e_field_s(:)%theta))
+                    close(u)
+
+                    header(2) = "e_field_s_phi"
+                    open(unit=u, file="e_field_s_phi.csv", status='unknown')
+                    rv = write_csv(u, header, degree_list &
+                                            , real(e_field_s(:)%phi))
+                    close(u)
+
 
                 end function
 

@@ -19,6 +19,16 @@ program main
 
     integer :: error_counter
 
+    integer(kind=4) :: l
+    integer(kind=4) :: m
+    double precision :: x
+    double precision :: erg
+
+
+    l = 3
+    m = 1
+    x = 0.01_8
+
 !    polarization: parallel (1) perpendicular (2)
 !    size parameter: x
 !    index of refraction: real,imaginary (+ for absorption)
@@ -39,8 +49,8 @@ program main
     error_counter = error_counter + lib_math_type_operator_test_functions()
     error_counter = error_counter + lib_math_bessel_test_functions()
     error_counter = error_counter + lib_math_legendre_test_functions()
-    !error_counter = error_counter + lib_mie_vector_spherical_harmonics_test_functions()
-    !error_counter = error_counter + lib_mie_scattering_by_a_sphere_test_functions()
+    error_counter = error_counter + lib_mie_vector_spherical_harmonics_test_functions()
+    error_counter = error_counter + lib_mie_scattering_by_a_sphere_test_functions()
     error_counter = error_counter + lib_sort_test_functions()
     error_counter = error_counter + lib_test_hash_function()
     !error_counter = error_counter + lib_tree_hf_test_functions()
@@ -62,7 +72,5 @@ program main
         print *, error_counter,"test(s) FAILED"
     end if
     print *, "-----------------------------------"
-    
-    read(*,*)
 
 end program main

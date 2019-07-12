@@ -90,8 +90,8 @@ module lib_mie_vector_spherical_harmonics
             double precision, dimension(0:n(2), -n(2):n(2)) :: pi_nm
             double precision, dimension(0:n(2), -n(2):n(2)) :: tau_nm
 
-            double precision, dimension(0:n(2), -n(2):n(2)) :: p_nm
-            double precision, dimension(0:n(2), -n(2):n(2)) :: p_d_nm
+            double precision, dimension(n(1):n(2), -n(2):n(2)) :: p_nm
+            double precision, dimension(n(1):n(2), -n(2):n(2)) :: p_d_nm
 
             double precision, dimension(n(2)-n(1)+1) :: buffer_p_n
             double precision, dimension(n(2)-n(1)+1) :: buffer_p_d_n
@@ -184,7 +184,7 @@ module lib_mie_vector_spherical_harmonics
             call lib_math_associated_legendre_polynomial_theta(theta, n(2), pi_nm, tau_nm)
 
             call lib_math_associated_legendre_polynomial(sin_theta, 0, n(1), number_of_members_n, buffer_p_n, buffer_p_d_n, .false.)
-            p_nm(:, 0) = buffer_p_n
+            p_nm(:, 0) = buffer_p_n(n(1):n(2))
             do i=1, m(2)
                 call lib_math_associated_legendre_polynomial_with_negative_m(sin_theta, i, n(1), number_of_members_n, &
                                                                              buffer_p_n_m_neg, buffer_p_d_n_m_neg, .false.)
