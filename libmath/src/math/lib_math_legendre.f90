@@ -1,6 +1,8 @@
 module lib_math_legendre
     use lib_math_factorial
     use lib_math_type
+    use lib_math_type_operator
+    use libmath_generated_functions
     implicit none
 
     private
@@ -228,15 +230,10 @@ module lib_math_legendre
             m_pi_nm(0,1) = 0
             m_pi_nm(1,1) = 1
 
-!            tau_nm(0,0) = 0
-!            tau_nm(1,0) = -sqrt(1.0_8 - x*x)
-!            tau_nm(0,1) = 0
-!            tau_nm(1,1) = x
-
             tau_nm(0,0) = 0
-            tau_nm(1,0) = -sin(theta)
-!            tau_nm(0,1) = 0
-            tau_nm(1,1) = -x
+            tau_nm(1,0) = -sqrt(1.0_8 - x*x)
+            tau_nm(0,1) = 0
+            tau_nm(1,1) = x
 
             if (x .eq. 1.0_8) then
                 ! Special Values, eq. 7
@@ -680,7 +677,69 @@ module lib_math_legendre
         end subroutine lib_math_associated_legendre_polynomial_theta_xu
 
         subroutine lib_math_associated_legendre_polynomial_theta_wa(theta, n_max, pi_nm, tau_nm, condon_shortley_phase)
-            use libmath_generated_functions
+            implicit none
+            ! dummy
+            double precision, intent(in) :: theta
+            integer(kind=4), intent(in) :: n_max
+
+            type(list_list_real) :: pi_nm
+            type(list_list_real) :: tau_nm
+
+            logical, optional :: condon_shortley_phase
+
+            ! auxiliary
+            integer(kind=4) :: n
+            integer(kind=4) :: m
+
+            real(kind=8) :: x
+
+            call init_list(pi_nm, 0, n_max+1)
+            call init_list(tau_nm, 0, n_max+1)
+
+            x = cos(theta)
+
+            pi_nm%item(0)%item(0) = 0.0_8
+            tau_nm%item(0)%item(0) = 0
+
+            if (x .eq. 1.0_8 .or.&
+                x .eq. -1.0_8) then
+                do n=1, n_max
+                    do m=-n, n
+                        pi_nm%item(n)%item(m) = get_associated_legendre_polynomial_limit(n, m)
+                    end do
+                end do
+            else
+                do n=1, n_max
+                    do m=-n, n
+                        pi_nm%item(n)%item(m) = get_associated_legendre_polynomial(n, m, theta)
+                    end do
+                end do
+            end if
+
+            do n=1, n_max
+                do m=-n, n
+                    tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative(n, m, theta)
+                end do
+            end do
+
+            if (present(condon_shortley_phase)) then
+                if (condon_shortley_phase) then
+                    do n=0, n_max
+                        do m=-n, n
+                            if (IAND(abs(m), 1) .eq. 1) then
+                                pi_nm%item(n)%item(m) = -pi_nm%item(n)%item(m)
+                                tau_nm%item(n)%item(m) = -tau_nm%item(n)%item(m)
+                            end if
+                        end do
+                    end do
+!                    pm = (-1.0_8)**m * pm
+!                    pd = (-1.0_8)**m * pd
+                end if
+            end if
+
+        end subroutine
+
+        subroutine lib_math_associated_legendre_polynomial_theta_wa_legacy(theta, n_max, pi_nm, tau_nm, condon_shortley_phase)
             implicit none
             ! dummy
             double precision, intent(in) :: theta
@@ -807,7 +866,7 @@ module lib_math_legendre
 !            if (.not. test_lib_math_associated_legendre_polynomial_theta_m1()) then
 !                rv = rv + 1
 !            end if
-            if (.not. test_lib_math_associated_legendre_polynomial_theta_n0_3()) then
+            if (.not. test_lib_math_associated_legendre_polynomial_theta_xu_n0_3()) then
                 rv = rv + 1
             end if
             if (.not. test_lib_math_associated_legendre_polynomial_theta_wa_n0_3()) then
@@ -1307,7 +1366,7 @@ module lib_math_legendre
 
                 call genlgp(theta, ground_truth_pi_n1, n_max+1)
 
-                call lib_math_associated_legendre_polynomial_theta(theta, n_max, pi_nm, tau_nm)
+                call lib_math_associated_legendre_polynomial_theta_xu(theta, n_max, pi_nm, tau_nm)
 
 
                 rv = .true.
@@ -1368,7 +1427,7 @@ module lib_math_legendre
                   return
           end subroutine genlgp
 
-          function test_lib_math_associated_legendre_polynomial_theta_n0_3() result(rv)
+          function test_lib_math_associated_legendre_polynomial_theta_xu_n0_3() result(rv)
                 implicit none
                 ! dummy
                 logical :: rv
@@ -1488,7 +1547,7 @@ module lib_math_legendre
                     print*, ""
                 end do
 
-            end function test_lib_math_associated_legendre_polynomial_theta_n0_3
+            end function test_lib_math_associated_legendre_polynomial_theta_xu_n0_3
 
             function test_lib_math_associated_legendre_polynomial_theta_wa_n0_3() result(rv)
                 implicit none
@@ -1499,24 +1558,20 @@ module lib_math_legendre
                 integer(kind=4), parameter :: n_max = 3
 
                 ! auxiliary
-                integer(kind=4) :: i
-                integer(kind=4) :: ii
+                integer(kind=4) :: n
+                integer(kind=4) :: m
                 double precision :: theta
 
-                real(kind=8), dimension(0:n_max, -n_max:n_max) :: pi_nm
-                real(kind=8), dimension(0:n_max, -n_max:n_max) :: tau_nm
+                type(list_list_real) :: pi_nm
+                type(list_list_real) :: tau_nm
 
-                double precision, dimension(0:n_max, -n_max:n_max) :: ground_truth_pi_nm
-                double precision, dimension(0:n_max, -n_max:n_max) :: ground_truth_tau_nm
-
-                type(list_list_real) :: ground_truth_pi_nm_e
+                type(list_list_real) :: ground_truth_pi_nm
+                type(list_list_real) :: ground_truth_tau_nm
 
                 double precision :: buffer
 
-                allocate( ground_truth_pi_nm_e%item(0:n_max) )
-                do i=0, n_max
-                    allocate (ground_truth_pi_nm_e%item(i)%item(-i:i) )
-                end do
+                call init_list(ground_truth_pi_nm, 0, n_max+1)
+                call init_list(ground_truth_tau_nm, 0, n_max+1)
 
                 ! Values were generated with WolframAplpha
                 !
@@ -1525,58 +1580,45 @@ module lib_math_legendre
                 !  >>>  N[m*LegendreP[n, m, cos (t)]/sin (t), 16], where n = 1, m = [-1, 0, 1], t = 2
                 !  >>>  N[m*LegendreP[n, m, cos (t)]/sin (t), 16], where n = 2, m = [-2, -1, 0, 1, 2], t = 2
                 !  >>>  N[m*LegendreP[n, m, cos (t)]/sin (t), 16], where n = 3, m = [-3, -2, -1, 0, 1, 2, 3], t = 2
+                ground_truth_pi_nm%item(0)%item(0) = 0_8
 
-!                ground_truth_pi_nm(0, -3) = -2.077165092735346_8
-!                ground_truth_pi_nm(0, -2) = 0_8
-!                ground_truth_pi_nm(0, -1) = -1.712759410407380_8
-                ground_truth_pi_nm(0,  0) = 0_8
-!                ground_truth_pi_nm(0,  1) = 0_8
-!                ground_truth_pi_nm(0,  2) = 0_8
-!                ground_truth_pi_nm(0,  3) = 0_8
+                ground_truth_pi_nm%item(1)%item(-1) = -0.5000000000000000_8
+                ground_truth_pi_nm%item(1)%item(0) = 0_8
+                ground_truth_pi_nm%item(1)%item(1) = -1.000000000000000_8
 
-!                ground_truth_pi_nm(1, -3) = -1.341772398969518_8
-!                ground_truth_pi_nm(1, -2) = 0.0_8
-                ground_truth_pi_nm(1, -1) = -0.5000000000000000_8
-                ground_truth_pi_nm(1,  0) = 0_8
-                ground_truth_pi_nm(1,  1) = -1.000000000000000_8
-!                ground_truth_pi_nm(1,  2) = 0_8
-!                ground_truth_pi_nm(1,  3) = 0_8
+                ground_truth_pi_nm%item(2)%item(-2) = -0.2273243567064204_8
+                ground_truth_pi_nm%item(2)%item(-1) = 0.2080734182735712_8
+                ground_truth_pi_nm%item(2)%item( 0) = 0.0_8
+                ground_truth_pi_nm%item(2)%item( 1) = 1.248440509641427_8
+                ground_truth_pi_nm%item(2)%item( 2) = 5.455784560954090_8
 
-!                ground_truth_pi_nm(2, -3) = -0.4958414335756772_8
-                ground_truth_pi_nm(2, -2) = -0.2273243567064204_8
-                ground_truth_pi_nm(2, -1) = 0.2080734182735712_8
-                ground_truth_pi_nm(2,  0) = 0.0_8
-                ground_truth_pi_nm(2,  1) = 1.248440509641427_8
-                ground_truth_pi_nm(2,  2) = 5.455784560954090_8
-!                ground_truth_pi_nm(2,  3) = 0_8
+                ground_truth_pi_nm%item(3)%item(-3) = -0.05167636315198787_8
+                ground_truth_pi_nm%item(3)%item(-2) = 0.09460031191349103_8
+                ground_truth_pi_nm%item(3)%item(-1) = 0.01676363151987872_8
+                ground_truth_pi_nm%item(3)%item( 0) = 0.0_8
+                ground_truth_pi_nm%item(3)%item( 1) = 0.2011635782385447_8
+                ground_truth_pi_nm%item(3)%item( 2) = -11.35203742961892_8
+                ground_truth_pi_nm%item(3)%item( 3) = -37.20698146943127_8
 
-                ground_truth_pi_nm(3, -3) = -0.05167636315198787_8
-                ground_truth_pi_nm(3, -2) = 0.09460031191349103_8
-                ground_truth_pi_nm(3, -1) = 0.01676363151987872_8
-                ground_truth_pi_nm(3,  0) = 0.0_8
-                ground_truth_pi_nm(3,  1) = 0.2011635782385447_8
-                ground_truth_pi_nm(3,  2) = -11.35203742961892_8
-                ground_truth_pi_nm(3,  3) = -37.20698146943127_8
+                ground_truth_tau_nm%item(0)%item(0) = 0_8
 
-                ground_truth_tau_nm(0,  0) = 0_8
+                ground_truth_tau_nm%item(1)%item(-1) = 0.0_8
+                ground_truth_tau_nm%item(1)%item( 0) = 0.0_8
+                ground_truth_tau_nm%item(1)%item( 1) = 0.0_8
 
-                ground_truth_tau_nm(1, -1) = 0.0_8
-                ground_truth_tau_nm(1,  0) = 0.0_8
-                ground_truth_tau_nm(1,  1) = 0.0_8
+                ground_truth_tau_nm%item(2)%item(-2) =  0.1040367091367856_8
+                ground_truth_tau_nm%item(2)%item(-1) =  0.4546487134128408_8
+                ground_truth_tau_nm%item(2)%item( 0) = 0_8
+                ground_truth_tau_nm%item(2)%item( 1) = 2.727892280477045_8
+                ground_truth_tau_nm%item(2)%item( 2) = -2.496881019282854_8
 
-                ground_truth_tau_nm(2, -2) =  0.1040367091367856_8
-                ground_truth_tau_nm(2, -1) =  0.4546487134128408_8
-                ground_truth_tau_nm(2,  0) = 0_8
-                ground_truth_tau_nm(2,  1) = 2.727892280477045_8
-                ground_truth_tau_nm(2,  2) = -2.496881019282854_8
-
-                ground_truth_tau_nm(3, -3) =  0.04730015595674552_8
-                ground_truth_tau_nm(3, -2) =  0.1634109052159030_8
-                ground_truth_tau_nm(3, -1) =  -0.4730015595674552_8
-                ground_truth_tau_nm(3,  0) = 0_8
-                ground_truth_tau_nm(3,  1) = -5.676018714809462_8
-                ground_truth_tau_nm(3,  2) = -19.60930862590836_8
-                ground_truth_tau_nm(3,  3) = 34.05611228885677_8
+                ground_truth_tau_nm%item(3)%item(-3) =  0.04730015595674552_8
+                ground_truth_tau_nm%item(3)%item(-2) =  0.1634109052159030_8
+                ground_truth_tau_nm%item(3)%item(-1) =  -0.4730015595674552_8
+                ground_truth_tau_nm%item(3)%item( 0) = 0_8
+                ground_truth_tau_nm%item(3)%item( 1) = -5.676018714809462_8
+                ground_truth_tau_nm%item(3)%item( 2) = -19.60930862590836_8
+                ground_truth_tau_nm%item(3)%item( 3) = 34.05611228885677_8
 
                 theta = 2.0_8
 
@@ -1585,30 +1627,30 @@ module lib_math_legendre
 
                 rv = .true.
                 print *, "test_lib_math_associated_legendre_polynomial_theta_wolfram_alpha_n0_3:"
-                do i=0, n_max
+                do n=0, n_max
                     !do ii=-n_max, n_max
-                    do ii=-i, i
-                        buffer = abs(pi_nm(i, ii) - ground_truth_pi_nm(i, ii))
+                    do m=-n, n
+                        buffer = abs(pi_nm%item(n)%item(m) - ground_truth_pi_nm%item(n)%item(m))
                         if (buffer .gt. ground_truth_e) then
-                            print *, "  n: ", i, " m: ", ii , "difference: ", buffer, " : FAILED"
+                            print *, "  n: ", n, " m: ", m , "difference: ", buffer, " : FAILED"
                             rv = .false.
                         else
-                            print *, "  n: ", i, " m: ", ii, "OK"
+                            print *, "  n: ", n, " m: ", m, "OK"
                         end if
                     end do
                     print*, ""
                 end do
 
                 print*, "  deriviation:"
-                do i=0, n_max
+                do n=0, n_max
                     !do ii=-n_max, n_max
-                    do ii=-i, i
-                        buffer = abs(tau_nm(i, ii) - ground_truth_tau_nm(i, ii))
+                    do m=-n, n
+                        buffer = abs(tau_nm%item(n)%item(m) - ground_truth_tau_nm%item(n)%item(m))
                         if (buffer .gt. ground_truth_e) then
-                            print *, "  n: ", i, " m: ", ii , "difference: ", buffer, " : FAILED"
+                            print *, "  n: ", n, " m: ", m , "difference: ", buffer, " : FAILED"
                             rv = .false.
                         else
-                            print *, "  n: ", i, " m: ", ii, "OK"
+                            print *, "  n: ", n, " m: ", m, "OK"
                         end if
                     end do
                     print*, ""

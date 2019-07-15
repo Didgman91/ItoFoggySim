@@ -17,120 +17,120 @@ module lib_mie_scattering_by_a_sphere
 
     contains
 
-        ! calculates the scatterd electical field of a sphere
-        !
-        ! Setup
-        ! ----
-        !
-        !        ^ z
-        !        |
-        !        o -> x
-        !    __________
-        !    __________
-        !
-        !    o: sphere
-        !    _: plane wave
-        !       - propagation direction: z
-        !
-        ! Argument
-        ! ----
-        !   theta: double precision
-        !       polar angle
-        !   phi: double precision
-        !       azimuthal angle
-        !   rho: double precision
-        !       dimensionless varibale rho = k*a
-        !       k: wavenumber
-        !       a: distance
-        !   rho_particle: double precision
-        !       dimensionless varibale rho = k*r
-        !       k: wavenumber
-        !       r: radius of the sphere
-        !   e_field_0: double precision
-        !       amplitude of the incident wave
-        !   n_particle: double precision
-        !       refractive index of the sphere
-        !   n_medium: double precision
-        !       refractive index of the medium
-        !
-        ! Reference: Absorption and Scattering of Light by Small Particles, Bohren & Huffman
-        !
-        function get_e_field_scattered_bh(theta, phi, rho, e_field_0, rho_particle, n_particle, n_medium) result (e_field_s)
-            implicit none
-            ! dummy
-            double precision, intent(in) :: theta
-            double precision, intent(in) :: phi
-            double precision, intent(in) :: rho
-            double precision, intent(in) :: rho_particle
-            double precision, intent(in) :: e_field_0
-            double precision, intent(in) :: n_particle
-            double precision, intent(in) :: n_medium
-
-            type(spherical_coordinate_cmplx_type) :: e_field_s
-
-            ! parameter
-            integer(kind=4), dimension(2), parameter :: n = (/1, 10/)
-
-            ! auxiliary
-            double precision :: buffer_real
-            integer(kind=4) :: i
-            double precision :: mu
-            double precision :: mu1
-
-            complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
-            complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
-
-
-            integer(kind=4), dimension(2) :: m
-            integer(kind=1) :: z_selector
-
-            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_emn
-            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_omn
-            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_emn
-            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_omn
-
-            complex(kind=8), dimension(n(2)-n(1)+1) :: e_field_n
-            type(spherical_coordinate_cmplx_type), dimension(n(2)-n(1)+1) :: e_field_n_s
-
-            m = (/1,1/)
-
-            mu = 1
-            mu1 = 1
-
-            call get_coefficients_a_b_real(rho_particle, n_particle/n_medium, mu, mu1, n, a_n, b_n)
-
-            z_selector = 3
-
-            call lib_mie_vector_spherical_harmonics_components(theta, phi, rho, m, n, z_selector, &
-                                                               M_emn, M_omn, N_emn, N_omn, &
-                                                               not_calc_Memn=.true., &
-                                                               not_calc_Momn=.false., &
-                                                               not_calc_Nemn=.false., &
-                                                               not_calc_Nomn=.true.)
-            ! page 93
-            do i=n(1), n(2)
-                buffer_real = e_field_0 * (2*i+1)/(i*(i+1))
-                e_field_n(i) = cmplx(buffer_real,0, kind=8)
-                e_field_n(i) = e_field_n(i) * (cmplx(0,1, kind=8)**i)
-            end do
-
-            ! eq. 4.45
-            do i=n(1), n(2)
-                e_field_n_s(i) = e_field_n(i) * (cmplx(0,1, kind=8) * a_n(i) * N_emn(m(1))%coordinate(i)&
-                                                 - b_n(i) * M_omn(m(1))%coordinate(i))
-            end do
-
-
-            e_field_s%theta = cmplx(0,0,kind=8)
-            e_field_s%phi = cmplx(0,0,kind=8)
-            e_field_s%rho = cmplx(0,0,kind=8)
-            do i=n(1), n(2)
-                e_field_s = e_field_s + e_field_n_s(i)
-            end do
-
-            print*, "done"
-
-        end function
+!        ! calculates the scatterd electical field of a sphere
+!        !
+!        ! Setup
+!        ! ----
+!        !
+!        !        ^ z
+!        !        |
+!        !        o -> x
+!        !    __________
+!        !    __________
+!        !
+!        !    o: sphere
+!        !    _: plane wave
+!        !       - propagation direction: z
+!        !
+!        ! Argument
+!        ! ----
+!        !   theta: double precision
+!        !       polar angle
+!        !   phi: double precision
+!        !       azimuthal angle
+!        !   rho: double precision
+!        !       dimensionless varibale rho = k*a
+!        !       k: wavenumber
+!        !       a: distance
+!        !   rho_particle: double precision
+!        !       dimensionless varibale rho = k*r
+!        !       k: wavenumber
+!        !       r: radius of the sphere
+!        !   e_field_0: double precision
+!        !       amplitude of the incident wave
+!        !   n_particle: double precision
+!        !       refractive index of the sphere
+!        !   n_medium: double precision
+!        !       refractive index of the medium
+!        !
+!        ! Reference: Absorption and Scattering of Light by Small Particles, Bohren & Huffman
+!        !
+!        function get_e_field_scattered_bh(theta, phi, rho, e_field_0, rho_particle, n_particle, n_medium) result (e_field_s)
+!            implicit none
+!            ! dummy
+!            double precision, intent(in) :: theta
+!            double precision, intent(in) :: phi
+!            double precision, intent(in) :: rho
+!            double precision, intent(in) :: rho_particle
+!            double precision, intent(in) :: e_field_0
+!            double precision, intent(in) :: n_particle
+!            double precision, intent(in) :: n_medium
+!
+!            type(spherical_coordinate_cmplx_type) :: e_field_s
+!
+!            ! parameter
+!            integer(kind=4), dimension(2), parameter :: n = (/1, 10/)
+!
+!            ! auxiliary
+!            double precision :: buffer_real
+!            integer(kind=4) :: i
+!            double precision :: mu
+!            double precision :: mu1
+!
+!            complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+!            complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+!
+!
+!            integer(kind=4), dimension(2) :: m
+!            integer(kind=1) :: z_selector
+!
+!            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_emn
+!            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_omn
+!            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_emn
+!            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_omn
+!
+!            complex(kind=8), dimension(n(2)-n(1)+1) :: e_field_n
+!            type(spherical_coordinate_cmplx_type), dimension(n(2)-n(1)+1) :: e_field_n_s
+!
+!            m = (/1,1/)
+!
+!            mu = 1
+!            mu1 = 1
+!
+!            call get_coefficients_a_b_real(rho_particle, n_particle/n_medium, mu, mu1, n, a_n, b_n)
+!
+!            z_selector = 3
+!
+!            call lib_mie_vector_spherical_harmonics_components(theta, phi, rho, m, n, z_selector, &
+!                                                               M_emn, M_omn, N_emn, N_omn, &
+!                                                               not_calc_Memn=.true., &
+!                                                               not_calc_Momn=.false., &
+!                                                               not_calc_Nemn=.false., &
+!                                                               not_calc_Nomn=.true.)
+!            ! page 93
+!            do i=n(1), n(2)
+!                buffer_real = e_field_0 * (2*i+1)/(i*(i+1))
+!                e_field_n(i) = cmplx(buffer_real,0, kind=8)
+!                e_field_n(i) = e_field_n(i) * (cmplx(0,1, kind=8)**i)
+!            end do
+!
+!            ! eq. 4.45
+!            do i=n(1), n(2)
+!                e_field_n_s(i) = e_field_n(i) * (cmplx(0,1, kind=8) * a_n(i) * N_emn(m(1))%coordinate(i)&
+!                                                 - b_n(i) * M_omn(m(1))%coordinate(i))
+!            end do
+!
+!
+!            e_field_s%theta = cmplx(0,0,kind=8)
+!            e_field_s%phi = cmplx(0,0,kind=8)
+!            e_field_s%rho = cmplx(0,0,kind=8)
+!            do i=n(1), n(2)
+!                e_field_s = e_field_s + e_field_n_s(i)
+!            end do
+!
+!            print*, "done"
+!
+!        end function
 
         ! calculates the scatterd electical field of a sphere
         !
@@ -167,13 +167,14 @@ module lib_mie_scattering_by_a_sphere
         !       refractive index of the sphere
         !   n_medium: double precision
         !       refractive index of the medium
-        !   n: integer, dimension(2)
+        !   n_range: integer, dimension(2)
         !       first and last index (degree) of the sum to calculate the electical field
         !       e.g. n = (/ 1, 80 /) <-- size parameter
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu
         !
-        function get_e_field_scattered_xu(theta, phi, rho, e_field_0, rho_particle, n_particle, n_medium, n) result (e_field_s)
+        function get_e_field_scattered_xu(theta, phi, rho, e_field_0, rho_particle, n_particle, n_medium, n_range) &
+                                         result (e_field_s)
             implicit none
             ! dummy
             double precision, intent(in) :: theta
@@ -183,7 +184,7 @@ module lib_mie_scattering_by_a_sphere
             double precision, intent(in) :: e_field_0
             double precision, intent(in) :: n_particle
             double precision, intent(in) :: n_medium
-            integer(kind=4), dimension(2) :: n
+            integer(kind=4), dimension(2) :: n_range
 
             type(spherical_coordinate_cmplx_type) :: e_field_s
 
@@ -192,78 +193,72 @@ module lib_mie_scattering_by_a_sphere
             complex(kind=8) :: buffer_cmplx
             integer(kind=4) :: i
             integer(kind=4) :: ii
+            integer(kind=4) :: m
+            integer(kind=4) :: n
             double precision :: mu
             double precision :: mu1
 
-            complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
-            complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+            complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: a_n
+            complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: b_n
 
 
-            integer(kind=4), dimension(2) :: m
             integer(kind=1) :: z_selector
 
-            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_mn
-            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_mn
+            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_nm
+            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_nm
 
-            complex(kind=8), dimension(n(2)-n(1)+1, n(2)+n(2)+1) :: e_field_nm
-            type(spherical_coordinate_cmplx_type), dimension(n(2)-n(1)+1) :: e_field_n_s
-
-            m = (/-n(2),n(2)/)
-!            m = (/1,1/)
+            complex(kind=8), dimension(n_range(1):n_range(2), -n_range(2):n_range(2)) :: e_field_nm
+            type(spherical_coordinate_cmplx_type), dimension(n_range(2)-n_range(1)+1) :: e_field_n_s
 
             mu = 1
-            mu1 = 1
+            mu1 = 1.5
 
-            call get_coefficients_a_b_real(rho_particle, n_particle/n_medium, mu, mu1, n, a_n, b_n)
+            call get_coefficients_a_b_real(rho_particle, n_particle/n_medium, mu, mu1, n_range, a_n, b_n)
 
             z_selector = 3
 
-            call lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, rho, m, n, z_selector, &
-                                                                       M_mn, N_mn)
+            call lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, rho, n_range, z_selector, &
+                                                                       M_nm, N_nm)
             ! eq. (5)
-            do i=n(1), n(2)
-                do ii=-i, i
-                    buffer_real = abs(e_field_0) * (2*i+1) * &
-                                    lib_math_factorial_get_factorial(i-ii) / lib_math_factorial_get_factorial(i+ii)
+            do n=n_range(1), n_range(2)
+                do m=-n, n
+                    buffer_real = abs(e_field_0) * real((2*n+1), kind=8) * &
+                                    lib_math_factorial_get_factorial(n-m) / lib_math_factorial_get_factorial(n+m)
 #ifdef _DEBUG_
                     if (isnan(buffer_real)) then
                         print *, "get_e_field_scattered_xu: ERROR"
                         print *, "  buffer_real is NaN"
-                        print * , "  n = ", i
-                        print * , "  m = ", ii
+                        print * , "  n = ", n
+                        print * , "  m = ", m
                     end if
 #endif
-                    buffer_cmplx = buffer_real * cmplx(0,1, kind=8)**i
-                    e_field_nm(-n(1)+i+1, -m(1)+ii+1) = buffer_cmplx
+                    e_field_nm(n, m) =  cmplx(0,buffer_real, kind=8)**n
                 end do
             end do
 
             ! first line eq. (4)
-            do i= 1, n(2)-n(2)+1
-                do ii=1, m(2)-m(1)+1
-!                    e_field_n_s(i) = cmplx(0, 1, kind=8) * e_field_nm(i, ii) &
-!                                    * (a_n(i)*N_mn(ii)%coordinate(i) &
-!                                       + b_n(i)*M_mn(ii)%coordinate(i))
-
-                    buffer_cmplx = cmplx(0, 1, kind=8) * e_field_nm(i, ii)
-                    e_field_n_s(i) = buffer_cmplx * a_n(i)*N_mn(ii)%coordinate(i)
+            do n= n_range(1), n_range(2)
+                i = n - n_range(1) + 1
+                do m=-n, n
+                    buffer_cmplx = cmplx(0, 1, kind=8) * e_field_nm(n, m)
+                    e_field_n_s(i) = buffer_cmplx * a_n(i)*N_nm(n)%coordinate(m)
 #ifdef _DEBUG_
                     if (isnan(real(e_field_n_s(i)%rho)) .or. isnan(aimag(e_field_n_s(i)%rho)) &
                         .or. isnan(real(e_field_n_s(i)%phi)) .or. isnan(aimag(e_field_n_s(i)%phi)) &
                         .or. isnan(real(e_field_n_s(i)%theta)) .or. isnan(aimag(e_field_n_s(i)%theta)) ) then
                         print *, "get_e_field_scattered_xu: ERROR"
                         print *, "  e_field_n_s is NaN"
-                        print * , "  n = ", i
-                        print * , "  m = ", ii
+                        print * , "  n = ", n
+                        print * , "  m = ", m
                     end if
 #endif
-                    e_field_n_s(i) = e_field_n_s(i) + buffer_cmplx * b_n(i)*M_mn(ii)%coordinate(i)
+                    e_field_n_s(i) = e_field_n_s(i) + buffer_cmplx * b_n(i)*M_nm(n)%coordinate(m)
                 end do
             end do
             e_field_s%theta = cmplx(0,0,kind=8)
             e_field_s%phi = cmplx(0,0,kind=8)
             e_field_s%rho = cmplx(0,0,kind=8)
-            do i=1, n(2)-n(1)+1
+            do i=1, n_range(2)-n_range(1)+1
                 e_field_s = e_field_s + e_field_n_s(i)
             end do
 
@@ -572,7 +567,7 @@ module lib_mie_scattering_by_a_sphere
 
                     phi = 0.0
                     rho = 50
-                    rho_particle = 50
+                    rho_particle = 10
 
                     e_field_0 = 1
                     n_particle = 1.5
