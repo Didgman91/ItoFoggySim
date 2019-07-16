@@ -112,7 +112,7 @@ module lib_mie_vector_spherical_harmonics
             complex(kind=8) :: buffer_cmplx
 
             complex(kind=8), dimension(-n_range(2):n_range(2)) :: exp_i_m_phi
-            double precision :: sin_theta
+            double precision :: cos_theta
 
             number_of_members_n = n_range(2) - n_range(1) + 1
 
@@ -132,7 +132,7 @@ module lib_mie_vector_spherical_harmonics
 
 
             ! --- pre-calculation ---
-            sin_theta = sin(theta)
+            cos_theta = cos(theta)
 
             do i=-n_range(2), n_range(2)
                 exp_i_m_phi(i)= cmplx(cos(i * phi), sin(i * phi), kind=8)
@@ -179,7 +179,7 @@ module lib_mie_vector_spherical_harmonics
 
 
             ! set p_nm(m .eq. 0)
-            call lib_math_associated_legendre_polynomial(sin_theta, 0, n_range(1), number_of_members_n , &
+            call lib_math_associated_legendre_polynomial(cos_theta, 0, n_range(1), number_of_members_n , &
                                                          buffer_p_n, buffer_p_d_n, .false.)
             do n=n_range(1), n_range(2)
                 i = n - n_range(1) + 1
@@ -196,7 +196,7 @@ module lib_mie_vector_spherical_harmonics
             !         ++
             !          +
             do m=1, n_range(2)
-                call lib_math_associated_legendre_polynomial_with_negative_m(sin_theta, m, m, n_range(2) - m + 1, &
+                call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, m, m, n_range(2) - m + 1, &
                                                                          buffer_p_n_m_neg, buffer_p_d_n_m_neg, .false.)
                 do n=m, n_range(2)
                     i = n - m + 1

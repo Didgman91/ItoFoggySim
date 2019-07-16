@@ -224,8 +224,7 @@ module lib_mie_scattering_by_a_sphere
             ! eq. (5)
             do n=n_range(1), n_range(2)
                 do m=-n, n
-                    buffer_real = abs(e_field_0) * real((2*n+1), kind=8) * &
-                                    lib_math_factorial_get_factorial(n-m) / lib_math_factorial_get_factorial(n+m)
+                    buffer_real = abs(e_field_0) * real((2*n+1), kind=8) * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m)
 #ifdef _DEBUG_
                     if (isnan(buffer_real)) then
                         print *, "get_e_field_scattered_xu: ERROR"
@@ -234,8 +233,7 @@ module lib_mie_scattering_by_a_sphere
                         print * , "  m = ", m
                     end if
 #endif
-                    buffer_cmplx = cmplx(0,buffer_real, kind=8)**n
-                    e_field_nm%item(n)%item(m) = buffer_cmplx
+                    e_field_nm%item(n)%item(m) = buffer_real * cmplx(0,1, kind=8)**n
                 end do
             end do
 
@@ -244,7 +242,7 @@ module lib_mie_scattering_by_a_sphere
                 i = n - n_range(1) + 1
                 do m=-n, n
                     buffer_cmplx = cmplx(0, 1, kind=8) * e_field_nm%item(n)%item(m)
-                    e_field_n_s(i) = buffer_cmplx * a_n(i)*N_nm(n)%coordinate(m)
+                    e_field_n_s(i) = buffer_cmplx * (a_n(i)*N_nm(n)%coordinate(m) + b_n(i)*M_nm(n)%coordinate(m))
 #ifdef _DEBUG_
                     if (isnan(real(e_field_n_s(i)%rho)) .or. isnan(aimag(e_field_n_s(i)%rho)) &
                         .or. isnan(real(e_field_n_s(i)%phi)) .or. isnan(aimag(e_field_n_s(i)%phi)) &
@@ -255,7 +253,6 @@ module lib_mie_scattering_by_a_sphere
                         print * , "  m = ", m
                     end if
 #endif
-                    e_field_n_s(i) = e_field_n_s(i) + buffer_cmplx * b_n(i)*M_nm(n)%coordinate(m)
                 end do
             end do
             e_field_s%theta = cmplx(0,0,kind=8)
@@ -571,6 +568,7 @@ module lib_mie_scattering_by_a_sphere
                     phi = 0.0
                     rho = 50
                     rho_particle = 10
+                    theta = 0.0
 
                     e_field_0 = 1
                     n_particle = 1.5
