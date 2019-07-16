@@ -1025,26 +1025,26 @@ module lib_mie_vector_spherical_harmonics
                 double precision :: theta
                 double precision :: phi
                 double precision :: rho
-                integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: m
                 integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: n
                 integer(kind=1) :: z_selector
 
                 type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_mn
                 type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_mn
 
-!                logical :: not_calc_Memn
-!                logical :: not_calc_Momn
-!                logical :: not_calc_Nemn
-!                logical :: not_calc_Nomn
+                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: ground_truth_M_mn
+                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: ground_truth_N_mn
 
-                theta = 0
+
+                theta = 0.2
                 phi = 0
-                rho = 100
+                rho = 10
 
                 z_selector = 3
 
-                m = (/ 1, 1 /)
-                n = (/ 1, 3 /)
+                n = (/ 1, 20 /)
+
+                call init_list(ground_truth_M_mn, n(1), n(2)-n(1)+1)
+                call init_list(ground_truth_N_mn, n(1), n(2)-n(1)+1)
 
                 call lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, rho, n, z_selector, &
                                                                            M_mn, N_mn)

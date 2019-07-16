@@ -579,7 +579,7 @@ module lib_mie_scattering_by_a_sphere
 
                     do i=1, number_of_values
                         degree_list(i) = start_angle + (i-1) * (stop_angle - start_angle) / number_of_values
-                        theta = degree_list(i) * 180.0_8 / PI
+                        phi = degree_list(i) * PI / 180.0_8
                         e_field_s(i) = get_e_field_scattered_xu(theta, phi, rho, e_field_0, rho_particle, n_particle, n_medium, n)
 
                         ! calculate the intensities
