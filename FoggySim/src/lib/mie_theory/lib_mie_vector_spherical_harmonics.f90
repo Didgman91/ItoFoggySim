@@ -178,18 +178,30 @@ module lib_mie_vector_spherical_harmonics
             call lib_math_associated_legendre_polynomial_theta(theta, n_range(2), pi_nm, tau_nm, .false.)
 
 
-            call lib_math_associated_legendre_polynomial(sin_theta, 0, n_range(1), 1, &
+            ! set p_nm(m .eq. 0)
+            call lib_math_associated_legendre_polynomial(sin_theta, 0, n_range(1), number_of_members_n , &
                                                          buffer_p_n, buffer_p_d_n, .false.)
-            p_nm%item(n_range(1))%item(0) = buffer_p_n(1)
-
             do n=n_range(1), n_range(2)
-                do m=1, n
-                    call lib_math_associated_legendre_polynomial_with_negative_m(sin_theta, m, n_range(1), n - n_range(1) + 1, &
-                                                                             buffer_p_n_m_neg, buffer_p_d_n_m_neg, .false.)
-                    do i=m, n
-                        p_nm%item(i)%item( m) = buffer_p_n_m_neg(2, i - m + 1)
-                        p_nm%item(i)%item(-m) = buffer_p_n_m_neg(1, i - m + 1)
-                    end do
+                i = n - n_range(1) + 1
+                p_nm%item(n)%item(0) = buffer_p_n(i)
+            end do
+
+            ! set p_nm(m .ne. 0)
+            !       ->n
+            !          +
+            !         ++
+            !    ^   +++  <-  m
+            !   m|  ++++
+            !        +++  <- -m
+            !         ++
+            !          +
+            do m=1, n_range(2)
+                call lib_math_associated_legendre_polynomial_with_negative_m(sin_theta, m, m, n_range(2) - m + 1, &
+                                                                         buffer_p_n_m_neg, buffer_p_d_n_m_neg, .false.)
+                do n=m, n_range(2)
+                    i = n - m + 1
+                    p_nm%item(n)%item( m) = buffer_p_n_m_neg(2, i)
+                    p_nm%item(n)%item(-m) = buffer_p_n_m_neg(1, i)
                 end do
             end do
 

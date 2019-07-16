@@ -207,11 +207,13 @@ module lib_mie_scattering_by_a_sphere
             type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_nm
             type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_nm
 
-            complex(kind=8), dimension(n_range(1):n_range(2), -n_range(2):n_range(2)) :: e_field_nm
+            type(list_list_cmplx) :: e_field_nm
             type(spherical_coordinate_cmplx_type), dimension(n_range(2)-n_range(1)+1) :: e_field_n_s
 
             mu = 1
             mu1 = 1.5
+
+            call init_list(e_field_nm, n_range(1), n_range(2)-n_range(1)+1)
 
             call get_coefficients_a_b_real(rho_particle, n_particle/n_medium, mu, mu1, n_range, a_n, b_n)
 
@@ -232,7 +234,8 @@ module lib_mie_scattering_by_a_sphere
                         print * , "  m = ", m
                     end if
 #endif
-                    e_field_nm(n, m) =  cmplx(0,buffer_real, kind=8)**n
+                    buffer_cmplx = cmplx(0,buffer_real, kind=8)**n
+                    e_field_nm%item(n)%item(m) = buffer_cmplx
                 end do
             end do
 
@@ -240,7 +243,7 @@ module lib_mie_scattering_by_a_sphere
             do n= n_range(1), n_range(2)
                 i = n - n_range(1) + 1
                 do m=-n, n
-                    buffer_cmplx = cmplx(0, 1, kind=8) * e_field_nm(n, m)
+                    buffer_cmplx = cmplx(0, 1, kind=8) * e_field_nm%item(n)%item(m)
                     e_field_n_s(i) = buffer_cmplx * a_n(i)*N_nm(n)%coordinate(m)
 #ifdef _DEBUG_
                     if (isnan(real(e_field_n_s(i)%rho)) .or. isnan(aimag(e_field_n_s(i)%rho)) &
@@ -451,7 +454,7 @@ module lib_mie_scattering_by_a_sphere
             ! auxiliary
             double precision :: dummy
 
-            dummy = x + 4.05 * x**(1/3) + 2
+            dummy = x + 4.05_8 * x**(1.0_8/3.0_8) + 2.0_8
 
             rv = int(ceiling(dummy))
 

@@ -68,6 +68,7 @@ module lib_math_type_operator
 
     interface init_list
         module procedure lib_math_list_list_real_init
+        module procedure lib_math_list_list_cmplx_init
     end interface
 
     contains
@@ -691,6 +692,36 @@ module lib_math_type_operator
             end do
 
         end subroutine lib_math_list_list_real_init
+
+        ! Arguments
+        ! ----
+        !   list: type (list_list_real)
+        !       derived data type to initialize
+        !   fnu: integer
+        !       start index
+        !   n: integer
+        !       number of elements, n .GE. 1
+        !
+        subroutine lib_math_list_list_cmplx_init(list, fnu, n)
+            implicit none
+            ! dummy
+            type (list_list_cmplx), intent(inout) :: list
+            integer, intent(in) :: fnu
+            integer, intent(in) :: n
+
+            ! auxiliary
+            integer :: i
+
+            if( allocated(list%item) ) then
+                deallocate( list%item )
+            end if
+
+            allocate( list%item(fnu:fnu+n-1) )
+            do i=fnu, fnu+n-1
+                allocate (list%item(i)%item(-i:i) )
+            end do
+
+        end subroutine lib_math_list_list_cmplx_init
 
         function lib_math_type_operator_test_functions() result (rv)
             implicit none
