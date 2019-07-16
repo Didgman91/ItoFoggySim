@@ -767,7 +767,7 @@ module lib_math_legendre
             end do
 
             if (present(condon_shortley_phase)) then
-                if (condon_shortley_phase) then
+                if (.not. condon_shortley_phase) then
                     do n=0, n_max
                         do m=-n, n
                             if (IAND(abs(m), 1) .eq. 1) then

@@ -214,8 +214,8 @@ module lib_mie_vector_spherical_harmonics
                     do n=n_range(1), n_range(2)
                         i = n - n_range(1) + 1
                         do m=-n, n
-                            buffer_real = pi_nm%item(n)%item(m)
-                            M_nm(n)%coordinate(m)%theta = cmplx(0, buffer_real, kind=8)
+                            buffer_real = pi_nm%item(n)%item(m) * z_n_real(i)
+                            M_nm(n)%coordinate(m)%theta = cmplx(0, buffer_real, kind=8) * exp_i_m_phi(m)
 
                             buffer_real = -tau_nm%item(n)%item(m) * z_n_real(i)
                             buffer_cmplx = cmplx(buffer_real, 0, kind=8) * exp_i_m_phi(m)
@@ -241,7 +241,7 @@ module lib_mie_vector_spherical_harmonics
                         i = n - n_range(1) + 1
                         do m=-n, n
                             buffer_real = pi_nm%item(n)%item(m)
-                            M_nm(n)%coordinate(m)%theta = cmplx(0, buffer_real, kind=8)
+                            M_nm(n)%coordinate(m)%theta = cmplx(0, buffer_real, kind=8) * z_n_cmplx(i) * exp_i_m_phi(m)
 
                             buffer_real = -tau_nm%item(n)%item(m)
                             buffer_cmplx = cmplx(buffer_real, 0, kind=8) * z_n_cmplx(i) * exp_i_m_phi(m)
@@ -275,7 +275,7 @@ module lib_mie_vector_spherical_harmonics
                             buffer_cmplx = cmplx(buffer_real, 0, kind=8) * exp_i_m_phi(m)
                             N_nm(n)%coordinate(m)%rho = buffer_cmplx
 
-                            buffer_cmplx = cmplx(z_d_real(i) / rho, 0, kind=8) * exp_i_m_phi(m)
+                            buffer_cmplx = cmplx(r_d_real(i) / rho, 0, kind=8) * exp_i_m_phi(m)     ! todo: check missing? k at eq. 2
 
                             N_nm(n)%coordinate(m)%theta = tau_nm%item(n)%item(m) * buffer_cmplx
 
@@ -302,7 +302,7 @@ module lib_mie_vector_spherical_harmonics
                             buffer_cmplx = cmplx(buffer_real, 0, kind=8) * exp_i_m_phi(m) * z_n_cmplx(i)
                             N_nm(n)%coordinate(m)%rho = buffer_cmplx
 
-                            buffer_cmplx = z_d_cmplx(i) * exp_i_m_phi(m) / rho
+                            buffer_cmplx = r_d_cmplx(i) * exp_i_m_phi(m) / rho     ! todo: check missing? k at eq. 2
 
                             N_nm(n)%coordinate(m)%theta = tau_nm%item(n)%item(m) * buffer_cmplx
 
