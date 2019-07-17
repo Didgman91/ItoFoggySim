@@ -354,13 +354,13 @@ module lib_mie_scattering_by_a_sphere
         !
         ! Arguments
         ! ----
-        !   x: double precision
+        !   x: complex
         !       size parameter: x = k*r = 2 * PI * N * r / lambda
         !       k: wavenumber
         !       r: distance
         !       N: refractive index of the medium
         !       lambda: wave length
-        !   m: double precision
+        !   m: complex
         !       relative refractive index: m = N_1 / N
         !       N_1: refractive index of the particle
         !       N: refractive index of the medium
@@ -377,7 +377,7 @@ module lib_mie_scattering_by_a_sphere
         subroutine get_coefficients_a_b_cmplx(x, m, mu, mu1, n, a_n, b_n)
             implicit none
             ! dummy
-            double precision :: x
+            complex(kind=8) :: x
             complex(kind=8) :: m
             double precision :: mu
             double precision :: mu1
@@ -390,10 +390,10 @@ module lib_mie_scattering_by_a_sphere
             complex(kind=8), dimension(n(2)-n(1)+1) :: numerator
             complex(kind=8), dimension(n(2)-n(1)+1) :: denominator
 
-            double precision, dimension(n(2)-n(1)+1) :: j_n_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: j_n_x
             complex(kind=8), dimension(n(2)-n(1)+1) :: j_n_mx
-            double precision, dimension(n(2)-n(1)+1) :: s_n_x
-            double precision, dimension(n(2)-n(1)+1) :: s_dn_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: s_n_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: s_dn_x
             complex(kind=8), dimension(n(2)-n(1)+1) :: s_n_mx
             complex(kind=8), dimension(n(2)-n(1)+1) :: s_dn_mx
 
@@ -412,7 +412,7 @@ module lib_mie_scattering_by_a_sphere
             s_dn_x = lib_math_riccati_s_derivative(x, n(1), number_of_n, s_n_x)
             j_n_x = s_n_x / x
 
-            s_dn_mx = lib_math_riccati_s_derivative(mx, n(1), number_of_n, s_n_mx)
+            s_dn_mx = lib_math_riccati_s_derivative(mx, n(1), number_of_n, s_n_mx) * m
             j_n_mx = s_n_mx / mx
 
             xi_dn_x = lib_math_riccati_xi_derivative(x, n(1), number_of_n, xi_n_x)
@@ -468,6 +468,9 @@ module lib_mie_scattering_by_a_sphere
 
             rv = 0
 
+            if (.not. test_get_coefficients_a_b_real()) then
+                rv = rv + 1
+            end if
             if (.not. test_get_coefficients_a_b_cmplx()) then
                 rv = rv + 1
             end if
@@ -485,6 +488,58 @@ module lib_mie_scattering_by_a_sphere
 
             contains
 
+                function test_get_coefficients_a_b_real() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+
+                    real(kind=8) :: x
+                    real(kind=8) :: m
+                    double precision :: mu
+                    double precision :: mu1
+                    integer(kind=4), dimension(2), parameter :: n = (/1, 4/)
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_b_n
+
+                    mu = 1
+                    mu1 = 1
+
+                    m = 1.5
+                    x= 10
+                    ground_truth_a_n(1) = cmplx(-0.22686_8+0.5_8, -0.12863_8, kind=8)
+                    ground_truth_b_n(1) = cmplx(0.22864_8+0.5_8, 0.13377_8, kind=8)
+
+                    call get_coefficients_a_b_real(x, m, mu, mu1, n, a_n, b_n)
+
+                    rv = .true.
+                    print *, "test_get_coefficients_a_b_real:"
+                    do i=n(1), n(2)
+                        buffer = abs(a_n(i) - ground_truth_a_n(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  a_n: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  a_n: ", i, ": OK"
+                        end if
+
+                        buffer = abs(b_n(i) - ground_truth_b_n(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  b_n: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  b_n: ", i, ": OK"
+                        end if
+                    end do
+
+                end function test_get_coefficients_a_b_real
                 function test_get_coefficients_a_b_cmplx() result (rv)
                     implicit none
                     ! dummy
@@ -494,7 +549,7 @@ module lib_mie_scattering_by_a_sphere
                     integer(kind=4) :: i
                     real(kind=8) :: buffer
 
-                    double precision :: x
+                    complex(kind=8) :: x
                     complex(kind=8) :: m
                     double precision :: mu
                     double precision :: mu1
@@ -508,7 +563,7 @@ module lib_mie_scattering_by_a_sphere
 
                     ! Reference: Electromagnetic scattering on spherical polydispersions, D.Deirmendjian, p. 27
                     m = cmplx(1.28, -1.37, kind=8)
-                    x=20
+                    x= cmplx(20, 0, kind=8)
                     ground_truth_a_n(1) = cmplx(-0.22686_8+0.5_8, -0.12863_8, kind=8)
                     ground_truth_b_n(1) = cmplx(0.22864_8+0.5_8, 0.13377_8, kind=8)
 
@@ -534,7 +589,7 @@ module lib_mie_scattering_by_a_sphere
                         end if
                     end do
 
-                end function
+                end function test_get_coefficients_a_b_cmplx
 
                 function test_get_e_field_scattered() result (rv)
                     use file_io
