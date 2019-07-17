@@ -1017,11 +1017,26 @@ module lib_mie_vector_spherical_harmonics
             end function
 
             function test_lib_mie_vector_spherical_harmonics_components_real_xu() result (rv)
+                use file_io
                 implicit none
                 ! dummy
                 logical :: rv
 
+                ! parameter
+                character(len=*), parameter :: file_name_M_mn = &
+                     "src/lib/mie_theory/lib_mie_vector_spherical_harmonics/ground_truth_M_mn.csv"
+                 character(len=*), parameter :: file_name_N_mn = &
+                     "src/lib/mie_theory/lib_mie_vector_spherical_harmonics/ground_truth_N_mn.csv"
+
                 ! auxiliary
+                integer :: i
+                integer :: ii
+                integer :: n_value
+                integer :: m_value
+
+                double precision :: buffer
+                complex(kind=8) :: buffer_cmplx
+
                 double precision :: theta
                 double precision :: phi
                 double precision :: rho
@@ -1034,6 +1049,8 @@ module lib_mie_vector_spherical_harmonics
                 type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: ground_truth_M_mn
                 type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: ground_truth_N_mn
 
+                double precision, dimension(:,:), allocatable :: csv_data
+                integer :: csv_columns
 
                 theta = 0.2
                 phi = 0
@@ -1041,14 +1058,97 @@ module lib_mie_vector_spherical_harmonics
 
                 z_selector = 3
 
-                n = (/ 1, 20 /)
+                n = (/ 1, 4 /)
+
+                rv = .false.
 
                 call init_list(ground_truth_M_mn, n(1), n(2)-n(1)+1)
                 call init_list(ground_truth_N_mn, n(1), n(2)-n(1)+1)
 
+                ! load ground truth M_mn
+                if (file_exists(file_name_M_mn)) then
+                    csv_columns = 8
+                    call read_csv(file_name_M_mn, csv_columns, csv_data)
+
+                    do i=lbound(csv_data, 1), ubound(csv_data, 1)
+                        n_value = int(csv_data(i, 1))
+                        m_value = int(csv_data(i, 2))
+
+                        buffer_cmplx = cmplx(csv_data(i, 3), csv_data(i, 4), kind=8)
+                        ground_truth_M_mn(n_value)%coordinate(m_value)%rho = buffer_cmplx
+
+                        buffer_cmplx = cmplx(csv_data(i, 5), csv_data(i, 6), kind=8)
+                        ground_truth_M_mn(n_value)%coordinate(m_value)%theta = buffer_cmplx
+
+                        buffer_cmplx = cmplx(csv_data(i, 7), csv_data(i, 8), kind=8)
+                        ground_truth_M_mn(n_value)%coordinate(m_value)%phi = buffer_cmplx
+                    end do
+                else
+                    print *, "test_lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                    print *, "  file does not exist"
+                    print *, "  file_name: ", file_name_M_mn
+
+                    return
+                end if
+
+                ! load ground truth M_mn
+                if (file_exists(file_name_N_mn)) then
+                    csv_columns = 8
+                    call read_csv(file_name_N_mn, csv_columns, csv_data)
+
+                    do i=lbound(csv_data, 1), ubound(csv_data, 1)
+                        n_value = int(csv_data(i, 1))
+                        m_value = int(csv_data(i, 2))
+
+                        buffer_cmplx = cmplx(csv_data(i, 3), csv_data(i, 4), kind=8)
+                        ground_truth_N_mn(n_value)%coordinate(m_value)%rho = buffer_cmplx
+
+                        buffer_cmplx = cmplx(csv_data(i, 5), csv_data(i, 6), kind=8)
+                        ground_truth_N_mn(n_value)%coordinate(m_value)%theta = buffer_cmplx
+
+                        buffer_cmplx = cmplx(csv_data(i, 7), csv_data(i, 8), kind=8)
+                        ground_truth_N_mn(n_value)%coordinate(m_value)%phi = buffer_cmplx
+                    end do
+                else
+                    print *, "test_lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                    print *, "  file does not exist"
+                    print *, "  file_name: ", file_name_N_mn
+
+                    return
+                end if
+
+                ! calculate M_mn, N_mn
                 call lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, rho, n, z_selector, &
                                                                            M_mn, N_mn)
 
+                ! evaluate
+                rv = .true.
+                print *, "test_lib_mie_vector_spherical_harmonics_components_real_xu:"
+                print *, "  M_mn:"
+                do i=n(1), n(2)
+                    do ii=-i, i
+                        buffer = abs(spherical_abs(M_mn(i)%coordinate(ii) - ground_truth_M_mn(i)%coordinate(ii)))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  n: ", i ," m: ", ii, "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  n: ", i ," m: ", ii, ": OK"
+                        end if
+                    end do
+                end do
+
+                print *, "  N_mn:"
+                do i=n(1), n(2)
+                    do ii=-i, i
+                        buffer = abs(spherical_abs(N_mn(i)%coordinate(ii) - ground_truth_N_mn(i)%coordinate(ii)))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  n: ", i ," m: ", ii, "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  n: ", i ," m: ", ii, ": OK"
+                        end if
+                    end do
+                end do
 
             end function
 
