@@ -87,6 +87,22 @@
                         					
                     </folderInfo>
                     					
+                    <folderInfo id="photran.managedbuild.config.gnu.fortran.exe.debug.895836576.1164922996" name="/" resourcePath="src/lib/legendre_poly/generator">
+                        						
+                        <toolChain id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.988627432" name="GCC Fortran" superClass="photran.managedbuild.toolchain.gnu.fortran.exe.debug" unusedChildren="">
+                            							
+                            <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.409832239" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug.1313622098"/>
+                            							
+                            <tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.833150807" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.526037379"/>
+                            							
+                            <tool id="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.1144345377" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.2024949275"/>
+                            							
+                            <tool id="photran.managedbuild.tool.gnu.assembler.exe.debug.1666607667" name="GCC Assembler" superClass="photran.managedbuild.tool.gnu.assembler.exe.debug.1122230029"/>
+                            						
+                        </toolChain>
+                        					
+                    </folderInfo>
+                    					
                     <sourceEntries>
                         						
                         <entry excluding="src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
@@ -95,7 +111,7 @@
                         						
                         <entry excluding="legendre_poly" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
                         						
-                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/legendre_poly"/>
+                        <entry excluding="generator" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/legendre_poly"/>
                         					
                     </sourceEntries>
                     				

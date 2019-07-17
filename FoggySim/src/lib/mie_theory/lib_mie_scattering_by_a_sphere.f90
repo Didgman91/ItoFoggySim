@@ -219,12 +219,13 @@ module lib_mie_scattering_by_a_sphere
 
             z_selector = 3
 
-            call lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, rho, n_range, z_selector, &
-                                                                       M_nm, N_nm)
+            call lib_mie_vector_spherical_harmonics_components(theta, phi, rho, n_range, z_selector, &
+                                                               M_nm, N_nm)
             ! eq. (5)
             do n=n_range(1), n_range(2)
                 do m=-n, n
                     buffer_real = abs(e_field_0) * real((2*n+1), kind=8) * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m)
+
 #ifdef _DEBUG_
                     if (isnan(buffer_real)) then
                         print *, "get_e_field_scattered_xu: ERROR"
@@ -328,7 +329,7 @@ module lib_mie_scattering_by_a_sphere
             s_dn_x = lib_math_riccati_s_derivative(x, n(1), number_of_n, s_n_x)
             j_n_x = s_n_x / x
 
-            s_dn_mx = lib_math_riccati_s_derivative(mx, n(1), number_of_n, s_n_mx)
+            s_dn_mx = lib_math_riccati_s_derivative(mx, n(1), number_of_n, s_n_mx) * m
             j_n_mx = s_n_mx / mx
 
             xi_dn_x = lib_math_riccati_xi_derivative(x, n(1), number_of_n, xi_n_x)
@@ -336,12 +337,12 @@ module lib_mie_scattering_by_a_sphere
 
 
             numerator = cmplx(mu * m*m * j_n_mx * s_dn_x - mu1 * j_n_x * s_dn_mx, 0, kind=8)
-            denominator = mu * m*m * j_n_mx * xi_dn_x - mu1 * h_n_x * s_dn_mx
+            denominator = cmplx(mu * m*m * j_n_mx, 0, kind=8) * xi_dn_x - mu1 * h_n_x * s_dn_mx
 
             a_n = numerator / denominator
 
             numerator = cmplx(mu1 * j_n_mx * s_dn_x - mu * j_n_x * s_dn_mx, 0, kind=8)
-            denominator = mu1 * j_n_mx * xi_dn_x - mu * h_n_x * s_dn_mx
+            denominator = cmplx(mu1 * j_n_mx, 0, kind=8) * xi_dn_x - mu * h_n_x * s_dn_mx
 
             b_n = numerator / denominator
 

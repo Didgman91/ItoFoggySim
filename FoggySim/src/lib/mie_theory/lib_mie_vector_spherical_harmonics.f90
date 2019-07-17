@@ -10,11 +10,9 @@ module lib_mie_vector_spherical_harmonics
     ! --- public ---
     public :: lib_mie_vector_spherical_harmonics_components
 
-    public :: lib_mie_vector_spherical_harmonics_components_real_xu
-
     interface lib_mie_vector_spherical_harmonics_components
         module procedure lib_mie_vector_spherical_harmonics_components_real_xu
-        module procedure lib_mie_vector_spherical_harmonics_components_cmplx
+        module procedure lib_mie_vector_spherical_harmonics_components_cmplx_xu
     end interface
 
     public :: lib_mie_vector_spherical_harmonics_test_functions
@@ -323,6 +321,233 @@ module lib_mie_vector_spherical_harmonics
             end select
 
         end subroutine lib_mie_vector_spherical_harmonics_components_real_xu
+
+        ! calculation of the components of the vector spherical harmonic
+        !
+        ! Argument
+        ! ----
+        !   theta: double precision
+        !       polar angle
+        !   phi: double precision
+        !       azimuthal angle
+        !   rho: complex
+        !       dimensionless varibale rho = |k|*r > 0
+        !       k: wavenumber
+        !       r: distance
+        !   n_range: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       CONDITION:
+        !           - first element .le. second element
+        !           - 0 <= n
+        !
+        !   z_selector: integer
+        !       1: spherical Bessel function first kind   j_n
+        !       2: spherical Bessel function second kind  y_n
+        !       3: spherical Hankel function first kind   h^(1)_n
+        !       4: spherical Hankel function second kind  h^(2)_n
+        !
+        ! Results
+        ! ----
+        !   rv: complex, dimension(3)
+        !       values of the spherical coordinates (rho, theta, phi)
+        !
+        ! LaTeX: $$ \mathbf{M}_{m n}^{(J)}=\left[\mathbf{i}_{\theta} i \pi_{m n}(\cos \theta)-\mathbf{i}_{\phi} \tau_{m n}(\cos \theta)\right] z_{n}^{(J)} )(k r) \exp (i m \phi) $$
+        !        $$ \mathbf{N}_{m n}^{(J)}=\mathbf{i}_r n\left(n+1 ) P_{n}^{m} (\cos \theta\right) \frac{z_{n}^{(J)}(k r)}{k r} \exp(i m \phi)
+        !           + \left[\mathbf{i}_{\theta} \tau_{m n}(\cos \theta)+\mathbf{i}_{\phi} i \pi_{m n}(\cos \theta)\right]
+        !           \times \frac{1}{k r} \frac{d}{d r}\left[r z_{n}^{(J)}(k r)\right] \exp (i m \phi) $$
+        !
+        ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 2
+        subroutine lib_mie_vector_spherical_harmonics_components_cmplx_xu(theta, phi, rho, n_range, z_selector, &
+                                                      M_nm, N_nm)
+            implicit none
+
+            ! dummy
+            double precision, intent(in) :: theta
+            double precision, intent(in) :: phi
+            complex(kind=8), intent(in) :: rho
+            integer(kind=4), dimension(2) :: n_range
+            integer(kind=1) :: z_selector
+
+            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable, intent(inout) :: M_nm
+            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable, intent(inout) :: N_nm
+
+            ! auxiliary
+            integer :: n
+            integer :: m
+            integer :: i
+
+            integer(kind=4) :: number_of_members_n
+
+            type(list_list_real) :: pi_nm
+            type(list_list_real) :: tau_nm
+
+            type(list_list_real) :: p_nm
+            type(list_list_real) :: p_d_nm
+
+            double precision, dimension(n_range(2)-n_range(1)+1) :: buffer_p_n
+            double precision, dimension(n_range(2)-n_range(1)+1) :: buffer_p_d_n
+
+            double precision, dimension(2, n_range(2)-n_range(1)+1) :: buffer_p_n_m_neg
+            double precision, dimension(2, n_range(2)-n_range(1)+1) :: buffer_p_d_n_m_neg
+
+            complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: z_n_cmplx
+            complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: z_d_cmplx ! deriviative
+
+            ! Riccati-Bessel
+            complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: r_cmplx
+            complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: r_d_cmplx ! deriviative
+
+            double precision :: buffer_real
+            complex(kind=8) :: buffer_cmplx
+
+            complex(kind=8), dimension(-n_range(2):n_range(2)) :: exp_i_m_phi
+            double precision :: cos_theta
+
+            number_of_members_n = n_range(2) - n_range(1) + 1
+
+            ! --- init ---
+            call init_list(p_nm, n_range(1), number_of_members_n)
+            call init_list(p_d_nm, n_range(1), number_of_members_n)
+
+            allocate( M_nm(n_range(1):n_range(2)) )
+            do i=n_range(1), n_range(2)
+                allocate (M_nm(i)%coordinate(-i:i))
+            end do
+
+            allocate( N_nm(n_range(1):n_range(2)) )
+            do i=n_range(1), n_range(2)
+                allocate (N_nm(i)%coordinate(-i:i))
+            end do
+
+
+            ! --- pre-calculation ---
+            cos_theta = cos(theta)
+
+            do i=-n_range(2), n_range(2)
+                exp_i_m_phi(i)= cmplx(cos(i * phi), sin(i * phi), kind=8)
+            end do
+
+            select case (z_selector)
+                case(1)
+                    ! spherical Bessel function first kind j_n
+                    ! internal: calculation with Riccati-Bessel functions: S_n
+                    r_d_cmplx = lib_math_riccati_s_derivative(rho, n_range(1), number_of_members_n, r_cmplx)
+                    z_n_cmplx = r_cmplx / rho
+                case(2)
+                    ! spherical Bessel function second kind y_n
+                    ! internal: calculation with Riccati-Bessel functions: C_n
+                    r_d_cmplx = lib_math_riccati_c_derivative(rho, n_range(1), number_of_members_n, r_cmplx)
+                    z_n_cmplx = r_cmplx / rho
+                case(3)
+                    ! spherical Hankel function first kind   h^(1)_n
+                    ! internal: calculation with Riccati-Bessel functions: Xi_n
+                    r_d_cmplx = lib_math_riccati_xi_derivative(rho, n_range(1), number_of_members_n, r_cmplx)
+                    z_n_cmplx = r_cmplx / rho
+                case(4)
+                    ! spherical Hankel function first kind   h^(2)_n
+                    ! internal: calculation with Riccati-Bessel functions: Zeta_n
+                    r_d_cmplx = lib_math_riccati_zeta_derivative(rho, n_range(1), number_of_members_n, r_cmplx)
+                    z_n_cmplx = r_cmplx / rho
+                case default
+                    z_n_cmplx = cmplx(0,0)
+                    z_d_cmplx = cmplx(0,0)
+
+                    r_cmplx = cmplx(0,0)
+                    r_d_cmplx = cmplx(0,0)
+                    print*, "lib_mie_vector_spherical_harmonics_M_emn: ERROR"
+                    print*, "  undefined z_selector value: ", z_selector
+                    return
+            end select
+
+
+            call lib_math_associated_legendre_polynomial_theta(theta, n_range(2), pi_nm, tau_nm, .false.)
+
+
+            ! set p_nm(m .eq. 0)
+            call lib_math_associated_legendre_polynomial(cos_theta, 0, n_range(1), number_of_members_n , &
+                                                         buffer_p_n, buffer_p_d_n, .false.)
+            do n=n_range(1), n_range(2)
+                i = n - n_range(1) + 1
+                p_nm%item(n)%item(0) = buffer_p_n(i)
+            end do
+
+            ! set p_nm(m .ne. 0)
+            !       ->n
+            !          +
+            !         ++
+            !    ^   +++  <-  m
+            !   m|  ++++
+            !        +++  <- -m
+            !         ++
+            !          +
+            do m=1, n_range(2)
+                call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, m, m, n_range(2) - m + 1, &
+                                                                         buffer_p_n_m_neg, buffer_p_d_n_m_neg, .false.)
+                do n=m, n_range(2)
+                    i = n - m + 1
+                    p_nm%item(n)%item( m) = buffer_p_n_m_neg(2, i)
+                    p_nm%item(n)%item(-m) = buffer_p_n_m_neg(1, i)
+                end do
+            end do
+
+            ! --- calculations of the components M and N ---
+            ! M_mn
+            ! first line eq. (2)
+            do n=n_range(1), n_range(2)
+                i = n - n_range(1) + 1
+                do m=-n, n
+                    buffer_real = pi_nm%item(n)%item(m)
+                    M_nm(n)%coordinate(m)%theta = cmplx(0, buffer_real, kind=8) * z_n_cmplx(i) * exp_i_m_phi(m)
+
+                    buffer_real = -tau_nm%item(n)%item(m)
+                    buffer_cmplx = cmplx(buffer_real, 0, kind=8) * z_n_cmplx(i) * exp_i_m_phi(m)
+                    M_nm(n)%coordinate(m)%phi = buffer_cmplx
+
+                    M_nm(n)%coordinate(m)%rho = cmplx(0,0, kind=8)
+#ifdef _DEBUG_
+            if (isnan(real(M_nm(n)%coordinate(m)%rho))   .or. isnan(aimag(M_nm(n)%coordinate(m)%rho)) .or. &
+                isnan(real(M_nm(n)%coordinate(m)%phi))   .or. isnan(aimag(M_nm(n)%coordinate(m)%phi)) .or. &
+                isnan(real(M_nm(n)%coordinate(m)%theta)) .or. isnan(aimag(M_nm(n)%coordinate(m)%theta)) ) then
+                print *, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                print *, "  M_nm(n)%coordinate(m) is NaN"
+                print *, "  n = ", n
+                print *, "  m = ", m
+                print *, "  z_selector: ", z_selector
+            end if
+#endif
+                end do
+            end do
+
+            ! N_mn
+            ! second line eq. (2)
+            do n=n_range(1), n_range(2)
+                i = n - n_range(1) + 1
+                do m=-n, n
+                    buffer_real = real(n*(n + 1), kind=8) * p_nm%item(n)%item(m)
+                    buffer_cmplx = cmplx(buffer_real, 0, kind=8) / rho * exp_i_m_phi(m) * z_n_cmplx(i)
+                    N_nm(n)%coordinate(m)%rho = buffer_cmplx
+
+                    buffer_cmplx = r_d_cmplx(i) * exp_i_m_phi(m) / rho     ! todo: check missing? k at eq. 2
+
+                    N_nm(n)%coordinate(m)%theta = tau_nm%item(n)%item(m) * buffer_cmplx
+
+                    N_nm(n)%coordinate(m)%phi = cmplx(0, pi_nm%item(n)%item(m), kind=8) * buffer_cmplx
+#ifdef _DEBUG_
+            if (isnan(real(N_nm(n)%coordinate(m)%rho))   .or. isnan(aimag(N_nm(n)%coordinate(m)%rho)) .or. &
+                isnan(real(N_nm(n)%coordinate(m)%phi))   .or. isnan(aimag(N_nm(n)%coordinate(m)%phi)) .or. &
+                isnan(real(N_nm(n)%coordinate(m)%theta)) .or. isnan(aimag(N_nm(n)%coordinate(m)%theta)) ) then
+                print *, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                print *, "  N_nm(n)%coordinate(m) is NaN"
+                print *, "  n = ", n
+                print *, "  m = ", m
+                print *, "  z_selector: ", z_selector
+            end if
+#endif
+                end do
+            end do
+
+        end subroutine lib_mie_vector_spherical_harmonics_components_cmplx_xu
 
 !        ! calculation of the components of the vector spherical harmonic
 !        !
@@ -967,6 +1192,9 @@ module lib_mie_vector_spherical_harmonics
             if (.not. test_lib_mie_vector_spherical_harmonics_components_real_xu()) then
                 rv = rv + 1
             end if
+            if (.not. test_lib_mie_vector_spherical_harmonics_components_cmplx_xu()) then
+                rv = rv + 1
+            end if
 
             print *, "----lib_mie_vector_spherical_harmonics_test_functions----"
             if (rv == 0) then
@@ -1150,7 +1378,143 @@ module lib_mie_vector_spherical_harmonics
                     end do
                 end do
 
-            end function
+            end function test_lib_mie_vector_spherical_harmonics_components_real_xu
+
+            function test_lib_mie_vector_spherical_harmonics_components_cmplx_xu() result (rv)
+                use file_io
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! parameter
+                character(len=*), parameter :: file_name_M_mn = &
+                     "src/lib/mie_theory/lib_mie_vector_spherical_harmonics/ground_truth_M_mn_cmplx.csv"
+                 character(len=*), parameter :: file_name_N_mn = &
+                     "src/lib/mie_theory/lib_mie_vector_spherical_harmonics/ground_truth_N_mn_cmplx.csv"
+
+                ! auxiliary
+                integer :: i
+                integer :: ii
+                integer :: n_value
+                integer :: m_value
+
+                double precision :: buffer
+                complex(kind=8) :: buffer_cmplx
+
+                double precision :: theta
+                double precision :: phi
+                complex(kind=8) :: rho
+                integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: n
+                integer(kind=1) :: z_selector
+
+                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_mn
+                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_mn
+
+                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: ground_truth_M_mn
+                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: ground_truth_N_mn
+
+                double precision, dimension(:,:), allocatable :: csv_data
+                integer :: csv_columns
+
+                theta = 0.2
+                phi = 0
+                rho = cmplx(10, 5, kind=8)
+
+                z_selector = 3
+
+                n = (/ 1, 4 /)
+
+                rv = .false.
+
+                call init_list(ground_truth_M_mn, n(1), n(2)-n(1)+1)
+                call init_list(ground_truth_N_mn, n(1), n(2)-n(1)+1)
+
+                ! load ground truth M_mn
+                if (file_exists(file_name_M_mn)) then
+                    csv_columns = 8
+                    call read_csv(file_name_M_mn, csv_columns, csv_data)
+
+                    do i=lbound(csv_data, 1), ubound(csv_data, 1)
+                        n_value = int(csv_data(i, 1))
+                        m_value = int(csv_data(i, 2))
+
+                        buffer_cmplx = cmplx(csv_data(i, 3), csv_data(i, 4), kind=8)
+                        ground_truth_M_mn(n_value)%coordinate(m_value)%rho = buffer_cmplx
+
+                        buffer_cmplx = cmplx(csv_data(i, 5), csv_data(i, 6), kind=8)
+                        ground_truth_M_mn(n_value)%coordinate(m_value)%theta = buffer_cmplx
+
+                        buffer_cmplx = cmplx(csv_data(i, 7), csv_data(i, 8), kind=8)
+                        ground_truth_M_mn(n_value)%coordinate(m_value)%phi = buffer_cmplx
+                    end do
+                else
+                    print *, "test_lib_mie_vector_spherical_harmonics_components_cmplx_xu: ERROR"
+                    print *, "  file does not exist"
+                    print *, "  file_name: ", file_name_M_mn
+
+                    return
+                end if
+
+                ! load ground truth M_mn
+                if (file_exists(file_name_N_mn)) then
+                    csv_columns = 8
+                    call read_csv(file_name_N_mn, csv_columns, csv_data)
+
+                    do i=lbound(csv_data, 1), ubound(csv_data, 1)
+                        n_value = int(csv_data(i, 1))
+                        m_value = int(csv_data(i, 2))
+
+                        buffer_cmplx = cmplx(csv_data(i, 3), csv_data(i, 4), kind=8)
+                        ground_truth_N_mn(n_value)%coordinate(m_value)%rho = buffer_cmplx
+
+                        buffer_cmplx = cmplx(csv_data(i, 5), csv_data(i, 6), kind=8)
+                        ground_truth_N_mn(n_value)%coordinate(m_value)%theta = buffer_cmplx
+
+                        buffer_cmplx = cmplx(csv_data(i, 7), csv_data(i, 8), kind=8)
+                        ground_truth_N_mn(n_value)%coordinate(m_value)%phi = buffer_cmplx
+                    end do
+                else
+                    print *, "test_lib_mie_vector_spherical_harmonics_components_cmplx_xu: ERROR"
+                    print *, "  file does not exist"
+                    print *, "  file_name: ", file_name_N_mn
+
+                    return
+                end if
+
+                ! calculate M_mn, N_mn
+                call lib_mie_vector_spherical_harmonics_components_cmplx_xu(theta, phi, rho, n, z_selector, &
+                                                                           M_mn, N_mn)
+
+                ! evaluate
+                rv = .true.
+                print *, "test_lib_mie_vector_spherical_harmonics_components_cmplx_xu:"
+                print *, "  M_mn:"
+                do i=n(1), n(2)
+                    do ii=-i, i
+                        buffer = abs(spherical_abs(M_mn(i)%coordinate(ii) - ground_truth_M_mn(i)%coordinate(ii)))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  n: ", i ," m: ", ii, "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  n: ", i ," m: ", ii, ": OK"
+                        end if
+                    end do
+                end do
+
+                print *, "  N_mn:"
+                do i=n(1), n(2)
+                    do ii=-i, i
+                        buffer = abs(spherical_abs(N_mn(i)%coordinate(ii) - ground_truth_N_mn(i)%coordinate(ii)))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  n: ", i ," m: ", ii, "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  n: ", i ," m: ", ii, ": OK"
+                        end if
+                    end do
+                end do
+
+            end function test_lib_mie_vector_spherical_harmonics_components_cmplx_xu
 
         end function lib_mie_vector_spherical_harmonics_test_functions
 

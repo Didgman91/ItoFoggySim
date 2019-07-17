@@ -193,11 +193,14 @@ module lib_math_bessel
 
     ! Calculates the derivative of the spherical Bessel function of the first kind
     !
-    ! symbol: j'_n
+    ! symbol: j'_n(a x)
     !
     ! Argument
     ! ----
+    !   a: integer, optional
+    !       coefficient
     !   x: double precision .OR. complex
+    !       control variable
     !   fnu: integer
     !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
@@ -214,6 +217,8 @@ module lib_math_bessel
     interface lib_math_bessel_spherical_first_kind_derivative
         module procedure lib_math_bessel_spherical_first_kind_derivative_real
         module procedure lib_math_bessel_spherical_first_kind_derivative_cmplx
+        module procedure lib_math_bessel_spherical_first_kind_derivative_coeff_real
+        module procedure lib_math_bessel_spherical_first_kind_derivative_coeff_cmplx
     end interface
 
     ! Calculates the derivative of the spherical Bessel function of the second kind
@@ -1242,12 +1247,10 @@ module lib_math_bessel
         integer(kind=4) nm
         real(kind=8) dj(0:fnu+n)
         real(kind=8) sj(0:fnu+n)
-        real(kind=8) ax
 
         order = fnu+n-1
-        ax = a * x
 
-        call SPHJ( order, ax, nm, sj, dj)
+        call SPHJ( order, a * x, nm, sj, dj)
 
         if (order .ne. nm) then
             print *, "lib_math_bessel_spherical_first_kind_derivative_real: ERROR"
@@ -1312,6 +1315,63 @@ module lib_math_bessel
         rv = cdj(fnu:order)
 
     end function lib_math_bessel_spherical_first_kind_derivative_cmplx
+
+    ! Calculates the derivative of the spherical Bessel function of the first kind
+    !
+    ! symbol: j'_n
+    !
+    ! Argument
+    ! ----
+    !   a: double precision
+    !       coefficient
+    !   z: complex
+    !   fnu: integer
+    !       ORDER OF INITIAL FUNCTION, FNU.GE.0
+    !   n: integer
+    !       NUMBER OF MEMBERS OF THE SEQUENCE, N.GE.1
+    !
+    ! Returns
+    ! ----
+    !   j_n: array<double precision>
+    !       spherical Bessel function of the first kind [fnu..fnu+n-1]
+    !   rv: array<double precision>
+    !
+    !
+    ! LaTeX: $$ \frac{\partial}{\partial x}\left(j_{n}(a x)\right)= j'_{n}(a x) (a x)'$$
+    !
+    ! Reference: WolframAlpha: https://www.wolframalpha.com/input/?i=derivative%5BSphericalBesselJ%5Bn,x%5D,+x%5D
+    !               >>> derivative[SphericalBesselJ[n,x], x]
+    function lib_math_bessel_spherical_first_kind_derivative_coeff_cmplx(a, z, fnu, n, j_n) result (rv)
+        implicit none
+        ! dummy
+        real(kind=8), intent(in) :: a
+        complex(kind=8), intent(in) :: z
+        integer(kind=4), intent(in) :: fnu
+        integer(kind=4), intent(in) :: n
+        complex(kind=8), dimension(n), intent(inout) :: j_n
+        complex(kind=8), dimension(n) :: rv
+
+        ! auxiliary
+        integer(kind=4) order
+        integer(kind=4) nm
+        complex(kind=8) csj(0:fnu+n-1)
+        complex(kind=8) cdj(0:fnu+n-1)
+        complex(kind=8) csy(0:fnu+n-1)
+        complex(kind=8) cdy(0:fnu+n-1)
+
+        order = fnu+n-1
+
+        call csphjy ( order, a * z, nm, csj, cdj, csy, cdy )
+
+        if (order .ne. nm) then
+            print *, "lib_math_bessel_spherical_first_kind_derivative_coeff_cmplx: ERROR"
+            print *, "  calculated highest order / requested: ", nm, " / ", order
+        end if
+
+        j_n = csj(fnu:order)
+        rv = a * cdj(fnu:order)
+
+    end function lib_math_bessel_spherical_first_kind_derivative_coeff_cmplx
 
     ! Calculates the derivative of the spherical Bessel function of the second kind
     !
@@ -2128,6 +2188,9 @@ module lib_math_bessel
 
         ! test: derivatives of Bessel functions with complex argument
         if (.not. test_lib_math_bessel_spherical_first_kind_derivative_cmplx()) then
+            rv = rv + 1
+        end if
+        if (.not. test_lib_math_bessel_spherical_first_kind_derivative_coeff_c()) then
             rv = rv + 1
         end if
         if (.not. test_lib_math_bessel_spherical_second_kind_derivative_cmplx()) then
@@ -3170,6 +3233,67 @@ module lib_math_bessel
             end do
 
         end function test_lib_math_bessel_spherical_first_kind_derivative_cmplx
+
+        function test_lib_math_bessel_spherical_first_kind_derivative_coeff_c() result (rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! parameter
+            integer, parameter :: n = 5
+            double precision, parameter :: ground_truth_e = 10.0_8**(-5.0_8)
+
+            ! auxiliary
+            real(kind=8) :: a = 1.5
+            complex(kind=8) :: x = cmplx(4, 2, kind = 8)
+            complex(kind=8), dimension(n) :: y_d
+            complex(kind=8), dimension(n) :: y_n
+            integer :: fnu = 1
+
+            complex(kind=8), dimension(n) :: ground_truth_y_d
+            complex(kind=8), dimension(n) :: ground_truth_y_n
+
+            integer :: i
+            double precision :: buffer
+            double precision :: buffer_y_n
+
+            ! Values were generated with sageMath
+            !
+            ! source code:
+            !  >>> for n in range(1,6):
+            !  >>>     var('x')
+            !  >>>     f(x) = derivative(spherical_bessel_J(n, x))
+            !  >>>     x=4.0 + I*2
+            !  >>>     value = numerical_approx(f(x))
+            !  >>>     print("n = {}: {}".format(n, value))
+            ground_truth_y_d(1) = cmplx(0.846179_8, +1.75688_8, kind=8)
+            ground_truth_y_d(2) = cmplx(-1.2786_8, +1.07342_8, kind=8)
+            ground_truth_y_d(3) = cmplx(-1.13322_8, -0.607966_8, kind=8)
+            ground_truth_y_d(4) = cmplx(0.0302722_8, -0.888809_8, kind=8)
+            ground_truth_y_d(5) = cmplx(0.508252_8, -0.277546_8, kind=8)
+
+            y_d = lib_math_bessel_spherical_first_kind_derivative_coeff_cmplx(a, x, fnu, n, y_n)
+            ground_truth_y_n = lib_math_bessel_spherical_first_kind_cmplx(a * x, fnu, n)
+
+            rv = .true.
+            print *, "test_lib_math_bessel_spherical_first_kind_derivative_coeff_cmplx:"
+            do i=1, n
+                buffer = abs(y_d(i) - ground_truth_y_d(i))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": OK"
+                end if
+
+                buffer_y_n = abs(y_n(i) - ground_truth_y_n(i))
+                if (buffer_y_n .gt. ground_truth_e) then
+                    print *, "  ", i, "antiderivative: difference: ", buffer_y_n, " : FAILED"
+                    rv = .false.
+                end if
+            end do
+
+        end function test_lib_math_bessel_spherical_first_kind_derivative_coeff_c
 
         function test_lib_math_bessel_spherical_second_kind_derivative_real() result (rv)
             implicit none
