@@ -437,7 +437,7 @@ module lib_mie_scattering_by_a_sphere
 
         end subroutine get_coefficients_a_b_cmplx
 
-         ! calculates the scattering coefficients
+        ! calculates the scattering coefficients
         !
         ! Arguments
         ! ----
@@ -451,23 +451,17 @@ module lib_mie_scattering_by_a_sphere
         !       relative refractive index: m = N_1 / N
         !       N_1: refractive index of the particle
         !       N: refractive index of the medium
-        !   mu: double precision
-        !       permeability of the medium
-        !   mu1: double precision
-        !       permeability of the particle
         !   n: integer, dimension(2)
         !       first element: start index
         !       second element: last index
         !       HINT: first element .le. second element
         !
         ! Reference: Light Scattering by Particles, Barber, Hill, eq. (4.18)
-        subroutine get_coefficients_a_b_cmplx_barberh(x, m, mu, mu1, n, a_n, b_n)
+        subroutine get_coefficients_a_b_cmplx_barberh(x, m, n, a_n, b_n)
             implicit none
             ! dummy
             complex(kind=8) :: x
             complex(kind=8) :: m
-            double precision :: mu
-            double precision :: mu1
             integer(kind=4), dimension(2) :: n
 
             complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
@@ -475,8 +469,8 @@ module lib_mie_scattering_by_a_sphere
 
             ! auxiliary
             integer :: i
-            complex(kind=8), dimension(n(2)-n(1)+1) :: numerator
-            complex(kind=8), dimension(n(2)-n(1)+1) :: denominator
+            complex(kind=8) :: numerator
+            complex(kind=8) :: denominator
 
             complex(kind=8), dimension(n(2)-n(1)+2) :: j_n_x
             complex(kind=8), dimension(n(2)-n(1)+2) :: h_n_x
@@ -484,8 +478,10 @@ module lib_mie_scattering_by_a_sphere
             complex(kind=8), dimension(n(2)-n(1)+1) :: An
 
             complex(kind=8) :: mx
-            complex(kind=8) :: n_dev_x
+            complex(kind=8) :: n_div_x
             complex(kind=8) :: mAn
+            complex(kind=8) :: An_div_m
+            complex(kind=8) :: buffer
 
             integer(kind=4) :: number_of_n
 
@@ -499,13 +495,24 @@ module lib_mie_scattering_by_a_sphere
             An = get_An(x, m, n(1), number_of_n)
 
             do i=1, number_of_n
-                n_dev_x = (n(1)+i-1) / x
+                n_div_x = real(n(1)+i-1, kind=8) / x
                 mAn = m * An(i)
-                numerator(i) = (mAn + n_dev_x) * j_n_x(i+1) - j_n_x(i)
-                denominator(i) = (mAn + n_dev_x) * h_n_x(i+1) - h_n_x(i)
+                An_div_m = An(i) / m
+
+                buffer = An_div_m + n_div_x
+                numerator = buffer * j_n_x(i+1) - j_n_x(i)
+                denominator = buffer * h_n_x(i+1) - h_n_x(i)
+
+                a_n(i) = numerator / denominator
+
+                buffer = mAn + n_div_x
+                numerator = buffer * j_n_x(i+1) - j_n_x(i)
+                denominator = buffer * h_n_x(i+1) - h_n_x(i)
+
+                b_n(i) = numerator / denominator
             end do
 
-            b_n = numerator / denominator
+
 
 !            numerator = mu * m*m * j_n_mx * s_dn_x - mu1 * j_n_x * s_dn_mx
 !            denominator = mu * m*m * j_n_mx * xi_dn_x - mu1 * h_n_x * s_dn_mx
@@ -519,6 +526,33 @@ module lib_mie_scattering_by_a_sphere
 
         end subroutine get_coefficients_a_b_cmplx_barberh
 
+        ! Calculates the logarithmic derivative An
+        !
+        ! Formula: A_n = [mx j_n(mx)]' / (mx j_n(mx))
+        !
+        ! Argument
+        ! ----
+        !   x: complex
+        !       size parameter: x = k*r = 2 * PI * N * r / lambda
+        !       k: wavenumber
+        !       r: distance
+        !       N: refractive index of the medium
+        !       lambda: wave length
+        !   m: complex
+        !       relative refractive index: m = N_1 / N
+        !       N_1: refractive index of the particle
+        !       N: refractive index of the medium
+        !   fnu: integer
+        !       order of initial function, fnu.GE.0
+        !   n: integer
+        !       number of members of the sequence, n.GE.1
+        !
+        ! Returns
+        ! ----
+        !   An: complex(fnu:fnu + n - 1)
+        !       value of the logarithmic derivative of the last interation
+        !
+        ! Reference: Light Scattering by Particles, Barber, Hill, eq. (4.19)
         function get_An(x, m, fnu, n) result (An)
             implicit none
             ! dummy
@@ -527,7 +561,7 @@ module lib_mie_scattering_by_a_sphere
             integer :: fnu
             integer :: n
 
-            complex(kind=8), dimension(fnu+n-1) :: An
+            complex(kind=8), dimension(fnu:fnu+n-1) :: An
 
             ! parameter
 
@@ -538,6 +572,7 @@ module lib_mie_scattering_by_a_sphere
             complex(kind=8) :: m_mx
             complex(kind=8) :: m_buffer
 
+
             m_mx = m * x
             m_n_max = fnu + n - 1
 
@@ -545,16 +580,34 @@ module lib_mie_scattering_by_a_sphere
             m_n_mx = max(get_n_c(abs(x)), int(abs(m_mx))) + 15
 
             m_buffer = cmplx(0.0, 0.0, kind=8)
-            do i=m_n_mx, fnu, -1
+            do i=m_n_mx, fnu+1, -1
                 m_buffer = get_An_minus_1(i, m_mx, m_buffer)
 
-                if (i .le. m_n_max) then
-                    An(fnu-1+i) = m_buffer
+                if (i .le. m_n_max+1) then
+                    An(i-1) = m_buffer
                 end if
             end do
 
         end function get_An
 
+        ! Argument
+        ! ----
+        !   n: integer
+        !       degree of the logarithmic derivative
+        !   mx: complex
+        !       x: complex
+        !           size parameter: x = k*r = 2 * PI * N * r / lambda
+        !           k: wavenumber
+        !           r: distance
+        !           N: refractive index of the medium
+        !           lambda: wave length
+        !       m: complex
+        !           relative refractive index: m = N_1 / N
+        !           N_1: refractive index of the particle
+        !           N: refractive index of the medium
+        !   An: complex
+        !       value of the logarithmic derivative of the last interation
+        !
         ! Reference: Light Scattering by Particles, Barber, Hill, eq. (4.19)
         function get_An_minus_1(n, mx, An) result (rv)
             implicit none
@@ -566,11 +619,11 @@ module lib_mie_scattering_by_a_sphere
             complex(kind=8) :: rv
 
             ! auxiliary
-            complex(kind=8) :: nmx
+            complex(kind=8) :: n_div_mx
 
-            nmx = n/mx
+            n_div_mx = real(n, kind=8) / mx
 
-            rv = nmx - 1.0_8/(An + nmx)
+            rv = n_div_mx - 1.0_8/(An + n_div_mx)
 
         end function get_An_minus_1
 
@@ -795,7 +848,7 @@ module lib_mie_scattering_by_a_sphere
                     ground_truth_b_n(3) = cmplx(0.940931_8, -0.235754_8, kind=8)
                     ground_truth_b_n(4) = cmplx(0.999006_8, -0.0315159_8, kind=8)
 
-                    call get_coefficients_a_b_cmplx_barberh(x, m, mu, mu1, n, a_n, b_n)
+                    call get_coefficients_a_b_cmplx_barberh(x, m, n, a_n, b_n)
 
                     rv = .true.
                     print *, "test_get_coefficients_a_b_real_barberh:"
@@ -856,7 +909,7 @@ module lib_mie_scattering_by_a_sphere
                     ground_truth_b_n(3) = cmplx(0.159304_8, -0.340386_8, kind=8)
                     ground_truth_b_n(4) = cmplx(0.947238_8, +0.177162_8, kind=8)
 
-                    call get_coefficients_a_b_cmplx_barberh(x, m, mu, mu1, n, a_n, b_n)
+                    call get_coefficients_a_b_cmplx_barberh(x, m, n, a_n, b_n)
 
                     rv = .true.
                     print *, "test_get_coefficients_a_b_cmplx_barberh:"
@@ -887,8 +940,8 @@ module lib_mie_scattering_by_a_sphere
                     logical :: rv
 
                     ! parameter
-                    double precision, parameter :: start_angle = 0
-                    double precision, parameter :: stop_angle = 180
+                    double precision, parameter :: start_angle = 10
+                    double precision, parameter :: stop_angle = 60
                     integer(kind=8), parameter :: number_of_values = 720
 
                     ! auxiliary
@@ -911,9 +964,9 @@ module lib_mie_scattering_by_a_sphere
                     real(kind=8), dimension(number_of_values) :: i_field_s
 
                     phi = 0.0
-                    rho = 50
+                    theta = Pi/2.0_8
+                    rho = 10
                     rho_particle = 10
-                    theta = 0.0
 
                     e_field_0 = 1
                     n_particle = 1.5
@@ -924,7 +977,8 @@ module lib_mie_scattering_by_a_sphere
 
                     do i=1, number_of_values
                         degree_list(i) = start_angle + (i-1) * (stop_angle - start_angle) / number_of_values
-                        phi = degree_list(i) * PI / 180.0_8
+!                        theta = degree_list(i) * PI / 180.0_8
+                        rho = degree_list(i)
                         e_field_s(i) = get_e_field_scattered_xu(theta, phi, rho, e_field_0, rho_particle, n_particle, n_medium, n)
 
                         ! calculate the intensities
@@ -967,3 +1021,4 @@ module lib_mie_scattering_by_a_sphere
         end function lib_mie_scattering_by_a_sphere_test_functions
 
 end module lib_mie_scattering_by_a_sphere
+
