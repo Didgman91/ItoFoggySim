@@ -41,7 +41,7 @@ program main
 !        cmi = 0       ! water: 0
 !        npnts = 10
 !   call S2(1, 2*3.14159265358979*10, 1.33, 0.0, 10)
-    call S2(1, 10.0, 1.28, -1.37, 10)
+    call S2(1, 10.0, 1.50, 0.0, 10)
 
 
     error_counter = 0
