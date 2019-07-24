@@ -10,6 +10,7 @@ module lib_math_type_operator
     public :: operator (*)
     public :: operator (/)
     public :: spherical_abs
+    public :: init_list
 
     public :: lib_math_type_operator_test_functions
 
@@ -19,17 +20,17 @@ module lib_math_type_operator
         module procedure lib_math_spherical_operator_add_array
         module procedure lib_math_spherical_operator_0d_add_array
         module procedure lib_math_spherical_operator_array_add_0d
-        module procedure lib_math_list_spherical_operator_add_array
-        module procedure lib_math_list_spherical_operator_0d_add_array
-        module procedure lib_math_list_spherical_operator_array_add_0d
+        module procedure lib_math_list_spherical_operator_add_array_cmplx
+        module procedure lib_math_list_spherical_operator_0d_add_array_cmplx
+        module procedure lib_math_list_spherical_operator_array_add_0d_cmplx
     end interface
 
     interface operator (-)
         module procedure lib_math_spherical_operator_sub
         module procedure lib_math_spherical_operator_sub_array
         module procedure lib_math_spherical_operator_array_sub_0d
-        module procedure lib_math_list_spherical_operator_sub_array
-        module procedure lib_math_list_spherical_operator_array_sub_0d
+        module procedure lib_math_list_spherical_operator_sub_array_cmplx
+        module procedure lib_math_list_spherical_operator_array_sub_0d_cmplx
     end interface
 
     interface operator (*)
@@ -41,10 +42,10 @@ module lib_math_type_operator
         module procedure lib_math_spherical_operator_array_cmplx_mul_array
         module procedure lib_math_spherical_operator_0d_real_mul_array
         module procedure lib_math_spherical_operator_0d_cmplx_mul_array
-        module procedure lib_math_list_spherical_operator_array_real_mul_array
-        module procedure lib_math_list_spherical_operator_array_cmplx_mul_array
-        module procedure lib_math_list_spherical_operator_real_mul_array
-        module procedure lib_math_list_spherical_operator_cmplx_mul_array
+        module procedure lib_math_list_spherical_operator_array_real_mul_array_c
+        module procedure lib_math_list_spherical_operator_array_c_mul_array_cmplx
+        module procedure lib_math_list_spherical_operator_real_mul_array_cmplx
+        module procedure lib_math_list_spherical_operator_cmplx_mul_array_cmplx
     end interface
 
     interface operator (/)
@@ -55,7 +56,7 @@ module lib_math_type_operator
         module procedure lib_math_spherical_operator_array_divide_by_0d_real
         module procedure lib_math_spherical_operator_array_divide_by_0d_cmplx
         module procedure lib_math_list_spherical_operator_array_divide_by_real_array
-        module procedure lib_math_list_spherical_operator_array_divide_by_cmplx_array
+        module procedure lib_math_list_spherical_operator_c_array_divide_by_c_array
         module procedure lib_math_list_spherical_operator_array_divide_by_real
         module procedure lib_math_list_spherical_operator_array_divide_by_cmplx
     end interface
@@ -65,9 +66,15 @@ module lib_math_type_operator
     end interface
 
 
+    interface init_list
+        module procedure lib_math_list_list_real_init
+        module procedure lib_math_list_list_cmplx_init
+        module procedure lib_math_list_spherical_coordinate_cmplx_type_init
+    end interface
+
     contains
 
-! ---- single ----
+! ---- single spherical coordinate ----
         function lib_math_spherical_operator_add(lhs, rhs) result(rv)
             implicit none
             ! dummy
@@ -183,7 +190,7 @@ module lib_math_type_operator
 
         end function
 
-! ---- array ----
+! ---- array spherical coordinate ----
         function lib_math_spherical_operator_add_array(lhs, rhs) result(rv)
             implicit none
             ! dummy
@@ -393,7 +400,7 @@ module lib_math_type_operator
         end function
 
 ! ---- list_spherical_coordinate ----
-        function lib_math_list_spherical_operator_add_array(lhs, rhs) result(rv)
+        function lib_math_list_spherical_operator_add_array_cmplx(lhs, rhs) result(rv)
             implicit none
             ! dummy
             type (list_spherical_coordinate_cmplx_type), intent(in) :: lhs
@@ -415,7 +422,7 @@ module lib_math_type_operator
 
         end function
 
-        function lib_math_list_spherical_operator_sub_array(lhs, rhs) result(rv)
+        function lib_math_list_spherical_operator_sub_array_cmplx(lhs, rhs) result(rv)
             implicit none
             ! dummy
             type (list_spherical_coordinate_cmplx_type), intent(in) :: lhs
@@ -436,7 +443,7 @@ module lib_math_type_operator
             end if
         end function
 
-        function lib_math_list_spherical_operator_0d_add_array(lhs, rhs) result(rv)
+        function lib_math_list_spherical_operator_0d_add_array_cmplx(lhs, rhs) result(rv)
             implicit none
             ! dummy
             type (spherical_coordinate_cmplx_type), intent(in) :: lhs
@@ -454,7 +461,7 @@ module lib_math_type_operator
 
         end function
 
-        function lib_math_list_spherical_operator_array_add_0d(lhs, rhs) result(rv)
+        function lib_math_list_spherical_operator_array_add_0d_cmplx(lhs, rhs) result(rv)
             implicit none
             ! dummy
             type (list_spherical_coordinate_cmplx_type), intent(in) :: lhs
@@ -472,7 +479,7 @@ module lib_math_type_operator
 
         end function
 
-        function lib_math_list_spherical_operator_array_sub_0d(lhs, rhs) result(rv)
+        function lib_math_list_spherical_operator_array_sub_0d_cmplx(lhs, rhs) result(rv)
             implicit none
             ! dummy
             type (list_spherical_coordinate_cmplx_type), intent(in) :: lhs
@@ -490,7 +497,7 @@ module lib_math_type_operator
 
         end function
 
-        function lib_math_list_spherical_operator_array_real_mul_array(lhs, rhs) result(rv)
+        function lib_math_list_spherical_operator_array_real_mul_array_c(lhs, rhs) result(rv)
             implicit none
             ! dummy
             real(kind=lib_math_type_kind), dimension(:), intent(in) :: lhs
@@ -509,12 +516,12 @@ module lib_math_type_operator
                     rv%coordinate(i) = lhs(i) * rhs%coordinate(i)
                 end do
             else
-                print *, "lib_math_list_spherical_operator_array_real_mul_array: ERROR"
+                print *, "lib_math_list_spherical_operator_array_real_mul_array_c: ERROR"
             end if
 
         end function
 
-        function lib_math_list_spherical_operator_array_cmplx_mul_array(lhs, rhs) result(rv)
+        function lib_math_list_spherical_operator_array_c_mul_array_cmplx(lhs, rhs) result(rv)
             implicit none
             ! dummy
             complex(kind=lib_math_type_kind), dimension(:), intent(in) :: lhs
@@ -537,7 +544,7 @@ module lib_math_type_operator
 
         end function
 
-        function lib_math_list_spherical_operator_real_mul_array(lhs, rhs) result(rv)
+        function lib_math_list_spherical_operator_real_mul_array_cmplx(lhs, rhs) result(rv)
             implicit none
             ! dummy
             real(kind=lib_math_type_kind), intent(in) :: lhs
@@ -555,7 +562,7 @@ module lib_math_type_operator
 
         end function
 
-        function lib_math_list_spherical_operator_cmplx_mul_array(lhs, rhs) result(rv)
+        function lib_math_list_spherical_operator_cmplx_mul_array_cmplx(lhs, rhs) result(rv)
             implicit none
             ! dummy
             complex(kind=lib_math_type_kind), intent(in) :: lhs
@@ -596,7 +603,7 @@ module lib_math_type_operator
 
         end function
 
-        function lib_math_list_spherical_operator_array_divide_by_cmplx_array(lhs, rhs) result(rv)
+        function lib_math_list_spherical_operator_c_array_divide_by_c_array(lhs, rhs) result(rv)
             implicit none
             ! dummy
             type (list_spherical_coordinate_cmplx_type), intent(in) :: lhs
@@ -655,6 +662,98 @@ module lib_math_type_operator
 
         end function
 
+! ---- list_list ----
+
+        ! Arguments
+        ! ----
+        !   list: type (list_list_real)
+        !       derived data type to initialize
+        !   fnu: integer
+        !       start index
+        !   n: integer
+        !       number of elements, n .GE. 1
+        !
+        subroutine lib_math_list_list_real_init(list, fnu, n)
+            implicit none
+            ! dummy
+            type (list_list_real), intent(inout) :: list
+            integer, intent(in) :: fnu
+            integer, intent(in) :: n
+
+            ! auxiliary
+            integer :: i
+
+            if( allocated(list%item) ) then
+                deallocate( list%item )
+            end if
+
+            allocate( list%item(fnu:fnu+n-1) )
+            do i=fnu, fnu+n-1
+                allocate (list%item(i)%item(-i:i) )
+            end do
+
+        end subroutine lib_math_list_list_real_init
+
+        ! Arguments
+        ! ----
+        !   list: type (list_list_real)
+        !       derived data type to initialize
+        !   fnu: integer
+        !       start index
+        !   n: integer
+        !       number of elements, n .GE. 1
+        !
+        subroutine lib_math_list_list_cmplx_init(list, fnu, n)
+            implicit none
+            ! dummy
+            type (list_list_cmplx), intent(inout) :: list
+            integer, intent(in) :: fnu
+            integer, intent(in) :: n
+
+            ! auxiliary
+            integer :: i
+
+            if( allocated(list%item) ) then
+                deallocate( list%item )
+            end if
+
+            allocate( list%item(fnu:fnu+n-1) )
+            do i=fnu, fnu+n-1
+                allocate (list%item(i)%item(-i:i) )
+            end do
+
+        end subroutine lib_math_list_list_cmplx_init
+
+        ! Arguments
+        ! ----
+        !   list: type (list_spherical_coordinate_cmplx_type)
+        !       derived data type to initialize
+        !   fnu: integer
+        !       start index
+        !   n: integer
+        !       number of elements, n .GE. 1
+        !
+        subroutine lib_math_list_spherical_coordinate_cmplx_type_init(list, fnu, n)
+            implicit none
+            ! dummy
+            type (list_spherical_coordinate_cmplx_type), dimension(:), allocatable, intent(inout) :: list
+            integer, intent(in) :: fnu
+            integer, intent(in) :: n
+
+            ! auxiliary
+            integer :: i
+
+            if( allocated(list) ) then
+                deallocate( list )
+            end if
+
+            allocate( list(fnu:fnu+n-1) )
+            do i=fnu, fnu+n-1
+                allocate (list(i)%coordinate(-i:i))
+            end do
+
+        end subroutine lib_math_list_spherical_coordinate_cmplx_type_init
+
         function lib_math_type_operator_test_functions() result (rv)
             implicit none
             ! dummy
@@ -662,37 +761,37 @@ module lib_math_type_operator
 
             rv = 0
 
-            if (.not. test_lib_math_list_spherical_operator_add_array()) then
+            if (.not. test_lib_math_list_spherical_operator_add_array_cmplx()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_math_list_spherical_operator_sub_array()) then
+            if (.not. test_lib_math_list_spherical_operator_sub_array_cmplx()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_math_list_spherical_operator_0d_add_array()) then
+            if (.not. test_lib_math_list_spherical_operator_0d_add_array_cmplx()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_math_list_spherical_operator_array_add_0d()) then
+            if (.not. test_lib_math_list_spherical_operator_array_add_0d_cmplx()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_math_list_spherical_operator_array_sub_0d()) then
+            if (.not. test_lib_math_list_spherical_operator_array_sub_0d_cmplx()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_math_list_spherical_operator_array_real_mul_array()) then
+            if (.not. test_lib_math_list_spherical_operator_array_real_mul_array_c()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_math_list_spherical_operator_array_cmplx_mul_array()) then
+            if (.not. test_lib_math_list_spherical_operator_array_c_mul_array_cmplx()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_math_list_spherical_operator_real_mul_array()) then
+            if (.not. test_lib_math_list_spherical_operator_real_mul_array_cmplx()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_math_list_spherical_operator_cmplx_mul_array()) then
+            if (.not. test_lib_math_list_spherical_operator_cmplx_mul_array_cmplx()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_math_list_spherical_operator_array_divide_by_r_array()) then
+            if (.not. test_lib_math_list_spherical_operator_c_array_divide_by_r_array()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_math_list_spherical_operator_array_divide_by_c_array()) then
+            if (.not. test_lib_math_list_spherical_operator_c_array_divide_by_c_array()) then
                 rv = rv + 1
             end if
             if (.not. test_lib_math_list_spherical_operator_array_divide_by_real()) then
@@ -761,7 +860,7 @@ module lib_math_type_operator
                     end if
                 end function evaluate
 
-                function test_lib_math_list_spherical_operator_add_array() result (rv)
+                function test_lib_math_list_spherical_operator_add_array_cmplx() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -799,10 +898,10 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(2)%rho = cmplx(7,7, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(7,7, kind=8)
 
-                    value = lib_math_list_spherical_operator_add_array(lhs, rhs)
+                    value = lib_math_list_spherical_operator_add_array_cmplx(lhs, rhs)
 
                     rv = .true.
-                    print *, "test_lib_math_list_spherical_operator_add_array:"
+                    print *, "test_lib_math_list_spherical_operator_add_array_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
                         rv = evaluate(buffer, i, 'phi')
@@ -814,9 +913,9 @@ module lib_math_type_operator
                         rv = evaluate(buffer, i, "theta")
                     end do
 
-                end function test_lib_math_list_spherical_operator_add_array
+                end function test_lib_math_list_spherical_operator_add_array_cmplx
 
-                function test_lib_math_list_spherical_operator_sub_array() result (rv)
+                function test_lib_math_list_spherical_operator_sub_array_cmplx() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -854,10 +953,10 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(2)%rho = cmplx(-1,1, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(3,5, kind=8)
 
-                    value = lib_math_list_spherical_operator_sub_array(lhs, rhs)
+                    value = lib_math_list_spherical_operator_sub_array_cmplx(lhs, rhs)
 
                     rv = .true.
-                    print *, "test_lib_math_list_spherical_operator_sub_array:"
+                    print *, "test_lib_math_list_spherical_operator_sub_array_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
                         rv = evaluate(buffer, i, 'phi')
@@ -869,9 +968,9 @@ module lib_math_type_operator
                         rv = evaluate(buffer, i, "theta")
                     end do
 
-                end function test_lib_math_list_spherical_operator_sub_array
+                end function test_lib_math_list_spherical_operator_sub_array_cmplx
 
-                function test_lib_math_list_spherical_operator_0d_add_array() result (rv)
+                function test_lib_math_list_spherical_operator_0d_add_array_cmplx() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -907,10 +1006,10 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(2)%rho = cmplx(7,7, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(7,7, kind=8)
 
-                    value = lib_math_list_spherical_operator_0d_add_array(lhs, rhs)
+                    value = lib_math_list_spherical_operator_0d_add_array_cmplx(lhs, rhs)
 
                     rv = .true.
-                    print *, "test_lib_math_list_spherical_operator_0d_add_array:"
+                    print *, "test_lib_math_list_spherical_operator_0d_add_array_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
                         rv = evaluate(buffer, i, 'phi')
@@ -922,9 +1021,9 @@ module lib_math_type_operator
                         rv = evaluate(buffer, i, "theta")
                     end do
 
-                end function test_lib_math_list_spherical_operator_0d_add_array
+                end function test_lib_math_list_spherical_operator_0d_add_array_cmplx
 
-                function test_lib_math_list_spherical_operator_array_add_0d() result (rv)
+                function test_lib_math_list_spherical_operator_array_add_0d_cmplx() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -960,10 +1059,10 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(2)%rho = cmplx(7,7, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(7,7, kind=8)
 
-                    value = lib_math_list_spherical_operator_array_add_0d(lhs, rhs)
+                    value = lib_math_list_spherical_operator_array_add_0d_cmplx(lhs, rhs)
 
                     rv = .true.
-                    print *, "test_lib_math_list_spherical_operator_array_add_0d:"
+                    print *, "test_lib_math_list_spherical_operator_array_add_0d_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
                         rv = evaluate(buffer, i, 'phi')
@@ -975,9 +1074,9 @@ module lib_math_type_operator
                         rv = evaluate(buffer, i, "theta")
                     end do
 
-                end function test_lib_math_list_spherical_operator_array_add_0d
+                end function test_lib_math_list_spherical_operator_array_add_0d_cmplx
 
-                function test_lib_math_list_spherical_operator_array_sub_0d() result (rv)
+                function test_lib_math_list_spherical_operator_array_sub_0d_cmplx() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -1013,10 +1112,10 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(2)%rho = cmplx(1,-1, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(-3,-5, kind=8)
 
-                    value = lib_math_list_spherical_operator_array_sub_0d(lhs, rhs)
+                    value = lib_math_list_spherical_operator_array_sub_0d_cmplx(lhs, rhs)
 
                     rv = .true.
-                    print *, "test_lib_math_list_spherical_operator_array_sub_0d:"
+                    print *, "test_lib_math_list_spherical_operator_array_sub_0d_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
                         rv = evaluate(buffer, i, 'phi')
@@ -1028,9 +1127,9 @@ module lib_math_type_operator
                         rv = evaluate(buffer, i, "theta")
                     end do
 
-                end function test_lib_math_list_spherical_operator_array_sub_0d
+                end function test_lib_math_list_spherical_operator_array_sub_0d_cmplx
 
-                function test_lib_math_list_spherical_operator_array_real_mul_array() result (rv)
+                function test_lib_math_list_spherical_operator_array_real_mul_array_c() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -1067,10 +1166,10 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(2)%rho = cmplx(20,15, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(10,5, kind=8)
 
-                    value = lib_math_list_spherical_operator_array_real_mul_array(lhs, rhs)
+                    value = lib_math_list_spherical_operator_array_real_mul_array_c(lhs, rhs)
 
                     rv = .true.
-                    print *, "test_lib_math_list_spherical_operator_array_real_mul_array:"
+                    print *, "test_lib_math_list_spherical_operator_array_real_mul_array_c:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
                         rv = evaluate(buffer, i, 'phi')
@@ -1082,9 +1181,9 @@ module lib_math_type_operator
                         rv = evaluate(buffer, i, "theta")
                     end do
 
-                end function test_lib_math_list_spherical_operator_array_real_mul_array
+                end function test_lib_math_list_spherical_operator_array_real_mul_array_c
 
-                function test_lib_math_list_spherical_operator_array_cmplx_mul_array() result (rv)
+                function test_lib_math_list_spherical_operator_array_c_mul_array_cmplx() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -1121,10 +1220,10 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(2)%rho = cmplx(8,6, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(4,2, kind=8)
 
-                    value = lib_math_list_spherical_operator_array_cmplx_mul_array(lhs, rhs)
+                    value = lib_math_list_spherical_operator_array_c_mul_array_cmplx(lhs, rhs)
 
                     rv = .true.
-                    print *, "test_lib_math_list_spherical_operator_array_cmplx_mul_array:"
+                    print *, "test_lib_math_list_spherical_operator_array_c_mul_array_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
                         rv = evaluate(buffer, i, 'phi')
@@ -1136,9 +1235,9 @@ module lib_math_type_operator
                         rv = evaluate(buffer, i, "theta")
                     end do
 
-                end function test_lib_math_list_spherical_operator_array_cmplx_mul_array
+                end function test_lib_math_list_spherical_operator_array_c_mul_array_cmplx
 
-                function test_lib_math_list_spherical_operator_real_mul_array() result (rv)
+                function test_lib_math_list_spherical_operator_real_mul_array_cmplx() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -1174,10 +1273,10 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(2)%rho = cmplx(16,12, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(8,4, kind=8)
 
-                    value = lib_math_list_spherical_operator_real_mul_array(lhs, rhs)
+                    value = lib_math_list_spherical_operator_real_mul_array_cmplx(lhs, rhs)
 
                     rv = .true.
-                    print *, "test_lib_math_list_spherical_operator_real_mul_array:"
+                    print *, "test_lib_math_list_spherical_operator_real_mul_array_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
                         rv = evaluate(buffer, i, 'phi')
@@ -1189,9 +1288,9 @@ module lib_math_type_operator
                         rv = evaluate(buffer, i, "theta")
                     end do
 
-                end function test_lib_math_list_spherical_operator_real_mul_array
+                end function test_lib_math_list_spherical_operator_real_mul_array_cmplx
 
-                function test_lib_math_list_spherical_operator_cmplx_mul_array() result (rv)
+                function test_lib_math_list_spherical_operator_cmplx_mul_array_cmplx() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -1227,10 +1326,10 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(2)%rho = cmplx(-12,16, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(-4,8, kind=8)
 
-                    value = lib_math_list_spherical_operator_cmplx_mul_array(lhs, rhs)
+                    value = lib_math_list_spherical_operator_cmplx_mul_array_cmplx(lhs, rhs)
 
                     rv = .true.
-                    print *, "test_lib_math_list_spherical_operator_cmplx_mul_array:"
+                    print *, "test_lib_math_list_spherical_operator_cmplx_mul_array_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
                         rv = evaluate(buffer, i, 'phi')
@@ -1242,9 +1341,9 @@ module lib_math_type_operator
                         rv = evaluate(buffer, i, "theta")
                     end do
 
-                end function test_lib_math_list_spherical_operator_cmplx_mul_array
+                end function test_lib_math_list_spherical_operator_cmplx_mul_array_cmplx
 
-                function test_lib_math_list_spherical_operator_array_divide_by_r_array() result (rv)
+                function test_lib_math_list_spherical_operator_c_array_divide_by_r_array() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -1284,7 +1383,7 @@ module lib_math_type_operator
                     value = lib_math_list_spherical_operator_array_divide_by_real_array(lhs, rhs)
 
                     rv = .true.
-                    print *, "test_lib_math_list_spherical_operator_array_divide_by_r_array:"
+                    print *, "test_lib_math_list_spherical_operator_c_array_divide_by_r_array:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
                         rv = evaluate(buffer, i, 'phi')
@@ -1296,9 +1395,9 @@ module lib_math_type_operator
                         rv = evaluate(buffer, i, "theta")
                     end do
 
-                end function test_lib_math_list_spherical_operator_array_divide_by_r_array
+                end function test_lib_math_list_spherical_operator_c_array_divide_by_r_array
 
-                function test_lib_math_list_spherical_operator_array_divide_by_c_array() result (rv)
+                function test_lib_math_list_spherical_operator_c_array_divide_by_c_array() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -1335,10 +1434,10 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(2)%rho = cmplx(0.625, -1, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(0.25, -0.5, kind=8)
 
-                    value = lib_math_list_spherical_operator_array_divide_by_cmplx_array(lhs, rhs)
+                    value = lib_math_list_spherical_operator_c_array_divide_by_c_array(lhs, rhs)
 
                     rv = .true.
-                    print *, "test_lib_math_list_spherical_operator_array_divide_by_c_array:"
+                    print *, "test_lib_math_list_spherical_operator_c_array_divide_by_c_array:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
                         rv = evaluate(buffer, i, 'phi')
@@ -1350,7 +1449,7 @@ module lib_math_type_operator
                         rv = evaluate(buffer, i, "theta")
                     end do
 
-                end function test_lib_math_list_spherical_operator_array_divide_by_c_array
+                end function test_lib_math_list_spherical_operator_c_array_divide_by_c_array
 
                 function test_lib_math_list_spherical_operator_array_divide_by_real() result (rv)
                     implicit none

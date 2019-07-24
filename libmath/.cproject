@@ -49,13 +49,15 @@
                             							
                             <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.908803412" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug">
                                 								
-                                <option id="gnu.fortran.compiler.option.misc.other.917436246" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fPIC -fcheck=all" valueType="string"/>
+                                <option id="gnu.fortran.compiler.option.misc.other.917436246" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -cpp -fmessage-length=0 -fPIC -fcheck=all" valueType="string"/>
                                 								
                                 <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.compiler.option.include.paths.1004503965" name="Include paths (-I)" superClass="gnu.fortran.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
                                     									
                                     <listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/8/include-fixed"/>
                                     									
                                     <listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/8/include"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_generated_functions/Debug}&quot;"/>
                                     								
                                 </option>
                                 								
@@ -67,11 +69,23 @@
                                 								
                                 <option id="gnu.fortran.link.option.shared.807688544" name="Shared (-shared)" superClass="gnu.fortran.link.option.shared" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                                 								
-                                <option id="gnu.fortran.link.option.ldflags.1121947081" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="" valueType="string"/>
+                                <option id="gnu.fortran.link.option.ldflags.1121947081" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-fopenmp -Wl,-rpath=&quot;${workspace_loc:/libmath_generated_functions/Debug}&quot;" valueType="string"/>
                                 								
                                 <option id="gnu.fortran.link.option.soname.1898426583" name="Shared object name (-Wl,-soname=)" superClass="gnu.fortran.link.option.soname" useByScannerDiscovery="false" value="" valueType="string"/>
                                 								
                                 <option id="gnu.fortran.link.option.defname.154598205" name="DEF file name (-Wl,--output-def=)" superClass="gnu.fortran.link.option.defname" useByScannerDiscovery="false" value="" valueType="string"/>
+                                								
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.link.option.libs.1163734097" name="Libraries (-l)" superClass="gnu.fortran.link.option.libs" useByScannerDiscovery="false" valueType="libs">
+                                    									
+                                    <listOptionValue builtIn="false" value="math_generated_functions"/>
+                                    								
+                                </option>
+                                								
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.link.option.paths.1013988198" name="Library search path (-L)" superClass="gnu.fortran.link.option.paths" useByScannerDiscovery="false" valueType="stringList">
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_generated_functions/Debug}&quot;"/>
+                                    								
+                                </option>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.linker.input.61996504" superClass="photran.managedbuild.tool.gnu.fortran.linker.input">
                                     									
@@ -88,22 +102,6 @@
                                 <inputType id="cdt.managedbuild.tool.gnu.assembler.input.1856196775" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
                                 							
                             </tool>
-                            						
-                        </toolChain>
-                        					
-                    </folderInfo>
-                    					
-                    <folderInfo id="photran.managedbuild.config.gnu.fortran.exe.debug.158129180.1562014889" name="/" resourcePath="src">
-                        						
-                        <toolChain id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.1335017912" name="GCC Fortran" superClass="photran.managedbuild.toolchain.gnu.fortran.exe.debug" unusedChildren="">
-                            							
-                            <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.744072189" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug.2135571687"/>
-                            							
-                            <tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1125146503" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.908803412"/>
-                            							
-                            <tool id="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.431622117" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.1656319768"/>
-                            							
-                            <tool id="photran.managedbuild.tool.gnu.assembler.exe.debug.2048739506" name="GCC Assembler" superClass="photran.managedbuild.tool.gnu.assembler.exe.debug.220502999"/>
                             						
                         </toolChain>
                         					

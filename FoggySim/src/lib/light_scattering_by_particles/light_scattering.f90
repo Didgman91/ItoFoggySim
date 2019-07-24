@@ -215,6 +215,8 @@
       integer ip, nc, nmx
       complex b,z,cm,ci,hkl(226),an,amat(225),f(225),g(225)
       common /cfcom/ f,g,cnrm
+      complex test_a(255)
+      complex test_b(255)
       dimension cnrm(225)
       ci = (0.0,1.0)
 !     ......................................................
@@ -260,8 +262,10 @@
 !     .    g(n) = ci**(n+1)*rf*(Bohren and Huffman's a(n))  .
 !     .......................................................
         b = cm*amat(n)+rn/x
+        test_b(n) = (b*bj-bjm)/(b*hkl(n+1)-hkl(n))
         f(n) = -ci**n*rf*(b*bj-bjm)/(b*hkl(n+1)-hkl(n))                 !eq 4.18a
         b = amat(n)/cm+rn/x
+        test_a(n) = (b*bj-bjm)/(b*hkl(n+1)-hkl(n))
         g(n) = ci**(n+1)*rf*(b*bj-bjm)/(b*hkl(n+1)-hkl(n))              !eq 4.18b
         if(ip.eq.2) then
 !     ...............................................
