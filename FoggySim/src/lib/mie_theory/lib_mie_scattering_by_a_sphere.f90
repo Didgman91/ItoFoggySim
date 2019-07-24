@@ -215,7 +215,8 @@ module lib_mie_scattering_by_a_sphere
 
             call init_list(e_field_nm, n_range(1), n_range(2)-n_range(1)+1)
 
-            call get_coefficients_a_b_real(rho_particle, n_particle/n_medium, mu, mu1, n_range, a_n, b_n)
+            call get_coefficients_a_b_real_barberh(rho_particle, n_particle/n_medium, n_range, a_n, b_n)
+!            call get_coefficients_a_b_real(rho_particle, n_particle/n_medium, mu, mu1, n_range, a_n, b_n)
 
             z_selector = 3
 
@@ -441,6 +442,83 @@ module lib_mie_scattering_by_a_sphere
         !
         ! Arguments
         ! ----
+        !   x: real
+        !       size parameter: x = k*r = 2 * PI * N * r / lambda
+        !       k: wavenumber
+        !       r: distance
+        !       N: refractive index of the medium
+        !       lambda: wave length
+        !   m: real
+        !       relative refractive index: m = N_1 / N
+        !       N_1: refractive index of the particle
+        !       N: refractive index of the medium
+        !   n: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       HINT: first element .le. second element
+        !
+        ! Reference: Light Scattering by Particles, Barber, Hill, eq. (4.18)
+        subroutine get_coefficients_a_b_real_barberh(x, m, n, a_n, b_n)
+            implicit none
+            ! dummy
+            real(kind=8) :: x
+            real(kind=8) :: m
+            integer(kind=4), dimension(2) :: n
+
+            complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+            complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+            ! auxiliary
+            integer :: i
+            complex(kind=8) :: numerator
+            complex(kind=8) :: denominator
+
+            complex(kind=8), dimension(n(2)-n(1)+2) :: j_n_x
+            complex(kind=8), dimension(n(2)-n(1)+2) :: h_n_x
+
+            real(kind=8), dimension(n(2)-n(1)+1) :: An
+
+            real(kind=8) :: mx
+            real(kind=8) :: n_div_x
+            real(kind=8) :: mAn
+            real(kind=8) :: An_div_m
+            real(kind=8) :: buffer
+
+            integer(kind=4) :: number_of_n
+
+            number_of_n = n(2) - n(1) + 1
+
+            mx = m*x
+
+            j_n_x = lib_math_bessel_spherical_first_kind(x, n(1)-1, number_of_n+1)
+            h_n_x = lib_math_hankel_spherical_1(x, n(1)-1, number_of_n+1)
+
+            An = get_An_real(x, m, n(1), number_of_n)
+
+            do i=1, number_of_n
+                n_div_x = real(n(1)+i-1, kind=8) / x
+                mAn = m * An(i)
+                An_div_m = An(i) / m
+
+                buffer = An_div_m + n_div_x
+                numerator = buffer * j_n_x(i+1) - j_n_x(i)
+                denominator = buffer * h_n_x(i+1) - h_n_x(i)
+
+                a_n(i) = numerator / denominator
+
+                buffer = mAn + n_div_x
+                numerator = buffer * j_n_x(i+1) - j_n_x(i)
+                denominator = buffer * h_n_x(i+1) - h_n_x(i)
+
+                b_n(i) = numerator / denominator
+            end do
+
+        end subroutine get_coefficients_a_b_real_barberh
+
+        ! calculates the scattering coefficients
+        !
+        ! Arguments
+        ! ----
         !   x: complex
         !       size parameter: x = k*r = 2 * PI * N * r / lambda
         !       k: wavenumber
@@ -492,7 +570,7 @@ module lib_mie_scattering_by_a_sphere
             j_n_x = lib_math_bessel_spherical_first_kind(x, n(1)-1, number_of_n+1)
             h_n_x = lib_math_hankel_spherical_1(x, n(1)-1, number_of_n+1)
 
-            An = get_An(x, m, n(1), number_of_n)
+            An = get_An_cmplx(x, m, n(1), number_of_n)
 
             do i=1, number_of_n
                 n_div_x = real(n(1)+i-1, kind=8) / x
@@ -512,19 +590,71 @@ module lib_mie_scattering_by_a_sphere
                 b_n(i) = numerator / denominator
             end do
 
-
-
-!            numerator = mu * m*m * j_n_mx * s_dn_x - mu1 * j_n_x * s_dn_mx
-!            denominator = mu * m*m * j_n_mx * xi_dn_x - mu1 * h_n_x * s_dn_mx
-!
-!            a_n = numerator / denominator
-!
-!            numerator = mu1 * j_n_mx * s_dn_x - mu * j_n_x * s_dn_mx
-!            denominator = mu1 * j_n_mx * xi_dn_x - mu * h_n_x * s_dn_mx
-!
-!            b_n = numerator / denominator
-
         end subroutine get_coefficients_a_b_cmplx_barberh
+
+        ! Calculates the logarithmic derivative An
+        !
+        ! Formula: A_n = [mx j_n(mx)]' / (mx j_n(mx))
+        !
+        ! Argument
+        ! ----
+        !   x: real
+        !       size parameter: x = k*r = 2 * PI * N * r / lambda
+        !       k: wavenumber
+        !       r: distance
+        !       N: refractive index of the medium
+        !       lambda: wave length
+        !   m: real
+        !       relative refractive index: m = N_1 / N
+        !       N_1: refractive index of the particle
+        !       N: refractive index of the medium
+        !   fnu: integer
+        !       order of initial function, fnu.GE.0
+        !   n: integer
+        !       number of members of the sequence, n.GE.1
+        !
+        ! Returns
+        ! ----
+        !   An: complex(fnu:fnu + n - 1)
+        !       value of the logarithmic derivative of the last interation
+        !
+        ! Reference: Light Scattering by Particles, Barber, Hill, eq. (4.19)
+        function get_An_real(x, m, fnu, n) result (An)
+            implicit none
+            ! dummy
+            real(kind=8) :: x
+            real(kind=8) :: m
+            integer :: fnu
+            integer :: n
+
+            real(kind=8), dimension(fnu:fnu+n-1) :: An
+
+            ! parameter
+
+            ! auxiliary
+            integer :: i
+            integer :: m_n_max
+            integer :: m_n_mx
+            real(kind=8) :: m_mx
+            real(kind=8) :: m_buffer
+
+
+            m_mx = m * x
+            m_n_max = fnu + n - 1
+
+            ! eq. (4.20)
+            m_n_mx = max(get_n_c(abs(x)), int(abs(m_mx))) + 15
+
+            m_buffer = cmplx(0.0, 0.0, kind=8)
+            do i=m_n_mx, fnu+1, -1
+                m_buffer = get_An_minus_1_real(i, m_mx, m_buffer)
+
+                if (i .le. m_n_max+1) then
+                    An(i-1) = m_buffer
+                end if
+            end do
+
+        end function get_An_real
 
         ! Calculates the logarithmic derivative An
         !
@@ -553,7 +683,7 @@ module lib_mie_scattering_by_a_sphere
         !       value of the logarithmic derivative of the last interation
         !
         ! Reference: Light Scattering by Particles, Barber, Hill, eq. (4.19)
-        function get_An(x, m, fnu, n) result (An)
+        function get_An_cmplx(x, m, fnu, n) result (An)
             implicit none
             ! dummy
             complex(kind=8) :: x
@@ -581,14 +711,51 @@ module lib_mie_scattering_by_a_sphere
 
             m_buffer = cmplx(0.0, 0.0, kind=8)
             do i=m_n_mx, fnu+1, -1
-                m_buffer = get_An_minus_1(i, m_mx, m_buffer)
+                m_buffer = get_An_minus_1_cmplx(i, m_mx, m_buffer)
 
                 if (i .le. m_n_max+1) then
                     An(i-1) = m_buffer
                 end if
             end do
 
-        end function get_An
+        end function get_An_cmplx
+
+        ! Argument
+        ! ----
+        !   n: integer
+        !       degree of the logarithmic derivative
+        !   mx: complex
+        !       x: real
+        !           size parameter: x = k*r = 2 * PI * N * r / lambda
+        !           k: wavenumber
+        !           r: distance
+        !           N: refractive index of the medium
+        !           lambda: wave length
+        !       m: real
+        !           relative refractive index: m = N_1 / N
+        !           N_1: refractive index of the particle
+        !           N: refractive index of the medium
+        !   An: complex
+        !       value of the logarithmic derivative of the last interation
+        !
+        ! Reference: Light Scattering by Particles, Barber, Hill, eq. (4.19)
+        function get_An_minus_1_real(n, mx, An) result (rv)
+            implicit none
+            ! dummy
+            integer :: n
+            real(kind=8) :: mx
+            real(kind=8) :: An
+
+            complex(kind=8) :: rv
+
+            ! auxiliary
+            real(kind=8) :: n_div_mx
+
+            n_div_mx = real(n, kind=8) / mx
+
+            rv = n_div_mx - 1.0_8/(An + n_div_mx)
+
+        end function get_An_minus_1_real
 
         ! Argument
         ! ----
@@ -609,7 +776,7 @@ module lib_mie_scattering_by_a_sphere
         !       value of the logarithmic derivative of the last interation
         !
         ! Reference: Light Scattering by Particles, Barber, Hill, eq. (4.19)
-        function get_An_minus_1(n, mx, An) result (rv)
+        function get_An_minus_1_cmplx(n, mx, An) result (rv)
             implicit none
             ! dummy
             integer :: n
@@ -625,7 +792,7 @@ module lib_mie_scattering_by_a_sphere
 
             rv = n_div_mx - 1.0_8/(An + n_div_mx)
 
-        end function get_An_minus_1
+        end function get_An_minus_1_cmplx
 
         ! calculates highest degree n for a convergent algorithm
         !
@@ -667,9 +834,9 @@ module lib_mie_scattering_by_a_sphere
             if (.not. test_get_coefficients_a_b_real()) then
                 rv = rv + 1
             end if
-            if (.not. test_get_coefficients_a_b_cmplx()) then
-                rv = rv + 1
-            end if
+!            if (.not. test_get_coefficients_a_b_cmplx()) then
+!                rv = rv + 1
+!            end if
             if (.not. test_get_coefficients_a_b_real_barberh()) then
                 rv = rv + 1
             end if
@@ -822,8 +989,8 @@ module lib_mie_scattering_by_a_sphere
                     integer(kind=4) :: i
                     real(kind=8) :: buffer
 
-                    complex(kind=8) :: x
-                    complex(kind=8) :: m
+                    real(kind=8) :: x
+                    real(kind=8) :: m
                     double precision :: mu
                     double precision :: mu1
                     integer(kind=4), dimension(2), parameter :: n = (/1, 4/)
@@ -834,21 +1001,22 @@ module lib_mie_scattering_by_a_sphere
                     complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_a_n
                     complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_b_n
 
-                    ! Reference: Electromagnetic scattering on spherical polydispersions, D.Deirmendjian, p. 27
-                    m = cmplx(1.5, 0, kind=8)
-                    x= cmplx(10, 0, kind=8)
 
-                    ground_truth_a_n(1) = cmplx(0.938111_8, +0.240954_8, kind=8)
-                    ground_truth_a_n(2) = cmplx(0.962707_8, +0.189478_8, kind=8)
-                    ground_truth_a_n(3) = cmplx(0.994996_8, +0.0705625_8, kind=8)
-                    ground_truth_a_n(4) = cmplx(0.99737_8, -0.0512159_8, kind=8)
+                    m = 1.5_8
+                    x = 10.0_8
+                    ! Reference: Light Scattering by Particles: Computational Methods, Barber Hill, program S2
+                    ! WARNING: same algorithm
+                    ground_truth_a_n(1) = cmplx(0.825333297_8, 0.379681736_8, kind=8)
+                    ground_truth_a_n(2) = cmplx(0.999948084_8, 0.0072028893_8, kind=8)
+                    ground_truth_a_n(3) = cmplx(0.970794678_8, 0.168381661_8, kind=8)
+                    ground_truth_a_n(4) = cmplx(0.995235085_8, -0.068863928_8, kind=8)
 
-                    ground_truth_b_n(1) = cmplx(0.980385_8, -0.138672_8, kind=8)
-                    ground_truth_b_n(2) = cmplx(0.805329_8, +0.395947_8, kind=8)
-                    ground_truth_b_n(3) = cmplx(0.940931_8, -0.235754_8, kind=8)
-                    ground_truth_b_n(4) = cmplx(0.999006_8, -0.0315159_8, kind=8)
+                    ground_truth_b_n(1) = cmplx(0.997406423_8,0.0508609638_8, kind=8)
+                    ground_truth_b_n(2) = cmplx(0.885268927_8,0.318697095_8, kind=8)
+                    ground_truth_b_n(3) = cmplx(0.995330393_8,-0.0681746677_8, kind=8)
+                    ground_truth_b_n(4) = cmplx(0.998444855_8,-0.0394046269_8, kind=8)
 
-                    call get_coefficients_a_b_cmplx_barberh(x, m, n, a_n, b_n)
+                    call get_coefficients_a_b_real_barberh(x, m, n, a_n, b_n)
 
                     rv = .true.
                     print *, "test_get_coefficients_a_b_real_barberh:"
@@ -893,21 +1061,20 @@ module lib_mie_scattering_by_a_sphere
                     complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_a_n
                     complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_b_n
 
-                    ! Reference: Electromagnetic scattering on spherical polydispersions, D.Deirmendjian, p. 27
                     m = cmplx(1.28, -1.37, kind=8)
-                    x= cmplx(20, 0, kind=8)
-!                    ground_truth_a_n(1) = cmplx(-0.22686_8+0.5_8, -0.12863_8, kind=8)
-!                    ground_truth_b_n(1) = cmplx(0.22864_8+0.5_8, 0.13377_8, kind=8)
+                    x= cmplx(10, 0, kind=8)
 
-                    ground_truth_a_n(1) = cmplx(-181.13_8, -327.306_8, kind=8)
-                    ground_truth_a_n(2) = cmplx(81.2324_8, +94.3237_8, kind=8)
-                    ground_truth_a_n(3) = cmplx(-51.6918_8, -32.7439, kind=8)
-                    ground_truth_a_n(4) = cmplx(36.652_8, +5.67418_8, kind=8)
+                    ! Reference: Light Scattering by Particles: Computational Methods, Barber Hill, program S2
+                    ! WARNING: same algorithm
+                    ground_truth_a_n(1) = cmplx(-0.333899468_8, 0.472839594_8, kind=8)
+                    ground_truth_a_n(2) = cmplx(1.1025393_8, -0.765782595_8, kind=8)
+                    ground_truth_a_n(3) = cmplx(0.419178337_8, 0.996963501_8, kind=8)
+                    ground_truth_a_n(4) = cmplx(-0.174542636_8, -0.790816486_8, kind=8)
 
-                    ground_truth_b_n(1) = cmplx(0.367587_8, -0.463775_8, kind=8)
-                    ground_truth_b_n(2) = cmplx(0.722992_8, +0.427339_8, kind=8)
-                    ground_truth_b_n(3) = cmplx(0.159304_8, -0.340386_8, kind=8)
-                    ground_truth_b_n(4) = cmplx(0.947238_8, +0.177162_8, kind=8)
+                    ground_truth_b_n(1) = cmplx(1.31455839_8, -0.476593971_8, kind=8)
+                    ground_truth_b_n(2) = cmplx(-0.0436286479_8, 0.753336608_8, kind=8)
+                    ground_truth_b_n(3) = cmplx(0.495494395_8, -0.906942308_8, kind=8)
+                    ground_truth_b_n(4) = cmplx(1.16279888_8, 0.575285077_8, kind=8)
 
                     call get_coefficients_a_b_cmplx_barberh(x, m, n, a_n, b_n)
 
