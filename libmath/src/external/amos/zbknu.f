@@ -1,10 +1,12 @@
       SUBROUTINE ZBKNU(ZR, ZI, FNU, KODE, N, YR, YI, NZ, TOL, ELIM,
      * ALIM)
+#ifndef __GFORTRAN__
       interface
 		DOUBLE PRECISION FUNCTION ZABS_amos(ZR, ZI)
 			DOUBLE PRECISION ZR, ZI
 		end function
 	end interface
+#endif
 C***BEGIN PROLOGUE  ZBKNU
 C***REFER TO  ZBESI,ZBESK,ZAIRY,ZBESH
 C
