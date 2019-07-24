@@ -1206,43 +1206,43 @@ module lib_mie_vector_spherical_harmonics
 
             contains
 
-            function test_lib_mie_vector_spherical_harmonics_components_real() result (rv)
-                implicit none
-                ! dummy
-                logical :: rv
-
-                ! auxiliary
-                double precision :: theta
-                double precision :: phi
-                double precision :: rho
-                integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: m
-                integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: n
-                integer(kind=1) :: z_selector
-
-                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_emn
-                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_omn
-                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_emn
-                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_omn
-
-!                logical :: not_calc_Memn
-!                logical :: not_calc_Momn
-!                logical :: not_calc_Nemn
-!                logical :: not_calc_Nomn
-
-                theta = 0
-                phi = 0
-                rho = 100
-
-                z_selector = 3
-
-                m = (/ 1, 1 /)
-                n = (/ 1, 3 /)
-
-                call lib_mie_vector_spherical_harmonics_components_real(theta, phi, rho, m, n, z_selector, &
-                                                                        M_emn, M_omn, N_emn, N_omn)
-
-
-            end function
+!            function test_lib_mie_vector_spherical_harmonics_components_real() result (rv)
+!                implicit none
+!                ! dummy
+!                logical :: rv
+!
+!                ! auxiliary
+!                double precision :: theta
+!                double precision :: phi
+!                double precision :: rho
+!                integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: m
+!                integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: n
+!                integer(kind=1) :: z_selector
+!
+!                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_emn
+!                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_omn
+!                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_emn
+!                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_omn
+!
+!!                logical :: not_calc_Memn
+!!                logical :: not_calc_Momn
+!!                logical :: not_calc_Nemn
+!!                logical :: not_calc_Nomn
+!
+!                theta = 0
+!                phi = 0
+!                rho = 100
+!
+!                z_selector = 3
+!
+!                m = (/ 1, 1 /)
+!                n = (/ 1, 3 /)
+!
+!                call lib_mie_vector_spherical_harmonics_components_real(theta, phi, rho, m, n, z_selector, &
+!                                                                        M_emn, M_omn, N_emn, N_omn)
+!
+!
+!            end function
 
             function test_lib_mie_vector_spherical_harmonics_components_real_xu() result (rv)
                 use file_io
