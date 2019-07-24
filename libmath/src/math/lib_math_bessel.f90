@@ -1,6 +1,7 @@
 #define _DEBUG_
 
 module lib_math_bessel
+    use lib_math_factorial
     implicit none
 
     private
@@ -633,6 +634,7 @@ module lib_math_bessel
     ! Argument
     ! ----
     !   x: double precision
+    !       x .gt. 0.0
     !   fnu: integer
     !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
@@ -643,9 +645,10 @@ module lib_math_bessel
     !   rv: array<double precision>
     !
     !
-    ! LaTeX: $$ h_{n}^{(1)}(\rho)=j_{n}(\rho)+i y_{n}(\rho) $$
+    ! LaTeX: $$ h_{n}^{(1)}(z)=i^{-n-1} z^{-1} e^{i z} \sum_{0}^{n}\left(n+\frac{1}{2}, k\right)(-2 i z)^{-k} $$
+    !        $$ \left(n+\frac{1}{2}, k\right)=\frac{(n+k) !}{k ! \Gamma(n-k+1)} $$
     !
-    ! Reference: Absorption and Scattering of Light by Small Particles Absorption and Scattering of Light by Small Particles (4.13)
+    ! Reference: Handbook of Mathematical Functions, Abramowitz and Stegun, pp. 437-442, eq. 10.1.16
     !
     function lib_math_bessel_spherical_third_kind_1_real(x, fnu, n) result (rv)
         implicit none
@@ -656,27 +659,48 @@ module lib_math_bessel
         complex(kind=8), dimension(n) :: rv
 
         ! auxiliary
-!        integer(kind=4) order
-!        integer(kind=4) nm
-!        complex(kind=8) chf1(0:fnu+n-1)
-!        complex(kind=8) chd1(0:fnu+n-1)
-!        complex(kind=8) chf2(0:fnu+n-1)
-!        complex(kind=8) chd2(0:fnu+n-1)
+        integer(kind=4) :: i
+        integer(kind=4) :: k
+        integer(kind=4) :: order
+        real(kind=8) :: nk
+        complex(kind=8) :: prefactor
 
-!        order = fnu+n-1
+        complex(kind=8), dimension(fnu:fnu+n-1) :: i_pow_n
+        complex(kind=8), dimension(0:fnu+n-1) :: x_pow_k
+        complex(kind=8) :: summation
 
-        rv = cmplx(lib_math_bessel_spherical_first_kind_real(x, fnu, n), &
-                   lib_math_bessel_spherical_second_kind_real(x, fnu, n), &
-                   kind=8)
+        complex(kind=8), dimension(fnu:fnu+n-1) :: h
 
-!        call CH12N( order, cmplx(x, 0, kind=8), nm, chf1, chd1, chf2, chd2)
-!
-!        if (order .ne. nm) then
-!            print *, "lib_math_bessel_spherical_third_kind_1_real: ERROR"
-!            print *, "  calculated highest order / requested: ", nm, " / ", order
-!        end if
-!
-!        rv = chf1(fnu:order)
+
+        ! pre-calulations
+        order = fnu + n - 1
+
+        prefactor = cmplx(cos(x), sin(x), kind=8) / x
+
+        x_pow_k(0) = cmplx(1.0, 0.0, kind=8)
+        do k=1, order
+            x_pow_k(k) = x_pow_k(k-1) * cmplx(0.0_8, -2.0_8 * x, kind=8)
+        end do
+
+        do i=fnu, order
+            i_pow_n(i) = cmplx(0.0, 1.0, kind=8)**(-i-1)
+        end do
+
+
+        ! calculate Hankel functions of degree fnu until order
+        do i=fnu, order
+            ! calculate the spherical Hankel function with degree i
+            summation = cmplx(0.0, 0.0, kind=8)
+            do k=0, i
+                nk = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(i, k)
+                summation = summation + nk / x_pow_k(k)
+            end do
+
+            h(i) = i_pow_n(i) * prefactor * summation
+
+        end do
+
+        rv = h
 
     end function lib_math_bessel_spherical_third_kind_1_real
 
@@ -686,7 +710,8 @@ module lib_math_bessel
     !
     ! Argument
     ! ----
-    !   x: double precision
+    !   x: cmplx
+    !       x .gt. 0.0
     !   fnu: integer
     !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
@@ -697,20 +722,62 @@ module lib_math_bessel
     !   rv: array<double precision>
     !
     !
-    ! LaTeX: $$ h_{n}^{(1)}(\rho)=j_{n}(\rho)+i y_{n}(\rho) $$
+    ! LaTeX: $$ h_{n}^{(1)}(z)=i^{-n-1} z^{-1} e^{i z} \sum_{0}^{n}\left(n+\frac{1}{2}, k\right)(-2 i z)^{-k} $$
+    !        $$ \left(n+\frac{1}{2}, k\right)=\frac{(n+k) !}{k ! \Gamma(n-k+1)} $$
     !
-    ! Reference: http://mathworld.wolfram.com/SphericalHankelFunctionoftheFirstKind.html
+    ! Reference: Handbook of Mathematical Functions, Abramowitz and Stegun, pp. 437-442, eq. 10.1.16
     !
-    function lib_math_bessel_spherical_third_kind_1_cmplx(z, fnu, n) result (rv)
+    function lib_math_bessel_spherical_third_kind_1_cmplx(x, fnu, n) result (rv)
         implicit none
         ! dummy
-        complex(kind=8), intent(in) :: z
+        complex(kind=8), intent(in) :: x
         integer(kind=4), intent(in) :: fnu
         integer(kind=4), intent(in) :: n
         complex(kind=8), dimension(n) :: rv
 
-        rv = lib_math_bessel_spherical_first_kind_cmplx(z, fnu, n) &
-             + cmplx(0,1, kind=8) * lib_math_bessel_spherical_second_kind_cmplx(z, fnu, n)
+        ! auxiliary
+        integer(kind=4) :: i
+        integer(kind=4) :: k
+        integer(kind=4) :: order
+        real(kind=8) :: nk
+        complex(kind=8) :: prefactor
+
+        complex(kind=8), dimension(fnu:fnu+n-1) :: i_pow_n
+        complex(kind=8), dimension(0:fnu+n-1) :: x_pow_k
+        complex(kind=8) :: summation
+
+        complex(kind=8), dimension(fnu:fnu+n-1) :: h
+
+
+        ! pre-calulations
+        order = fnu + n - 1
+
+        prefactor = exp(cmplx(0.0, 1.0, kind=8) * x) / x
+
+        x_pow_k(0) = cmplx(1.0, 0.0, kind=8)
+        do k=1, order
+            x_pow_k(k) = x_pow_k(k-1) * (-2.0_8) * x * cmplx(0.0, 1.0, kind=8)
+        end do
+
+        do i=fnu, order
+            i_pow_n(i) = cmplx(0.0, 1.0, kind=8)**(-i-1)
+        end do
+
+
+        ! calculate Hankel functions of degree fnu until order
+        do i=fnu, order
+            ! calculate the spherical Hankel function with degree i
+            summation = cmplx(0.0, 0.0, kind=8)
+            do k=0, i
+                nk = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(i, k)
+                summation = summation + nk / x_pow_k(k)
+            end do
+
+            h(i) = i_pow_n(i) * prefactor * summation
+
+        end do
+
+        rv = h
 
     end function lib_math_bessel_spherical_third_kind_1_cmplx
 
@@ -721,6 +788,7 @@ module lib_math_bessel
     ! Argument
     ! ----
     !   x: double precision
+    !       x .gt. 0.0
     !   fnu: integer
     !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
@@ -731,9 +799,10 @@ module lib_math_bessel
     !   rv: array<double precision>
     !
     !
-    ! LaTeX: $$ h_{n}^{(2)}(\rho)=j_{n}(\rho) - i y_{n}(\rho) $$
+    ! LaTeX: $$ h_{\mathrm{n}}^{(2)}(z)=i^{n+1} z^{-1} e^{-i z} \sum_{0}^{n}\left(n+\frac{1}{2}, k\right)(2 i z)^{-k} $$
+    !        $$ \left(n+\frac{1}{2}, k\right)=\frac{(n+k) !}{k ! \Gamma(n-k+1)} $$
     !
-    ! Reference: Absorption and Scattering of Light by Small Particles Absorption and Scattering of Light by Small Particles (4.14)
+    ! Reference: Handbook of Mathematical Functions, Abramowitz and Stegun, pp. 437-442, eq. 10.1.17
     !
     function lib_math_bessel_spherical_third_kind_2_real(x, fnu, n) result (rv)
         implicit none
@@ -744,27 +813,48 @@ module lib_math_bessel
         complex(kind=8), dimension(n) :: rv
 
         ! auxiliary
-!        integer(kind=4) order
-!        integer(kind=4) nm
-!        complex(kind=8) chf1(0:fnu+n-1)
-!        complex(kind=8) chd1(0:fnu+n-1)
-!        complex(kind=8) chf2(0:fnu+n-1)
-!        complex(kind=8) chd2(0:fnu+n-1)
-!
-!        order = fnu+n-1
+        integer(kind=4) :: i
+        integer(kind=4) :: k
+        integer(kind=4) :: order
+        real(kind=8) :: nk
+        complex(kind=8) :: prefactor
 
-        rv = cmplx(lib_math_bessel_spherical_first_kind_real(x, fnu, n), &
-                   - lib_math_bessel_spherical_second_kind_real(x, fnu, n), &
-                   kind=8)
+        complex(kind=8), dimension(fnu:fnu+n-1) :: i_pow_n
+        complex(kind=8), dimension(0:fnu+n-1) :: x_pow_k
+        complex(kind=8) :: summation
 
-!        call CH12N( order, cmplx(x, 0, kind=8), nm, chf1, chd1, chf2, chd2)
-!
-!        if (order .ne. nm) then
-!            print *, "lib_math_bessel_spherical_third_kind_2_real: ERROR"
-!            print *, "  calculated highest order / requested: ", nm, " / ", order
-!        end if
-!
-!        rv = chf2(fnu:order)
+        complex(kind=8), dimension(fnu:fnu+n-1) :: h
+
+
+        ! pre-calulations
+        order = fnu + n - 1
+
+        prefactor = cmplx(cos(x), -sin(x), kind=8) / x
+
+        x_pow_k(0) = cmplx(1.0, 0.0, kind=8)
+        do k=1, order
+            x_pow_k(k) = x_pow_k(k-1) * cmplx(0.0_8, 2.0_8 * x, kind=8)
+        end do
+
+        do i=fnu, order
+            i_pow_n(i) = cmplx(0.0, 1.0, kind=8)**(i+1)
+        end do
+
+
+        ! calculate Hankel functions of degree fnu until order
+        do i=fnu, order
+            ! calculate the spherical Hankel function with degree i
+            summation = cmplx(0.0, 0.0, kind=8)
+            do k=0, i
+                nk = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(i, k)
+                summation = summation + nk / x_pow_k(k)
+            end do
+
+            h(i) = i_pow_n(i) * prefactor * summation
+
+        end do
+
+        rv = h
 
     end function lib_math_bessel_spherical_third_kind_2_real
 
@@ -774,7 +864,8 @@ module lib_math_bessel
     !
     ! Argument
     ! ----
-    !   x: double precision
+    !   z: complex
+    !       z .ne. (0.0, 0.0)
     !   fnu: integer
     !       ORDER OF INITIAL FUNCTION, FNU.GE.0
     !   n: integer
@@ -785,9 +876,10 @@ module lib_math_bessel
     !   rv: array<double precision>
     !
     !
-    ! LaTeX: $$ h_{n}^{(2)}(\rho)=j_{n}(\rho) - i y_{n}(\rho) $$
+    ! LaTeX: $$ h_{\mathrm{n}}^{(2)}(z)=i^{n+1} z^{-1} e^{-i z} \sum_{0}^{n}\left(n+\frac{1}{2}, k\right)(2 i z)^{-k} $$
+    !        $$ \left(n+\frac{1}{2}, k\right)=\frac{(n+k) !}{k ! \Gamma(n-k+1)} $$
     !
-    ! Reference:
+    ! Reference: Handbook of Mathematical Functions, Abramowitz and Stegun, pp. 437-442, eq. 10.1.17
     !
     function lib_math_bessel_spherical_third_kind_2_cmplx(z, fnu, n) result (rv)
         implicit none
@@ -797,8 +889,49 @@ module lib_math_bessel
         integer(kind=4), intent(in) :: n
         complex(kind=8), dimension(n) :: rv
 
-        rv = lib_math_bessel_spherical_first_kind_cmplx(z, fnu, n) &
-             - cmplx(0,1, kind=8) * lib_math_bessel_spherical_second_kind_cmplx(z, fnu, n)
+        ! auxiliary
+        integer(kind=4) :: i
+        integer(kind=4) :: k
+        integer(kind=4) :: order
+        real(kind=8) :: nk
+        complex(kind=8) :: prefactor
+
+        complex(kind=8), dimension(fnu:fnu+n-1) :: i_pow_n
+        complex(kind=8), dimension(0:fnu+n-1) :: x_pow_k
+        complex(kind=8) :: summation
+
+        complex(kind=8), dimension(fnu:fnu+n-1) :: h
+
+
+        ! pre-calulations
+        order = fnu + n - 1
+
+        prefactor = exp(-cmplx(0.0, 1.0, kind=8) * z) / z
+
+        x_pow_k(0) = cmplx(1.0, 0.0, kind=8)
+        do k=1, order
+            x_pow_k(k) = x_pow_k(k-1) * (2.0_8) * z * cmplx(0.0, 1.0, kind=8)
+        end do
+
+        do i=fnu, order
+            i_pow_n(i) = cmplx(0.0, 1.0, kind=8)**(i+1)
+        end do
+
+
+        ! calculate Hankel functions of degree fnu until order
+        do i=fnu, order
+            ! calculate the spherical Hankel function with degree i
+            summation = cmplx(0.0, 0.0, kind=8)
+            do k=0, i
+                nk = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(i, k)
+                summation = summation + nk / x_pow_k(k)
+            end do
+
+            h(i) = i_pow_n(i) * prefactor * summation
+
+        end do
+
+        rv = h
 
     end function lib_math_bessel_spherical_third_kind_2_cmplx
 
@@ -2471,6 +2604,7 @@ module lib_math_bessel
 
             ! auxiliary
             complex(kind=8) :: x = cmplx(5, 2, kind=8)
+
             complex(kind=8), dimension(n) :: y
             integer :: fnu = 0
 

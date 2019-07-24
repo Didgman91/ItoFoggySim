@@ -4,8 +4,10 @@ module lib_math_factorial
     private
 
     ! --- public functions ---
-    public :: lib_math_factorial_get_n_minus_m_divided_by_n_plus_m
     public :: lib_math_factorial_get_factorial
+    public :: lib_math_factorial_get_n_minus_m_divided_by_n_plus_m
+    public :: lib_math_factorial_get_n_plus_m_divided_by_n_minus_m
+    public :: lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m
 
     public :: lib_math_factorial_test_functions
 
@@ -55,6 +57,75 @@ module lib_math_factorial
 
         end function lib_math_factorial_get_n_minus_m_divided_by_n_plus_m
 
+        ! calculates the division of two factorials
+        !
+        ! formula: rv = (n+m)!  / (n-m)!
+        !
+        ! Arguments
+        ! ----
+        !   n: integer
+        !       0 <= n
+        !   m: integer
+        !       0 <= m <= n
+        !
+        ! Result
+        ! ----
+        !   rv: double precision
+        !
+        function lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n,m) result (rv)
+            implicit none
+            ! dummy
+            integer(kind=4) :: n
+            integer(kind=4) :: m
+
+            real(kind=8) :: rv
+
+            ! auxiliary
+            integer(kind=4) :: i
+
+            if (n .eq. m) then
+                ! (n + m)! / (n - m)! = (n + m)! / 0!
+                ! = (n + m)!
+                rv = lib_math_factorial_get_factorial(n+m)
+            else
+                ! ( (n-m+1) * (n-m+2) * ... * (n+m) ) / 1
+                rv = 1
+                do i = n-m+1, n+m
+                   rv = rv * i
+                end do
+            end if
+
+        end function lib_math_factorial_get_n_plus_m_divided_by_n_minus_m
+
+        ! calculates the division of two factorials
+        !
+        ! formula: rv = (n+m)!  / ( m!(n-m)! )
+        !
+        ! Arguments
+        ! ----
+        !   n: integer
+        !       0 <= n
+        !   m: integer
+        !       0 <= m <= n
+        !
+        ! Result
+        ! ----
+        !   rv: double precision
+        !
+        function lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(n, m) result (rv)
+            implicit none
+            ! dummy
+            integer(kind=4) :: n
+            integer(kind=4) :: m
+
+            real(kind=8) :: rv
+
+            ! auxiliary
+
+            rv = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n, m) / lib_math_factorial_get_factorial(m)
+
+        end function lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m
+
         ! calculates the factorial
         !
         ! formula: rv = n!
@@ -97,6 +168,12 @@ module lib_math_factorial
                 rv = rv + 1
             end if
             if (.not. test_lib_math_factorial_get_n_minus_m_divided_by_n_plus_m()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_factorial_get_n_plus_m_divided_by_n_minus_m()) then
+                rv = rv + 1
+            end if
+            if (.not. test_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m()) then
                 rv = rv + 1
             end if
 
@@ -167,6 +244,122 @@ module lib_math_factorial
                     end do
 
                 end function test_lib_math_factorial_get_n_minus_m_divided_by_n_plus_m
+
+                function test_lib_math_factorial_get_n_plus_m_divided_by_n_minus_m() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=1), parameter :: d = 7
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    integer(kind=4), dimension(d) :: n
+                    integer(kind=4), dimension(d) :: m
+                    real(kind=8), dimension(d) :: value
+                    real(kind=8), dimension(d) :: ground_truth_value
+                    real(kind=8) :: buffer
+
+                    n = (/ 0, 1, 5, 20, 30, 80, 80 /)
+                    m = (/ 0, 1, 1, 15, 30, 40, 80 /)
+
+                    ! Values were generated with sageMath
+                    !
+                    ! source code:
+                    ! >>> var('n')
+                    ! >>> var('m')
+                    ! >>> f(n,m) = factorial(n+m)/factorial(n-m)
+                    ! >>>
+                    ! >>> n = [0, 1, 5, 20, 30, 80, 80]
+                    ! >>> m = [0, 1, 1, 15, 30, 40, 80]
+                    ! >>>
+                    ! >>> for i in range(0,6):
+                    ! >>>     value = numerical_approx(f(n[i],m[i]))
+                    ! >>>     print("n = {}, m = {}: {}".format(n[i], m[i], value))
+                    ground_truth_value(1) = 1.00000000000000_8
+                    ground_truth_value(2) = 2.00000000000000_8
+                    ground_truth_value(3) = 30.0000000000000_8
+                    ground_truth_value(4) = 8.61095663865512d37
+                    ground_truth_value(5) = 8.32098711274139d81
+                    ground_truth_value(6) = 8.19877142982340d150
+                    ground_truth_value(7) = 4.71472363599206d284
+
+                    do i=1, d
+                        value(i) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n(i), m(i))
+                    end do
+
+                    rv = .true.
+                    print *, "test_lib_math_factorial_get_n_plus_m_divided_by_n_minus_m:"
+                    do i=1, d
+                        buffer = log(value(i)) - log(ground_truth_value(i))
+                        if (abs(buffer) .gt. ground_truth_e) then
+                            print *, "  ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  ", i, ": OK"
+                        end if
+                    end do
+
+                end function test_lib_math_factorial_get_n_plus_m_divided_by_n_minus_m
+
+                function test_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=1), parameter :: d = 7
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    integer(kind=4), dimension(d) :: n
+                    integer(kind=4), dimension(d) :: m
+                    real(kind=8), dimension(d) :: value
+                    real(kind=8), dimension(d) :: ground_truth_value
+                    real(kind=8) :: buffer
+
+                    n = (/ 0, 1, 5, 20, 30, 80, 80 /)
+                    m = (/ 0, 1, 1, 15, 30, 40, 80 /)
+
+                    ! Values were generated with sageMath
+                    !
+                    ! source code:
+                    ! >>> var('n')
+                    ! >>> var('m')
+                    ! >>> f(n,m) = factorial(n+m)/( factorial(m) * factorial(n-m) )
+                    ! >>>
+                    ! >>> n = [0, 1, 5, 20, 30, 80, 80]
+                    ! >>> m = [0, 1, 1, 15, 30, 40, 80]
+                    ! >>>
+                    ! >>> for i in range(0,6):
+                    ! >>>     value = numerical_approx(f(n[i],m[i]))
+                    ! >>>     print("n = {}, m = {}: {}".format(n[i], m[i], value))
+                    ground_truth_value(1) = 1.00000000000000_8
+                    ground_truth_value(2) = 2.00000000000000_8
+                    ground_truth_value(3) = 30.0000000000000_8
+                    ground_truth_value(4) = 6.58493953033965d25
+                    ground_truth_value(5) = 3.13700184745716d49
+                    ground_truth_value(6) = 1.00485572438191d103
+                    ground_truth_value(7) = 6.58761967824400d165
+
+                    do i=1, d
+                        value(i) = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(n(i), m(i))
+                    end do
+
+                    rv = .true.
+                    print *, "test_lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m:"
+                    do i=1, d
+                        buffer = log(value(i)) - log(ground_truth_value(i))
+                        if (abs(buffer) .gt. ground_truth_e) then
+                            print *, "  ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  ", i, ": OK"
+                        end if
+                    end do
+
+                end function test_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m
 
                 function test_lib_math_factorial_get_factorial() result (rv)
                     implicit none
