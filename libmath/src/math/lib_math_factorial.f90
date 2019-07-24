@@ -122,7 +122,83 @@ module lib_math_factorial
 
             ! auxiliary
 
-            rv = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n, m) / lib_math_factorial_get_factorial(m)
+            ! auxiliary
+            integer(kind=4) :: i
+            integer(kind=4) :: zwei_m
+            integer(kind=4) :: buffer
+
+            if (n .eq. m) then
+                ! (n + m)! / m!(n - m)! = (n + n)! / n!0!
+                ! = (n+1) * (n+2) * ... * (2n)
+                rv = 1
+                do i=n+1, 2*n
+                    rv = rv * i
+                end do
+            else
+                ! ( (n-m+1) * (n-m+2) * ... * (n+m) ) / m!
+                ! e.g. n = 20, m = 15
+                !
+                !  (n+m)!          1 *...* 5 * 6 *...* 35
+                ! --------- = --------------------------------
+                ! m! (n-m)!    1 *...* 3 *...* 15 * 1 *...* 5
+                zwei_m = 2 * m
+                rv = 1
+                do i = n-m+1, n+m
+                    !                  vvvvvvvvv
+                    !  (n+m)!          1 *...* 5 * 6 *...* 35
+                    ! --------- = --------------------------------
+                    ! m! (n-m)!    1 *...* 3 *...* 15 * 1 *...* 5
+                    !                                   ^^^^^^^^^
+                    !
+                    !                                 vvvvvvvvvv
+                    !     (n-m+1) *...* (n+m)         6 *...* 30 *...* 35
+                    ! => --------------------- = -------------------------
+                    !             m!              1 *...* 2 * 3 *...* 15
+                    !                                         ^^^^^^^^^^
+                    !
+                    !                             6/2 * 7 * 8/2 *...* 31 * 32 *...* 35  <<<<
+                    ! =>                       = --------------------------------------
+                    !                                  1 *...* 2
+                    !
+                    ! here: calculation of the numerator
+                    if( i .le. zwei_m) then
+                        if (mod(i, 2) .eq. 0) then
+                            ! i is even
+                            rv = rv * 2
+                        else
+                            ! i is odd
+                            rv = rv * i
+                        end if
+                    else
+                        rv = rv * i
+                    end if
+                end do
+
+                !         rv
+                ! =>  -----------
+                !     1 *...* 2
+                if (m .gt. 1) then
+
+                    buffer = n-m+1
+                    if (mod(buffer, 2) .eq. 0) then
+                        ! is even
+                        buffer = buffer / 2 - 1
+                    else
+                        ! is odd
+                        buffer = (n - m) / 2
+                    end if
+
+
+                    do i=2, buffer
+                        rv = rv / real(i, kind=8)
+                    end do
+
+                end if
+
+            end if
+
+
+!            rv = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n, m) / lib_math_factorial_get_factorial(m)
 
         end function lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m
 
@@ -320,7 +396,7 @@ module lib_math_factorial
                     real(kind=8) :: buffer
 
                     n = (/ 0, 1, 5, 20, 30, 80, 80 /)
-                    m = (/ 0, 1, 1, 15, 30, 40, 80 /)
+                    m = (/ 0, 1, 2, 15, 30, 40, 80 /)
 
                     ! Values were generated with sageMath
                     !
@@ -330,14 +406,14 @@ module lib_math_factorial
                     ! >>> f(n,m) = factorial(n+m)/( factorial(m) * factorial(n-m) )
                     ! >>>
                     ! >>> n = [0, 1, 5, 20, 30, 80, 80]
-                    ! >>> m = [0, 1, 1, 15, 30, 40, 80]
+                    ! >>> m = [0, 1, 2, 15, 30, 40, 80]
                     ! >>>
                     ! >>> for i in range(0,6):
                     ! >>>     value = numerical_approx(f(n[i],m[i]))
                     ! >>>     print("n = {}, m = {}: {}".format(n[i], m[i], value))
                     ground_truth_value(1) = 1.00000000000000_8
                     ground_truth_value(2) = 2.00000000000000_8
-                    ground_truth_value(3) = 30.0000000000000_8
+                    ground_truth_value(3) = 420.0000000000000_8
                     ground_truth_value(4) = 6.58493953033965d25
                     ground_truth_value(5) = 3.13700184745716d49
                     ground_truth_value(6) = 1.00485572438191d103
