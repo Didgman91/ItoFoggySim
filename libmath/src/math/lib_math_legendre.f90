@@ -760,11 +760,21 @@ module lib_math_legendre
                 end do
             end if
 
-            do n=1, n_max
-                do m=-n, n
-                    tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative(n, m, theta)
+            if (x .eq. 1.0_8 .or.&
+                x .eq. -1.0_8) then
+                do n=1, n_max
+                    do m=-n, n
+                        tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative_limit(n, m, theta)
+                    end do
                 end do
-            end do
+            else
+                do n=1, n_max
+                    do m=-n, n
+                        tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative(n, m, theta)
+                    end do
+                end do
+            end if
+
 
             if (present(condon_shortley_phase)) then
                 if (.not. condon_shortley_phase) then
