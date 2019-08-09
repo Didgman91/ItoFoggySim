@@ -220,8 +220,9 @@ module lib_mie_scattering_by_a_sphere
 
             z_selector = 3
 
-            call lib_mie_vector_spherical_harmonics_components(theta, phi, rho, n_range, z_selector, &
-                                                               M_nm, N_nm)
+            ! todo:
+!            call lib_mie_vector_spherical_harmonics_components(theta, phi, r, k, n_range, z_selector, &
+!                                                               M_nm, N_nm)
             ! eq. (5)
             do n=n_range(1), n_range(2)
                 do m=-n, n
@@ -746,7 +747,7 @@ module lib_mie_scattering_by_a_sphere
             real(kind=8) :: mx
             real(kind=8) :: An
 
-            complex(kind=8) :: rv
+            real(kind=8) :: rv
 
             ! auxiliary
             real(kind=8) :: n_div_mx
@@ -1101,6 +1102,91 @@ module lib_mie_scattering_by_a_sphere
                 end function test_get_coefficients_a_b_cmplx_barberh
 
                 function test_get_e_field_scattered() result (rv)
+                    use file_io
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    double precision, parameter :: start_angle = 10
+                    double precision, parameter :: stop_angle = 60
+                    integer(kind=8), parameter :: number_of_values = 720
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    integer :: u
+                    complex(kind=8) :: buffer_cmplx
+                    character(len=25), dimension(2) :: header
+                    double precision :: theta
+                    double precision :: phi
+                    double precision :: rho
+                    double precision :: e_field_0
+                    double precision :: rho_particle
+                    double precision :: n_particle
+                    double precision :: n_medium
+
+                    integer(kind=4), dimension(2) :: n
+
+                    double precision, dimension(number_of_values) :: degree_list
+                    type(spherical_coordinate_cmplx_type), dimension(number_of_values) :: e_field_s
+                    real(kind=8), dimension(number_of_values) :: i_field_s
+
+                    phi = 0.0
+                    theta = Pi/2.0_8
+                    rho = 10
+                    rho_particle = 10
+
+                    e_field_0 = 1
+                    n_particle = 1.5
+                    n_medium = 1
+
+                    n(1) = 1
+                    n(2) = get_n_c(rho_particle)
+
+                    do i=1, number_of_values
+                        degree_list(i) = start_angle + (i-1) * (stop_angle - start_angle) / number_of_values
+!                        theta = degree_list(i) * PI / 180.0_8
+                        rho = degree_list(i)
+                        e_field_s(i) = get_e_field_scattered_xu(theta, phi, rho, e_field_0, rho_particle, n_particle, n_medium, n)
+
+                        ! calculate the intensities
+                        buffer_cmplx = abs(spherical_abs(e_field_s(i)))
+                        i_field_s(i) = real(buffer_cmplx * buffer_cmplx)
+                    end do
+
+
+
+                    ! write to csv
+                    header(1) = "degree"
+                    header(2) = "i_field_s"
+                    u = 99
+                    open(unit=u, file="i_field_s.csv", status='unknown')
+                    rv = write_csv(u, header, degree_list, i_field_s)
+                    close(u)
+
+                    header(1) = "degree"
+                    header(2) = "e_field_s_rho"
+                    open(unit=u, file="e_field_s_rho.csv", status='unknown')
+                    rv = write_csv(u, header, degree_list &
+                                            , real(e_field_s(:)%rho))
+                    close(u)
+
+                    header(2) = "e_field_s_theta"
+                    open(unit=u, file="e_field_s_theta.csv", status='unknown')
+                    rv = write_csv(u, header, degree_list &
+                                            , real(e_field_s(:)%theta))
+                    close(u)
+
+                    header(2) = "e_field_s_phi"
+                    open(unit=u, file="e_field_s_phi.csv", status='unknown')
+                    rv = write_csv(u, header, degree_list &
+                                            , real(e_field_s(:)%phi))
+                    close(u)
+
+
+                end function
+
+                function test_get_e_field_scattered_plane_section() result (rv)
                     use file_io
                     implicit none
                     ! dummy

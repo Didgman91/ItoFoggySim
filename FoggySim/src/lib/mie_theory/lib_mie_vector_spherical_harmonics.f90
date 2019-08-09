@@ -30,10 +30,10 @@ module lib_mie_vector_spherical_harmonics
         !       polar angle
         !   phi: double precision
         !       azimuthal angle
-        !   rho: double precision
-        !       dimensionless varibale rho = k*r > 0
-        !       k: wavenumber
-        !       r: distance
+        !   r: double precision
+        !       distance [m]
+        !   k: double precision
+        !       wavenumber [1/m]
         !   n_range: integer, dimension(2)
         !       first element: start index
         !       second element: last index
@@ -49,8 +49,10 @@ module lib_mie_vector_spherical_harmonics
         !
         ! Results
         ! ----
-        !   rv: complex, dimension(3)
-        !       values of the spherical coordinates (rho, theta, phi)
+        !   M_nm: type(list_spherical_coordinate_cmplx_type)
+        !       M component of the vector spherical harmonic
+        !   N_nm: type(list_spherical_coordinate_cmplx_type)
+        !       N component of the vector spherical harmonic
         !
         ! LaTeX: $$ \mathbf{M}_{m n}^{(J)}=\left[\mathbf{i}_{\theta} i \pi_{m n}(\cos \theta)-\mathbf{i}_{\phi} \tau_{m n}(\cos \theta)\right] z_{n}^{(J)} )(k r) \exp (i m \phi) $$
         !        $$ \mathbf{N}_{m n}^{(J)}=\mathbf{i}_r n\left(n+1 ) P_{n}^{m} (\cos \theta\right) \frac{z_{n}^{(J)}(k r)}{k r} \exp(i m \phi)
@@ -58,14 +60,15 @@ module lib_mie_vector_spherical_harmonics
         !           \times \frac{1}{k r} \frac{d}{d r}\left[r z_{n}^{(J)}(k r)\right] \exp (i m \phi) $$
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 2
-        subroutine lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, rho, n_range, z_selector, &
+        subroutine lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, r, k, n_range, z_selector, &
                                                       M_nm, N_nm)
             implicit none
             
             ! dummy
             double precision, intent(in) :: theta
             double precision, intent(in) :: phi
-            double precision, intent(in) :: rho
+            double precision, intent(in) :: r
+            double precision, intent(in) :: k
             integer(kind=4), dimension(2) :: n_range
             integer(kind=1) :: z_selector
 
@@ -77,6 +80,8 @@ module lib_mie_vector_spherical_harmonics
             integer :: m
             integer :: i
             integer :: ii
+
+            double precision :: rho
 
             integer(kind=4) :: number_of_members_n
 
@@ -130,6 +135,8 @@ module lib_mie_vector_spherical_harmonics
 
 
             ! --- pre-calculation ---
+            rho = k * r
+
             cos_theta = cos(theta)
 
             do i=-n_range(2), n_range(2)
@@ -153,7 +160,7 @@ module lib_mie_vector_spherical_harmonics
                     r_d_cmplx = lib_math_riccati_xi_derivative(rho, n_range(1), number_of_members_n, r_cmplx)
                     z_n_cmplx = r_cmplx / rho
                 case(4)
-                    ! spherical Hankel function first kind   h^(2)_n
+                    ! spherical Hankel function second kind   h^(2)_n
                     ! internal: calculation with Riccati-Bessel functions: Zeta_n
                     r_d_cmplx = lib_math_riccati_zeta_derivative(rho, n_range(1), number_of_members_n, r_cmplx)
                     z_n_cmplx = r_cmplx / rho
@@ -167,7 +174,7 @@ module lib_mie_vector_spherical_harmonics
                     r_cmplx = cmplx(0,0)
                     r_d_real = 0
                     r_d_cmplx = cmplx(0,0)
-                    print*, "lib_mie_vector_spherical_harmonics_M_emn: ERROR"
+                    print*, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
                     print*, "  undefined z_selector value: ", z_selector
                     return
             end select
@@ -273,7 +280,7 @@ module lib_mie_vector_spherical_harmonics
                             buffer_cmplx = cmplx(buffer_real, 0, kind=8) * exp_i_m_phi(m)
                             N_nm(n)%coordinate(m)%rho = buffer_cmplx
 
-                            buffer_cmplx = cmplx(r_d_real(i) / rho, 0, kind=8) * exp_i_m_phi(m)     ! todo: check missing? k at eq. 2
+                            buffer_cmplx = cmplx(r_d_real(i) / (k * rho), 0, kind=8) * exp_i_m_phi(m)
 
                             N_nm(n)%coordinate(m)%theta = tau_nm%item(n)%item(m) * buffer_cmplx
 
@@ -300,7 +307,7 @@ module lib_mie_vector_spherical_harmonics
                             buffer_cmplx = cmplx(buffer_real, 0, kind=8) * exp_i_m_phi(m) * z_n_cmplx(i)
                             N_nm(n)%coordinate(m)%rho = buffer_cmplx
 
-                            buffer_cmplx = r_d_cmplx(i) * exp_i_m_phi(m) / rho     ! todo: check missing? k at eq. 2
+                            buffer_cmplx = r_d_cmplx(i) * exp_i_m_phi(m) / (k * rho)
 
                             N_nm(n)%coordinate(m)%theta = tau_nm%item(n)%item(m) * buffer_cmplx
 
@@ -330,10 +337,10 @@ module lib_mie_vector_spherical_harmonics
         !       polar angle
         !   phi: double precision
         !       azimuthal angle
-        !   rho: complex
-        !       dimensionless varibale rho = |k|*r > 0
-        !       k: wavenumber
-        !       r: distance
+        !   k: complex
+        !       wavenumber [1/m]
+        !   r: double precision
+        !       distance [m]
         !   n_range: integer, dimension(2)
         !       first element: start index
         !       second element: last index
@@ -358,14 +365,15 @@ module lib_mie_vector_spherical_harmonics
         !           \times \frac{1}{k r} \frac{d}{d r}\left[r z_{n}^{(J)}(k r)\right] \exp (i m \phi) $$
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 2
-        subroutine lib_mie_vector_spherical_harmonics_components_cmplx_xu(theta, phi, rho, n_range, z_selector, &
+        subroutine lib_mie_vector_spherical_harmonics_components_cmplx_xu(theta, phi, k, r, n_range, z_selector, &
                                                       M_nm, N_nm)
             implicit none
 
             ! dummy
             double precision, intent(in) :: theta
             double precision, intent(in) :: phi
-            complex(kind=8), intent(in) :: rho
+            complex(kind=8), intent(in) :: k
+            double precision, intent(in) :: r
             integer(kind=4), dimension(2) :: n_range
             integer(kind=1) :: z_selector
 
@@ -376,6 +384,8 @@ module lib_mie_vector_spherical_harmonics
             integer :: n
             integer :: m
             integer :: i
+
+            complex(kind=8) :: rho
 
             integer(kind=4) :: number_of_members_n
 
@@ -422,6 +432,8 @@ module lib_mie_vector_spherical_harmonics
 
 
             ! --- pre-calculation ---
+            rho = k * r
+
             cos_theta = cos(theta)
 
             do i=-n_range(2), n_range(2)
@@ -528,7 +540,7 @@ module lib_mie_vector_spherical_harmonics
                     buffer_cmplx = cmplx(buffer_real, 0, kind=8) / rho * exp_i_m_phi(m) * z_n_cmplx(i)
                     N_nm(n)%coordinate(m)%rho = buffer_cmplx
 
-                    buffer_cmplx = r_d_cmplx(i) * exp_i_m_phi(m) / rho     ! todo: check missing? k at eq. 2
+                    buffer_cmplx = r_d_cmplx(i) * exp_i_m_phi(m) / (k * rho)
 
                     N_nm(n)%coordinate(m)%theta = tau_nm%item(n)%item(m) * buffer_cmplx
 
@@ -1178,6 +1190,56 @@ module lib_mie_vector_spherical_harmonics
 
         end subroutine lib_mie_vector_spherical_harmonics_components_cmplx
 
+        ! Calculation of the tranlation transformation coefficients
+        ! from the l-th coordinate system to the j-th coordinate system
+        !
+        ! Argument
+        ! ----
+        !   x: double precision
+        !       normalized distance: x = k * d_lj
+        !       k: wave number
+        !       d_lj: distance from origin l to origin j
+        !   theta: double precision
+        !       polar coordinate [rad]
+        !   phi: double precision
+        !       azimuthal coordinate [rad]
+        !   n_range: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       CONDITION:
+        !           - first element .le. second element
+        !           - 0 <= n
+        !
+        !   z_selector: integer
+        !       1: spherical Bessel function first kind   j_n
+        !       2: spherical Bessel function second kind  y_n
+        !       3: spherical Hankel function first kind   h^(1)_n
+        !       4: spherical Hankel function second kind  h^(2)_n
+        !
+        ! Returns
+        ! ----
+        !   A:
+        !
+        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
+        subroutine lib_mie_vector_spherical_harmonics_tranlation_coefficient_real(x, theta, phi, n_range, z_selector,&
+                                                                                  A_mnkl, B_mnkl)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: x
+            double precision, intent(in) :: theta
+            double precision, intent(in) :: phi
+            integer(kind=4), dimension(2) :: n_range
+            integer(kind=1) :: z_selector
+
+            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable, intent(inout) :: A_mnkl
+            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable, intent(inout) :: B_mnkl
+
+            ! auxiliary
+
+            print*, "test"
+
+        end subroutine lib_mie_vector_spherical_harmonics_tranlation_coefficient_real
+
 
         function lib_mie_vector_spherical_harmonics_test_functions() result (rv)
             implicit none
@@ -1267,7 +1329,8 @@ module lib_mie_vector_spherical_harmonics
 
                 double precision :: theta
                 double precision :: phi
-                double precision :: rho
+                double precision :: k
+                double precision :: r
                 integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: n
                 integer(kind=1) :: z_selector
 
@@ -1282,7 +1345,12 @@ module lib_mie_vector_spherical_harmonics
 
                 theta = 0.2
                 phi = 0
-                rho = 10
+                ! n = 1
+                ! lam = 10**-6 m
+                ! k = n * 2 Pi / lam
+                k = 2.0_8 * PI * 10.0_8**(6.0_8)
+                ! r = 50 * 10**-6 m
+                r = 50.0_8 * 10.0_8**(-6.0_8)
 
                 z_selector = 3
 
@@ -1346,7 +1414,7 @@ module lib_mie_vector_spherical_harmonics
                 end if
 
                 ! calculate M_mn, N_mn
-                call lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, rho, n, z_selector, &
+                call lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, r, k, n, z_selector, &
                                                                            M_mn, N_mn)
 
                 ! evaluate
@@ -1403,7 +1471,8 @@ module lib_mie_vector_spherical_harmonics
 
                 double precision :: theta
                 double precision :: phi
-                complex(kind=8) :: rho
+                complex(kind=8) :: k
+                double precision :: r
                 integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: n
                 integer(kind=1) :: z_selector
 
@@ -1418,7 +1487,8 @@ module lib_mie_vector_spherical_harmonics
 
                 theta = 0.2
                 phi = 0
-                rho = cmplx(10, 5, kind=8)
+                k = cmplx(1.0, 0.4, kind=8) * 2.0 * PI / 10.0_8**(-6.0_8)
+                r = 50.0_8 * 10.0_8**(-6.0_8)
 
                 z_selector = 3
 
@@ -1482,7 +1552,7 @@ module lib_mie_vector_spherical_harmonics
                 end if
 
                 ! calculate M_mn, N_mn
-                call lib_mie_vector_spherical_harmonics_components_cmplx_xu(theta, phi, rho, n, z_selector, &
+                call lib_mie_vector_spherical_harmonics_components_cmplx_xu(theta, phi, k, r, n, z_selector, &
                                                                            M_mn, N_mn)
 
                 ! evaluate
