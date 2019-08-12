@@ -280,7 +280,7 @@ module lib_mie_vector_spherical_harmonics
                             buffer_cmplx = cmplx(buffer_real, 0, kind=8) * exp_i_m_phi(m)
                             N_nm(n)%coordinate(m)%rho = buffer_cmplx
 
-                            buffer_cmplx = cmplx(r_d_real(i) / (k * rho), 0, kind=8) * exp_i_m_phi(m)
+                            buffer_cmplx = cmplx(r_d_real(i) / rho, 0, kind=8) * exp_i_m_phi(m)
 
                             N_nm(n)%coordinate(m)%theta = tau_nm%item(n)%item(m) * buffer_cmplx
 
@@ -307,7 +307,7 @@ module lib_mie_vector_spherical_harmonics
                             buffer_cmplx = cmplx(buffer_real, 0, kind=8) * exp_i_m_phi(m) * z_n_cmplx(i)
                             N_nm(n)%coordinate(m)%rho = buffer_cmplx
 
-                            buffer_cmplx = r_d_cmplx(i) * exp_i_m_phi(m) / (k * rho)
+                            buffer_cmplx = r_d_cmplx(i) * exp_i_m_phi(m) / rho
 
                             N_nm(n)%coordinate(m)%theta = tau_nm%item(n)%item(m) * buffer_cmplx
 
@@ -540,7 +540,7 @@ module lib_mie_vector_spherical_harmonics
                     buffer_cmplx = cmplx(buffer_real, 0, kind=8) / rho * exp_i_m_phi(m) * z_n_cmplx(i)
                     N_nm(n)%coordinate(m)%rho = buffer_cmplx
 
-                    buffer_cmplx = r_d_cmplx(i) * exp_i_m_phi(m) / (k * rho)
+                    buffer_cmplx = r_d_cmplx(i) * exp_i_m_phi(m) / rho
 
                     N_nm(n)%coordinate(m)%theta = tau_nm%item(n)%item(m) * buffer_cmplx
 
@@ -1343,14 +1343,14 @@ module lib_mie_vector_spherical_harmonics
                 double precision, dimension(:,:), allocatable :: csv_data
                 integer :: csv_columns
 
-                theta = 0.2
-                phi = 0
+                theta = 0.2_8
+                phi = 0_8
                 ! n = 1
                 ! lam = 10**-6 m
                 ! k = n * 2 Pi / lam
-                k = 2.0_8 * PI * 10.0_8**(6.0_8)
+                k = 2.0_8 * PI !* 10.0_8**(6.0_8)
                 ! r = 50 * 10**-6 m
-                r = 50.0_8 * 10.0_8**(-6.0_8)
+                r = 50.0_8 !* 10.0_8**(-6.0_8)
 
                 z_selector = 3
 
@@ -1487,12 +1487,14 @@ module lib_mie_vector_spherical_harmonics
 
                 theta = 0.2
                 phi = 0
-                k = cmplx(1.0, 0.4, kind=8) * 2.0 * PI / 10.0_8**(-6.0_8)
-                r = 50.0_8 * 10.0_8**(-6.0_8)
+                ! Ag (Silver), lambda = 1 mu
+                ! https://refractiveindex.info/?shelf=main&book=Ag&page=Johnson
+                k = cmplx(0.04, 7.1155, kind=8) * 2.0 * PI / 10.0_8**(-6.0_8)
+                r = 2.0_8 * 10.0_8**(-6.0_8)
 
                 z_selector = 3
 
-                n = (/ 1, 4 /)
+                n = (/ 1, 5 /)
 
                 rv = .false.
 
