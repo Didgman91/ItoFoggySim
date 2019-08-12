@@ -775,9 +775,10 @@ module lib_math_legendre
                 end do
             end if
 
-
+            ! HINT: the calculation of the polynomial includes the condon shortley phase
             if (present(condon_shortley_phase)) then
                 if (.not. condon_shortley_phase) then
+                    ! remove phase
                     do n=0, n_max
                         do m=-n, n
                             if (IAND(abs(m), 1) .eq. 1) then
@@ -789,6 +790,16 @@ module lib_math_legendre
 !                    pm = (-1.0_8)**m * pm
 !                    pd = (-1.0_8)**m * pd
                 end if
+            else
+                ! std: remove phase
+                do n=0, n_max
+                    do m=-n, n
+                        if (IAND(abs(m), 1) .eq. 1) then
+                            pi_nm%item(n)%item(m) = -pi_nm%item(n)%item(m)
+                            tau_nm%item(n)%item(m) = -tau_nm%item(n)%item(m)
+                        end if
+                    end do
+                end do
             end if
 
         end subroutine
@@ -893,6 +904,14 @@ module lib_math_legendre
             if (.not. test_lib_math_legendre_polynomial()) then
                 rv = rv + 1
             end if
+
+            print *, "-------------lib_math_legendre_test_functions-------------"
+            if (rv == 0) then
+                print *, "lib_math_legendre_test_functions tests: OK"
+            else
+                print *, rv,"lib_math_legendre_test_functions test(s) FAILED"
+            end if
+            print *, "----------------------------------------------------------"
 
 
             contains
@@ -1901,7 +1920,7 @@ module lib_math_legendre
 
                 theta = 2.0_8
 
-                call lib_math_associated_legendre_polynomial_theta_wa(theta, n_max, pi_nm, tau_nm)
+                call lib_math_associated_legendre_polynomial_theta_wa(theta, n_max, pi_nm, tau_nm, .true.)
 
 
                 rv = .true.
