@@ -9,8 +9,12 @@ module lib_math_type_operator
     public :: operator (-)
     public :: operator (*)
     public :: operator (/)
+    public :: assignment (=)
     public :: spherical_abs
     public :: init_list
+
+    public :: lib_math_spherical_components_to_cartesian_components_cmplx
+    public :: lib_math_cartesian_components_to_spherical_components_cmplx
 
     public :: lib_math_type_operator_test_functions
 
@@ -59,6 +63,11 @@ module lib_math_type_operator
         module procedure lib_math_list_spherical_operator_c_array_divide_by_c_array
         module procedure lib_math_list_spherical_operator_array_divide_by_real
         module procedure lib_math_list_spherical_operator_array_divide_by_cmplx
+    end interface
+
+    interface assignment (=)
+        module procedure lib_math_spherical_point_to_cartesian_point
+        module procedure lib_math_cartesian_point_to_spherical_point
     end interface
 
     interface spherical_abs
@@ -753,6 +762,128 @@ module lib_math_type_operator
             end do
 
         end subroutine lib_math_list_spherical_coordinate_cmplx_type_init
+
+        ! reference: http://mathworld.wolfram.com/SphericalCoordinates.html
+        ! ISO 31-11
+        subroutine lib_math_spherical_point_to_cartesian_point(lhs, rhs)
+            implicit none
+            ! dummy
+            type(spherical_coordinate_real_type), intent(in) :: rhs
+
+            type(cartesian_coordinate_real_type), intent(inout) :: lhs
+
+            ! auxiliary
+            real(kind=lib_math_type_kind) :: cos_theta
+            real(kind=lib_math_type_kind) :: sin_theta
+            real(kind=lib_math_type_kind) :: cos_phi
+            real(kind=lib_math_type_kind) :: sin_phi
+
+            real(kind=lib_math_type_kind) :: r_sin_theta
+
+            cos_theta = cos(rhs%theta)
+            sin_theta = sin(rhs%theta)
+            cos_phi = cos(rhs%phi)
+            sin_phi = sin(rhs%phi)
+
+            r_sin_theta = rhs%rho * sin_theta
+
+            lhs%x = r_sin_theta * cos_phi
+            lhs%y = r_sin_theta * sin_phi
+            lhs%z = rhs%rho * cos_theta
+
+        end subroutine lib_math_spherical_point_to_cartesian_point
+
+        ! reference: http://mathworld.wolfram.com/SphericalCoordinates.html
+        ! ISO 31-11
+        subroutine lib_math_cartesian_point_to_spherical_point(lhs, rhs)
+            implicit none
+            ! dummy
+            type(cartesian_coordinate_real_type), intent(in) :: rhs
+
+            type(spherical_coordinate_real_type), intent(inout) :: lhs
+
+            ! auxiliary
+            real(kind=lib_math_type_kind) :: r
+
+            r = sqrt(rhs%x * rhs%x + rhs%y * rhs%y + rhs%z * rhs%z)
+
+            lhs%rho = r
+            lhs%theta = acos(rhs%z / r)
+            lhs%phi = atan(rhs%y, rhs%x)
+
+        end subroutine lib_math_cartesian_point_to_spherical_point
+
+        ! LaTeX:  $$ \left[v_{r}(\theta, \varphi) v_{\theta}(\theta, \varphi) v_{\varphi}(\theta, \varphi)\right]=\left[v_{x}(\theta, \varphi) v_{y}(\theta, \varphi) v_{z}(\theta, \varphi)\right) ] \mathbb{T}(\theta, \varphi) $$
+        !         $$ \mathbb{T}(\theta, \varphi)=\left[\begin{array}{ccc}{\sin \theta \cos \varphi} & {\sin \theta \sin \varphi} & {\cos \theta} \\ {\cos \theta \cos \varphi} & {\cos \theta \sin \varphi} & {-\sin \theta} \\ {-\sin \varphi} & {\cos \varphi} & {0}\end{array}\right] $$
+        !
+        ! Reference: Accurate calculation of spherical and vector spherical harmonic
+        !            expansions via spectral element grids, Wang^2, Xie, eq. 3.23
+        function lib_math_spherical_components_to_cartesian_components_cmplx(rhs, theta, phi) result (lhs)
+            implicit none
+            ! dummy
+            type(spherical_coordinate_cmplx_type), intent(in) :: rhs
+            real(kind=lib_math_type_kind), intent(in) :: theta
+            real(kind=lib_math_type_kind), intent(in) :: phi
+
+            type(cartesian_coordinate_cmplx_type) :: lhs
+
+            ! auxiliary
+            real(kind=lib_math_type_kind) :: cos_theta
+            real(kind=lib_math_type_kind) :: sin_theta
+            real(kind=lib_math_type_kind) :: cos_phi
+            real(kind=lib_math_type_kind) :: sin_phi
+
+            cos_theta = cos(theta)
+            sin_theta = sin(theta)
+            cos_phi = cos(phi)
+            sin_phi = sin(phi)
+
+            lhs%x = rhs%rho * (sin_theta * cos_phi) &
+                    + rhs%theta * (sin_theta * sin_phi) &
+                    + rhs%phi * cos_theta
+            lhs%y = rhs%rho * (cos_theta * cos_phi) &
+                      + rhs%theta * (cos_theta * sin_phi) &
+                      - rhs%phi * sin_theta
+            lhs%z = - rhs%rho * sin_phi &
+                    + rhs%theta * cos_phi
+
+        end function lib_math_spherical_components_to_cartesian_components_cmplx
+
+        ! LaTeX:  $$ \left[v_{r}(\theta, \varphi) v_{\theta}(\theta, \varphi) v_{\varphi}(\theta, \varphi)\right]=\left[v_{x}(\theta, \varphi) v_{y}(\theta, \varphi) v_{z}(\theta, \varphi)\right) ] \mathbb{T}(\theta, \varphi) $$
+        !         $$ \mathbb{T}(\theta, \varphi)=\left[\begin{array}{ccc}{\sin \theta \cos \varphi} & {\sin \theta \sin \varphi} & {\cos \theta} \\ {\cos \theta \cos \varphi} & {\cos \theta \sin \varphi} & {-\sin \theta} \\ {-\sin \varphi} & {\cos \varphi} & {0}\end{array}\right] $$
+        !
+        ! Reference: Accurate calculation of spherical and vector spherical harmonic
+        !            expansions via spectral element grids, Wang^2, Xie, eq. 3.23
+        function lib_math_cartesian_components_to_spherical_components_cmplx(rhs, theta, phi) result (lhs)
+            implicit none
+            ! dummy
+            type(cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            real(kind=lib_math_type_kind), intent(in) :: theta
+            real(kind=lib_math_type_kind), intent(in) :: phi
+
+            type(spherical_coordinate_cmplx_type) :: lhs
+
+            ! auxiliary
+            complex(kind=lib_math_type_kind) :: cos_theta
+            complex(kind=lib_math_type_kind) :: sin_theta
+            complex(kind=lib_math_type_kind) :: cos_phi
+            complex(kind=lib_math_type_kind) :: sin_phi
+
+            cos_theta = cos(theta)
+            sin_theta = sin(theta)
+            cos_phi = cos(phi)
+            sin_phi = sin(phi)
+
+            lhs%rho = rhs%x * (sin_theta * cos_phi) &
+                    + rhs%y * (cos_theta * cos_phi) &
+                    - rhs%z * sin_phi
+            lhs%theta = rhs%x * (sin_theta * sin_phi) &
+                      + rhs%y * (cos_theta * sin_phi) &
+                      + rhs%z * cos_phi
+            lhs%phi = rhs%x * cos_theta &
+                    - rhs%y * sin_theta
+
+        end function lib_math_cartesian_components_to_spherical_components_cmplx
 
         function lib_math_type_operator_test_functions() result (rv)
             implicit none
