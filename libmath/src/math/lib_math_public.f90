@@ -7,4 +7,9 @@ module lib_math_public
     implicit none
 
     double precision, parameter :: PI=4.D0*atan(1.D0)   ! maximum precision, platform independet
+
+    double precision, parameter :: unit_m = 1.0_8
+    double precision, parameter :: unit_mm = 10.0_8**(-3)
+    double precision, parameter :: unit_mu = 10.0_8**(-6)
+    double precision, parameter :: unit_nm = 10.0_8**(-9)
 end module lib_math_public

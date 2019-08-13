@@ -76,9 +76,11 @@ module file_io
 !                write(u, '(F2.15,A,ES2.15)') c1(i), delimiter, c2(i)
                 write(u, *) c1(i), delimiter, c2(i)
             else if (present(c2) .and. present(c3) .and. .not. present(c4)) then
-                write(u, '(ES2.15,A,ES2.15,A,ES2.15)') c1(i), delimiter, c2(i), delimiter, c3(i)
+!                write(u, '(ES2.15,A,ES2.15,A,ES2.15)') c1(i), delimiter, c2(i), delimiter, c3(i)
+                write(u, *) c1(i), delimiter, c2(i), delimiter, c3(i)
             else if (present(c2) .and. present(c3) .and. present(c4)) then
-                write(u, '(ES2.15,A,ES2.15,A,ES2.15,A,ES2.15)') c1(i), delimiter, c2(i), delimiter, c3(i), delimiter, c4(i)
+!                write(u, '(ES2.15,A,ES2.15,A,ES2.15,A,ES2.15)') c1(i), delimiter, c2(i), delimiter, c3(i), delimiter, c4(i)
+                write(u, *) c1(i), delimiter, c2(i), delimiter, c3(i), delimiter, c4(i)
             else
                 write(u, '(ES2.15)') c1(i)
             end if
@@ -122,16 +124,17 @@ module file_io
 
         do i=1, size(c1)
             if (present(c2) .and. .not. present(c3)) then
-                write(u, '(ES2.15,A,ES2.15,A,ES2.15,A,ES2.15)') &
-                                real(c1(i)), delimiter, aimag(c1(i)), delimiter, &
-                                real(c2(i)), delimiter, aimag(c2(i))
+!                write(u, '(ES2.15,A,ES2.15,A,ES2.15,A,ES2.15)') &
+                write(u, *) real(c1(i)), delimiter, aimag(c1(i)), delimiter, &
+                            real(c2(i)), delimiter, aimag(c2(i))
             else if (present(c2) .and. present(c3)) then
-                write(u, '(ES2.15,A,ES2.15,A,ES2.15,A,ES2.15,A,ES2.15,A,ES2.15)') &
-                                real(c1(i)), delimiter, aimag(c1(i)), delimiter, &
-                                real(c2(i)), delimiter, aimag(c2(i)), delimiter, &
-                                real(c3(i)), delimiter, aimag(c3(i))
+!                write(u, '(ES2.15,A,ES2.15,A,ES2.15,A,ES2.15,A,ES2.15,A,ES2.15)') &
+                write(u, *) real(c1(i)), delimiter, aimag(c1(i)), delimiter, &
+                            real(c2(i)), delimiter, aimag(c2(i)), delimiter, &
+                            real(c3(i)), delimiter, aimag(c3(i))
             else
-                write(u, '(ES2.15,A,ES2.15)') real(c1(i)), delimiter, aimag(c2(i))
+!                write(u, '(ES2.15,A,ES2.15)') real(c1(i)), delimiter, aimag(c2(i))
+                write(u, *) real(c1(i)), delimiter, aimag(c2(i))
             end if
         end do
 
@@ -168,26 +171,24 @@ module file_io
 
         dummy_str = trim(header(1))
         do i=2, size(header)
-            dummy_str = trim(dummy_str) // delimiter // trim(header(i))
+            dummy_str = trim(dummy_str) // delimiter // trim(header(i)) // "(real)" // delimiter // trim(header(i)) // "(cmplx)"
         end do
         write(u, *) trim(dummy_str)
 
         do i=1, size(c1)
             if (.not. present(c3) .and. .not. present(c4)) then
-                write(u, '(ES2.15,A,ES2.15,A,ES2.15)') &
-                                c1(i), delimiter, &
-                                real(c2(i)), delimiter, aimag(c2(i))
+                write(u, *) c1(i), delimiter, real(c2(i)), delimiter, aimag(c2(i))
             else if (present(c3) .and. .not. present(c4)) then
-                write(u, '(ES2.15,A,ES2.15,A,ES2.15,A,ES2.15,A,ES2.15)') &
-                                c1(i), delimiter, &
-                                real(c2(i)), delimiter, aimag(c2(i)), delimiter, &
-                                real(c3(i)), delimiter, aimag(c3(i))
+!                write(u, '(ES2.15,A,ES2.15,A,ES2.15,A,ES2.15,A,ES2.15)') &
+                write(u, *) c1(i), delimiter, &
+                            real(c2(i)), delimiter, aimag(c2(i)), delimiter, &
+                            real(c3(i)), delimiter, aimag(c3(i))
             else if (present(c3) .and. present(c4)) then
-                write(u, '(ES2.15,A,ES2.15,A,ES2.15,A,ES2.15,A,ES2.15,A,ES2.15,A,ES2.15)') &
-                                c1(i), delimiter, &
-                                real(c2(i)), delimiter, aimag(c2(i)), delimiter, &
-                                real(c3(i)), delimiter, aimag(c3(i)), delimiter, &
-                                real(c4(i)), delimiter, aimag(c4(i))
+!                write(u, '(ES2.15,A,ES2.15,A,ES2.15,A,ES2.15,A,ES2.15,A,ES2.15,A,ES2.15)') &
+                write(u, *) c1(i), delimiter, &
+                            real(c2(i)), delimiter, aimag(c2(i)), delimiter, &
+                            real(c3(i)), delimiter, aimag(c3(i)), delimiter, &
+                            real(c4(i)), delimiter, aimag(c4(i))
             end if
         end do
 

@@ -13,8 +13,8 @@ module lib_math_type_operator
     public :: spherical_abs
     public :: init_list
 
-    public :: make_spherical
     public :: make_cartesian
+    public :: make_spherical
 
     public :: lib_math_type_operator_test_functions
 

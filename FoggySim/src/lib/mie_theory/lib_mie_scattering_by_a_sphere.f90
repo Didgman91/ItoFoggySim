@@ -153,42 +153,44 @@ module lib_mie_scattering_by_a_sphere
         !       polar angle [radian]
         !   phi: double precision
         !       azimuthal angle [radian]
-        !   rho: double precision
-        !       dimensionless varibale rho = k*a
-        !       k: wavenumber
-        !       a: distance
-        !   rho_particle: double precision
-        !       dimensionless varibale rho = k*r
-        !       k: wavenumber
-        !       r: radius of the sphere
+        !   r: double precision
+        !       distance
         !   e_field_0: double precision
         !       amplitude of the incident wave
-        !   n_particle: double precision
-        !       refractive index of the sphere
+        !   lambda: double precision
+        !       wave length
         !   n_medium: double precision
         !       refractive index of the medium
+        !   r_particle: double precision
+        !       radius of the sphere
+        !   n_particle: double precision
+        !       refractive index of the sphere
         !   n_range: integer, dimension(2)
         !       first and last index (degree) of the sum to calculate the electical field
         !       e.g. n = (/ 1, 80 /) <-- size parameter
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu
         !
-        function get_e_field_scattered_xu(theta, phi, rho, e_field_0, rho_particle, n_particle, n_medium, n_range) &
+        function get_e_field_scattered_xu(theta, phi, r, e_field_0, lambda, n_medium, r_particle, n_particle, n_range) &
                                          result (e_field_s)
             implicit none
             ! dummy
             double precision, intent(in) :: theta
             double precision, intent(in) :: phi
-            double precision, intent(in) :: rho
-            double precision, intent(in) :: rho_particle
+            double precision, intent(in) :: r
             double precision, intent(in) :: e_field_0
-            double precision, intent(in) :: n_particle
+            double precision, intent(in) :: lambda
             double precision, intent(in) :: n_medium
+            double precision, intent(in) :: r_particle
+            double precision, intent(in) :: n_particle
             integer(kind=4), dimension(2) :: n_range
 
             type(spherical_coordinate_cmplx_type) :: e_field_s
 
             ! auxiliary
+            double precision :: k0 ! wave number = 2 pi / lambda
+            double precision :: rho_particle ! r_particle * k0 * n_particle
+
             double precision :: buffer_real
             complex(kind=8) :: buffer_cmplx
             integer(kind=4) :: i
@@ -210,6 +212,9 @@ module lib_mie_scattering_by_a_sphere
             type(list_list_cmplx) :: e_field_nm
             type(spherical_coordinate_cmplx_type), dimension(n_range(2)-n_range(1)+1) :: e_field_n_s
 
+            k0 = 2.0_8 * PI / lambda
+            rho_particle = r_particle * k0 * n_particle
+
             mu = 1
             mu1 = 1.5
 
@@ -221,8 +226,8 @@ module lib_mie_scattering_by_a_sphere
             z_selector = 3
 
             ! todo:
-!            call lib_mie_vector_spherical_harmonics_components(theta, phi, r, k, n_range, z_selector, &
-!                                                               M_nm, N_nm)
+            call lib_mie_vector_spherical_harmonics_components(theta, phi, r, k0 * n_medium, n_range, z_selector, &
+                                                               M_nm, N_nm)
             ! eq. (5)
             do n=n_range(1), n_range(2)
                 do m=-n, n
@@ -1108,8 +1113,8 @@ module lib_mie_scattering_by_a_sphere
                     logical :: rv
 
                     ! parameter
-                    double precision, parameter :: start_angle = 10
-                    double precision, parameter :: stop_angle = 60
+                    double precision, parameter :: start_angle = -90
+                    double precision, parameter :: stop_angle = 90
                     integer(kind=8), parameter :: number_of_values = 720
 
                     ! auxiliary
@@ -1119,42 +1124,49 @@ module lib_mie_scattering_by_a_sphere
                     character(len=25), dimension(2) :: header
                     double precision :: theta
                     double precision :: phi
-                    double precision :: rho
+                    double precision :: r
                     double precision :: e_field_0
-                    double precision :: rho_particle
+                    double precision :: lambda
+                    double precision :: r_particle
                     double precision :: n_particle
                     double precision :: n_medium
 
-                    integer(kind=4), dimension(2) :: n
+                    double precision :: k0
+
+                    integer(kind=4), dimension(2) :: n_range
 
                     double precision, dimension(number_of_values) :: degree_list
                     type(spherical_coordinate_cmplx_type), dimension(number_of_values) :: e_field_s
+                    type(cartesian_coordinate_cmplx_type), dimension(number_of_values) :: e_field_s_cart
                     real(kind=8), dimension(number_of_values) :: i_field_s
 
                     phi = 0.0
                     theta = Pi/2.0_8
-                    rho = 10
-                    rho_particle = 10
+                    r = 6 * unit_mu
+                    r_particle = 5 * unit_mu
 
                     e_field_0 = 1
+                    lambda = 1 * unit_mu
+
                     n_particle = 1.5
                     n_medium = 1
 
-                    n(1) = 1
-                    n(2) = get_n_c(rho_particle)
+                    k0 = 2 * PI / lambda
+
+                    n_range(1) = 1
+                    n_range(2) = get_n_c(r_particle * k0 * n_particle)
 
                     do i=1, number_of_values
                         degree_list(i) = start_angle + (i-1) * (stop_angle - start_angle) / number_of_values
-!                        theta = degree_list(i) * PI / 180.0_8
-                        rho = degree_list(i)
-                        e_field_s(i) = get_e_field_scattered_xu(theta, phi, rho, e_field_0, rho_particle, n_particle, n_medium, n)
+                        theta = degree_list(i) * PI / 180.0_8
+                        e_field_s(i) = get_e_field_scattered_xu(theta, phi, r, e_field_0, lambda, n_medium, &
+                                                                r_particle, n_particle, n_range)
+                        e_field_s_cart(i) = make_cartesian(e_field_s(i), theta, phi)
 
                         ! calculate the intensities
                         buffer_cmplx = abs(spherical_abs(e_field_s(i)))
                         i_field_s(i) = real(buffer_cmplx * buffer_cmplx)
                     end do
-
-
 
                     ! write to csv
                     header(1) = "degree"
@@ -1164,6 +1176,7 @@ module lib_mie_scattering_by_a_sphere
                     rv = write_csv(u, header, degree_list, i_field_s)
                     close(u)
 
+                    ! --- spherical components ---
                     header(1) = "degree"
                     header(2) = "e_field_s_rho"
                     open(unit=u, file="e_field_s_rho.csv", status='unknown')
@@ -1181,6 +1194,26 @@ module lib_mie_scattering_by_a_sphere
                     open(unit=u, file="e_field_s_phi.csv", status='unknown')
                     rv = write_csv(u, header, degree_list &
                                             , real(e_field_s(:)%phi))
+                    close(u)
+
+                    ! --- cartesian components ---
+                    header(1) = "degree"
+                    header(2) = "e_field_s_x"
+                    open(unit=u, file="e_field_s_x.csv", status='unknown')
+                    rv = write_csv(u, header, degree_list &
+                                            , e_field_s_cart(:)%x)
+                    close(u)
+
+                    header(2) = "e_field_s_y"
+                    open(unit=u, file="e_field_s_y.csv", status='unknown')
+                    rv = write_csv(u, header, degree_list &
+                                            , e_field_s_cart(:)%y)
+                    close(u)
+
+                    header(2) = "e_field_s_z"
+                    open(unit=u, file="e_field_s_z.csv", status='unknown')
+                    rv = write_csv(u, header, degree_list &
+                                            , e_field_s_cart(:)%z)
                     close(u)
 
 
@@ -1193,9 +1226,9 @@ module lib_mie_scattering_by_a_sphere
                     logical :: rv
 
                     ! parameter
-                    double precision, parameter :: start_angle = 10
-                    double precision, parameter :: stop_angle = 60
-                    integer(kind=8), parameter :: number_of_values = 720
+                    double precision, dimension(2), parameter :: x_range = (/ -5, 5 /)
+                    double precision, dimension(2), parameter :: z_range = (/ 0, 5 /)
+                    real(kind=8), parameter :: step_size = 0.5
 
                     ! auxiliary
                     integer(kind=4) :: i
@@ -1212,61 +1245,61 @@ module lib_mie_scattering_by_a_sphere
 
                     integer(kind=4), dimension(2) :: n
 
-                    double precision, dimension(number_of_values) :: degree_list
-                    type(spherical_coordinate_cmplx_type), dimension(number_of_values) :: e_field_s
-                    real(kind=8), dimension(number_of_values) :: i_field_s
-
-                    phi = 0.0
-                    theta = Pi/2.0_8
-                    rho = 10
-                    rho_particle = 10
-
-                    e_field_0 = 1
-                    n_particle = 1.5
-                    n_medium = 1
-
-                    n(1) = 1
-                    n(2) = get_n_c(rho_particle)
-
-                    do i=1, number_of_values
-                        degree_list(i) = start_angle + (i-1) * (stop_angle - start_angle) / number_of_values
-!                        theta = degree_list(i) * PI / 180.0_8
-                        rho = degree_list(i)
-                        e_field_s(i) = get_e_field_scattered_xu(theta, phi, rho, e_field_0, rho_particle, n_particle, n_medium, n)
-
-                        ! calculate the intensities
-                        buffer_cmplx = abs(spherical_abs(e_field_s(i)))
-                        i_field_s(i) = real(buffer_cmplx * buffer_cmplx)
-                    end do
-
-
-
-                    ! write to csv
-                    header(1) = "degree"
-                    header(2) = "i_field_s"
-                    u = 99
-                    open(unit=u, file="i_field_s.csv", status='unknown')
-                    rv = write_csv(u, header, degree_list, i_field_s)
-                    close(u)
-
-                    header(1) = "degree"
-                    header(2) = "e_field_s_rho"
-                    open(unit=u, file="e_field_s_rho.csv", status='unknown')
-                    rv = write_csv(u, header, degree_list &
-                                            , real(e_field_s(:)%rho))
-                    close(u)
-
-                    header(2) = "e_field_s_theta"
-                    open(unit=u, file="e_field_s_theta.csv", status='unknown')
-                    rv = write_csv(u, header, degree_list &
-                                            , real(e_field_s(:)%theta))
-                    close(u)
-
-                    header(2) = "e_field_s_phi"
-                    open(unit=u, file="e_field_s_phi.csv", status='unknown')
-                    rv = write_csv(u, header, degree_list &
-                                            , real(e_field_s(:)%phi))
-                    close(u)
+!                    double precision, dimension(number_of_values) :: degree_list
+!                    type(spherical_coordinate_cmplx_type), dimension(number_of_values) :: e_field_s
+!                    real(kind=8), dimension(number_of_values) :: i_field_s
+!
+!                    phi = 0.0
+!                    theta = Pi/2.0_8
+!                    rho = 10
+!                    rho_particle = 10
+!
+!                    e_field_0 = 1
+!                    n_particle = 1.5
+!                    n_medium = 1
+!
+!                    n(1) = 1
+!                    n(2) = get_n_c(rho_particle)
+!
+!                    do i=1, number_of_values
+!                        degree_list(i) = start_angle + (i-1) * (stop_angle - start_angle) / number_of_values
+!!                        theta = degree_list(i) * PI / 180.0_8
+!                        rho = degree_list(i)
+!                        e_field_s(i) = get_e_field_scattered_xu(theta, phi, rho, e_field_0, rho_particle, n_particle, n_medium, n)
+!
+!                        ! calculate the intensities
+!                        buffer_cmplx = abs(spherical_abs(e_field_s(i)))
+!                        i_field_s(i) = real(buffer_cmplx * buffer_cmplx)
+!                    end do
+!
+!
+!
+!                    ! write to csv
+!                    header(1) = "degree"
+!                    header(2) = "i_field_s"
+!                    u = 99
+!                    open(unit=u, file="i_field_s.csv", status='unknown')
+!                    rv = write_csv(u, header, degree_list, i_field_s)
+!                    close(u)
+!
+!                    header(1) = "degree"
+!                    header(2) = "e_field_s_rho"
+!                    open(unit=u, file="e_field_s_rho.csv", status='unknown')
+!                    rv = write_csv(u, header, degree_list &
+!                                            , real(e_field_s(:)%rho))
+!                    close(u)
+!
+!                    header(2) = "e_field_s_theta"
+!                    open(unit=u, file="e_field_s_theta.csv", status='unknown')
+!                    rv = write_csv(u, header, degree_list &
+!                                            , real(e_field_s(:)%theta))
+!                    close(u)
+!
+!                    header(2) = "e_field_s_phi"
+!                    open(unit=u, file="e_field_s_phi.csv", status='unknown')
+!                    rv = write_csv(u, header, degree_list &
+!                                            , real(e_field_s(:)%phi))
+!                    close(u)
 
 
                 end function
