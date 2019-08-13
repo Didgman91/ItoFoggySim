@@ -1138,6 +1138,12 @@ module lib_math_type_operator
             if (.not. test_lib_math_list_spherical_operator_array_divide_by_cmplx()) then
                 rv = rv + 1
             end if
+            if (.not. test_lib_math_cartesian_point_to_spherical_point()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_spherical_point_to_cartesian_point()) then
+                rv = rv + 1
+            end if
             if (.not. test_lib_math_spherical_components_to_cartesian_components_c_a()) then
                 rv = rv + 1
             end if
@@ -1900,6 +1906,90 @@ module lib_math_type_operator
                     end do
 
                 end function test_lib_math_list_spherical_operator_array_divide_by_cmplx
+
+                function test_lib_math_cartesian_point_to_spherical_point() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer, parameter :: d = 1
+
+                    ! auxiliary
+                    integer :: i
+                    type(cartesian_coordinate_real_type) :: rhs
+                    type(spherical_coordinate_real_type), dimension(d) :: lhs
+                    type(spherical_coordinate_real_type), dimension(d) :: ground_truth_lhs
+
+                    real(kind=lib_math_type_kind) :: buffer
+
+                    rhs%x = 1
+                    rhs%y = 1
+                    rhs%z = 1
+
+                    ground_truth_lhs(1)%rho = sqrt(3.0_8)
+                    ground_truth_lhs(1)%theta = 0.9553166181245092_8
+                    ground_truth_lhs(1)%phi = 0.25 * PI
+
+                    i=1
+
+                    call lib_math_cartesian_point_to_spherical_point(lhs(i), rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_cartesian_point_to_spherical_point:"
+
+                    buffer = abs(lhs(i)%rho - ground_truth_lhs(i)%rho)
+                    rv = evaluate(buffer, i, "rho  ")
+
+                    buffer = abs(lhs(i)%theta - ground_truth_lhs(i)%theta)
+                    rv = evaluate(buffer, i, "theta")
+
+                    buffer = abs(lhs(i)%phi - ground_truth_lhs(i)%phi)
+                    rv = evaluate(buffer, i, "phi  ")
+
+                end function test_lib_math_cartesian_point_to_spherical_point
+
+                function test_lib_math_spherical_point_to_cartesian_point() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer, parameter :: d = 1
+
+                    ! auxiliary
+                    integer :: i
+                    type(spherical_coordinate_real_type) :: rhs
+                    type(cartesian_coordinate_real_type), dimension(d) :: lhs
+                    type(cartesian_coordinate_real_type), dimension(d) :: ground_truth_lhs
+
+                    real(kind=lib_math_type_kind) :: buffer
+
+                    rhs%rho = 1
+                    rhs%theta = 0.25 * PI
+                    rhs%phi = 0.25 * PI
+
+                    ground_truth_lhs(1)%x = 0.5_8
+                    ground_truth_lhs(1)%y = 0.5_8
+                    ground_truth_lhs(1)%z = 1.0_8 / sqrt(2.0_8)
+
+                    i=1
+
+                    call lib_math_spherical_point_to_cartesian_point(lhs(i), rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_spherical_point_to_cartesian_point:"
+
+                    buffer = abs(lhs(i)%x - ground_truth_lhs(i)%x)
+                    rv = evaluate(buffer, i, "x")
+
+                    buffer = abs(lhs(i)%y - ground_truth_lhs(i)%y)
+                    rv = evaluate(buffer, i, "y")
+
+                    buffer = abs(lhs(i)%z - ground_truth_lhs(i)%z)
+                    rv = evaluate(buffer, i, "z")
+
+                end function test_lib_math_spherical_point_to_cartesian_point
 
                 function test_lib_math_spherical_components_to_cartesian_components_c_a() result (rv)
                     implicit none
