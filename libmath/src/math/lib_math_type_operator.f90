@@ -13,8 +13,8 @@ module lib_math_type_operator
     public :: spherical_abs
     public :: init_list
 
-    public :: lib_math_spherical_components_to_cartesian_components_cmplx
-    public :: lib_math_cartesian_components_to_spherical_components_cmplx
+    public :: make_spherical
+    public :: make_cartesian
 
     public :: lib_math_type_operator_test_functions
 
@@ -79,6 +79,18 @@ module lib_math_type_operator
         module procedure lib_math_list_list_real_init
         module procedure lib_math_list_list_cmplx_init
         module procedure lib_math_list_spherical_coordinate_cmplx_type_init
+    end interface
+
+    interface make_cartesian
+        module procedure lib_math_spherical_components_to_cartesian_components_cmplx_a
+        module procedure lib_math_spherical_components_to_cartesian_components_cmplx_c
+        module procedure lib_math_spherical_components_to_cartesian_components_cmplx_s
+    end interface
+
+    interface make_spherical
+        module procedure lib_math_cartesian_components_to_spherical_components_cmplx_a
+        module procedure lib_math_cartesian_components_to_spherical_components_cmplx_c
+        module procedure lib_math_cartesian_components_to_spherical_components_cmplx_s
     end interface
 
     contains
@@ -813,12 +825,28 @@ module lib_math_type_operator
 
         end subroutine lib_math_cartesian_point_to_spherical_point
 
+        ! Converts a complex vector field from a sherical to a cartesian coordinate system
+        !
+        ! Argument
+        ! ----
+        !   rhs: type(spherical_coordinate_cmplx_type)
+        !       complex vector (spherical coordinate system)
+        !   theta: real
+        !       polar coordinate of the complex vector (rhs)
+        !   phi: real
+        !       azimuthal coordinate of the complex vector (rhs)
+        !
+        ! Returns
+        ! ----
+        !   lhs: type(cartesian_coordinate_cmplx_type)
+        !       complex vector (cartesian coordinate system)
+        !
         ! LaTeX:  $$ \left[v_{r}(\theta, \varphi) v_{\theta}(\theta, \varphi) v_{\varphi}(\theta, \varphi)\right]=\left[v_{x}(\theta, \varphi) v_{y}(\theta, \varphi) v_{z}(\theta, \varphi)\right) ] \mathbb{T}(\theta, \varphi) $$
         !         $$ \mathbb{T}(\theta, \varphi)=\left[\begin{array}{ccc}{\sin \theta \cos \varphi} & {\sin \theta \sin \varphi} & {\cos \theta} \\ {\cos \theta \cos \varphi} & {\cos \theta \sin \varphi} & {-\sin \theta} \\ {-\sin \varphi} & {\cos \varphi} & {0}\end{array}\right] $$
         !
         ! Reference: Accurate calculation of spherical and vector spherical harmonic
         !            expansions via spectral element grids, Wang^2, Xie, eq. 3.23
-        function lib_math_spherical_components_to_cartesian_components_cmplx(rhs, theta, phi) result (lhs)
+        function lib_math_spherical_components_to_cartesian_components_cmplx_a(rhs, theta, phi) result (lhs)
             implicit none
             ! dummy
             type(spherical_coordinate_cmplx_type), intent(in) :: rhs
@@ -838,23 +866,119 @@ module lib_math_type_operator
             cos_phi = cos(phi)
             sin_phi = sin(phi)
 
+!            lhs%x = rhs%rho * (sin_theta * cos_phi) &
+!                    + rhs%theta * (sin_theta * sin_phi) &
+!                    + rhs%phi * cos_theta
+!            lhs%y = rhs%rho * (cos_theta * cos_phi) &
+!                      + rhs%theta * (cos_theta * sin_phi) &
+!                      - rhs%phi * sin_theta
+!            lhs%z = - rhs%rho * sin_phi &
+!                    + rhs%theta * cos_phi
+
             lhs%x = rhs%rho * (sin_theta * cos_phi) &
-                    + rhs%theta * (sin_theta * sin_phi) &
-                    + rhs%phi * cos_theta
-            lhs%y = rhs%rho * (cos_theta * cos_phi) &
+                    + rhs%theta * (cos_theta * cos_phi) &
+                    - rhs%phi * sin_phi
+            lhs%y = rhs%rho * (sin_theta * sin_phi) &
                       + rhs%theta * (cos_theta * sin_phi) &
-                      - rhs%phi * sin_theta
-            lhs%z = - rhs%rho * sin_phi &
-                    + rhs%theta * cos_phi
+                      + rhs%phi * cos_phi
+            lhs%z = rhs%rho * cos_theta &
+                    - rhs%theta * sin_theta
 
-        end function lib_math_spherical_components_to_cartesian_components_cmplx
+        end function lib_math_spherical_components_to_cartesian_components_cmplx_a
 
+        ! Converts a complex vector field from a sherical to a cartesian coordinate system
+        !
+        ! Argument
+        ! ----
+        !   rhs: type(spherical_coordinate_cmplx_type)
+        !       complex vector (spherical coordinate system)
+        !   coordinate: type(cartesian_coordinate_real_type)
+        !       cartesian coordinate of the complex vector (rhs)
+        !
+        ! Returns
+        ! ----
+        !   lhs: type(cartesian_coordinate_cmplx_type)
+        !       complex vector (cartesian coordinate system)
+        !
         ! LaTeX:  $$ \left[v_{r}(\theta, \varphi) v_{\theta}(\theta, \varphi) v_{\varphi}(\theta, \varphi)\right]=\left[v_{x}(\theta, \varphi) v_{y}(\theta, \varphi) v_{z}(\theta, \varphi)\right) ] \mathbb{T}(\theta, \varphi) $$
         !         $$ \mathbb{T}(\theta, \varphi)=\left[\begin{array}{ccc}{\sin \theta \cos \varphi} & {\sin \theta \sin \varphi} & {\cos \theta} \\ {\cos \theta \cos \varphi} & {\cos \theta \sin \varphi} & {-\sin \theta} \\ {-\sin \varphi} & {\cos \varphi} & {0}\end{array}\right] $$
         !
         ! Reference: Accurate calculation of spherical and vector spherical harmonic
         !            expansions via spectral element grids, Wang^2, Xie, eq. 3.23
-        function lib_math_cartesian_components_to_spherical_components_cmplx(rhs, theta, phi) result (lhs)
+        function lib_math_spherical_components_to_cartesian_components_cmplx_c(rhs, coordinate) &
+                                                                                      result (lhs)
+            implicit none
+            ! dummy
+            type(spherical_coordinate_cmplx_type), intent(in) :: rhs
+            type(cartesian_coordinate_real_type), intent(in) :: coordinate
+
+            type(cartesian_coordinate_cmplx_type) :: lhs
+
+            ! auxiliary
+            type(spherical_coordinate_real_type) :: coordinate_spherical
+
+            coordinate_spherical = coordinate
+
+            lhs = lib_math_spherical_components_to_cartesian_components_cmplx_a(rhs, &
+                                                                                coordinate_spherical%theta, &
+                                                                                coordinate_spherical%phi)
+        end function lib_math_spherical_components_to_cartesian_components_cmplx_c
+
+        ! Converts a complex vector field from a sherical to a cartesian coordinate system
+        !
+        ! Argument
+        ! ----
+        !   rhs: type(spherical_coordinate_cmplx_type)
+        !       complex vector (spherical coordinate system)
+        !   coordinate: type(spherical_coordinate_real_type)
+        !       spherical coordinate of the complex vector (rhs)
+        !
+        ! Returns
+        ! ----
+        !   lhs: type(cartesian_coordinate_cmplx_type)
+        !       complex vector (cartesian coordinate system)
+        !
+        ! LaTeX:  $$ \left[v_{r}(\theta, \varphi) v_{\theta}(\theta, \varphi) v_{\varphi}(\theta, \varphi)\right]=\left[v_{x}(\theta, \varphi) v_{y}(\theta, \varphi) v_{z}(\theta, \varphi)\right) ] \mathbb{T}(\theta, \varphi) $$
+        !         $$ \mathbb{T}(\theta, \varphi)=\left[\begin{array}{ccc}{\sin \theta \cos \varphi} & {\sin \theta \sin \varphi} & {\cos \theta} \\ {\cos \theta \cos \varphi} & {\cos \theta \sin \varphi} & {-\sin \theta} \\ {-\sin \varphi} & {\cos \varphi} & {0}\end{array}\right] $$
+        !
+        ! Reference: Accurate calculation of spherical and vector spherical harmonic
+        !            expansions via spectral element grids, Wang^2, Xie, eq. 3.23
+        function lib_math_spherical_components_to_cartesian_components_cmplx_s(rhs, coordinate) &
+                                                                                      result (lhs)
+            implicit none
+            ! dummy
+            type(spherical_coordinate_cmplx_type), intent(in) :: rhs
+            type(spherical_coordinate_real_type), intent(in) :: coordinate
+
+            type(cartesian_coordinate_cmplx_type) :: lhs
+
+            lhs = lib_math_spherical_components_to_cartesian_components_cmplx_a(rhs, &
+                                                                                    coordinate%theta, &
+                                                                                    coordinate%phi)
+        end function lib_math_spherical_components_to_cartesian_components_cmplx_s
+
+        ! Converts a complex vector field from a cartesian to a spherical coordinate system
+        !
+        ! Argument
+        ! ----
+        !   rhs: type(cartesian_coordinate_cmplx_type)
+        !       complex vector (cartesian coordinate system)
+        !   theta: real
+        !       polar coordinate of the complex vector (rhs)
+        !   phi: real
+        !       azimuthal coordinate of the complex vector (rhs)
+        !
+        ! Returns
+        ! ----
+        !   lhs: type(spherical_coordinate_cmplx_type)
+        !       complex vector (spherical coordinate system)
+        !
+        ! LaTeX:  $$ \left[v_{r}(\theta, \varphi) v_{\theta}(\theta, \varphi) v_{\varphi}(\theta, \varphi)\right]=\left[v_{x}(\theta, \varphi) v_{y}(\theta, \varphi) v_{z}(\theta, \varphi)\right) ] \mathbb{T}(\theta, \varphi) $$
+        !         $$ \mathbb{T}(\theta, \varphi)=\left[\begin{array}{ccc}{\sin \theta \cos \varphi} & {\sin \theta \sin \varphi} & {\cos \theta} \\ {\cos \theta \cos \varphi} & {\cos \theta \sin \varphi} & {-\sin \theta} \\ {-\sin \varphi} & {\cos \varphi} & {0}\end{array}\right] $$
+        !
+        ! Reference: Accurate calculation of spherical and vector spherical harmonic
+        !            expansions via spectral element grids, Wang^2, Xie, eq. 3.23
+        function lib_math_cartesian_components_to_spherical_components_cmplx_a(rhs, theta, phi) result (lhs)
             implicit none
             ! dummy
             type(cartesian_coordinate_cmplx_type), intent(in) :: rhs
@@ -874,21 +998,104 @@ module lib_math_type_operator
             cos_phi = cos(phi)
             sin_phi = sin(phi)
 
-            lhs%rho = rhs%x * (sin_theta * cos_phi) &
-                    + rhs%y * (cos_theta * cos_phi) &
-                    - rhs%z * sin_phi
-            lhs%theta = rhs%x * (sin_theta * sin_phi) &
-                      + rhs%y * (cos_theta * sin_phi) &
-                      + rhs%z * cos_phi
-            lhs%phi = rhs%x * cos_theta &
-                    - rhs%y * sin_theta
+!            lhs%rho = rhs%x * (sin_theta * cos_phi) &
+!                    + rhs%y * (cos_theta * cos_phi) &
+!                    - rhs%z * sin_phi
+!            lhs%theta = rhs%x * (sin_theta * sin_phi) &
+!                      + rhs%y * (cos_theta * sin_phi) &
+!                      + rhs%z * cos_phi
+!            lhs%phi = rhs%x * cos_theta &
+!                    - rhs%y * sin_theta
 
-        end function lib_math_cartesian_components_to_spherical_components_cmplx
+            lhs%rho = rhs%x * (sin_theta *cos_phi) &
+                    + rhs%y * (sin_theta * sin_phi) &
+                    + rhs%z * cos_theta
+            lhs%theta = rhs%x * (cos_theta * cos_phi) &
+                      + rhs%y * (cos_theta * sin_phi) &
+                      - rhs%z * sin_theta
+            lhs%phi = - rhs%x * sin_phi &
+                      + rhs%y * cos_phi
+
+        end function lib_math_cartesian_components_to_spherical_components_cmplx_a
+
+        ! Converts a complex vector field from a cartesian to a spherical coordinate system
+        !
+        ! Argument
+        ! ----
+        !   rhs: type(cartesian_coordinate_cmplx_type)
+        !       complex vector (cartesian coordinate system)
+        !   coordinate: type(cartesian_coordinate_real_type)
+        !       coordinate of the complex vector (rhs)
+        !
+        ! Returns
+        ! ----
+        !   lhs: type(spherical_coordinate_cmplx_type)
+        !       complex vector (spherical coordinate system)
+        !
+        ! LaTeX:  $$ \left[v_{r}(\theta, \varphi) v_{\theta}(\theta, \varphi) v_{\varphi}(\theta, \varphi)\right]=\left[v_{x}(\theta, \varphi) v_{y}(\theta, \varphi) v_{z}(\theta, \varphi)\right) ] \mathbb{T}(\theta, \varphi) $$
+        !         $$ \mathbb{T}(\theta, \varphi)=\left[\begin{array}{ccc}{\sin \theta \cos \varphi} & {\sin \theta \sin \varphi} & {\cos \theta} \\ {\cos \theta \cos \varphi} & {\cos \theta \sin \varphi} & {-\sin \theta} \\ {-\sin \varphi} & {\cos \varphi} & {0}\end{array}\right] $$
+        !
+        ! Reference: Accurate calculation of spherical and vector spherical harmonic
+        !            expansions via spectral element grids, Wang^2, Xie, eq. 3.23
+        function lib_math_cartesian_components_to_spherical_components_cmplx_c(rhs, coordinate) &
+                                                                                      result (lhs)
+            implicit none
+            ! dummy
+            type(cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type(cartesian_coordinate_real_type), intent(in) :: coordinate
+
+            type(spherical_coordinate_cmplx_type) :: lhs
+
+            ! auxiliary
+            type(spherical_coordinate_real_type) :: coordinate_spherical
+
+            coordinate_spherical = coordinate
+
+            lhs = lib_math_cartesian_components_to_spherical_components_cmplx_a(rhs, &
+                                                                                coordinate_spherical%theta, &
+                                                                                coordinate_spherical%phi)
+        end function lib_math_cartesian_components_to_spherical_components_cmplx_c
+
+        ! Converts a complex vector field from a cartesian to a spherical coordinate system
+        !
+        ! Argument
+        ! ----
+        !   rhs: type(cartesian_coordinate_cmplx_type)
+        !       complex vector (cartesian coordinate system)
+        !   coordinate: type(spherical_coordinate_real_type)
+        !       coordinate of the complex vector (rhs)
+        !
+        ! Returns
+        ! ----
+        !   lhs: type(spherical_coordinate_cmplx_type)
+        !       complex vector (spherical coordinate system)
+        !
+        ! LaTeX:  $$ \left[v_{r}(\theta, \varphi) v_{\theta}(\theta, \varphi) v_{\varphi}(\theta, \varphi)\right]=\left[v_{x}(\theta, \varphi) v_{y}(\theta, \varphi) v_{z}(\theta, \varphi)\right) ] \mathbb{T}(\theta, \varphi) $$
+        !         $$ \mathbb{T}(\theta, \varphi)=\left[\begin{array}{ccc}{\sin \theta \cos \varphi} & {\sin \theta \sin \varphi} & {\cos \theta} \\ {\cos \theta \cos \varphi} & {\cos \theta \sin \varphi} & {-\sin \theta} \\ {-\sin \varphi} & {\cos \varphi} & {0}\end{array}\right] $$
+        !
+        ! Reference: Accurate calculation of spherical and vector spherical harmonic
+        !            expansions via spectral element grids, Wang^2, Xie, eq. 3.23
+        function lib_math_cartesian_components_to_spherical_components_cmplx_s(rhs, coordinate) &
+                                                                                      result (lhs)
+            implicit none
+            ! dummy
+            type(cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type(spherical_coordinate_real_type), intent(in) :: coordinate
+
+            type(spherical_coordinate_cmplx_type) :: lhs
+
+            lhs = lib_math_cartesian_components_to_spherical_components_cmplx_a(rhs, &
+                                                                                coordinate%theta, &
+                                                                                coordinate%phi)
+        end function lib_math_cartesian_components_to_spherical_components_cmplx_s
 
         function lib_math_type_operator_test_functions() result (rv)
             implicit none
             ! dummy
             integer :: rv
+
+            ! parameter
+            double precision, parameter :: PI=4.D0*atan(1.D0)   ! maximum precision, platform independet
 
             rv = 0
 
@@ -929,6 +1136,12 @@ module lib_math_type_operator
                 rv = rv + 1
             end if
             if (.not. test_lib_math_list_spherical_operator_array_divide_by_cmplx()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_spherical_components_to_cartesian_components_c_a()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_cartesian_components_to_spherical_components_c_a()) then
                 rv = rv + 1
             end if
 
@@ -1677,16 +1890,174 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_array_divide_by_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        rv = evaluate(buffer, i, "phi  ")
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        rv = evaluate(buffer, i, "rho  ")
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
                         rv = evaluate(buffer, i, "theta")
                     end do
 
                 end function test_lib_math_list_spherical_operator_array_divide_by_cmplx
+
+                function test_lib_math_spherical_components_to_cartesian_components_c_a() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer, parameter :: d = 5
+
+                    ! auxiliary
+                    integer :: i
+                    type(spherical_coordinate_cmplx_type) :: rhs
+                    real(kind=lib_math_type_kind), dimension(d) :: theta
+                    real(kind=lib_math_type_kind), dimension(d) :: phi
+
+                    type(cartesian_coordinate_cmplx_type), dimension(d) :: lhs
+                    type(cartesian_coordinate_cmplx_type), dimension(d) :: ground_truth_lhs
+
+                    real(kind=lib_math_type_kind) :: buffer
+
+                    rhs%rho = cmplx(1,0)
+                    rhs%theta = cmplx(0,0)
+                    rhs%phi = cmplx(0,0)
+
+                    theta(1) = 0.25 * PI
+                    phi(1) = 0
+
+                    theta(2) = 0.25 * PI
+                    phi(2) = 0.25 * PI
+
+                    theta(3) = 0.25 * PI
+                    phi(3) = 0.75 * PI
+
+                    theta(4) = 0.25 * PI
+                    phi(4) = 1.25 * PI
+
+                    theta(5) = 0.25 * PI
+                    phi(5) = 1.5 * PI
+
+                    ground_truth_lhs(1)%x = 1.0_8 / sqrt(2.0_8)
+                    ground_truth_lhs(1)%y = cmplx(0,0)
+                    ground_truth_lhs(1)%z = 1.0_8 / sqrt(2.0_8)
+
+                    ground_truth_lhs(2)%x = 0.5_8
+                    ground_truth_lhs(2)%y = 0.5_8
+                    ground_truth_lhs(2)%z = 1.0_8 / sqrt(2.0_8)
+
+                    ground_truth_lhs(3)%x = -0.5_8
+                    ground_truth_lhs(3)%y = 0.5_8
+                    ground_truth_lhs(3)%z = 1.0_8 / sqrt(2.0_8)
+
+                    ground_truth_lhs(4)%x = - 0.5_8
+                    ground_truth_lhs(4)%y = - 0.5_8
+                    ground_truth_lhs(4)%z = 1.0_8 / sqrt(2.0_8)
+
+                    ground_truth_lhs(5)%x = cmplx(0,0)
+                    ground_truth_lhs(5)%y = - 1.0_8 / sqrt(2.0_8)
+                    ground_truth_lhs(5)%z = 1.0_8 / sqrt(2.0_8)
+
+                    do i=1, d
+                        lhs(i) = lib_math_spherical_components_to_cartesian_components_cmplx_a(rhs, &
+                                                                                               theta(i), &
+                                                                                               phi(i))
+                    end do
+
+                    rv = .true.
+                    print *, "test_lib_math_spherical_components_to_cartesian_components_c_a:"
+                    do i=1, d
+                        buffer = abs(lhs(i)%x - ground_truth_lhs(i)%x)
+                        rv = evaluate(buffer, i, "x")
+
+                        buffer = abs(lhs(i)%y - ground_truth_lhs(i)%y)
+                        rv = evaluate(buffer, i, "y")
+
+                        buffer = abs(lhs(i)%z - ground_truth_lhs(i)%z)
+                        rv = evaluate(buffer, i, "z")
+                    end do
+
+                end function test_lib_math_spherical_components_to_cartesian_components_c_a
+
+                function test_lib_math_cartesian_components_to_spherical_components_c_a() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer, parameter :: d = 5
+
+                    ! auxiliary
+                    integer :: i
+                    type(cartesian_coordinate_cmplx_type) :: rhs
+                    real(kind=lib_math_type_kind), dimension(d) :: theta
+                    real(kind=lib_math_type_kind), dimension(d) :: phi
+
+                    type(spherical_coordinate_cmplx_type), dimension(d) :: lhs
+                    type(spherical_coordinate_cmplx_type), dimension(d) :: ground_truth_lhs
+
+                    real(kind=lib_math_type_kind) :: buffer
+
+                    rhs%x = cmplx(0,0)
+                    rhs%y = cmplx(0,0)
+                    rhs%z = cmplx(1,0)
+
+                    theta(1) = 0.25 * PI
+                    phi(1) = 0
+
+                    theta(2) = 0.25 * PI
+                    phi(2) = 0.25 * PI
+
+                    theta(3) = 0.25 * PI
+                    phi(3) = 0.75 * PI
+
+                    theta(4) = 0.25 * PI
+                    phi(4) = 1.25 * PI
+
+                    theta(5) = 0.25 * PI
+                    phi(5) = 1.5 * PI
+
+                    ground_truth_lhs(1)%rho = 1.0_8 / sqrt(2.0_8)
+                    ground_truth_lhs(1)%theta = - 1.0_8 / sqrt(2.0_8)
+                    ground_truth_lhs(1)%phi = cmplx(0,0)
+
+                    ground_truth_lhs(2)%rho = 1.0_8 / sqrt(2.0_8)
+                    ground_truth_lhs(2)%theta = - 1.0_8 / sqrt(2.0_8)
+                    ground_truth_lhs(2)%phi = cmplx(0,0)
+
+                    ground_truth_lhs(3)%rho = 1.0_8 / sqrt(2.0_8)
+                    ground_truth_lhs(3)%theta = - 1.0_8 / sqrt(2.0_8)
+                    ground_truth_lhs(3)%phi = cmplx(0,0)
+
+                    ground_truth_lhs(4)%rho = 1.0_8 / sqrt(2.0_8)
+                    ground_truth_lhs(4)%theta = - 1.0_8 / sqrt(2.0_8)
+                    ground_truth_lhs(4)%phi = cmplx(0,0)
+
+                    ground_truth_lhs(5)%rho = 1.0_8 / sqrt(2.0_8)
+                    ground_truth_lhs(5)%theta = - 1.0_8 / sqrt(2.0_8)
+                    ground_truth_lhs(5)%phi = cmplx(0,0)
+
+                    do i=1, d
+                        lhs(i) = lib_math_cartesian_components_to_spherical_components_cmplx_a(rhs, &
+                                                                                               theta(i), &
+                                                                                               phi(i))
+                    end do
+
+                    rv = .true.
+                    print *, "test_lib_math_cartesian_components_to_spherical_components_c_a:"
+                    do i=1, d
+                        buffer = abs(lhs(i)%rho - ground_truth_lhs(i)%rho)
+                        rv = evaluate(buffer, i, "rho  ")
+
+                        buffer = abs(lhs(i)%theta - ground_truth_lhs(i)%theta)
+                        rv = evaluate(buffer, i, "theta")
+
+                        buffer = abs(lhs(i)%phi - ground_truth_lhs(i)%phi)
+                        rv = evaluate(buffer, i, "phi  ")
+                    end do
+
+                end function test_lib_math_cartesian_components_to_spherical_components_c_a
 
         end function lib_math_type_operator_test_functions
 
