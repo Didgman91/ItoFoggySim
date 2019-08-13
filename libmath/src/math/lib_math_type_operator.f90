@@ -1254,13 +1254,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_add_array_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        if (.not. evaluate(buffer, i, 'phi')) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        if (.not. evaluate(buffer, i, "rho")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_add_array_cmplx
@@ -1309,13 +1309,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_sub_array_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        if (.not. evaluate(buffer, i, 'phi')) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        if (.not. evaluate(buffer, i, "rho")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_sub_array_cmplx
@@ -1362,13 +1362,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_0d_add_array_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        if (.not. evaluate(buffer, i, 'phi')) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        if (.not. evaluate(buffer, i, "rho")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_0d_add_array_cmplx
@@ -1415,13 +1415,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_array_add_0d_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        if (.not. evaluate(buffer, i, 'phi')) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        if (.not. evaluate(buffer, i, "rho")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_array_add_0d_cmplx
@@ -1468,13 +1468,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_array_sub_0d_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        if (.not. evaluate(buffer, i, 'phi')) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        if (.not. evaluate(buffer, i, "rho")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_array_sub_0d_cmplx
@@ -1522,13 +1522,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_array_real_mul_array_c:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        if (.not. evaluate(buffer, i, 'phi')) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        if (.not. evaluate(buffer, i, "rho")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_array_real_mul_array_c
@@ -1576,13 +1576,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_array_c_mul_array_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        if (.not. evaluate(buffer, i, 'phi')) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        if (.not. evaluate(buffer, i, "rho")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_array_c_mul_array_cmplx
@@ -1629,13 +1629,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_real_mul_array_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        if (.not. evaluate(buffer, i, 'phi')) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        if (.not. evaluate(buffer, i, "rho")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_real_mul_array_cmplx
@@ -1682,13 +1682,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_cmplx_mul_array_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        if (.not. evaluate(buffer, i, 'phi')) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        if (.not. evaluate(buffer, i, "rho")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_cmplx_mul_array_cmplx
@@ -1727,7 +1727,7 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(1)%theta = cmplx(2.5,3, kind=8)
 
                     ground_truth_value%coordinate(2)%phi = cmplx(1.5,1.25, kind=8)
-                    ground_truth_value%coordinate(2)%rho = cmplx(1,0.625, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(1,0.75, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(0.5,0.25, kind=8)
 
                     value = lib_math_list_spherical_operator_array_divide_by_real_array(lhs, rhs)
@@ -1736,13 +1736,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_c_array_divide_by_r_array:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        if (.not. evaluate(buffer, i, 'phi')) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        if (.not. evaluate(buffer, i, "rho")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_c_array_divide_by_r_array
@@ -1781,7 +1781,7 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(1)%theta = cmplx(3, -2.5, kind=8)
 
                     ground_truth_value%coordinate(2)%phi = cmplx(1.25, -1.5, kind=8)
-                    ground_truth_value%coordinate(2)%rho = cmplx(0.625, -1, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(0.75, -1, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(0.25, -0.5, kind=8)
 
                     value = lib_math_list_spherical_operator_c_array_divide_by_c_array(lhs, rhs)
@@ -1790,13 +1790,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_c_array_divide_by_c_array:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        if (.not. evaluate(buffer, i, 'phi')) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        if (.not. evaluate(buffer, i, "rho")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_c_array_divide_by_c_array
@@ -1843,13 +1843,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_array_divide_by_real:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, 'phi')
+                        if (.not. evaluate(buffer, i, 'phi')) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho")
+                        if (.not. evaluate(buffer, i, "rho")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_array_divide_by_real
@@ -1887,7 +1887,7 @@ module lib_math_type_operator
                     ground_truth_value%coordinate(1)%theta = cmplx(3, -2.5, kind=8)
 
                     ground_truth_value%coordinate(2)%phi = cmplx(2.5, -3, kind=8)
-                    ground_truth_value%coordinate(2)%rho = cmplx(1.25, -2, kind=8)
+                    ground_truth_value%coordinate(2)%rho = cmplx(1.5, -2, kind=8)
                     ground_truth_value%coordinate(2)%theta = cmplx(0.5, -1, kind=8)
 
                     value = lib_math_list_spherical_operator_array_divide_by_cmplx(lhs, rhs)
@@ -1896,13 +1896,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_list_spherical_operator_array_divide_by_cmplx:"
                     do i=1, d
                         buffer = abs(value%coordinate(i)%phi - ground_truth_value%coordinate(i)%phi)
-                        rv = evaluate(buffer, i, "phi  ")
+                        if (.not. evaluate(buffer, i, "phi  ")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%rho - ground_truth_value%coordinate(i)%rho)
-                        rv = evaluate(buffer, i, "rho  ")
+                        if (.not. evaluate(buffer, i, "rho  ")) rv = .false.
 
                         buffer = abs(value%coordinate(i)%theta - ground_truth_value%coordinate(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
                     end do
 
                 end function test_lib_math_list_spherical_operator_array_divide_by_cmplx
@@ -1939,13 +1939,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_cartesian_point_to_spherical_point:"
 
                     buffer = abs(lhs(i)%rho - ground_truth_lhs(i)%rho)
-                    rv = evaluate(buffer, i, "rho  ")
+                    if (.not. evaluate(buffer, i, "rho  ")) rv = .false.
 
                     buffer = abs(lhs(i)%theta - ground_truth_lhs(i)%theta)
-                    rv = evaluate(buffer, i, "theta")
+                    if (.not. evaluate(buffer, i, "theta")) rv = .false.
 
                     buffer = abs(lhs(i)%phi - ground_truth_lhs(i)%phi)
-                    rv = evaluate(buffer, i, "phi  ")
+                    if (.not. evaluate(buffer, i, "phi  ")) rv = .false.
 
                 end function test_lib_math_cartesian_point_to_spherical_point
 
@@ -1981,13 +1981,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_spherical_point_to_cartesian_point:"
 
                     buffer = abs(lhs(i)%x - ground_truth_lhs(i)%x)
-                    rv = evaluate(buffer, i, "x")
+                    if (.not. evaluate(buffer, i, "x")) rv = .false.
 
                     buffer = abs(lhs(i)%y - ground_truth_lhs(i)%y)
-                    rv = evaluate(buffer, i, "y")
+                    if (.not. evaluate(buffer, i, "y")) rv = .false.
 
                     buffer = abs(lhs(i)%z - ground_truth_lhs(i)%z)
-                    rv = evaluate(buffer, i, "z")
+                    if (.not. evaluate(buffer, i, "z")) rv = .false.
 
                 end function test_lib_math_spherical_point_to_cartesian_point
 
@@ -2059,13 +2059,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_spherical_components_to_cartesian_components_c_a:"
                     do i=1, d
                         buffer = abs(lhs(i)%x - ground_truth_lhs(i)%x)
-                        rv = evaluate(buffer, i, "x")
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
 
                         buffer = abs(lhs(i)%y - ground_truth_lhs(i)%y)
-                        rv = evaluate(buffer, i, "y")
+                        if (.not. evaluate(buffer, i, "y")) rv = .false.
 
                         buffer = abs(lhs(i)%z - ground_truth_lhs(i)%z)
-                        rv = evaluate(buffer, i, "z")
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
                     end do
 
                 end function test_lib_math_spherical_components_to_cartesian_components_c_a
@@ -2138,13 +2138,13 @@ module lib_math_type_operator
                     print *, "test_lib_math_cartesian_components_to_spherical_components_c_a:"
                     do i=1, d
                         buffer = abs(lhs(i)%rho - ground_truth_lhs(i)%rho)
-                        rv = evaluate(buffer, i, "rho  ")
+                        if (.not. evaluate(buffer, i, "rho  ")) rv = .false.
 
                         buffer = abs(lhs(i)%theta - ground_truth_lhs(i)%theta)
-                        rv = evaluate(buffer, i, "theta")
+                        if (.not. evaluate(buffer, i, "theta")) rv = .false.
 
                         buffer = abs(lhs(i)%phi - ground_truth_lhs(i)%phi)
-                        rv = evaluate(buffer, i, "phi  ")
+                        if (.not. evaluate(buffer, i, "phi  ")) rv = .false.
                     end do
 
                 end function test_lib_math_cartesian_components_to_spherical_components_c_a
