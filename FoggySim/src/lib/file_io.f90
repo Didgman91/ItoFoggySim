@@ -7,6 +7,9 @@ module file_io
     public :: file_exists
     public :: write_csv
     public :: read_csv
+    public :: write_ppm_p2
+
+    public :: test_file_io
 
     ! interface
     interface operator( .f. )
@@ -37,6 +40,101 @@ module file_io
       ! Check if the file exists
       inquire( file=trim(filename), exist=res )
     end function
+
+    ! writes two columns into a ppm file
+    !
+    ! Argument
+    !   u: integer
+    !       >>> open(unit=u, file=trim(filename), status='new')
+    !
+    !
+    function write_ppm_p2(u, img) result (rv)
+        implicit none
+        ! dummy
+        integer, intent(in) :: u
+        double precision, allocatable, dimension(:, :), intent(inout) :: img
+
+        logical :: rv
+
+        ! parameter
+        character, parameter :: delimiter = ' '
+        integer(kind=2), parameter :: max_value = 255
+
+        ! auxiliary
+        integer :: i
+
+        integer(kind=2), dimension(size(img, 1), size(img, 2)) :: img_discretised
+
+
+        img_discretised = int( (img - minval(img)) * real(max_value) / maxval(img), kind=2 )
+
+
+        write(u, *) "P2"
+        write(u, *) size(img, 1), delimiter, size(img, 2)
+        write(u, *) max_value
+        write(u, *) "# The part above is the header"
+        write(u, *) "# P2   means this is a graymap image in ASCII"
+        write(u, *) "# ", size(img, 1), delimiter, size(img, 2), "  is the width and height of the image in pixels"
+        write(u, *) "# ", max_value, "  is the maximum value "
+        write(u, *) "# The part below is image data: RGB triplets"
+
+
+
+        do i=1, size(img, 2)
+                write(u, *) img_discretised(:, i)
+        end do
+
+        rv = .true.
+
+    end function write_ppm_p2
+
+    ! writes two columns into a ppm file
+    !
+    ! Argument
+    !   u: integer
+    !       >>> open(unit=u, file=trim(filename), status='new')
+    !
+    !
+    function write_ppm_p3(u, img, color_map) result (rv)
+        implicit none
+        ! dummy
+        integer, intent(in) :: u
+        double precision, dimension(:, :), intent(inout) :: img
+        integer, intent(in), optional :: color_map
+
+        logical :: rv
+
+        ! parameter
+        character, parameter :: delimiter = ' '
+        integer(kind=2), parameter :: max_value = 255
+
+        ! auxiliary
+        integer :: i
+
+        integer(kind=2), dimension(size(img, 1), size(img, 2)) :: img_discretised
+
+
+        img_discretised = int( (img - minval(img)) * real(max_value) / maxval(img), kind=2 )
+
+
+        write(u, *) "P3"
+        write(u, *) size(img, 1), delimiter, size(img, 2)
+        write(u, *) max_value
+        write(u, *) "# The part above is the header"
+        write(u, *) "# P3   means this is a RGB color image in ASCII"
+        write(u, *) "# ", size(img, 1), delimiter, size(img, 2), "  is the width and height of the image in pixels"
+        write(u, *) "# ", max_value, "  is the maximum value for each color"
+        write(u, *) "# The part below is image data: RGB triplets"
+
+
+
+        do i=1, size(img, 1)
+                write(u, *) img_discretised(i, :)
+        end do
+
+        rv = .true.
+
+    end function write_ppm_p3
 
     ! writes up to three columns into a csv file
     !
@@ -384,5 +482,38 @@ module file_io
         close(unit)
 
     end function file_io_csv_read_double
+
+    subroutine test_file_io()
+        implicit none
+
+        call test_write_ppm_p2
+
+        contains
+
+            subroutine test_write_ppm_p2()
+                implicit none
+
+                ! auxiliary
+                integer :: u
+                double precision, allocatable, dimension(:, :) :: img
+
+                logical :: rv
+
+                allocate (img(10,3))
+
+                img = reshape((/ 0,0,0,1,2,3,4,5,6,7, &
+                                 0,0,0,0,0,0,0,0,0,0, &
+                                 0,0,0,0,0,0,0,0,0,0 /), shape(img))
+
+                u = 99
+                open(unit=u, file="test.ppm", status='unknown')
+                rv = write_ppm_p2(u, img)
+                close(u)
+
+
+
+            end subroutine test_write_ppm_p2
+
+    end subroutine
 
 end module

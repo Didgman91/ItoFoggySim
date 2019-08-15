@@ -1,4 +1,5 @@
 program main
+    use file_io
     use libmath
     use lib_data_types
     use lib_tree
@@ -43,6 +44,7 @@ program main
 !   call S2(1, 2*3.14159265358979*10, 1.33, 0.0, 10)
     call S2(1, 10.0, 1.50, 0.0, 10)
 
+    call test_file_io
 
     error_counter = 0
     error_counter = error_counter + lib_math_factorial_test_functions()
