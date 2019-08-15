@@ -849,7 +849,10 @@ module lib_mie_scattering_by_a_sphere
             if (.not. test_get_coefficients_a_b_cmplx_barberh()) then
                 rv = rv + 1
             end if
-            if (.not. test_get_e_field_scattered()) then
+!            if (.not. test_get_e_field_scattered()) then
+!                rv = rv + 1
+!            end if
+            if (.not. test_get_e_field_scattered_plane_section()) then
                 rv = rv + 1
             end if
 
@@ -1113,8 +1116,8 @@ module lib_mie_scattering_by_a_sphere
                     logical :: rv
 
                     ! parameter
-                    double precision, parameter :: start_angle = -90
-                    double precision, parameter :: stop_angle = 90
+                    double precision, parameter :: start_angle = 0
+                    double precision, parameter :: stop_angle = 180
                     integer(kind=8), parameter :: number_of_values = 720
 
                     ! auxiliary
@@ -1226,80 +1229,89 @@ module lib_mie_scattering_by_a_sphere
                     logical :: rv
 
                     ! parameter
-                    double precision, dimension(2), parameter :: x_range = (/ -5, 5 /)
-                    double precision, dimension(2), parameter :: z_range = (/ 0, 5 /)
-                    real(kind=8), parameter :: step_size = 0.5
 
                     ! auxiliary
-                    integer(kind=4) :: i
+                    integer :: i
+                    integer :: ii
+                    double precision :: x
+                    double precision :: y
+                    double precision :: z
                     integer :: u
-                    complex(kind=8) :: buffer_cmplx
-                    character(len=25), dimension(2) :: header
-                    double precision :: theta
-                    double precision :: phi
-                    double precision :: rho
+
+                    double precision :: lambda
+                    double precision :: k0
                     double precision :: e_field_0
-                    double precision :: rho_particle
+                    double precision :: r_particle
                     double precision :: n_particle
                     double precision :: n_medium
 
-                    integer(kind=4), dimension(2) :: n
+                    integer(kind=4), dimension(2) :: n_range
 
-!                    double precision, dimension(number_of_values) :: degree_list
-!                    type(spherical_coordinate_cmplx_type), dimension(number_of_values) :: e_field_s
-!                    real(kind=8), dimension(number_of_values) :: i_field_s
-!
-!                    phi = 0.0
-!                    theta = Pi/2.0_8
-!                    rho = 10
-!                    rho_particle = 10
-!
-!                    e_field_0 = 1
-!                    n_particle = 1.5
-!                    n_medium = 1
-!
-!                    n(1) = 1
-!                    n(2) = get_n_c(rho_particle)
-!
-!                    do i=1, number_of_values
-!                        degree_list(i) = start_angle + (i-1) * (stop_angle - start_angle) / number_of_values
-!!                        theta = degree_list(i) * PI / 180.0_8
-!                        rho = degree_list(i)
-!                        e_field_s(i) = get_e_field_scattered_xu(theta, phi, rho, e_field_0, rho_particle, n_particle, n_medium, n)
-!
-!                        ! calculate the intensities
-!                        buffer_cmplx = abs(spherical_abs(e_field_s(i)))
-!                        i_field_s(i) = real(buffer_cmplx * buffer_cmplx)
-!                    end do
-!
-!
-!
-!                    ! write to csv
-!                    header(1) = "degree"
-!                    header(2) = "i_field_s"
-!                    u = 99
-!                    open(unit=u, file="i_field_s.csv", status='unknown')
-!                    rv = write_csv(u, header, degree_list, i_field_s)
-!                    close(u)
-!
-!                    header(1) = "degree"
-!                    header(2) = "e_field_s_rho"
-!                    open(unit=u, file="e_field_s_rho.csv", status='unknown')
-!                    rv = write_csv(u, header, degree_list &
-!                                            , real(e_field_s(:)%rho))
-!                    close(u)
-!
-!                    header(2) = "e_field_s_theta"
-!                    open(unit=u, file="e_field_s_theta.csv", status='unknown')
-!                    rv = write_csv(u, header, degree_list &
-!                                            , real(e_field_s(:)%theta))
-!                    close(u)
-!
-!                    header(2) = "e_field_s_phi"
-!                    open(unit=u, file="e_field_s_phi.csv", status='unknown')
-!                    rv = write_csv(u, header, degree_list &
-!                                            , real(e_field_s(:)%phi))
-!                    close(u)
+                    double precision, dimension(2) :: x_range
+                    double precision, dimension(2) :: z_range
+                    real(kind=8) :: step_size
+
+                    integer :: no_x_values
+                    integer :: no_z_values
+
+                    type(spherical_coordinate_cmplx_type) :: buffer
+                    type(cartesian_coordinate_real_type) :: point_cartesian
+                    type(spherical_coordinate_real_type) :: point_spherical
+
+                    type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field_s
+                    double precision, dimension(:, :), allocatable :: e_field_s_real
+
+
+                    x_range = (/ -30.0 * unit_mu, 30.0 * unit_mu /)
+                    z_range = (/ 6.0 * unit_mu, 100.0 * unit_mu /)
+                    step_size = 0.25 * unit_mu
+
+                    no_x_values = int(floor((x_range(2)-x_range(1))/step_size))
+                    no_z_values = int(floor((z_range(2)-z_range(1))/step_size))
+
+                    allocate(e_field_s(no_x_values, no_z_values))
+                    allocate(e_field_s_real(no_x_values, no_z_values))
+
+                    y = 0;
+
+                    r_particle = 5 * unit_mu
+
+                    e_field_0 = 1
+                    lambda = 1 * unit_mu
+
+                    n_particle = 1.5
+                    n_medium = 1
+
+                    k0 = 2 * PI / lambda
+
+                    n_range(1) = 1
+                    n_range(2) = get_n_c(r_particle * k0 * n_particle)
+
+                    do i=1, no_x_values
+                        x = x_range(1) + (i-1) * step_size
+                        do ii=1, no_z_values
+                            z = z_range(1) + (ii-1) * step_size
+
+                            point_cartesian%x = x
+                            point_cartesian%y = y
+                            point_cartesian%z = z
+
+                            point_spherical = point_cartesian
+
+                            buffer = get_e_field_scattered_xu(point_spherical%theta, point_spherical%phi, point_spherical%rho, &
+                                                              e_field_0, lambda, n_medium, &
+                                                              r_particle, n_particle, n_range)
+                            e_field_s(i, ii) = make_cartesian(buffer, point_spherical%theta, point_spherical%phi)
+                            e_field_s_real(i, ii) = real(e_field_s(i, ii)%x)
+                        end do
+                        print *, "  x-Value: ", x
+                    end do
+
+                    ! wirte to PGM
+                    u = 99
+                    open(unit=u, file="test.ppm", status='unknown')
+                    rv = write_ppm_p2(u, e_field_s_real)
+                    close(u)
 
 
                 end function
