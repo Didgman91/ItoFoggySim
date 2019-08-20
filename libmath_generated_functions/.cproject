@@ -59,6 +59,8 @@
                                 								
                                 <option id="gnu.fortran.compiler.option.misc.other.658246343" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fPIC -fcheck=all" valueType="string"/>
                                 								
+                                <option id="gnu.fortran.compiler.exe.debug.option.optimization.level.1539924902" superClass="gnu.fortran.compiler.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.fortran.optimization.level.most" valueType="enumerated"/>
+                                								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.635884096" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                                 							
                             </tool>
@@ -82,22 +84,6 @@
                                 <inputType id="cdt.managedbuild.tool.gnu.assembler.input.511279248" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
                                 							
                             </tool>
-                            						
-                        </toolChain>
-                        					
-                    </folderInfo>
-                    					
-                    <folderInfo id="photran.managedbuild.config.gnu.fortran.exe.debug.895836576.1164922996" name="/" resourcePath="src/lib/legendre_poly/generator">
-                        						
-                        <toolChain id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.988627432" name="GCC Fortran" superClass="photran.managedbuild.toolchain.gnu.fortran.exe.debug" unusedChildren="">
-                            							
-                            <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.409832239" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug.1313622098"/>
-                            							
-                            <tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.833150807" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.526037379"/>
-                            							
-                            <tool id="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.1144345377" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.2024949275"/>
-                            							
-                            <tool id="photran.managedbuild.tool.gnu.assembler.exe.debug.1666607667" name="GCC Assembler" superClass="photran.managedbuild.tool.gnu.assembler.exe.debug.1122230029"/>
                             						
                         </toolChain>
                         					
