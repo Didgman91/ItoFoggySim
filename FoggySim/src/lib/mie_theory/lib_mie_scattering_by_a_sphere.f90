@@ -229,8 +229,9 @@ module lib_mie_scattering_by_a_sphere
             call lib_mie_vector_spherical_harmonics_components(theta, phi, r, k0 * n_medium, n_range, z_selector, &
                                                                M_nm, N_nm)
             ! eq. (5)
+            m=1
             do n=n_range(1), n_range(2)
-                do m=-n, n
+!                do m=-n, n
                     buffer_real = abs(e_field_0) * real((2*n+1), kind=8) * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m)
 
 #ifdef _DEBUG_
@@ -242,13 +243,13 @@ module lib_mie_scattering_by_a_sphere
                     end if
 #endif
                     e_field_nm%item(n)%item(m) = buffer_real * cmplx(0,1, kind=8)**n
-                end do
+!                end do
             end do
 
             ! first line eq. (4)
             do n= n_range(1), n_range(2)
                 i = n - n_range(1) + 1
-                do m=-n, n
+!                do m=-n, n
                     buffer_cmplx = cmplx(0, 1, kind=8) * e_field_nm%item(n)%item(m)
                     e_field_n_s(i) = buffer_cmplx * (a_n(i)*N_nm(n)%coordinate(m) + b_n(i)*M_nm(n)%coordinate(m))
 #ifdef _DEBUG_
@@ -261,7 +262,7 @@ module lib_mie_scattering_by_a_sphere
                         print * , "  m = ", m
                     end if
 #endif
-                end do
+!                end do
             end do
             e_field_s%theta = cmplx(0,0,kind=8)
             e_field_s%phi = cmplx(0,0,kind=8)
@@ -1262,9 +1263,9 @@ module lib_mie_scattering_by_a_sphere
                     double precision, dimension(:, :), allocatable :: e_field_s_real
 
 
-                    x_range = (/ -30.0 * unit_mu, 30.0 * unit_mu /)
-                    z_range = (/ 6.0 * unit_mu, 100.0 * unit_mu /)
-                    step_size = 0.25 * unit_mu
+                    x_range = (/ -15.0 * unit_mu, 15.0 * unit_mu /)
+                    z_range = (/ 6.0 * unit_mu, 30.0 * unit_mu /)
+                    step_size = 1 * unit_mu
 
                     no_x_values = int(floor((x_range(2)-x_range(1))/step_size))
                     no_z_values = int(floor((z_range(2)-z_range(1))/step_size))

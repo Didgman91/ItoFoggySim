@@ -57,6 +57,12 @@
                                 								
                                 <option id="gnu.c.compiler.option.misc.other.1185876090" name="Other flags" superClass="gnu.c.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0" valueType="string"/>
                                 								
+                                <option id="gnu.c.compiler.option.debugging.gprof.1331482852" name="Generate gprof information (-pg)" superClass="gnu.c.compiler.option.debugging.gprof" useByScannerDiscovery="false" value="true" valueType="boolean"/>
+                                								
+                                <option id="gnu.c.compiler.option.debugging.codecov.1465506927" name="Generate gcov information (-ftest-coverage -fprofile-arcs)" superClass="gnu.c.compiler.option.debugging.codecov" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                                								
+                                <option id="gnu.c.compiler.option.debugging.prof.81308081" name="Generate prof information (-p)" superClass="gnu.c.compiler.option.debugging.prof" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                                								
                                 <inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.193835051" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
                                 							
                             </tool>
@@ -77,13 +83,17 @@
                                     								
                                 </option>
                                 								
+                                <option id="gnu.fortran.compiler.option.debugging.gprof.367331119" name="Generate gprof information (-pg)" superClass="gnu.fortran.compiler.option.debugging.gprof" useByScannerDiscovery="false" value="true" valueType="boolean"/>
+                                								
+                                <option id="gnu.fortran.compiler.option.debugging.prof.993278952" name="Generate prof information (-p)" superClass="gnu.fortran.compiler.option.debugging.prof" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                                								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.20276603" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                                 							
                             </tool>
                             							
                             <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.844012393" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.debug">
                                 								
-                                <option id="gnu.fortran.link.option.ldflags.48812646" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-fopenmp -Wl,-rpath=&quot;${workspace_loc:/libmath/Debug}&quot;" valueType="string"/>
+                                <option id="gnu.fortran.link.option.ldflags.48812646" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-fopenmp -Wl,-rpath=&quot;${workspace_loc:/libmath/Debug}&quot; -static-libgfortran" valueType="string"/>
                                 								
                                 <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.link.option.libs.728795757" name="Libraries (-l)" superClass="gnu.fortran.link.option.libs" useByScannerDiscovery="false" valueType="libs">
                                     									
@@ -100,6 +110,10 @@
                                 </option>
                                 								
                                 <option id="gnu.fortran.link.option.shared.451308642" name="Shared (-shared)" superClass="gnu.fortran.link.option.shared" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                                								
+                                <option id="gnu.fortran.link.option.debugging.gprof.1460149492" name="Generate gprof information (-pg)" superClass="gnu.fortran.link.option.debugging.gprof" useByScannerDiscovery="false" value="true" valueType="boolean"/>
+                                								
+                                <option id="gnu.fortran.link.option.debugging.prof.250816570" name="Generate prof information (-p)" superClass="gnu.fortran.link.option.debugging.prof" useByScannerDiscovery="false" value="false" valueType="boolean"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.linker.input.972629953" superClass="photran.managedbuild.tool.gnu.fortran.linker.input">
                                     									

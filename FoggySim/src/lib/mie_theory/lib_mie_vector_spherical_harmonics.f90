@@ -1,4 +1,4 @@
-#define _DEBUG_
+!#define _DEBUG_
 
 
 module lib_mie_vector_spherical_harmonics
@@ -1239,6 +1239,27 @@ module lib_mie_vector_spherical_harmonics
             print*, "test"
 
         end subroutine lib_mie_vector_spherical_harmonics_tranlation_coefficient_real
+
+        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson, eq. 3
+        function a_xu_cruzan(m, n, mu, nu, p) result(rv)
+            implicit none
+            ! dummy
+            integer(kind=8), intent(in) :: m
+            integer(kind=8), intent(in) :: n
+            integer(kind=8), intent(in) :: mu
+            integer(kind=8), intent(in) :: nu
+            integer(kind=8), intent(in) :: p
+
+            real(kind=8) :: rv
+
+            ! auxiliary
+            integer(kind=8) :: mu_minus_m
+
+            mu_minus_m = mu - m
+
+
+
+        end function
 
 
         function lib_mie_vector_spherical_harmonics_test_functions() result (rv)
