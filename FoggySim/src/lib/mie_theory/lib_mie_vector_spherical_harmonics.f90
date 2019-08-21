@@ -2,6 +2,7 @@
 
 
 module lib_mie_vector_spherical_harmonics
+    !$  use omp_lib
     use libmath
     implicit none
 
@@ -21,6 +22,30 @@ module lib_mie_vector_spherical_harmonics
     integer(kind=1), parameter :: VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND = 4
 
     contains
+
+        ! Constructor
+        !
+        ! - initialise calculation of the translation coefficient
+        !   - Wigner 3j-Symbol
+        !
+        ! Argument
+        ! ----
+        !   j_max: integer
+        !
+        subroutine lib_mie_vector_spherical_harmonic_contructor(j_max)
+            implicit none
+            ! dummy
+            integer(kind=4), intent(in) :: j_max
+
+            ! Wigner 3j-Symbol
+            call fwig_table_init(2 * j_max, 3_4)
+
+            ! temp_init must be called per thread
+            !$  if (.false.) then
+            call fwig_temp_init(2 * j_max)      ! single threaded
+            !$  end if
+
+        end subroutine lib_mie_vector_spherical_harmonic_contructor
 
         ! calculation of the components of the vector spherical harmonic
         !
@@ -1240,27 +1265,54 @@ module lib_mie_vector_spherical_harmonics
 
         end subroutine lib_mie_vector_spherical_harmonics_tranlation_coefficient_real
 
-        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson, eq. 3
-        function a_xu_cruzan(m, n, mu, nu, p) result(rv)
+        ! todo: optimize for a(p=p) and b(p=p+1)
+        !
+        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
+        !            eq. 3, eq. 4
+        subroutine ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b)
             implicit none
             ! dummy
-            integer(kind=8), intent(in) :: m
-            integer(kind=8), intent(in) :: n
-            integer(kind=8), intent(in) :: mu
-            integer(kind=8), intent(in) :: nu
-            integer(kind=8), intent(in) :: p
+            integer(kind=4), intent(in) :: m
+            integer(kind=4), intent(in) :: n
+            integer(kind=4), intent(in) :: mu
+            integer(kind=4), intent(in) :: nu
+            integer(kind=4), intent(in) :: p
 
-            real(kind=8) :: rv
+            real(kind=8), intent(inout) :: a
+            real(kind=8), intent(inout) :: b
 
             ! auxiliary
-            integer(kind=8) :: mu_minus_m
+            integer(kind=4) :: mu_minus_m
+
+            real(kind=8), dimension(3) :: buffer_factorial
+            real(kind=8), dimension(2) :: buffer_wigner
 
             mu_minus_m = mu - m
 
+            ! --- a: eq. 3 ---
+            buffer_factorial(1) = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n, m)
+            buffer_factorial(2) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(nu, mu)
+            buffer_factorial(3) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(p, m - mu)
 
+            buffer_wigner(1) = lib_math_wigner_3j(n, nu, p, -m, mu, m-mu)
+            buffer_wigner(2) = lib_math_wigner_3j(n, nu, p, 0, 0, 0)
 
-        end function
+            a = (2_4 * p + 1_4) * sqrt(buffer_factorial(1) * buffer_factorial(2) * buffer_factorial(3)) &
+                 * buffer_wigner(1) * buffer_wigner(2)
 
+            ! --- b: eq. 4 ---
+            buffer_factorial(3) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(p + 1_4, m - mu)
+            buffer_wigner(1) = lib_math_wigner_3j(n, nu, p+1_4, -m, mu, m-mu)
+
+            b = (2_4 * p + 3_4) * sqrt(buffer_factorial(1) * buffer_factorial(2) * buffer_factorial(3)) &
+                 * buffer_wigner(1) * buffer_wigner(2)
+
+            if (mod(mu-m, 2) .ne. 0) then
+                a = -a
+                b = -b
+            end if
+
+        end subroutine ab_xu_cruzan_eq34
 
         function lib_mie_vector_spherical_harmonics_test_functions() result (rv)
             implicit none
@@ -1276,6 +1328,9 @@ module lib_mie_vector_spherical_harmonics
                 rv = rv + 1
             end if
             if (.not. test_lib_mie_vector_spherical_harmonics_components_cmplx_xu()) then
+                rv = rv + 1
+            end if
+            if (.not. test_ab_xu_cruzan_eq34()) then
                 rv = rv + 1
             end if
 
@@ -1446,10 +1501,10 @@ module lib_mie_vector_spherical_harmonics
                     do ii=-i, i
                         buffer = abs(spherical_abs(M_mn(i)%coordinate(ii) - ground_truth_M_mn(i)%coordinate(ii)))
                         if (buffer .gt. ground_truth_e) then
-                            print *, "  n: ", i ," m: ", ii, "difference: ", buffer, " : FAILED"
+                            print *, "    n: ", i ," m: ", ii, "difference: ", buffer, " : FAILED"
                             rv = .false.
                         else
-                            print *, "  n: ", i ," m: ", ii, ": OK"
+                            print *, "    n: ", i ," m: ", ii, ": OK"
                         end if
                     end do
                 end do
@@ -1459,10 +1514,10 @@ module lib_mie_vector_spherical_harmonics
                     do ii=-i, i
                         buffer = abs(spherical_abs(N_mn(i)%coordinate(ii) - ground_truth_N_mn(i)%coordinate(ii)))
                         if (buffer .gt. ground_truth_e) then
-                            print *, "  n: ", i ," m: ", ii, "difference: ", buffer, " : FAILED"
+                            print *, "    n: ", i ," m: ", ii, "difference: ", buffer, " : FAILED"
                             rv = .false.
                         else
-                            print *, "  n: ", i ," m: ", ii, ": OK"
+                            print *, "    n: ", i ," m: ", ii, ": OK"
                         end if
                     end do
                 end do
@@ -1586,10 +1641,10 @@ module lib_mie_vector_spherical_harmonics
                     do ii=-i, i
                         buffer = abs(spherical_abs(M_mn(i)%coordinate(ii) - ground_truth_M_mn(i)%coordinate(ii)))
                         if (buffer .gt. ground_truth_e) then
-                            print *, "  n: ", i ," m: ", ii, "difference: ", buffer, " : FAILED"
+                            print *, "    n: ", i ," m: ", ii, "difference: ", buffer, " : FAILED"
                             rv = .false.
                         else
-                            print *, "  n: ", i ," m: ", ii, ": OK"
+                            print *, "    n: ", i ," m: ", ii, ": OK"
                         end if
                     end do
                 end do
@@ -1599,15 +1654,92 @@ module lib_mie_vector_spherical_harmonics
                     do ii=-i, i
                         buffer = abs(spherical_abs(N_mn(i)%coordinate(ii) - ground_truth_N_mn(i)%coordinate(ii)))
                         if (buffer .gt. ground_truth_e) then
-                            print *, "  n: ", i ," m: ", ii, "difference: ", buffer, " : FAILED"
+                            print *, "    n: ", i ," m: ", ii, "difference: ", buffer, " : FAILED"
                             rv = .false.
                         else
-                            print *, "  n: ", i ," m: ", ii, ": OK"
+                            print *, "    n: ", i ," m: ", ii, ": OK"
                         end if
                     end do
                 end do
 
             end function test_lib_mie_vector_spherical_harmonics_components_cmplx_xu
+
+            function test_ab_xu_cruzan_eq34() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! parameter
+                integer, dimension(2), parameter :: q = (/ 1, 5 /)
+
+                ! auxiliary
+                integer(kind=4) :: i
+
+                integer(kind=4) :: m
+                integer(kind=4) :: n
+                integer(kind=4) :: mu
+                integer(kind=4) :: nu
+                integer(kind=4) :: p
+
+                real(kind=8), dimension(q(1):q(2)) :: a
+                real(kind=8), dimension(q(1):q(2)) :: b
+
+                real(kind=8), dimension(q(1):q(2)) :: ground_truth_a
+                real(kind=8), dimension(q(1):q(2)) :: ground_truth_b
+
+                real(kind=8) :: buffer
+
+                m = -15
+                n = 16
+                mu = -15
+                nu = 20
+
+                ground_truth_a(1) = -2.289221071014754D-8
+                ground_truth_b(1) = -4.708684376179547D-9
+
+                ground_truth_a(2) = 2.691860941883802D-7
+                ground_truth_b(2) = 8.05644974652361D-8
+
+                ground_truth_a(3) = -1.989821339021589D-6
+                ground_truth_b(3) = -7.524763818766572D-7
+
+                ground_truth_a(4) = 1.033853835595824D-5
+                ground_truth_b(4) = 4.673349949711971D-6
+
+                ground_truth_a(5) = -3.995549233873365D-5
+                ground_truth_b(5) = -2.099627385849716D-5
+
+                do i=q(1), q(2)
+                    ! eq. 5
+                    p = n + nu - 2 * i
+                    call ab_xu_cruzan_eq34(m, n, mu, nu, p, a(i), b(i))
+                end do
+
+                rv = .true.
+                print *, "test_ab_xu_cruzan_eq34:"
+                print *, "  a:"
+                do i=q(1), q(2)
+                    buffer = ground_truth_a(i) - a(i)
+                    if (abs(buffer) .gt. ground_truth_e) then
+                        print *, "    q: ", i, "difference: ", buffer, " : FAILED"
+                        rv = .false.
+                    else
+                        print *, "    q: ", i , ": OK"
+                    end if
+                end do
+
+                print *, "  b:"
+                do i=q(1), q(2)
+                    buffer = ground_truth_b(i) - b(i)
+                    if (abs(buffer) .gt. ground_truth_e) then
+                        print *, "    q: ", i, "difference: ", buffer, " : FAILED"
+                        rv = .false.
+                    else
+                        print *, "    q: ", i , ": OK"
+                    end if
+                end do
+
+            end function test_ab_xu_cruzan_eq34
 
         end function lib_mie_vector_spherical_harmonics_test_functions
 
