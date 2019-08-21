@@ -42,17 +42,21 @@ module lib_math_factorial
             ! auxiliary
             integer(kind=4) :: i
 
-            if (n .eq. m) then
-                ! (n - m)! / (n + m)! = 0! / (n + m)!
-                ! = 1 / (n + m)!
-                rv = 1.0_8 / lib_math_factorial_get_factorial(n+m)
+            if (m .ge. 0) then
+                if (n .eq. m) then
+                    ! (n - m)! / (n + m)! = 0! / (n + m)!
+                    ! = 1 / (n + m)!
+                    rv = 1.0_8 / lib_math_factorial_get_factorial(n+m)
+                else
+                    ! 1 / ( (n-m+1) * (n-m+2) * ... * (n+m) )
+                    rv = 1
+                    do i = n-m+1, n+m
+                       rv = rv * i
+                    end do
+                    rv = 1D0 / rv
+                end if
             else
-                ! 1 / ( (n-m+1) * (n-m+2) * ... * (n+m) )
-                rv = 1
-                do i = n-m+1, n+m
-                   rv = rv * i
-                end do
-                rv = 1D0 / rv
+                rv = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n, -m)
             end if
 
         end function lib_math_factorial_get_n_minus_m_divided_by_n_plus_m
@@ -83,16 +87,20 @@ module lib_math_factorial
             ! auxiliary
             integer(kind=4) :: i
 
-            if (n .eq. m) then
-                ! (n + m)! / (n - m)! = (n + m)! / 0!
-                ! = (n + m)!
-                rv = lib_math_factorial_get_factorial(n+m)
+            if (m .ge. 0) then
+                if (n .eq. m) then
+                    ! (n + m)! / (n - m)! = (n + m)! / 0!
+                    ! = (n + m)!
+                    rv = lib_math_factorial_get_factorial(n+m)
+                else
+                    ! ( (n-m+1) * (n-m+2) * ... * (n+m) ) / 1
+                    rv = 1
+                    do i = n-m+1, n+m
+                       rv = rv * i
+                    end do
+                end if
             else
-                ! ( (n-m+1) * (n-m+2) * ... * (n+m) ) / 1
-                rv = 1
-                do i = n-m+1, n+m
-                   rv = rv * i
-                end do
+                rv = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n, -m)
             end if
 
         end function lib_math_factorial_get_n_plus_m_divided_by_n_minus_m
