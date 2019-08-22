@@ -34,8 +34,8 @@ module lib_math_factorial
         function lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m) result (rv)
             implicit none
             ! dummy
-            integer(kind=4) :: n
-            integer(kind=4) :: m
+            integer(kind=4), intent(in) :: n
+            integer(kind=4), intent(in) :: m
 
             real(kind=8) :: rv
 
@@ -79,8 +79,8 @@ module lib_math_factorial
         function lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n,m) result (rv)
             implicit none
             ! dummy
-            integer(kind=4) :: n
-            integer(kind=4) :: m
+            integer(kind=4), intent(in) :: n
+            integer(kind=4), intent(in) :: m
 
             real(kind=8) :: rv
 
@@ -123,8 +123,8 @@ module lib_math_factorial
         function lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(n, m) result (rv)
             implicit none
             ! dummy
-            integer(kind=4) :: n
-            integer(kind=4) :: m
+            integer(kind=4), intent(in) :: n
+            integer(kind=4), intent(in) :: m
 
             real(kind=8) :: rv
 
@@ -226,7 +226,7 @@ module lib_math_factorial
         function lib_math_factorial_get_factorial(n) result (rv)
             implicit none
             ! dummy
-            integer(kind=4) :: n
+            integer(kind=4), intent(in) :: n
 
             real(kind=8) :: rv
 
