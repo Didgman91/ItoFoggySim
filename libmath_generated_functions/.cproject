@@ -59,7 +59,7 @@
                                 								
                                 <option id="gnu.fortran.compiler.option.misc.other.658246343" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fPIC -fcheck=all" valueType="string"/>
                                 								
-                                <option id="gnu.fortran.compiler.exe.debug.option.optimization.level.1539924902" superClass="gnu.fortran.compiler.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.fortran.optimization.level.most" valueType="enumerated"/>
+                                <option id="gnu.fortran.compiler.exe.debug.option.optimization.level.1539924902" name="Optimization Level" superClass="gnu.fortran.compiler.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.fortran.optimization.level.none" valueType="enumerated"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.635884096" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                                 							
@@ -137,7 +137,7 @@
             			
             <storageModule moduleId="cdtBuildSystem" version="4.0.0">
                 				
-                <configuration artifactName="${ProjName}" buildProperties="" cleanCommand="rm -rf" description="" errorParsers="org.eclipse.photran.core.GFortranErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser" id="photran.managedbuild.config.gnu.fortran.exe.release.1885486730" name="Release" parent="photran.managedbuild.config.gnu.fortran.exe.release">
+                <configuration artifactExtension="so" artifactName="${ProjName}" buildProperties="" cleanCommand="rm -rf" description="" errorParsers="org.eclipse.photran.core.GFortranErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser" id="photran.managedbuild.config.gnu.fortran.exe.release.1885486730" name="Release" parent="photran.managedbuild.config.gnu.fortran.exe.release">
                     					
                     <folderInfo id="photran.managedbuild.config.gnu.fortran.exe.release.1885486730." name="/" resourcePath="">
                         						
@@ -153,13 +153,17 @@
                                 							
                             </tool>
                             							
-                            <tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.release.858153170" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.release">
+                            <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.compiler.exe.release.858153170" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.release">
+                                								
+                                <option id="gnu.fortran.compiler.option.misc.other.2145883561" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fPIC" valueType="string"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.653145088" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                                 							
                             </tool>
                             							
-                            <tool id="photran.managedbuild.tool.gnu.fortran.linker.exe.release.1725735798" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.release">
+                            <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.linker.exe.release.1725735798" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.release">
+                                								
+                                <option id="gnu.fortran.link.option.shared.889270660" name="Shared (-shared)" superClass="gnu.fortran.link.option.shared" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.linker.input.1916476789" superClass="photran.managedbuild.tool.gnu.fortran.linker.input">
                                     									
@@ -209,12 +213,6 @@
         	
     </storageModule>
     	
-    <storageModule moduleId="scannerConfiguration">
-        		
-        <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-        	
-    </storageModule>
-    	
     <storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
     	
     <storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
@@ -232,6 +230,24 @@
             <resource resourceType="PROJECT" workspacePath="/libmath_generated_functions"/>
             		
         </configuration>
+        	
+    </storageModule>
+    	
+    <storageModule moduleId="scannerConfiguration">
+        		
+        <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+        		
+        <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.debug.895836576;photran.managedbuild.config.gnu.fortran.exe.debug.895836576.;photran.managedbuild.tool.gnu.c.compiler.exe.debug.1313622098;cdt.managedbuild.tool.gnu.c.compiler.input.1879434487">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
+            		
+        </scannerConfigBuildInfo>
+        		
+        <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.debug.895836576;photran.managedbuild.config.gnu.fortran.exe.debug.895836576.">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile"/>
+            		
+        </scannerConfigBuildInfo>
         	
     </storageModule>
     
