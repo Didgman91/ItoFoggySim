@@ -211,10 +211,12 @@ module lib_mie_vector_spherical_harmonics
             ! set p_nm(m .eq. 0)
             call lib_math_associated_legendre_polynomial(cos_theta, 0, n_range(1), number_of_members_n , &
                                                          buffer_p_n, buffer_p_d_n, .false.)
+            !$OMP PARALLEL DO PRIVATE(n, i)
             do n=n_range(1), n_range(2)
                 i = n - n_range(1) + 1
                 p_nm%item(n)%item(0) = buffer_p_n(i)
             end do
+            !$OMP END PARALLEL DO
 
             ! set p_nm(m .ne. 0)
             !       ->n
@@ -225,6 +227,7 @@ module lib_mie_vector_spherical_harmonics
             !        +++  <- -m
             !         ++
             !          +
+            !$OMP PARALLEL DO PRIVATE(m, n, i, buffer_p_n_m_neg, buffer_p_d_n_m_neg)
             do m=1, n_range(2)
                 call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, m, m, n_range(2) - m + 1, &
                                                                          buffer_p_n_m_neg, buffer_p_d_n_m_neg, .false.)
@@ -234,6 +237,7 @@ module lib_mie_vector_spherical_harmonics
                     p_nm%item(n)%item(-m) = buffer_p_n_m_neg(1, i)
                 end do
             end do
+            !$OMP END PARALLEL DO
 
             ! --- calculations of the components M and N ---
             ! M_mn
@@ -241,6 +245,7 @@ module lib_mie_vector_spherical_harmonics
             select case (z_selector)
                 case (1,2)
                     ! z = [j_n, y_n] ==> z: real
+                    !$OMP PARALLEL DO PRIVATE(n, m, i, buffer_real, buffer_cmplx)
                     do n=n_range(1), n_range(2)
                         i = n - n_range(1) + 1
                         do m=-n, n
@@ -265,8 +270,10 @@ module lib_mie_vector_spherical_harmonics
 #endif
                         end do
                     end do
+                    !$OMP END PARALLEL DO
                 case (3,4)
                     ! z = [h^(1)_n, h^(2)_n] ==> z: complex
+                    !$OMP PARALLEL DO PRIVATE(n, m, i, buffer_real, buffer_cmplx)
                     do n=n_range(1), n_range(2)
                         i = n - n_range(1) + 1
                         do m=-n, n
@@ -291,6 +298,7 @@ module lib_mie_vector_spherical_harmonics
 #endif
                         end do
                     end do
+                    !$OMP END PARALLEL DO
             end select
 
             ! N_mn
@@ -298,6 +306,7 @@ module lib_mie_vector_spherical_harmonics
             select case (z_selector)
                 case (1,2)
                     ! z = [j_n, y_n] ==> z: real
+                    !$OMP PARALLEL DO PRIVATE(n, m, i, buffer_real, buffer_cmplx)
                     do n=n_range(1), n_range(2)
                         i = n - n_range(1) + 1
                         do m=-n, n
@@ -323,8 +332,10 @@ module lib_mie_vector_spherical_harmonics
 #endif
                         end do
                     end do
+                    !$OMP END PARALLEL DO
                 case (3,4)
                     ! z = [h^(1)_n, h^(2)_n] ==> z: complex
+                    !$OMP PARALLEL DO PRIVATE(n, m, i, buffer_real, buffer_cmplx)
                     do n=n_range(1), n_range(2)
                         i = n - n_range(1) + 1
                         do m=-n, n
@@ -350,6 +361,7 @@ module lib_mie_vector_spherical_harmonics
 #endif
                         end do
                     end do
+                    !$OMP END PARALLEL DO
             end select
 
         end subroutine lib_mie_vector_spherical_harmonics_components_real_xu
@@ -1256,12 +1268,76 @@ module lib_mie_vector_spherical_harmonics
             integer(kind=4), dimension(2) :: n_range
             integer(kind=1) :: z_selector
 
-            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable, intent(inout) :: A_mnkl
-            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable, intent(inout) :: B_mnkl
+            type(spherical_coordinate_cmplx_type), dimension(:, :, :, :), allocatable, intent(inout) :: A_mnkl
+            type(spherical_coordinate_cmplx_type), dimension(:, :, :, :), allocatable, intent(inout) :: B_mnkl
 
             ! auxiliary
+            integer(kind=4) :: m
+            integer(kind=4) :: n
+            integer(kind=4) :: k    ! here: synonym for mu (TeX: $ \mu $)
+            integer(kind=4) :: l    ! here: synonym for nu (TeX: $ \nu $)
+            integer(kind=4) :: p
+            integer(kind=4) :: q
 
-            print*, "test"
+            integer(kind=4) :: q_max
+            integer(kind=4) :: q_max_1
+            integer(kind=4) :: q_max_2
+
+            double precision :: cos_theta
+
+            double precision, dimension(:), allocatable :: p_k_plus_m_p_plus_1
+!            double precision, dimension(2, n) :: buffer_pm
+!            double precision, dimension(2, n) :: buffer_pd
+
+            double precision, dimension(:), allocatable :: z_p_plus_1
+
+            !$  integer(kind=4) :: j_max
+
+            ! --- init ---
+            ! eq. 5
+            ! p = n + nu - 2 * q
+            ! worst case:
+            !   q = 0
+            !   n = nu = n_range(2)
+            !   p = 2 * n_range(2) - 0
+            !   b(p=p+1)
+            !   => j_max = 2 * n_range(2) + 1
+
+            !$  j_max = 2 * n_range(2) + 1
+            !$  call fwig_thread_temp_init(2 * j_max)     ! multi threaded
+
+
+            ! --- pre-calc ---
+            cos_theta = cos(theta)
+!            lib_math_associated_legendre_polynomial_with_negative_m(cos_theta,
+!            p_k_plus_m_p_plus_1 =
+!
+!
+!
+!
+!            allocate(A_mnkl(-n_range(2):n_range(2), & ! m
+!                            n_range(1):n_range(2), & ! n
+!                            -n_range(2):n_range(2), & ! k
+!                            n_range(1):n_range(2)))
+!
+!            do m=-n_range(2), n_range(2)
+!                do n=n_range(1), n_range(2)
+!                    do k=-n_range(2), n_range(2)
+!                        do l=n_range(1), n_range(2)
+!                            q_max_1 = min(n, l, (n + l - abs(m - k))/2) ! eq. 25
+!                            q_max_2 = min(n, l, (n + l + 1 - abs(m - k))/2) ! eq. 60
+!                            q_max = max(q_max_1, q_max_2)
+!
+!
+!
+!                            do q=0, q_max
+!                                A_mnkl(m, n, k, l)
+!                            end do
+!                        end do
+!                    end do
+!                end do
+!            end do
+
 
         end subroutine lib_mie_vector_spherical_harmonics_tranlation_coefficient_real
 
