@@ -8,6 +8,7 @@ module file_io
     public :: write_csv
     public :: read_csv
     public :: write_ppm_p2
+    public :: write_ppm_p3
 
     public :: test_file_io
 
@@ -62,11 +63,15 @@ module file_io
 
         ! auxiliary
         integer :: i
+        double precision :: img_max_value
+        double precision :: img_min_value
 
         integer(kind=2), dimension(size(img, 1), size(img, 2)) :: img_discretised
 
+        img_max_value = maxval(img)
+        img_min_value = minval(img)
 
-        img_discretised = int( (img - minval(img)) * real(max_value) / maxval(img), kind=2 )
+        img_discretised = int( (img - img_min_value) * real(max_value) / (img_max_value - img_min_value), kind=2 )
 
 
         write(u, *) "P2"
@@ -75,9 +80,9 @@ module file_io
         write(u, *) "# The part above is the header"
         write(u, *) "# P2   means this is a graymap image in ASCII"
         write(u, *) "# ", size(img, 1), delimiter, size(img, 2), "  is the width and height of the image in pixels"
-        write(u, *) "# ", max_value, "  is the maximum value "
-        write(u, *) "# The part below is image data: RGB triplets"
-
+        write(u, *) "# pixel value range: 0 - ", max_value
+        write(u, *) "# data point value range: ", img_min_value, " - ", img_max_value
+        write(u, *) "# The part below is image data"
 
 
         do i=1, size(img, 2)
@@ -93,6 +98,9 @@ module file_io
     ! Argument
     !   u: integer
     !       >>> open(unit=u, file=trim(filename), status='new')
+    !   img: double precision, 2D array
+    !   color_map: integer, opional (std = 1)
+    !       - 1: temperatur
     !
     !
     function write_ppm_p3(u, img, color_map) result (rv)
@@ -110,12 +118,15 @@ module file_io
 
         ! auxiliary
         integer :: i
+        integer :: ii
+        double precision :: img_max_value
+        double precision :: img_min_value
 
-        integer(kind=2), dimension(size(img, 1), size(img, 2)) :: img_discretised
+        integer(kind=2) :: buffer
+        integer(kind=2), dimension(size(img, 1)*3, size(img, 2)) :: img_discretised_color
 
-
-        img_discretised = int( (img - minval(img)) * real(max_value) / maxval(img), kind=2 )
-
+        img_max_value = maxval(img)
+        img_min_value = minval(img)
 
         write(u, *) "P3"
         write(u, *) size(img, 1), delimiter, size(img, 2)
@@ -123,18 +134,77 @@ module file_io
         write(u, *) "# The part above is the header"
         write(u, *) "# P3   means this is a RGB color image in ASCII"
         write(u, *) "# ", size(img, 1), delimiter, size(img, 2), "  is the width and height of the image in pixels"
-        write(u, *) "# ", max_value, "  is the maximum value for each color"
+        write(u, *) "# pixel value range for each color: 0 - ", max_value
+        write(u, *) "# data point value range: ", img_min_value, " - ", img_max_value
         write(u, *) "# The part below is image data: RGB triplets"
-
-
-
-        do i=1, size(img, 1)
-                write(u, *) img_discretised(i, :)
-        end do
 
         rv = .true.
 
+        if (present(color_map)) then
+            if (color_map .eq. 1) then
+                 call color_map_temperature(img, max_value, img_discretised_color)
+            else
+                rv = .false.
+            end if
+        else
+            call color_map_temperature(img, max_value, img_discretised_color)
+        end if
+
+        if (rv) then
+            do i=1, size(img_discretised_color, 2)
+                write(u, *) img_discretised_color(:, i)
+            end do
+        end if
+
     end function write_ppm_p3
+
+    subroutine color_map_temperature(img, max_value, rv)
+        implicit none
+        ! dummy
+        double precision, dimension(:, :), intent(in) :: img
+        integer(kind=2), intent(in) :: max_value
+
+        integer(kind=2), dimension(size(img, 1)*3, size(img, 2)), intent(inout) :: rv
+
+        ! auxiliary
+        integer :: i
+        integer :: ii
+        double precision :: img_max_value
+        double precision :: img_min_value
+        integer(kind=2) :: buffer
+
+        img_max_value = maxval(img)
+        img_min_value = minval(img)
+
+        do i=1, size(img, 1)
+            do ii=1, size(img, 2)
+                if (img(i, ii) .gt. 0) then
+                    buffer = int( img(i,ii) * real(max_value) / img_max_value, kind=2)
+                    ! red
+                    rv(3*(i-1)+1, ii) = max_value
+                    ! green
+                    rv(3*(i-1)+2, ii) = max_value - buffer
+                    ! blue
+                    rv(3*(i-1)+3, ii) = max_value - buffer
+                else if (img(i, ii) .eq. 0) then
+                    ! red
+                    rv(3*(i-1)+1, ii) = max_value
+                    ! green
+                    rv(3*(i-1)+2, ii) = max_value
+                    ! blue
+                    rv(3*(i-1)+3, ii) = max_value
+                else
+                    buffer = int( img(i,ii) * real(max_value) / img_min_value, kind=2)
+                    ! red
+                    rv(3*(i-1)+1, ii) = max_value - buffer
+                    ! green
+                    rv(3*(i-1)+2, ii) = max_value - buffer
+                    ! blue
+                    rv(3*(i-1)+3, ii) = max_value
+                end if
+            end do
+        end do
+    end subroutine
 
     ! writes up to three columns into a csv file
     !
@@ -487,6 +557,7 @@ module file_io
         implicit none
 
         call test_write_ppm_p2
+        call test_write_ppm_p3
 
         contains
 
@@ -510,9 +581,29 @@ module file_io
                 rv = write_ppm_p2(u, img)
                 close(u)
 
-
-
             end subroutine test_write_ppm_p2
+
+            subroutine test_write_ppm_p3()
+                implicit none
+
+                ! auxiliary
+                integer :: u
+                double precision, allocatable, dimension(:, :) :: img
+
+                logical :: rv
+
+                allocate (img(10,3))
+
+                img = reshape((/ 0,0,0,1,2,3,4,5,6,7, &
+                                 0,0,0,0,0,0,0,0,0,0, &
+                                 -7,-6,-5,-4,-3,-2,-1,0,0,0 /), shape(img))
+
+                u = 99
+                open(unit=u, file="test.ppm", status='unknown')
+                rv = write_ppm_p3(u, img)
+                close(u)
+
+            end subroutine test_write_ppm_p3
 
     end subroutine
 

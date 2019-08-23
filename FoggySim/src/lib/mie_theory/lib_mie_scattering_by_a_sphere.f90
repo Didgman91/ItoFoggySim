@@ -1307,6 +1307,7 @@ module lib_mie_scattering_by_a_sphere
                     x_range = (/ -5.0_8 * unit_mu, 5.0_8 * unit_mu /)
                     z_range = (/ -5.0_8 * unit_mu, 10.0_8 * unit_mu /)
                     step_size = 0.02_8 * unit_mu
+!                    step_size = 0.1_8 * unit_mu
 
                     no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                     no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -1356,15 +1357,15 @@ module lib_mie_scattering_by_a_sphere
                     ! wirte to PGM
                     u = 99
                     open(unit=u, file="e_field_s_x.ppm", status='unknown')
-                    rv = write_ppm_p2(u, e_field_s_real_x)
+                    rv = write_ppm_p3(u, e_field_s_real_x)
                     close(u)
 
                     open(unit=u, file="e_field_s_y.ppm", status='unknown')
-                    rv = write_ppm_p2(u, e_field_s_real_y)
+                    rv = write_ppm_p3(u, e_field_s_real_y)
                     close(u)
 
                     open(unit=u, file="e_field_s_z.ppm", status='unknown')
-                    rv = write_ppm_p2(u, e_field_s_real_z)
+                    rv = write_ppm_p3(u, e_field_s_real_z)
                     close(u)
 
 
