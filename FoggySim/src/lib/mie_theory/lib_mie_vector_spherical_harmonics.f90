@@ -516,10 +516,12 @@ module lib_mie_vector_spherical_harmonics
             ! set p_nm(m .eq. 0)
             call lib_math_associated_legendre_polynomial(cos_theta, 0, n_range(1), number_of_members_n , &
                                                          buffer_p_n, buffer_p_d_n, .false.)
+            !$OMP PARALLEL DO PRIVATE(n, i)
             do n=n_range(1), n_range(2)
                 i = n - n_range(1) + 1
                 p_nm%item(n)%item(0) = buffer_p_n(i)
             end do
+            !$OMP END PARALLEL DO
 
             ! set p_nm(m .ne. 0)
             !       ->n
@@ -530,6 +532,7 @@ module lib_mie_vector_spherical_harmonics
             !        +++  <- -m
             !         ++
             !          +
+            !$OMP PARALLEL DO PRIVATE(m, n, i, buffer_p_n_m_neg, buffer_p_d_n_m_neg)
             do m=1, n_range(2)
                 call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, m, m, n_range(2) - m + 1, &
                                                                          buffer_p_n_m_neg, buffer_p_d_n_m_neg, .false.)
@@ -539,10 +542,12 @@ module lib_mie_vector_spherical_harmonics
                     p_nm%item(n)%item(-m) = buffer_p_n_m_neg(1, i)
                 end do
             end do
+            !$OMP END PARALLEL DO
 
             ! --- calculations of the components M and N ---
             ! M_mn
             ! first line eq. (2)
+            !$OMP PARALLEL DO PRIVATE(n, m, i, buffer_real, buffer_cmplx)
             do n=n_range(1), n_range(2)
                 i = n - n_range(1) + 1
                 do m=-n, n
@@ -567,9 +572,11 @@ module lib_mie_vector_spherical_harmonics
 #endif
                 end do
             end do
+            !$OMP END PARALLEL DO
 
             ! N_mn
             ! second line eq. (2)
+            !$OMP PARALLEL DO PRIVATE(n, m, i, buffer_real, buffer_cmplx)
             do n=n_range(1), n_range(2)
                 i = n - n_range(1) + 1
                 do m=-n, n
@@ -595,6 +602,7 @@ module lib_mie_vector_spherical_harmonics
 #endif
                 end do
             end do
+            !$OMP END PARALLEL DO
 
         end subroutine lib_mie_vector_spherical_harmonics_components_cmplx_xu
 

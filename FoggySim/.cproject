@@ -71,7 +71,7 @@
                                 								
                                 <option id="gnu.fortran.compiler.option.misc.other.1881149699" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fopenmp -fcheck=all -cpp -mcmodel=large -frecursive" valueType="string"/>
                                 								
-                                <option id="gnu.fortran.compiler.option.misc.verbose.1638748952" name="Verbose (-v)" superClass="gnu.fortran.compiler.option.misc.verbose" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                                <option id="gnu.fortran.compiler.option.misc.verbose.1638748952" name="Verbose (-v)" superClass="gnu.fortran.compiler.option.misc.verbose" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                                 								
                                 <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.compiler.option.include.paths.982631948" name="Include paths (-I)" superClass="gnu.fortran.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
                                     									

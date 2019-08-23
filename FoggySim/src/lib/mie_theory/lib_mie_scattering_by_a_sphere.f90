@@ -14,6 +14,9 @@ module lib_mie_scattering_by_a_sphere
     complex(kind=8), dimension(:), allocatable :: cache_coefficients_a_b_real_barberh_a_n
     complex(kind=8), dimension(:), allocatable :: cache_coefficients_a_b_real_barberh_b_n
 
+    complex(kind=8), dimension(:), allocatable :: cache_coefficients_a_b_cmplx_barberh_a_n
+    complex(kind=8), dimension(:), allocatable :: cache_coefficients_a_b_cmplx_barberh_b_n
+
     private
 
     ! --- public ---
@@ -175,7 +178,7 @@ module lib_mie_scattering_by_a_sphere
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu
         !
-        function get_e_field_scattered_xu(theta, phi, r, e_field_0, lambda, n_medium, r_particle, n_particle, n_range) &
+        function get_e_field_scattered_xu_real(theta, phi, r, e_field_0, lambda, n_medium, r_particle, n_particle, n_range) &
                                          result (e_field_s)
             implicit none
             ! dummy
@@ -207,7 +210,6 @@ module lib_mie_scattering_by_a_sphere
             complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: a_n
             complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: b_n
 
-
             integer(kind=1) :: z_selector
 
             type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_nm
@@ -227,6 +229,158 @@ module lib_mie_scattering_by_a_sphere
             call get_coefficients_a_b_real_barberh(rho_particle, n_particle/n_medium, n_range, a_n, b_n)
 !            call get_coefficients_a_b_real(rho_particle, n_particle/n_medium, mu, mu1, n_range, a_n, b_n)
 
+
+            if ( r .ge. r_particle) then
+                z_selector = 3
+
+                ! todo:
+                call lib_mie_vector_spherical_harmonics_components(theta, phi, r, k0 * n_medium, n_range, z_selector, &
+                                                                   M_nm, N_nm)
+                ! eq. (5)
+                m=1
+                !$OMP PARALLEL DO PRIVATE(n, m, buffer_real)
+                do n=n_range(1), n_range(2)
+                    do m=-n, n
+                        buffer_real = abs(e_field_0) * real((2*n+1), kind=8) &
+                                      * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m)
+
+#ifdef _DEBUG_
+                        if (isnan(buffer_real)) then
+                            print *, "get_e_field_scattered_xu: ERROR"
+                            print *, "  buffer_real is NaN"
+                            print * , "  n = ", n
+                            print * , "  m = ", m
+                        end if
+#endif
+                        e_field_nm%item(n)%item(m) = buffer_real * cmplx(0,1, kind=8)**n
+                    end do
+                end do
+                !$OMP END PARALLEL DO
+
+                ! first line eq. (4)
+                !$OMP PARALLEL DO PRIVATE(n, m, i, buffer_cmplx)
+                do n= n_range(1), n_range(2)
+                    i = n - n_range(1) + 1
+                    do m=-n, n
+                        buffer_cmplx = cmplx(0, 1, kind=8) * e_field_nm%item(n)%item(m)
+                        e_field_n_s(i) = buffer_cmplx * (a_n(i)*N_nm(n)%coordinate(m) + b_n(i)*M_nm(n)%coordinate(m))
+#ifdef _DEBUG_
+                        if (isnan(real(e_field_n_s(i)%rho)) .or. isnan(aimag(e_field_n_s(i)%rho)) &
+                            .or. isnan(real(e_field_n_s(i)%phi)) .or. isnan(aimag(e_field_n_s(i)%phi)) &
+                            .or. isnan(real(e_field_n_s(i)%theta)) .or. isnan(aimag(e_field_n_s(i)%theta)) ) then
+                            print *, "get_e_field_scattered_xu: ERROR"
+                            print *, "  e_field_n_s is NaN"
+                            print * , "  n = ", n
+                            print * , "  m = ", m
+                        end if
+#endif
+                    end do
+                end do
+                !$OMP END PARALLEL DO
+
+                e_field_s%theta = cmplx(0,0,kind=8)
+                e_field_s%phi = cmplx(0,0,kind=8)
+                e_field_s%rho = cmplx(0,0,kind=8)
+                do i=1, n_range(2)-n_range(1)+1
+                    e_field_s = e_field_s + e_field_n_s(i)
+                end do
+            else
+                e_field_s%theta = cmplx(0,0,kind=8)
+                e_field_s%phi = cmplx(0,0,kind=8)
+                e_field_s%rho = cmplx(0,0,kind=8)
+            end if
+
+        end function get_e_field_scattered_xu_real
+
+        ! calculates the scatterd electical field of a sphere
+        !
+        ! Setup
+        ! ----
+        !
+        !        ^ z
+        !        |
+        !        o -> x
+        !    __________
+        !    __________
+        !
+        !    o: sphere
+        !    _: plane wave
+        !       - propagation direction: z
+        !
+        ! Argument
+        ! ----
+        !   theta: double precision
+        !       polar angle [radian]
+        !   phi: double precision
+        !       azimuthal angle [radian]
+        !   r: double precision
+        !       distance
+        !   e_field_0: double precision
+        !       amplitude of the incident wave
+        !   lambda: double precision
+        !       wave length
+        !   n_medium: double precision
+        !       refractive index of the medium
+        !   r_particle: double precision
+        !       radius of the sphere
+        !   n_particle: double precision
+        !       refractive index of the sphere
+        !   n_range: integer, dimension(2)
+        !       first and last index (degree) of the sum to calculate the electical field
+        !       e.g. n = (/ 1, 80 /) <-- size parameter
+        !
+        ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu
+        !
+        function get_e_field_scattered_xu_cmplx(theta, phi, r, e_field_0, lambda, n_medium, r_particle, n_particle, n_range) &
+                                         result (e_field_s)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: theta
+            double precision, intent(in) :: phi
+            double precision, intent(in) :: r
+            double precision, intent(in) :: e_field_0
+            double precision, intent(in) :: lambda
+            double precision, intent(in) :: n_medium
+            double precision, intent(in) :: r_particle
+            complex(kind=8), intent(in) :: n_particle
+            integer(kind=4), dimension(2) :: n_range
+
+            type(spherical_coordinate_cmplx_type) :: e_field_s
+
+            ! auxiliary
+            double precision :: k0 ! wave number = 2 pi / lambda
+            complex(kind=8) :: rho_particle ! r_particle * k0 * n_particle
+
+            double precision :: buffer_real
+            complex(kind=8) :: buffer_cmplx
+            integer(kind=4) :: i
+            integer(kind=4) :: ii
+            integer(kind=4) :: m
+            integer(kind=4) :: n
+            double precision :: mu
+            double precision :: mu1
+
+            complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: a_n
+            complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: b_n
+
+
+            integer(kind=1) :: z_selector
+
+            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_nm
+            type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_nm
+
+            type(list_list_cmplx) :: e_field_nm
+            type(spherical_coordinate_cmplx_type), dimension(n_range(2)-n_range(1)+1) :: e_field_n_s
+
+            k0 = 2.0_8 * PI / lambda
+            rho_particle = r_particle * k0 * n_particle
+
+            mu = 1
+            mu1 = 1.5
+
+            call init_list(e_field_nm, n_range(1), n_range(2)-n_range(1)+1)
+
+            call get_coefficients_a_b_cmplx_barberh(rho_particle, n_particle/n_medium, n_range, a_n, b_n)
 
             if ( r .ge. r_particle) then
                 z_selector = 3
@@ -288,7 +442,7 @@ module lib_mie_scattering_by_a_sphere
                 e_field_s%rho = cmplx(0,0,kind=8)
             end if
 
-        end function get_e_field_scattered_xu
+        end function get_e_field_scattered_xu_cmplx
 
         ! calculates the scattering coefficients
         !
@@ -518,44 +672,44 @@ module lib_mie_scattering_by_a_sphere
                 b_n = cache_coefficients_a_b_real_barberh_b_n
             else
 
-            number_of_n = n(2) - n(1) + 1
+                number_of_n = n(2) - n(1) + 1
 
-            mx = m*x
+                mx = m*x
 
-            j_n_x = lib_math_bessel_spherical_first_kind(x, n(1)-1, number_of_n+1)
-            h_n_x = lib_math_hankel_spherical_1(x, n(1)-1, number_of_n+1)
+                j_n_x = lib_math_bessel_spherical_first_kind(x, n(1)-1, number_of_n+1)
+                h_n_x = lib_math_hankel_spherical_1(x, n(1)-1, number_of_n+1)
 
-            An = get_An_real(x, m, n(1), number_of_n)
+                An = get_An_real(x, m, n(1), number_of_n)
 
-            !$OMP PARALLEL DO PRIVATE(i, mAn, n_div_x, buffer, numerator, denominator)
-            do i=1, number_of_n
-                n_div_x = real(n(1)+i-1, kind=8) / x
-                mAn = m * An(i)
-                An_div_m = An(i) / m
+                !$OMP PARALLEL DO PRIVATE(i, mAn, n_div_x, buffer, numerator, denominator)
+                do i=1, number_of_n
+                    n_div_x = real(n(1)+i-1, kind=8) / x
+                    mAn = m * An(i)
+                    An_div_m = An(i) / m
 
-                buffer = An_div_m + n_div_x
-                numerator = buffer * j_n_x(i+1) - j_n_x(i)
-                denominator = buffer * h_n_x(i+1) - h_n_x(i)
+                    buffer = An_div_m + n_div_x
+                    numerator = buffer * j_n_x(i+1) - j_n_x(i)
+                    denominator = buffer * h_n_x(i+1) - h_n_x(i)
 
-                a_n(i) = numerator / denominator
+                    a_n(i) = numerator / denominator
 
-                buffer = mAn + n_div_x
-                numerator = buffer * j_n_x(i+1) - j_n_x(i)
-                denominator = buffer * h_n_x(i+1) - h_n_x(i)
+                    buffer = mAn + n_div_x
+                    numerator = buffer * j_n_x(i+1) - j_n_x(i)
+                    denominator = buffer * h_n_x(i+1) - h_n_x(i)
 
-                b_n(i) = numerator / denominator
-            end do
-            !$OMP END PARALLEL DO
+                    b_n(i) = numerator / denominator
+                end do
+                !$OMP END PARALLEL DO
 
-            if ( allocated(cache_coefficients_a_b_real_barberh_a_n) ) then
-                deallocate(cache_coefficients_a_b_real_barberh_a_n)
-                deallocate(cache_coefficients_a_b_real_barberh_b_n)
-            end if
+                if ( allocated(cache_coefficients_a_b_real_barberh_a_n) ) then
+                    deallocate(cache_coefficients_a_b_real_barberh_a_n)
+                    deallocate(cache_coefficients_a_b_real_barberh_b_n)
+                end if
 
-            allocate(cache_coefficients_a_b_real_barberh_a_n(n(2)-n(1)+1))
-            allocate(cache_coefficients_a_b_real_barberh_b_n(n(2)-n(1)+1))
-            cache_coefficients_a_b_real_barberh_a_n = a_n
-            cache_coefficients_a_b_real_barberh_b_n = b_n
+                allocate(cache_coefficients_a_b_real_barberh_a_n(n(2)-n(1)+1))
+                allocate(cache_coefficients_a_b_real_barberh_b_n(n(2)-n(1)+1))
+                cache_coefficients_a_b_real_barberh_a_n = a_n
+                cache_coefficients_a_b_real_barberh_b_n = b_n
 
             end if
 
@@ -609,32 +763,52 @@ module lib_mie_scattering_by_a_sphere
 
             integer(kind=4) :: number_of_n
 
-            number_of_n = n(2) - n(1) + 1
+            if (allocated(cache_coefficients_a_b_cmplx_barberh_a_n) .and. &
+                size(cache_coefficients_a_b_cmplx_barberh_a_n) .eq. (n(2)-n(1)+1)) then
+                a_n = cache_coefficients_a_b_cmplx_barberh_a_n
+                b_n = cache_coefficients_a_b_cmplx_barberh_b_n
+            else
 
-            mx = m*x
+                number_of_n = n(2) - n(1) + 1
 
-            j_n_x = lib_math_bessel_spherical_first_kind(x, n(1)-1, number_of_n+1)
-            h_n_x = lib_math_hankel_spherical_1(x, n(1)-1, number_of_n+1)
+                mx = m*x
 
-            An = get_An_cmplx(x, m, n(1), number_of_n)
+                j_n_x = lib_math_bessel_spherical_first_kind(x, n(1)-1, number_of_n+1)
+                h_n_x = lib_math_hankel_spherical_1(x, n(1)-1, number_of_n+1)
 
-            do i=1, number_of_n
-                n_div_x = real(n(1)+i-1, kind=8) / x
-                mAn = m * An(i)
-                An_div_m = An(i) / m
+                An = get_An_cmplx(x, m, n(1), number_of_n)
 
-                buffer = An_div_m + n_div_x
-                numerator = buffer * j_n_x(i+1) - j_n_x(i)
-                denominator = buffer * h_n_x(i+1) - h_n_x(i)
+                !$OMP PARALLEL DO PRIVATE(i, mAn, n_div_x, An_div_m, buffer, numerator, denominator)
+                do i=1, number_of_n
+                    n_div_x = real(n(1)+i-1, kind=8) / x
+                    mAn = m * An(i)
+                    An_div_m = An(i) / m
 
-                a_n(i) = numerator / denominator
+                    buffer = An_div_m + n_div_x
+                    numerator = buffer * j_n_x(i+1) - j_n_x(i)
+                    denominator = buffer * h_n_x(i+1) - h_n_x(i)
 
-                buffer = mAn + n_div_x
-                numerator = buffer * j_n_x(i+1) - j_n_x(i)
-                denominator = buffer * h_n_x(i+1) - h_n_x(i)
+                    a_n(i) = numerator / denominator
 
-                b_n(i) = numerator / denominator
-            end do
+                    buffer = mAn + n_div_x
+                    numerator = buffer * j_n_x(i+1) - j_n_x(i)
+                    denominator = buffer * h_n_x(i+1) - h_n_x(i)
+
+                    b_n(i) = numerator / denominator
+                end do
+                !$OMP END PARALLEL DO
+
+                if ( allocated(cache_coefficients_a_b_cmplx_barberh_a_n) ) then
+                    deallocate(cache_coefficients_a_b_cmplx_barberh_a_n)
+                    deallocate(cache_coefficients_a_b_cmplx_barberh_b_n)
+                end if
+
+                allocate(cache_coefficients_a_b_cmplx_barberh_a_n(n(2)-n(1)+1))
+                allocate(cache_coefficients_a_b_cmplx_barberh_b_n(n(2)-n(1)+1))
+                cache_coefficients_a_b_cmplx_barberh_a_n = a_n
+                cache_coefficients_a_b_cmplx_barberh_b_n = b_n
+
+            end if
 
         end subroutine get_coefficients_a_b_cmplx_barberh
 
@@ -889,10 +1063,13 @@ module lib_mie_scattering_by_a_sphere
             if (.not. test_get_coefficients_a_b_cmplx_barberh()) then
                 rv = rv + 1
             end if
-!            if (.not. test_get_e_field_scattered()) then
+!            if (.not. test_get_e_field_scattered_real()) then
 !                rv = rv + 1
 !            end if
-            if (.not. test_get_e_field_scattered_plane_section()) then
+!            if (.not. test_get_e_field_scattered_plane_section_real()) then
+!                rv = rv + 1
+!            end if
+            if (.not. test_get_e_field_scattered_plane_section_cmplx()) then
                 rv = rv + 1
             end if
 
@@ -1149,7 +1326,7 @@ module lib_mie_scattering_by_a_sphere
 
                 end function test_get_coefficients_a_b_cmplx_barberh
 
-                function test_get_e_field_scattered() result (rv)
+                function test_get_e_field_scattered_real() result (rv)
                     use file_io
                     implicit none
                     ! dummy
@@ -1202,7 +1379,7 @@ module lib_mie_scattering_by_a_sphere
                     do i=1, number_of_values
                         degree_list(i) = start_angle + (i-1) * (stop_angle - start_angle) / number_of_values
                         theta = degree_list(i) * PI / 180.0_8
-                        e_field_s(i) = get_e_field_scattered_xu(theta, phi, r, e_field_0, lambda, n_medium, &
+                        e_field_s(i) = get_e_field_scattered_xu_real(theta, phi, r, e_field_0, lambda, n_medium, &
                                                                 r_particle, n_particle, n_range)
                         e_field_s_cart(i) = make_cartesian(e_field_s(i), theta, phi)
 
@@ -1259,10 +1436,9 @@ module lib_mie_scattering_by_a_sphere
                                             , e_field_s_cart(:)%z)
                     close(u)
 
+                end function test_get_e_field_scattered_real
 
-                end function
-
-                function test_get_e_field_scattered_plane_section() result (rv)
+                function test_get_e_field_scattered_plane_section_real() result (rv)
                     use file_io
                     implicit none
                     ! dummy
@@ -1303,11 +1479,12 @@ module lib_mie_scattering_by_a_sphere
                     double precision, dimension(:, :), allocatable :: e_field_s_real_y
                     double precision, dimension(:, :), allocatable :: e_field_s_real_z
 
+                    real :: start, finish
 
                     x_range = (/ -5.0_8 * unit_mu, 5.0_8 * unit_mu /)
                     z_range = (/ -5.0_8 * unit_mu, 10.0_8 * unit_mu /)
-                    step_size = 0.02_8 * unit_mu
-!                    step_size = 0.1_8 * unit_mu
+!                    step_size = 0.02_8 * unit_mu
+                    step_size = 0.05_8 * unit_mu
 
                     no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                     no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -1332,6 +1509,9 @@ module lib_mie_scattering_by_a_sphere
                     n_range(1) = 1
                     n_range(2) = get_n_c(r_particle * k0 * n_particle)
 
+                    call lib_math_factorial_initialise_caching(n_range(2))
+
+                    call cpu_time(start)
                     do i=1, no_x_values
                         x = x_range(1) + (i-1) * step_size
                         do ii=1, no_z_values
@@ -1343,9 +1523,123 @@ module lib_mie_scattering_by_a_sphere
 
                             point_spherical = point_cartesian
 
-                            buffer = get_e_field_scattered_xu(point_spherical%theta, point_spherical%phi, point_spherical%rho, &
-                                                              e_field_0, lambda, n_medium, &
-                                                              r_particle, n_particle, n_range)
+                            buffer = get_e_field_scattered_xu_real(point_spherical%theta, point_spherical%phi, &
+                                                                   point_spherical%rho, &
+                                                                   e_field_0, lambda, n_medium, &
+                                                                   r_particle, n_particle, n_range)
+                            e_field_s(i, ii) = make_cartesian(buffer, point_spherical%theta, point_spherical%phi)
+                            e_field_s_real_x(i, ii) = real(e_field_s(i, ii)%x)
+                            e_field_s_real_y(i, ii) = real(e_field_s(i, ii)%y)
+                            e_field_s_real_z(i, ii) = real(e_field_s(i, ii)%z)
+                        end do
+                        print *, "  x-Value: ", x
+                    end do
+                    call cpu_time(finish)
+                    print *, "test_get_e_field_scattered_plane_section_real"
+                    print '("  Time = ",f10.3," seconds.")',finish-start
+
+                    ! wirte to PGM
+                    u = 99
+                    open(unit=u, file="e_field_s_x.ppm", status='unknown')
+                    rv = write_ppm_p3(u, e_field_s_real_x)
+                    close(u)
+
+                    open(unit=u, file="e_field_s_y.ppm", status='unknown')
+                    rv = write_ppm_p3(u, e_field_s_real_y)
+                    close(u)
+
+                    open(unit=u, file="e_field_s_z.ppm", status='unknown')
+                    rv = write_ppm_p3(u, e_field_s_real_z)
+                    close(u)
+
+                end function test_get_e_field_scattered_plane_section_real
+
+                function test_get_e_field_scattered_plane_section_cmplx() result (rv)
+                    use file_io
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+
+                    ! auxiliary
+                    integer :: i
+                    integer :: ii
+                    double precision :: x
+                    double precision :: y
+                    double precision :: z
+                    integer :: u
+
+                    double precision :: lambda
+                    double precision :: k0
+                    double precision :: e_field_0
+                    double precision :: r_particle
+                    complex(kind=8) :: n_particle
+                    double precision :: n_medium
+
+                    integer(kind=4), dimension(2) :: n_range
+
+                    double precision, dimension(2) :: x_range
+                    double precision, dimension(2) :: z_range
+                    real(kind=8) :: step_size
+
+                    integer :: no_x_values
+                    integer :: no_z_values
+
+                    type(spherical_coordinate_cmplx_type) :: buffer
+                    type(cartesian_coordinate_real_type) :: point_cartesian
+                    type(spherical_coordinate_real_type) :: point_spherical
+
+                    type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field_s
+                    double precision, dimension(:, :), allocatable :: e_field_s_real_x
+                    double precision, dimension(:, :), allocatable :: e_field_s_real_y
+                    double precision, dimension(:, :), allocatable :: e_field_s_real_z
+
+
+                    x_range = (/ -5.0_8 * unit_mu, 5.0_8 * unit_mu /)
+                    z_range = (/ -5.0_8 * unit_mu, 10.0_8 * unit_mu /)
+!                    step_size = 0.02_8 * unit_mu
+                    step_size = 0.1_8 * unit_mu
+
+                    no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                    no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
+
+                    allocate(e_field_s(no_x_values, no_z_values))
+                    allocate(e_field_s_real_x(no_x_values, no_z_values))
+                    allocate(e_field_s_real_y(no_x_values, no_z_values))
+                    allocate(e_field_s_real_z(no_x_values, no_z_values))
+
+                    y = 0;
+
+                    r_particle = 1.5 * unit_mu
+
+                    e_field_0 = 1
+                    lambda = 1 * unit_mu
+
+                    ! https://refractiveindex.info/?shelf=main&book=Ag&page=Johnson
+                    n_particle = cmplx(0.040000, 7.1155, kind=8)
+                    n_medium = 1
+
+                    k0 = 2 * PI / lambda
+
+                    n_range(1) = 1
+                    n_range(2) = min(45, get_n_c(r_particle * k0 * abs(n_particle))) ! todo: abs??
+
+                    do i=1, no_x_values
+                        x = x_range(1) + (i-1) * step_size
+                        do ii=1, no_z_values
+                            z = z_range(1) + (ii-1) * step_size
+
+                            point_cartesian%x = x
+                            point_cartesian%y = y
+                            point_cartesian%z = z
+
+                            point_spherical = point_cartesian
+
+                            buffer = get_e_field_scattered_xu_cmplx(point_spherical%theta, point_spherical%phi, &
+                                                                    point_spherical%rho, &
+                                                                    e_field_0, lambda, n_medium, &
+                                                                    r_particle, n_particle, n_range)
                             e_field_s(i, ii) = make_cartesian(buffer, point_spherical%theta, point_spherical%phi)
                             e_field_s_real_x(i, ii) = real(e_field_s(i, ii)%x)
                             e_field_s_real_y(i, ii) = real(e_field_s(i, ii)%y)
@@ -1368,8 +1662,7 @@ module lib_mie_scattering_by_a_sphere
                     rv = write_ppm_p3(u, e_field_s_real_z)
                     close(u)
 
-
-                end function
+                end function test_get_e_field_scattered_plane_section_cmplx
 
         end function lib_mie_scattering_by_a_sphere_test_functions
 
