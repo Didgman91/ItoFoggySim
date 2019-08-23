@@ -1,9 +1,12 @@
 module lib_math_factorial
+    use lib_math_type
     implicit none
 
     private
 
     ! --- public functions ---
+    public :: lib_math_factorial_initialise_caching
+
     public :: lib_math_factorial_get_factorial
     public :: lib_math_factorial_get_n_minus_m_divided_by_n_plus_m
     public :: lib_math_factorial_get_n_plus_m_divided_by_n_minus_m
@@ -14,7 +17,41 @@ module lib_math_factorial
     ! parameter
     double precision, parameter :: ground_truth_e = 10.0_8**(-14.0_8)
 
+    ! caching
+    type(list_list_real) :: caching_factorial_nm
+    integer(kind=4) :: caching_factorial_nm_n_max
+
     contains
+        subroutine lib_math_factorial_initialise_caching(n_max)
+            implicit none
+            ! dummy
+            integer(kind=4) :: n_max
+
+            ! auxiliary
+            integer(kind=4) :: n
+            integer(kind=4) :: m
+            real(kind=8) :: buffer
+
+            caching_factorial_nm_n_max = n_max
+
+            if (allocated(caching_factorial_nm%item)) then
+                deallocate(caching_factorial_nm%item)
+            end if
+
+            allocate(caching_factorial_nm%item(0:n_max))
+            do n=0, n_max
+                allocate(caching_factorial_nm%item(n)%item(-n:n))
+            end do
+
+            ! pre-calculate
+            do n=0, n_max
+                do m = -n, n
+                    buffer = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m_core(n,m)
+                    caching_factorial_nm%item(n)%item(m) = buffer
+                end do
+            end do
+
+        end subroutine
 
         ! calculates the division of two factorials
         !
@@ -31,7 +68,7 @@ module lib_math_factorial
         ! ----
         !   rv: double precision
         !
-        function lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m) result (rv)
+        function lib_math_factorial_get_n_minus_m_divided_by_n_plus_m_core(n,m) result (rv)
             implicit none
             ! dummy
             integer(kind=4), intent(in) :: n
@@ -56,7 +93,53 @@ module lib_math_factorial
                     rv = 1D0 / rv
                 end if
             else
-                rv = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n, -m)
+                rv = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m_core(n, -m)
+            end if
+
+        end function lib_math_factorial_get_n_minus_m_divided_by_n_plus_m_core
+
+        ! calculates the division of two factorials
+        !
+        ! formula: rv = (n-m)!  / (n+m)!
+        !
+        ! Arguments
+        ! ----
+        !   n: integer
+        !       1 <= n
+        !   m: integer
+        !       1 <= m <= n
+        !
+        ! Result
+        ! ----
+        !   rv: double precision
+        !
+        function lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m, caching) result (rv)
+            implicit none
+            ! dummy
+            integer(kind=4), intent(in) :: n
+            integer(kind=4), intent(in) :: m
+            logical, intent(in), optional :: caching
+
+            real(kind=8) :: rv
+
+            ! auxiliaray
+            logical :: m_caching
+
+            if (present(caching))then
+                m_caching = caching
+            else
+                m_caching = .true.
+            end if
+
+            if (m_caching .and. allocated(caching_factorial_nm%item)) then
+                if ((n .le. caching_factorial_nm_n_max) &
+                    .and. (abs(m) .le. caching_factorial_nm_n_max)) then
+                    rv = caching_factorial_nm%item(n)%item(m)
+                else
+                    rv = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m_core(n,m)
+                end if
+            else
+                rv = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m_core(n,m)
             end if
 
         end function lib_math_factorial_get_n_minus_m_divided_by_n_plus_m
@@ -76,7 +159,7 @@ module lib_math_factorial
         ! ----
         !   rv: double precision
         !
-        function lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n,m) result (rv)
+        function lib_math_factorial_get_n_plus_m_divided_by_n_minus_m_core(n,m) result (rv)
             implicit none
             ! dummy
             integer(kind=4), intent(in) :: n
@@ -101,6 +184,53 @@ module lib_math_factorial
                 end if
             else
                 rv = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n, -m)
+            end if
+
+        end function lib_math_factorial_get_n_plus_m_divided_by_n_minus_m_core
+
+        ! calculates the division of two factorials
+        !
+        ! formula: rv = (n+m)!  / (n-m)!
+        !
+        ! Arguments
+        ! ----
+        !   n: integer
+        !       0 <= n
+        !   m: integer
+        !       0 <= m <= n
+        !
+        ! Result
+        ! ----
+        !   rv: double precision
+        !
+        function lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n,m, caching) result (rv)
+            implicit none
+            ! dummy
+            integer(kind=4), intent(in) :: n
+            integer(kind=4), intent(in) :: m
+
+            logical, intent(in), optional :: caching
+
+            real(kind=8) :: rv
+
+            ! auxiliaray
+            logical :: m_caching
+
+            if (present(caching))then
+                m_caching = caching
+            else
+                m_caching = .true.
+            end if
+
+            if (m_caching .and. allocated(caching_factorial_nm%item)) then
+                if (n .le. caching_factorial_nm_n_max &
+                    .and. abs(m) .le. caching_factorial_nm_n_max) then
+                    rv = caching_factorial_nm%item(n)%item(-m)
+                else
+                    rv = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m_core(n,m)
+                end if
+            else
+                rv = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m_core(n,m)
             end if
 
         end function lib_math_factorial_get_n_plus_m_divided_by_n_minus_m
