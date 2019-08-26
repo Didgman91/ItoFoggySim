@@ -1288,16 +1288,22 @@ module lib_mie_vector_spherical_harmonics
             integer(kind=4) :: q
 
             integer(kind=4) :: q_max
-            integer(kind=4) :: q_max_1
-            integer(kind=4) :: q_max_2
+            integer(kind=4) :: q_max_a
+            integer(kind=4) :: q_max_b
+
+            double precision :: factorial
 
             double precision :: cos_theta
 
-            double precision, dimension(:), allocatable :: p_k_plus_m_p_plus_1
-!            double precision, dimension(2, n) :: buffer_pm
-!            double precision, dimension(2, n) :: buffer_pd
+            type(list_list_real) :: p_k_minus_m_p
+            double precision, dimension(:, :), allocatable :: buffer_pm
+            double precision, dimension(:, :), allocatable :: buffer_pd
 
-            double precision, dimension(:), allocatable :: z_p_plus_1
+            double precision, dimension(:), allocatable :: z_n_real
+            complex(kind=8), dimension(:), allocatable :: z_n_cmplx
+
+            double precision :: buffer_real
+            complex(kind=8) :: buffer_cmplx
 
             !$  integer(kind=4) :: j_max
 
@@ -1314,40 +1320,141 @@ module lib_mie_vector_spherical_harmonics
             !$  j_max = 2 * n_range(2) + 1
             !$  call fwig_thread_temp_init(2 * j_max)     ! multi threaded
 
+            allocate (buffer_pm(2, 1:2*n_range(2)))
+            allocate (buffer_pd(2, 1:2*n_range(2)))
+
+            call init_list(p_k_minus_m_p, n_range(1), 2*n_range(2)-n_range(1)+1)
 
             ! --- pre-calc ---
+
+            ! z function
+            select case (z_selector)
+                case(1)
+                    ! spherical Bessel function first kind j_n
+                    allocate(z_n_real(0:2*n_range(2)))
+                    z_n_real = lib_math_bessel_spherical_first_kind(x, 0, 2*n_range(2)+1)
+                case(2)
+                    ! spherical Bessel function second kind y_n
+                    allocate(z_n_real(0:2*n_range(2)))
+                    z_n_real = lib_math_bessel_spherical_second_kind(x, 0, 2*n_range(2)+1)
+                case(3)
+                    ! spherical Hankel function first kind   h^(1)_n
+                    allocate(z_n_cmplx(0:2*n_range(2)))
+                    z_n_cmplx = cmplx(lib_math_bessel_spherical_first_kind(x, 0, 2*n_range(2)+1), &
+                                      lib_math_bessel_spherical_second_kind(x, 0, 2*n_range(2)+1),&
+                                      kind=8)
+!                    z_n_cmplx = lib_math_hankel_spherical_1(x, 0, 2*n_range(2)+1)
+                case(4)
+                    ! spherical Hankel function second kind   h^(2)_n
+                    allocate(z_n_cmplx(0:2*n_range(2)))
+                    z_n_cmplx = lib_math_hankel_spherical_2(x, 0, 2*n_range(2)+1)
+                case default
+                    z_n_real = 0
+                    z_n_cmplx = cmplx(0,0)
+
+                    print*, "lib_mie_vector_spherical_harmonics_tranlation_coefficient_real: ERROR"
+                    print*, "  undefined z_selector value[1-4]: ", z_selector
+                    return
+            end select
+
+            ! Legendre Polynomial
             cos_theta = cos(theta)
-!            lib_math_associated_legendre_polynomial_with_negative_m(cos_theta,
-!            p_k_plus_m_p_plus_1 =
-!
-!
-!
-!
-!            allocate(A_mnkl(-n_range(2):n_range(2), & ! m
-!                            n_range(1):n_range(2), & ! n
-!                            -n_range(2):n_range(2), & ! k
-!                            n_range(1):n_range(2)))
-!
-!            do m=-n_range(2), n_range(2)
-!                do n=n_range(1), n_range(2)
-!                    do k=-n_range(2), n_range(2)
-!                        do l=n_range(1), n_range(2)
-!                            q_max_1 = min(n, l, (n + l - abs(m - k))/2) ! eq. 25
-!                            q_max_2 = min(n, l, (n + l + 1 - abs(m - k))/2) ! eq. 60
-!                            q_max = max(q_max_1, q_max_2)
-!
-!
-!
-!                            do q=0, q_max
+            call lib_math_associated_legendre_polynomial(cos_theta, 0, &
+                                                         n_range(1), 2*n_range(2)-n_range(1)+1, &
+                                                         buffer_pm, buffer_pd)
+            do n=1, 2*n_range(2)-n_range(1)
+                if (m .le. n) then
+                    p_k_minus_m_p%item(n_range(1)+n-1)%item(0) = buffer_pm(2,n)
+                end if
+            end do
+
+            do m=1, 2*n_range(2)
+                call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, m, &
+                                                                             m, 2*n_range(2)-n_range(1)+1, &
+                                                                             buffer_pm, buffer_pd)
+                do n=m, 2*n_range(2)-n_range(1)
+                    if (m .le. n) then
+                        p_k_minus_m_p%item(n)%item(-m) = buffer_pm(1,n-m+1)
+                        p_k_minus_m_p%item(n)%item(m) = buffer_pm(2,n-m+1)
+                    end if
+                end do
+            end do
+
+
+
+
+            allocate(A_mnkl(-n_range(2):n_range(2), & ! m
+                            n_range(1):n_range(2), & ! n
+                            -n_range(2):n_range(2), & ! k
+                            n_range(1):n_range(2))) ! l
+
+            do n=n_range(1), n_range(2)
+                do m=-n, n
+                    do l=n_range(1), n_range(2) ! here: synonym for nu (TeX: $ \nu $)
+                        do k=-l, l ! here: synonym for mu (TeX: $ \mu $)
+                            q_max_a = get_q_max_a(m, n, k, l)
+                            q_max_b = get_q_max_b(m, n, k, l)
+
+                            factorial = (2 * l + 1)
+                            factorial = factorial * lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n, m)
+                            factorial = factorial * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(l, k)
+                            factorial = factorial / real( 2 * n * ( n + 1 ) , kind=8)
+
+
+!                            do q=0, q_max_a
 !                                A_mnkl(m, n, k, l)
 !                            end do
-!                        end do
-!                    end do
-!                end do
-!            end do
+                        end do
+                    end do
+                end do
+            end do
 
 
         end subroutine lib_mie_vector_spherical_harmonics_tranlation_coefficient_real
+
+        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
+        !            eq. 25
+        function get_q_max_a(m, n, k, l) result (rv)
+            implicit none
+            ! dummy
+            integer(kind=4), intent(in) :: m
+            integer(kind=4), intent(in) :: n
+            integer(kind=4), intent(in) :: k
+            integer(kind=4), intent(in) :: l
+
+            integer(kind=4) :: rv
+
+            rv = min(n, l, int(floor( (n + l - abs(m - k))/2.0 )))
+        end function
+
+        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
+        !            eq. 60
+        function get_q_max_b(m, n, k, l) result (rv)
+            implicit none
+            ! dummy
+            integer(kind=4), intent(in) :: m
+            integer(kind=4), intent(in) :: n
+            integer(kind=4), intent(in) :: k
+            integer(kind=4), intent(in) :: l
+
+            integer(kind=4) :: rv
+
+            rv = min(n, l, int(floor( (n + l + 1 - abs(m - k))/2.0 )))
+        end function
+
+        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
+        !            eq. 5
+        function get_p(n, l, q) result (rv)
+            implicit none
+            ! dummy
+            integer(kind=4), intent(in) :: n
+            integer(kind=4), intent(in) :: l
+            integer(kind=4), intent(in) :: q
+
+            integer(kind=4) :: rv
+
+            rv = n + l - 2 * q
+        end function
 
         ! todo: optimize for a(p=p) and b(p=p+1)
         !
@@ -1415,6 +1522,9 @@ module lib_mie_vector_spherical_harmonics
                 rv = rv + 1
             end if
             if (.not. test_ab_xu_cruzan_eq34()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r()) then
                 rv = rv + 1
             end if
 
@@ -1824,6 +1934,33 @@ module lib_mie_vector_spherical_harmonics
                 end do
 
             end function test_ab_xu_cruzan_eq34
+
+            function test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! auxiliary
+                double precision :: x
+                double precision :: theta
+                double precision :: phi
+                integer(kind=4), dimension(2) :: n_range
+                integer(kind=1) :: z_selector
+
+                type(spherical_coordinate_cmplx_type), dimension(:, :, :, :), allocatable :: A_mnkl
+                type(spherical_coordinate_cmplx_type), dimension(:, :, :, :), allocatable :: B_mnkl
+
+                z_selector = 3
+                x = 2.0
+                theta = 0.5
+                phi = 0.5
+                n_range = (/ 1, 20 /)
+                call lib_mie_vector_spherical_harmonics_tranlation_coefficient_real(x, theta, phi, &
+                                                                                    n_range, z_selector, &
+                                                                                    A_mnkl, B_mnkl)
+
+
+            end function test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r
 
         end function lib_mie_vector_spherical_harmonics_test_functions
 
