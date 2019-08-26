@@ -659,48 +659,52 @@ module lib_math_bessel
         complex(kind=8), dimension(n) :: rv
 
         ! auxiliary
-        integer(kind=4) :: i
-        integer(kind=4) :: k
-        integer(kind=4) :: order
-        real(kind=8) :: nk
-        complex(kind=8) :: prefactor
+!        integer(kind=4) :: i
+!        integer(kind=4) :: k
+!        integer(kind=4) :: order
+!        real(kind=8) :: nk
+!        complex(kind=8) :: prefactor
+!
+!        complex(kind=8), dimension(fnu:fnu+n-1) :: i_pow_n
+!        complex(kind=8), dimension(0:fnu+n-1) :: x_pow_k
+!        complex(kind=8) :: summation
+!
+!        complex(kind=8), dimension(fnu:fnu+n-1) :: h
+!
+!
+!        ! pre-calulations
+!        order = fnu + n - 1
+!
+!        prefactor = cmplx(cos(x), sin(x), kind=8) / x
+!
+!        x_pow_k(0) = cmplx(1.0, 0.0, kind=8)
+!        do k=1, order
+!            x_pow_k(k) = x_pow_k(k-1) * cmplx(0.0_8, -2.0_8 * x, kind=8)
+!        end do
+!
+!        do i=fnu, order
+!            i_pow_n(i) = cmplx(0.0, 1.0, kind=8)**(-i-1)
+!        end do
+!
+!
+!        ! calculate Hankel functions of degree fnu until order
+!        do i=fnu, order
+!            ! calculate the spherical Hankel function with degree i
+!            summation = cmplx(0.0, 0.0, kind=8)
+!            do k=0, i
+!                nk = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(i, k)
+!                summation = summation + nk / x_pow_k(k)
+!            end do
+!
+!            h(i) = i_pow_n(i) * prefactor * summation
+!
+!        end do
+!
+!        rv = h
 
-        complex(kind=8), dimension(fnu:fnu+n-1) :: i_pow_n
-        complex(kind=8), dimension(0:fnu+n-1) :: x_pow_k
-        complex(kind=8) :: summation
-
-        complex(kind=8), dimension(fnu:fnu+n-1) :: h
-
-
-        ! pre-calulations
-        order = fnu + n - 1
-
-        prefactor = cmplx(cos(x), sin(x), kind=8) / x
-
-        x_pow_k(0) = cmplx(1.0, 0.0, kind=8)
-        do k=1, order
-            x_pow_k(k) = x_pow_k(k-1) * cmplx(0.0_8, -2.0_8 * x, kind=8)
-        end do
-
-        do i=fnu, order
-            i_pow_n(i) = cmplx(0.0, 1.0, kind=8)**(-i-1)
-        end do
-
-
-        ! calculate Hankel functions of degree fnu until order
-        do i=fnu, order
-            ! calculate the spherical Hankel function with degree i
-            summation = cmplx(0.0, 0.0, kind=8)
-            do k=0, i
-                nk = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(i, k)
-                summation = summation + nk / x_pow_k(k)
-            end do
-
-            h(i) = i_pow_n(i) * prefactor * summation
-
-        end do
-
-        rv = h
+        rv = cmplx(lib_math_bessel_spherical_first_kind_real(x, fnu, n), &
+                   lib_math_bessel_spherical_second_kind_real(x, fnu, n), &
+                   kind=8)
 
     end function lib_math_bessel_spherical_third_kind_1_real
 
@@ -736,48 +740,51 @@ module lib_math_bessel
         complex(kind=8), dimension(n) :: rv
 
         ! auxiliary
-        integer(kind=4) :: i
-        integer(kind=4) :: k
-        integer(kind=4) :: order
-        real(kind=8) :: nk
-        complex(kind=8) :: prefactor
+!        integer(kind=4) :: i
+!        integer(kind=4) :: k
+!        integer(kind=4) :: order
+!        real(kind=8) :: nk
+!        complex(kind=8) :: prefactor
+!
+!        complex(kind=8), dimension(fnu:fnu+n-1) :: i_pow_n
+!        complex(kind=8), dimension(0:fnu+n-1) :: x_pow_k
+!        complex(kind=8) :: summation
+!
+!        complex(kind=8), dimension(fnu:fnu+n-1) :: h
+!
+!
+!        ! pre-calulations
+!        order = fnu + n - 1
+!
+!        prefactor = exp(cmplx(0.0, 1.0, kind=8) * x) / x
+!
+!        x_pow_k(0) = cmplx(1.0, 0.0, kind=8)
+!        do k=1, order
+!            x_pow_k(k) = x_pow_k(k-1) * (-2.0_8) * x * cmplx(0.0, 1.0, kind=8)
+!        end do
+!
+!        do i=fnu, order
+!            i_pow_n(i) = cmplx(0.0, 1.0, kind=8)**(-i-1)
+!        end do
+!
+!
+!        ! calculate Hankel functions of degree fnu until order
+!        do i=fnu, order
+!            ! calculate the spherical Hankel function with degree i
+!            summation = cmplx(0.0, 0.0, kind=8)
+!            do k=0, i
+!                nk = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(i, k)
+!                summation = summation + nk / x_pow_k(k)
+!            end do
+!
+!            h(i) = i_pow_n(i) * prefactor * summation
+!
+!        end do
+!
+!        rv = h
 
-        complex(kind=8), dimension(fnu:fnu+n-1) :: i_pow_n
-        complex(kind=8), dimension(0:fnu+n-1) :: x_pow_k
-        complex(kind=8) :: summation
-
-        complex(kind=8), dimension(fnu:fnu+n-1) :: h
-
-
-        ! pre-calulations
-        order = fnu + n - 1
-
-        prefactor = exp(cmplx(0.0, 1.0, kind=8) * x) / x
-
-        x_pow_k(0) = cmplx(1.0, 0.0, kind=8)
-        do k=1, order
-            x_pow_k(k) = x_pow_k(k-1) * (-2.0_8) * x * cmplx(0.0, 1.0, kind=8)
-        end do
-
-        do i=fnu, order
-            i_pow_n(i) = cmplx(0.0, 1.0, kind=8)**(-i-1)
-        end do
-
-
-        ! calculate Hankel functions of degree fnu until order
-        do i=fnu, order
-            ! calculate the spherical Hankel function with degree i
-            summation = cmplx(0.0, 0.0, kind=8)
-            do k=0, i
-                nk = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(i, k)
-                summation = summation + nk / x_pow_k(k)
-            end do
-
-            h(i) = i_pow_n(i) * prefactor * summation
-
-        end do
-
-        rv = h
+        rv = lib_math_bessel_spherical_first_kind_cmplx(x, fnu, n) &
+             + cmplx(0,1, kind=8) * lib_math_bessel_spherical_second_kind_cmplx(x, fnu, n)
 
     end function lib_math_bessel_spherical_third_kind_1_cmplx
 
@@ -813,48 +820,52 @@ module lib_math_bessel
         complex(kind=8), dimension(n) :: rv
 
         ! auxiliary
-        integer(kind=4) :: i
-        integer(kind=4) :: k
-        integer(kind=4) :: order
-        real(kind=8) :: nk
-        complex(kind=8) :: prefactor
+!        integer(kind=4) :: i
+!        integer(kind=4) :: k
+!        integer(kind=4) :: order
+!        real(kind=8) :: nk
+!        complex(kind=8) :: prefactor
+!
+!        complex(kind=8), dimension(fnu:fnu+n-1) :: i_pow_n
+!        complex(kind=8), dimension(0:fnu+n-1) :: x_pow_k
+!        complex(kind=8) :: summation
+!
+!        complex(kind=8), dimension(fnu:fnu+n-1) :: h
+!
+!
+!        ! pre-calulations
+!        order = fnu + n - 1
+!
+!        prefactor = cmplx(cos(x), -sin(x), kind=8) / x
+!
+!        x_pow_k(0) = cmplx(1.0, 0.0, kind=8)
+!        do k=1, order
+!            x_pow_k(k) = x_pow_k(k-1) * cmplx(0.0_8, 2.0_8 * x, kind=8)
+!        end do
+!
+!        do i=fnu, order
+!            i_pow_n(i) = cmplx(0.0, 1.0, kind=8)**(i+1)
+!        end do
+!
+!
+!        ! calculate Hankel functions of degree fnu until order
+!        do i=fnu, order
+!            ! calculate the spherical Hankel function with degree i
+!            summation = cmplx(0.0, 0.0, kind=8)
+!            do k=0, i
+!                nk = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(i, k)
+!                summation = summation + nk / x_pow_k(k)
+!            end do
+!
+!            h(i) = i_pow_n(i) * prefactor * summation
+!
+!        end do
+!
+!        rv = h
 
-        complex(kind=8), dimension(fnu:fnu+n-1) :: i_pow_n
-        complex(kind=8), dimension(0:fnu+n-1) :: x_pow_k
-        complex(kind=8) :: summation
-
-        complex(kind=8), dimension(fnu:fnu+n-1) :: h
-
-
-        ! pre-calulations
-        order = fnu + n - 1
-
-        prefactor = cmplx(cos(x), -sin(x), kind=8) / x
-
-        x_pow_k(0) = cmplx(1.0, 0.0, kind=8)
-        do k=1, order
-            x_pow_k(k) = x_pow_k(k-1) * cmplx(0.0_8, 2.0_8 * x, kind=8)
-        end do
-
-        do i=fnu, order
-            i_pow_n(i) = cmplx(0.0, 1.0, kind=8)**(i+1)
-        end do
-
-
-        ! calculate Hankel functions of degree fnu until order
-        do i=fnu, order
-            ! calculate the spherical Hankel function with degree i
-            summation = cmplx(0.0, 0.0, kind=8)
-            do k=0, i
-                nk = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(i, k)
-                summation = summation + nk / x_pow_k(k)
-            end do
-
-            h(i) = i_pow_n(i) * prefactor * summation
-
-        end do
-
-        rv = h
+        rv = cmplx(lib_math_bessel_spherical_first_kind_real(x, fnu, n), &
+                   -lib_math_bessel_spherical_second_kind_real(x, fnu, n), &
+                   kind=8)
 
     end function lib_math_bessel_spherical_third_kind_2_real
 
@@ -890,48 +901,51 @@ module lib_math_bessel
         complex(kind=8), dimension(n) :: rv
 
         ! auxiliary
-        integer(kind=4) :: i
-        integer(kind=4) :: k
-        integer(kind=4) :: order
-        real(kind=8) :: nk
-        complex(kind=8) :: prefactor
+!        integer(kind=4) :: i
+!        integer(kind=4) :: k
+!        integer(kind=4) :: order
+!        real(kind=8) :: nk
+!        complex(kind=8) :: prefactor
+!
+!        complex(kind=8), dimension(fnu:fnu+n-1) :: i_pow_n
+!        complex(kind=8), dimension(0:fnu+n-1) :: x_pow_k
+!        complex(kind=8) :: summation
+!
+!        complex(kind=8), dimension(fnu:fnu+n-1) :: h
+!
+!
+!        ! pre-calulations
+!        order = fnu + n - 1
+!
+!        prefactor = exp(-cmplx(0.0, 1.0, kind=8) * z) / z
+!
+!        x_pow_k(0) = cmplx(1.0, 0.0, kind=8)
+!        do k=1, order
+!            x_pow_k(k) = x_pow_k(k-1) * (2.0_8) * z * cmplx(0.0, 1.0, kind=8)
+!        end do
+!
+!        do i=fnu, order
+!            i_pow_n(i) = cmplx(0.0, 1.0, kind=8)**(i+1)
+!        end do
+!
+!
+!        ! calculate Hankel functions of degree fnu until order
+!        do i=fnu, order
+!            ! calculate the spherical Hankel function with degree i
+!            summation = cmplx(0.0, 0.0, kind=8)
+!            do k=0, i
+!                nk = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(i, k)
+!                summation = summation + nk / x_pow_k(k)
+!            end do
+!
+!            h(i) = i_pow_n(i) * prefactor * summation
+!
+!        end do
+!
+!        rv = h
 
-        complex(kind=8), dimension(fnu:fnu+n-1) :: i_pow_n
-        complex(kind=8), dimension(0:fnu+n-1) :: x_pow_k
-        complex(kind=8) :: summation
-
-        complex(kind=8), dimension(fnu:fnu+n-1) :: h
-
-
-        ! pre-calulations
-        order = fnu + n - 1
-
-        prefactor = exp(-cmplx(0.0, 1.0, kind=8) * z) / z
-
-        x_pow_k(0) = cmplx(1.0, 0.0, kind=8)
-        do k=1, order
-            x_pow_k(k) = x_pow_k(k-1) * (2.0_8) * z * cmplx(0.0, 1.0, kind=8)
-        end do
-
-        do i=fnu, order
-            i_pow_n(i) = cmplx(0.0, 1.0, kind=8)**(i+1)
-        end do
-
-
-        ! calculate Hankel functions of degree fnu until order
-        do i=fnu, order
-            ! calculate the spherical Hankel function with degree i
-            summation = cmplx(0.0, 0.0, kind=8)
-            do k=0, i
-                nk = lib_math_factorial_get_n_plus_m_divided_by_m_fac_n_minus_m(i, k)
-                summation = summation + nk / x_pow_k(k)
-            end do
-
-            h(i) = i_pow_n(i) * prefactor * summation
-
-        end do
-
-        rv = h
+        rv = lib_math_bessel_spherical_first_kind_cmplx(z, fnu, n) &
+             - cmplx(0,1, kind=8) * lib_math_bessel_spherical_second_kind_cmplx(z, fnu, n)
 
     end function lib_math_bessel_spherical_third_kind_2_cmplx
 
@@ -2551,15 +2565,15 @@ module lib_math_bessel
             logical :: rv
 
             ! parameter
-            integer, parameter :: n = 5
+            integer, parameter :: n = 41
 
             ! auxiliary
-            double precision :: x = 5
+            double precision :: x = 2
             complex(kind=8), dimension(n) :: y
             integer :: fnu = 0
 
             complex(kind=8), dimension(n) :: ground_truth_y
-            double precision :: ground_truth_e = 10.0_8**(-13.0_8)
+            double precision :: ground_truth_e = 10.0_8**(-14.0_8)
 
             integer :: i
             double precision :: buffer
@@ -2571,23 +2585,67 @@ module lib_math_bessel
             !  >>> for n in range(0,5):
             !  >>>     value = numerical_approx(spherical_hankel1(n, x))
             !  >>>     print("n = {}: {}".format(n, value))
-            ground_truth_y(1) = cmplx(-0.191784854932628_8, -0.0567324370926452_8, kind=8)
-            ground_truth_y(2) = cmplx(-0.0950894080791708_8, +0.180438367514099_8, kind=8)
-            ground_truth_y(3) = cmplx(0.134731210085125_8, +0.164995457601104_8, kind=8)
-            ground_truth_y(4) = cmplx(0.229820618164296_8, -0.0154429099129942_8, kind=8)
-            ground_truth_y(5) = cmplx(0.187017655344889_8, -0.186615531479296_8, kind=8)
+            ground_truth_y(1)  = cmplx(0.454648713412841_8, + 0.208073418273571_8, kind=8)
+            ground_truth_y(2)  = cmplx(0.435397774979992_8, - 0.350612004276055_8, kind=8)
+            ground_truth_y(3)  = cmplx(0.198447949057147_8, - 0.733991424687654_8, kind=8)
+            ground_truth_y(4)  = cmplx(0.0607220976628748_8, - 1.48436655744308_8, kind=8)
+            ground_truth_y(5)  = cmplx(0.0140793927629153_8, - 4.46129152636313_8, kind=8)
+            ground_truth_y(6)  = cmplx(0.00263516977024412_8, - 18.5914453111910_8, kind=8)
+            ground_truth_y(7)  = cmplx(0.000414040973427324_8, - 97.7916576851873_8, kind=8)
+            ground_truth_y(8)  = cmplx(0.0000560965570334895_8, - 617.054329642526_8, kind=8)
+            ground_truth_y(9)  = cmplx(6.68320432384702d-6, - 4530.11581463376_8, kind=8)
+            ground_truth_y(10) = cmplx(7.10679719210186d-7, - 37888.9300947444_8, kind=8)
+            ground_truth_y(11) = cmplx(6.82530086497472d-8, - 355414.720085438_8, kind=8)
+            ground_truth_y(12) = cmplx(5.97687161216011d-9, - 3.69396563080236d6, kind=8)
+            ground_truth_y(13) = cmplx(4.81014890094075d-10, - 4.21251900341417d7, kind=8)
+            ground_truth_y(14) = cmplx(3.58145140158186d-11, - 5.22870909795969d8, kind=8)
+            ground_truth_y(15) = cmplx(2.48104911947672d-12, - 7.01663209221144d9, kind=8)
+            ground_truth_y(16) = cmplx(1.60698216593841d-13, - 1.01218294427270d11, kind=8)
+            ground_truth_y(17) = cmplx(9.77323772781462d-15, - 1.56186693153047d12, kind=8)
+            ground_truth_y(18) = cmplx(5.60205915100117d-16, - 2.56695860758255d13, kind=8)
+            ground_truth_y(19) = cmplx(3.03657864374240d-17, - 4.47655889395416d14, kind=8)
+            ground_truth_y(20) = cmplx(1.56113399222733d-18, - 8.25596436773937d15, kind=8)
+            ground_truth_y(21) = cmplx(7.63264110088761d-20, - 1.60543649281522d17, kind=8)
+            ground_truth_y(22) = cmplx(3.55743345463290d-21, - 3.28288884590347d18, kind=8)
+            ground_truth_y(23) = cmplx(1.58408265731184d-22, - 7.04215665376430d19, kind=8)
+            ground_truth_y(24) = cmplx(6.75252431874067d-24, - 1.58120235825106d21, kind=8)
+            ground_truth_y(25) = cmplx(2.76055759221868d-25, - 3.70878338523624d22, kind=8)
+            ground_truth_y(26) = cmplx(1.08417821950868d-26, - 9.07070727024627d23, kind=8)
+            ground_truth_y(27) = cmplx(4.09686752846144d-28, - 2.30932157052756d25, kind=8)
+            ground_truth_y(28) = cmplx(1.49167553359982d-29, - 6.11063145462780d26, kind=8)
+            ground_truth_y(29) = cmplx(5.24018893806175d-31, - 1.67811432845212d28, kind=8)
+            ground_truth_y(30) = cmplx(1.77831374777941d-32, - 4.77651520463390d29, kind=8)
+            ground_truth_y(31) = cmplx(5.83661788752249d-34, - 1.40739387103855d31, kind=8)
+            ground_truth_y(32) = cmplx(1.85470791494552d-35, - 4.28777479146294d32, kind=8)
+            ground_truth_y(33) = cmplx(5.71204455589985d-37, - 1.34924166543979d34, kind=8)
+            ground_truth_y(34) = cmplx(1.70656572193294d-38, - 4.38074763788785d35, kind=8)
+            ground_truth_y(35) = cmplx(4.95061257549874d-40, - 1.46620121702699d37, kind=8)
+            ground_truth_y(36) = cmplx(1.39561661412576d-41, - 5.05401345110523d38, kind=8)
+            ground_truth_y(37) = cmplx(3.82640464769116d-43, - 1.79270857392533d40, kind=8)
+            ground_truth_y(38) = cmplx(1.02108228151588d-44, - 6.53833228137634d41, kind=8)
+            ground_truth_y(39) = cmplx(2.65390799339793d-46, - 2.45008189694220d43, kind=8)
+            ground_truth_y(40) = cmplx(6.72295942323183d-48, - 9.42627697094610d44, kind=8)
+            ground_truth_y(41) = cmplx(1.66097877863811d-49, - 3.72092932162677d46, kind=8)
 
             y = lib_math_bessel_spherical_third_kind_1_real(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_spherical_third_kind_1_real:"
             do i=1, n
-                buffer = abs(y(i) - ground_truth_y(i))
+                buffer = abs(log(real(y(i))) - log(real(ground_truth_y(i))))
                 if (buffer .gt. ground_truth_e) then
-                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    print *, "  ", i , " (Re) difference: ", buffer, " : FAILED"
                     rv = .false.
                 else
-                    print *, "  ", i, ": OK"
+                    print *, "  ", i, ": (Re) OK"
+                end if
+
+                buffer = abs(log(aimag(y(i))) - log(aimag(ground_truth_y(i))))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , " (Im) difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": (Im) OK"
                 end if
             end do
 
@@ -2599,7 +2657,7 @@ module lib_math_bessel
             logical :: rv
 
             ! parameter
-            integer, parameter :: n = 5
+            integer, parameter :: n = 41
             double precision, parameter :: ground_truth_e = 10.0_8**(-13.0_8)
 
             ! auxiliary
@@ -2620,23 +2678,67 @@ module lib_math_bessel
             !  >>> for n in range(0,5):
             !  >>>     value = numerical_approx(spherical_hankel1(n, x))
             !  >>>     print("n = {}: {}".format(n, value))
-            ground_truth_y(1) = cmplx(-0.0250227739998745_8, +0.00233120915731335_8, kind = 8)
-            ground_truth_y(2) = cmplx(-0.00182228917664341_8, +0.0271504151649199_8, kind = 8)
-            ground_truth_y(3) = cmplx(0.0296975379081458_8, +0.0120891343783301_8, kind = 8)
-            ground_truth_y(4) = cmplx(0.0315922819865381_8, -0.0269692779105477_8, kind = 8)
-            ground_truth_y(5) = cmplx(-0.00458857312258838_8, -0.0598897093673198_8, kind = 8)
+            ground_truth_y(1)  = cmplx(-0.0250227739998745_8, + 0.00233120915731335_8, kind=8)
+            ground_truth_y(2)  = cmplx(-0.00182228917664341_8, + 0.0271504151649199_8, kind=8)
+            ground_truth_y(3)  = cmplx(0.0296975379081458_8, + 0.0120891343783301_8, kind=8)
+            ground_truth_y(4)  = cmplx(0.0315922819865381_8, - 0.0269692779105477_8, kind=8)
+            ground_truth_y(5)  = cmplx(-0.00458857312258838_8, - 0.0598897093673198_8, kind=8)
+            ground_truth_y(6)  = cmplx(-0.0758854047150979_8, - 0.0631149498592040_8, kind=8)
+            ground_truth_y(7)  = cmplx(-0.187212328816476_8, - 0.00224281954730325_8, kind=8)
+            ground_truth_y(8)  = cmplx(-0.345739239467690_8, + 0.225933476709331_8, kind=8)
+            ground_truth_y(9)  = cmplx(-0.473216590452379_8, + 0.944214817382837_8, kind=8)
+            ground_truth_y(10) = cmplx(0.0657355705905944_8, + 3.09639836994315_8, kind=8)
+            ground_truth_y(11) = cmplx(4.74590684093329_8, + 9.11302288820878_8, kind=8)
+            ground_truth_y(12) = cmplx(30.3158913122633_8, + 23.0256470073922_8, kind=8)
+            ground_truth_y(13) = cmplx(151.995722926319_8, + 34.1083014388942_8, kind=8)
+            ground_truth_y(14) = cmplx(683.645503092378_8, - 138.068697574778_8, kind=8)
+            ground_truth_y(15) = cmplx(2773.39852701965_8, - 1949.83696832108_8, kind=8)
+            ground_truth_y(16) = cmplx(9283.67319536370_8, - 15157.9131980699_8, kind=8)
+            ground_truth_y(17) = cmplx(14439.6610247403_8, - 98914.4486804165_8, kind=8)
+            ground_truth_y(18) = cmplx(-152242.622982445_8, - 580493.868177847_8, kind=8)
+            ground_truth_y(19) = cmplx(-2.33433724014119d6, - 3.03658359691793d6, kind=8)
+            ground_truth_y(20) = cmplx(-2.24877427424674d7, - 1.28342306028349d7, kind=8)
+            ground_truth_y(21) = cmplx(-1.83396001442696d8, - 2.27782796320593d7, kind=8)
+            ground_truth_y(22) = cmplx(-1.33833981676034d9, + 3.70383361421073d8, kind=8)
+            ground_truth_y(23) = cmplx(-8.64040025791115d9, + 6.73759369159482d9, kind=8)
+            ground_truth_y(24) = cmplx(-4.47894748655319d10, + 7.87190857358492d10, kind=8)
+            ground_truth_y(25) = cmplx(-9.91503767845082d10, + 7.76338123042356d11, kind=8)
+            ground_truth_y(26) = cmplx(1.83062719024299d12, + 6.81505943392825d12, kind=8)
+            ground_truth_y(27) = cmplx(4.01662536792895d13, + 5.27104267820238d13, kind=8)
+            ground_truth_y(28) = cmplx(5.57871526737558d14, + 3.28034602884404d14, kind=8)
+            ground_truth_y(29) = cmplx(6.49426395908323d15, + 9.41898119841410d14, kind=8)
+            ground_truth_y(30) = cmplx(6.69677013698362d16, - 1.66006251953219d16, kind=8)
+            ground_truth_y(31) = cmplx(6.07181533663459d17, - 4.42299594473656d17, kind=8)
+            ground_truth_y(32) = cmplx(4.45819841040840d18, - 7.18952087209458d18, kind=8)
+            ground_truth_y(33) = cmplx(1.65808484454651d19, - 9.70208753855694d19, kind=8)
+            ground_truth_y(34) = cmplx(-2.53559510663783d20, - 1.15444133423896d21, kind=8)
+            ground_truth_y(35) = cmplx(-8.27994549880366d21, - 1.20671471432732d22, kind=8)
+            ground_truth_y(36) = cmplx(-1.55672216449990d23, - 1.03001878858670d23, kind=8)
+            ground_truth_y(37) = cmplx(-2.40171673166249d24, - 4.86560861785316d23, kind=8)
+            ground_truth_y(38) = cmplx(-3.25224137448419d25, + 6.07044768130982d24, kind=8)
+            ground_truth_y(39) = cmplx(-3.86747869548312d26, + 2.47203110593422d26, kind=8)
+            ground_truth_y(40) = cmplx(-3.78915519814181d27, + 5.32952850021206d27, kind=8)
+            ground_truth_y(41) = cmplx(-2.21874176557107d28, + 9.29890134028607d28, kind=8)
 
             y = lib_math_bessel_spherical_third_kind_1_cmplx(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_spherical_third_kind_1_cmplx:"
             do i=1, n
-                buffer = abs(y(i) - ground_truth_y(i))
+                buffer = abs(log(real(y(i))) - log(real(ground_truth_y(i))))
                 if (buffer .gt. ground_truth_e) then
-                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    print *, "  ", i , " (Re) difference: ", buffer, " : FAILED"
                     rv = .false.
                 else
-                    print *, "  ", i, ": OK"
+                    print *, "  ", i, ": (Re) OK"
+                end if
+
+                buffer = abs(log(aimag(y(i))) - log(aimag(ground_truth_y(i))))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , " (Im) difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": (Im) OK"
                 end if
             end do
 
@@ -2648,10 +2750,10 @@ module lib_math_bessel
             logical :: rv
 
             ! parameter
-            integer, parameter :: n = 5
+            integer, parameter :: n = 41
 
             ! auxiliary
-            double precision :: x = 5
+            double precision :: x = 2
             complex(kind=8), dimension(n) :: y
             integer :: fnu = 0
 
@@ -2664,27 +2766,71 @@ module lib_math_bessel
             ! Values were generated with sageMath
             !
             ! source code:
-            !  >>> x=5.0 +I*0.0
+            !  >>> x=2.0 +I*0.0
             !  >>> for n in range(0,5):
             !  >>>     value = numerical_approx(spherical_hankel1(n, x))
             !  >>>     print("n = {}: {}".format(n, value))
-            ground_truth_y(1) = cmplx(-0.191784854932628_8, +0.0567324370926452_8, kind=8)
-            ground_truth_y(2) = cmplx(-0.0950894080791708_8, -0.180438367514099_8, kind=8)
-            ground_truth_y(3) = cmplx(0.134731210085125_8, -0.164995457601104_8, kind=8)
-            ground_truth_y(4) = cmplx(0.229820618164296_8, +0.0154429099129942_8, kind=8)
-            ground_truth_y(5) = cmplx(0.187017655344889_8, +0.186615531479296_8, kind=8)
+            ground_truth_y(1)  = cmplx(0.454648713412841_8, - 0.208073418273571_8, kind=8)
+            ground_truth_y(2)  = cmplx(0.435397774979992_8, + 0.350612004276055_8, kind=8)
+            ground_truth_y(3)  = cmplx(0.198447949057147_8, + 0.733991424687654_8, kind=8)
+            ground_truth_y(4)  = cmplx(0.0607220976628748_8, + 1.48436655744308_8, kind=8)
+            ground_truth_y(5)  = cmplx(0.0140793927629153_8, + 4.46129152636313_8, kind=8)
+            ground_truth_y(6)  = cmplx(0.00263516977024412_8, + 18.5914453111910_8, kind=8)
+            ground_truth_y(7)  = cmplx(0.000414040973427324_8, + 97.7916576851873_8, kind=8)
+            ground_truth_y(8)  = cmplx(0.0000560965570334895_8, + 617.054329642526_8, kind=8)
+            ground_truth_y(9)  = cmplx(6.68320432384702d-6, + 4530.11581463376_8, kind=8)
+            ground_truth_y(10) = cmplx(7.10679719210186d-7, + 37888.9300947444_8, kind=8)
+            ground_truth_y(11) = cmplx(6.82530086497472d-8, + 355414.720085438_8, kind=8)
+            ground_truth_y(12) = cmplx(5.97687161216011d-9, + 3.69396563080236d6, kind=8)
+            ground_truth_y(13) = cmplx(4.81014890094075d-10, + 4.21251900341417d7, kind=8)
+            ground_truth_y(14) = cmplx(3.58145140158186d-11, + 5.22870909795969d8, kind=8)
+            ground_truth_y(15) = cmplx(2.48104911947672d-12, + 7.01663209221144d9, kind=8)
+            ground_truth_y(16) = cmplx(1.60698216593841d-13, + 1.01218294427270d11, kind=8)
+            ground_truth_y(17) = cmplx(9.77323772781462d-15, + 1.56186693153047d12, kind=8)
+            ground_truth_y(18) = cmplx(5.60205915100117d-16, + 2.56695860758255d13, kind=8)
+            ground_truth_y(19) = cmplx(3.03657864374240d-17, + 4.47655889395416d14, kind=8)
+            ground_truth_y(20) = cmplx(1.56113399222733d-18, + 8.25596436773937d15, kind=8)
+            ground_truth_y(21) = cmplx(7.63264110088761d-20, + 1.60543649281522d17, kind=8)
+            ground_truth_y(22) = cmplx(3.55743345463290d-21, + 3.28288884590347d18, kind=8)
+            ground_truth_y(23) = cmplx(1.58408265731184d-22, + 7.04215665376430d19, kind=8)
+            ground_truth_y(24) = cmplx(6.75252431874067d-24, + 1.58120235825106d21, kind=8)
+            ground_truth_y(25) = cmplx(2.76055759221868d-25, + 3.70878338523624d22, kind=8)
+            ground_truth_y(26) = cmplx(1.08417821950868d-26, + 9.07070727024627d23, kind=8)
+            ground_truth_y(27) = cmplx(4.09686752846144d-28, + 2.30932157052756d25, kind=8)
+            ground_truth_y(28) = cmplx(1.49167553359982d-29, + 6.11063145462780d26, kind=8)
+            ground_truth_y(29) = cmplx(5.24018893806175d-31, + 1.67811432845212d28, kind=8)
+            ground_truth_y(30) = cmplx(1.77831374777941d-32, + 4.77651520463390d29, kind=8)
+            ground_truth_y(31) = cmplx(5.83661788752249d-34, + 1.40739387103855d31, kind=8)
+            ground_truth_y(32) = cmplx(1.85470791494552d-35, + 4.28777479146294d32, kind=8)
+            ground_truth_y(33) = cmplx(5.71204455589985d-37, + 1.34924166543979d34, kind=8)
+            ground_truth_y(34) = cmplx(1.70656572193294d-38, + 4.38074763788785d35, kind=8)
+            ground_truth_y(35) = cmplx(4.95061257549874d-40, + 1.46620121702699d37, kind=8)
+            ground_truth_y(36) = cmplx(1.39561661412576d-41, + 5.05401345110523d38, kind=8)
+            ground_truth_y(37) = cmplx(3.82640464769116d-43, + 1.79270857392533d40, kind=8)
+            ground_truth_y(38) = cmplx(1.02108228151588d-44, + 6.53833228137634d41, kind=8)
+            ground_truth_y(39) = cmplx(2.65390799339793d-46, + 2.45008189694220d43, kind=8)
+            ground_truth_y(40) = cmplx(6.72295942323183d-48, + 9.42627697094610d44, kind=8)
+            ground_truth_y(41) = cmplx(1.66097877863811d-49, + 3.72092932162677d46, kind=8)
 
             y = lib_math_bessel_spherical_third_kind_2_real(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_spherical_third_kind_2_real:"
             do i=1, n
-                buffer = abs(y(i) - ground_truth_y(i))
+                buffer = abs(log(real(y(i))) - log(real(ground_truth_y(i))))
                 if (buffer .gt. ground_truth_e) then
-                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    print *, "  ", i , " (Re) difference: ", buffer, " : FAILED"
                     rv = .false.
                 else
-                    print *, "  ", i, ": OK"
+                    print *, "  ", i, ": (Re) OK"
+                end if
+
+                buffer = abs(log(aimag(y(i))) - log(aimag(ground_truth_y(i))))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , " (Im) difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": (Im) OK"
                 end if
             end do
 
@@ -2696,7 +2842,7 @@ module lib_math_bessel
             logical :: rv
 
             ! parameter
-            integer, parameter :: n = 5
+            integer, parameter :: n = 41
 
             ! auxiliary
             complex(kind=8) :: x = cmplx(2_8, 2_8, kind=8)
@@ -2716,23 +2862,67 @@ module lib_math_bessel
             !  >>> for n in range(0,5):
             !  >>>     value = numerical_approx(spherical_hankel2(n, x))
             !  >>>     print("n = {}: {}".format(n, value))
-            ground_truth_y(1) = cmplx(0.910979344197223_8, -2.44844550451690_8, kind=8)
-            ground_truth_y(2) = cmplx(2.06407896443698_8, +0.0711231320186915_8, kind=8)
-            ground_truth_y(3) = cmplx(0.690422228144533_8, +0.953728630203184_8, kind=8)
-            ground_truth_y(4) = cmplx(-0.00889039150233644_8, +0.258009870554623_8, kind=8)
-            ground_truth_y(5) = cmplx(-0.254463139803031_8, -0.486653171603505_8, kind=8)
+            ground_truth_y(1)  = cmplx(0.910979344197223_8, - 2.44844550451690_8, kind=8)
+            ground_truth_y(2)  = cmplx(2.06407896443698_8, + 0.0711231320186915_8, kind=8)
+            ground_truth_y(3)  = cmplx(0.690422228144533_8, + 0.953728630203184_8, kind=8)
+            ground_truth_y(4)  = cmplx(-0.00889039150233644_8, + 0.258009870554623_8, kind=8)
+            ground_truth_y(5)  = cmplx(-0.254463139803031_8, - 0.486653171603505_8, kind=8)
+            ground_truth_y(6)  = cmplx(-1.65862130916237_8, - 0.780437442105689_8, kind=8)
+            ground_truth_y(7)  = cmplx(-6.45294842618414_8, + 2.90165880600938_8, kind=8)
+            ground_truth_y(8)  = cmplx(-9.88306995640557_8, + 31.1829109467346_8, kind=8)
+            ground_truth_y(9)  = cmplx(86.3273521399181_8, + 151.095769580766_8, kind=8)
+            ground_truth_y(10) = cmplx(1018.93133726931_8, + 244.082863176871_8, kind=8)
+            ground_truth_y(11) = cmplx(5912.99009997946_8, - 3831.62602151987_8, kind=8)
+            ground_truth_y(12) = cmplx(9908.23007464352_8, - 51403.3175010484_8, kind=8)
+            ground_truth_y(13) = cmplx(-244509.742801807_8, - 348709.772538709_8, kind=8)
+            ground_truth_y(14) = cmplx(-3.71753020095287d6, - 599846.868354584_8, kind=8)
+            ground_truth_y(15) = cmplx(-2.88977854750235d7, + 2.13930722675771d7, kind=8)
+            ground_truth_y(16) = cmplx(-5.06916405530332d7, + 3.65208565502209d8, kind=8)
+            ground_truth_y(17) = cmplx(2.46640395383114d9, + 3.20183352466055d9, kind=8)
+            ground_truth_y(18) = cmplx(4.68136508381095d10, + 5.70208539384046d9, kind=8)
+            ground_truth_y(19) = cmplx(4.57046288075731d11, - 3.62928031162014d11, kind=8)
+            ground_truth_y(20) = cmplx(8.23780225613767d11, - 7.59046453834298d12, kind=8)
+            ground_truth_y(21) = cmplx(-6.64322183371856d13, - 8.16759584174163d13, kind=8)
+            ground_truth_y(22) = cmplx(-1.51893259196028d15, - 1.48657871284022d14, kind=8)
+            ground_truth_y(23) = cmplx(-1.78601652615391d16, + 1.48121292056872d16, kind=8)
+            ground_truth_y(24) = cmplx(-3.27714730363732d16, + 3.67711970627580d17, kind=8)
+            ground_truth_y(25) = cmplx(3.95341101195822d18, + 4.69086833384576d18, kind=8)
+            ground_truth_y(26) = cmplx(1.05925193459135d20, + 8.66614022249484d18, kind=8)
+            ground_truth_y(27) = cmplx(1.45708609342882d21, - 1.24474379710101d21, kind=8)
+            ground_truth_y(28) = cmplx(2.70761023288441d21, - 3.58079121897428d22, kind=8)
+            ground_truth_y(29) = cmplx(-4.56586238000232d23, - 5.28343689514023d23, kind=8)
+            ground_truth_y(30) = cmplx(-1.40379590773110d25, - 9.86735771881784d23, kind=8)
+            ground_truth_y(31) = cmplx(-2.21157662787594d26, + 1.93033887444595d26, kind=8)
+            ground_truth_y(32) = cmplx(-4.14849614903414d26, + 6.31740787681276d27, kind=8)
+            ground_truth_y(33) = cmplx(9.31864502878598d28, + 1.05840021607085d29, kind=8)
+            ground_truth_y(34) = cmplx(3.23459501790776d30, + 1.99303126060599d29, kind=8)
+            ground_truth_y(35) = cmplx(5.74246074611821d31, - 5.09469792100470d31, kind=8)
+            ground_truth_y(36) = cmplx(1.08504492314173d32, - 1.86960917320476d33, kind=8)
+            ground_truth_y(37) = cmplx(-3.13170326932691d34, - 3.50605705837511d34, kind=8)
+            ground_truth_y(38) = cmplx(-1.21149976429793d36, - 6.64499573280903d34, kind=8)
+            ground_truth_y(39) = cmplx(-2.39302402477947d37, + 2.15047444512683d37, kind=8)
+            ground_truth_y(40) = cmplx(-4.54792943188346d37, + 8.74689905414290d38, kind=8)
+            ground_truth_y(41) = cmplx(1.64008398093830d40, + 1.81518369502779d40, kind=8)
 
             y = lib_math_bessel_spherical_third_kind_2_cmplx(x, fnu, n)
 
             rv = .true.
             print *, "test_lib_math_bessel_spherical_third_kind_2_cmplx:"
             do i=1, n
-                buffer = abs(y(i) - ground_truth_y(i))
+                buffer = abs(log(real(y(i))) - log(real(ground_truth_y(i))))
                 if (buffer .gt. ground_truth_e) then
-                    print *, "  ", i , "difference: ", buffer, " : FAILED"
+                    print *, "  ", i , " (Re) difference: ", buffer, " : FAILED"
                     rv = .false.
                 else
-                    print *, "  ", i, ": OK"
+                    print *, "  ", i, ": (Re) OK"
+                end if
+
+                buffer = abs(log(aimag(y(i))) - log(aimag(ground_truth_y(i))))
+                if (buffer .gt. ground_truth_e) then
+                    print *, "  ", i , " (Im) difference: ", buffer, " : FAILED"
+                    rv = .false.
+                else
+                    print *, "  ", i, ": (Im) OK"
                 end if
             end do
 
