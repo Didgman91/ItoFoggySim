@@ -747,38 +747,47 @@ module lib_math_legendre
 
             if (x .eq. 1.0_8 .or.&
                 x .eq. -1.0_8) then
+                !$OMP PARALLEL DO PRIVATE(n, m)
                 do n=1, n_max
                     do m=-n, n
                         pi_nm%item(n)%item(m) = get_associated_legendre_polynomial_limit(n, m)
                     end do
                 end do
+                !$OMP END PARALLEL DO
             else
+                !$OMP PARALLEL DO PRIVATE(n, m)
                 do n=1, n_max
                     do m=-n, n
                         pi_nm%item(n)%item(m) = get_associated_legendre_polynomial(n, m, theta)
                     end do
                 end do
+                !$OMP END PARALLEL DO
             end if
 
             if (x .eq. 1.0_8 .or.&
                 x .eq. -1.0_8) then
+                !$OMP PARALLEL DO PRIVATE(n, m)
                 do n=1, n_max
                     do m=-n, n
                         tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative_limit(n, m, theta)
                     end do
                 end do
+                !$OMP END PARALLEL DO
             else
+                !$OMP PARALLEL DO PRIVATE(n, m)
                 do n=1, n_max
                     do m=-n, n
                         tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative(n, m, theta)
                     end do
                 end do
+                !$OMP END PARALLEL DO
             end if
 
             ! HINT: the calculation of the polynomial includes the condon shortley phase
             if (present(condon_shortley_phase)) then
                 if (.not. condon_shortley_phase) then
                     ! remove phase
+                    !$OMP PARALLEL DO PRIVATE(n, m)
                     do n=0, n_max
                         do m=-n, n
                             if (IAND(abs(m), 1) .eq. 1) then
@@ -787,11 +796,13 @@ module lib_math_legendre
                             end if
                         end do
                     end do
+                    !$OMP END PARALLEL DO
 !                    pm = (-1.0_8)**m * pm
 !                    pd = (-1.0_8)**m * pd
                 end if
             else
                 ! std: remove phase
+                !$OMP PARALLEL DO PRIVATE(n, m)
                 do n=0, n_max
                     do m=-n, n
                         if (IAND(abs(m), 1) .eq. 1) then
@@ -800,6 +811,7 @@ module lib_math_legendre
                         end if
                     end do
                 end do
+                !$OMP END PARALLEL DO
             end if
 
         end subroutine

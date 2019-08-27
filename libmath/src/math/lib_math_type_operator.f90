@@ -76,6 +76,9 @@ module lib_math_type_operator
 
 
     interface init_list
+        module procedure lib_math_list_list_logical_init
+        module procedure lib_math_list_list_integer_sys_init
+        module procedure lib_math_list_list_integer_init
         module procedure lib_math_list_list_real_init
         module procedure lib_math_list_list_cmplx_init
         module procedure lib_math_list_spherical_coordinate_cmplx_type_init
@@ -684,6 +687,96 @@ module lib_math_type_operator
         end function
 
 ! ---- list_list ----
+
+        ! Arguments
+        ! ----
+        !   list: type (list_list_logical)
+        !       derived data type to initialize
+        !   fnu: integer
+        !       start index
+        !   n: integer
+        !       number of elements, n .GE. 1
+        !
+        subroutine lib_math_list_list_logical_init(list, fnu, n)
+            implicit none
+            ! dummy
+            type (list_list_logical), intent(inout) :: list
+            integer, intent(in) :: fnu
+            integer, intent(in) :: n
+
+            ! auxiliary
+            integer :: i
+
+            if( allocated(list%item) ) then
+                deallocate( list%item )
+            end if
+
+            allocate( list%item(fnu:fnu+n-1) )
+            do i=fnu, fnu+n-1
+                allocate (list%item(i)%item(-i:i) )
+            end do
+
+        end subroutine lib_math_list_list_logical_init
+
+        ! Arguments
+        ! ----
+        !   list: type (list_list_integer_sys)
+        !       derived data type to initialize
+        !   fnu: integer
+        !       start index
+        !   n: integer
+        !       number of elements, n .GE. 1
+        !
+        subroutine lib_math_list_list_integer_sys_init(list, fnu, n)
+            implicit none
+            ! dummy
+            type (list_list_integer_sys), intent(inout) :: list
+            integer, intent(in) :: fnu
+            integer, intent(in) :: n
+
+            ! auxiliary
+            integer :: i
+
+            if( allocated(list%item) ) then
+                deallocate( list%item )
+            end if
+
+            allocate( list%item(fnu:fnu+n-1) )
+            do i=fnu, fnu+n-1
+                allocate (list%item(i)%item(-i:i) )
+            end do
+
+        end subroutine lib_math_list_list_integer_sys_init
+
+        ! Arguments
+        ! ----
+        !   list: type (list_list_integer)
+        !       derived data type to initialize
+        !   fnu: integer
+        !       start index
+        !   n: integer
+        !       number of elements, n .GE. 1
+        !
+        subroutine lib_math_list_list_integer_init(list, fnu, n)
+            implicit none
+            ! dummy
+            type (list_list_integer), intent(inout) :: list
+            integer, intent(in) :: fnu
+            integer, intent(in) :: n
+
+            ! auxiliary
+            integer :: i
+
+            if( allocated(list%item) ) then
+                deallocate( list%item )
+            end if
+
+            allocate( list%item(fnu:fnu+n-1) )
+            do i=fnu, fnu+n-1
+                allocate (list%item(i)%item(-i:i) )
+            end do
+
+        end subroutine lib_math_list_list_integer_init
 
         ! Arguments
         ! ----

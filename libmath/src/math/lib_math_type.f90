@@ -46,6 +46,30 @@ module lib_math_type
     end type list_spherical_coordinate_cmplx_type
 
     ! lists
+    type list_logical
+        logical, dimension(:), allocatable :: item
+    end type
+
+    type list_list_logical
+        type(list_logical), dimension(:), allocatable :: item
+    end type
+
+    type list_integer_sys
+        integer, dimension(:), allocatable :: item
+    end type
+
+    type list_list_integer_sys
+        type(list_integer_sys), dimension(:), allocatable :: item
+    end type
+
+    type list_integer
+        integer(kind=lib_math_type_kind), dimension(:), allocatable :: item
+    end type
+
+    type list_list_integer
+        type(list_integer), dimension(:), allocatable :: item
+    end type
+
     type list_real
         real(kind=lib_math_type_kind), dimension(:), allocatable :: item
     end type
