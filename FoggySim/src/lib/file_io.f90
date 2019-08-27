@@ -103,12 +103,13 @@ module file_io
     !       - 1: temperatur
     !
     !
-    function write_ppm_p3(u, img, color_map) result (rv)
+    function write_ppm_p3(u, img, color_map, logarithmic) result (rv)
         implicit none
         ! dummy
         integer, intent(in) :: u
         double precision, dimension(:, :), intent(inout) :: img
         integer, intent(in), optional :: color_map
+        logical, intent(in), optional :: logarithmic
 
         logical :: rv
 
@@ -118,11 +119,9 @@ module file_io
 
         ! auxiliary
         integer :: i
-        integer :: ii
         double precision :: img_max_value
         double precision :: img_min_value
 
-        integer(kind=2) :: buffer
         integer(kind=2), dimension(size(img, 1)*3, size(img, 2)) :: img_discretised_color
 
         img_max_value = maxval(img)
@@ -142,12 +141,12 @@ module file_io
 
         if (present(color_map)) then
             if (color_map .eq. 1) then
-                 call color_map_temperature(img, max_value, img_discretised_color)
+                 call color_map_temperature(img, max_value, img_discretised_color, logarithmic=logarithmic)
             else
                 rv = .false.
             end if
         else
-            call color_map_temperature(img, max_value, img_discretised_color)
+            call color_map_temperature(img, max_value, img_discretised_color, logarithmic=logarithmic)
         end if
 
         if (rv) then
@@ -158,11 +157,12 @@ module file_io
 
     end function write_ppm_p3
 
-    subroutine color_map_temperature(img, max_value, rv)
+    subroutine color_map_temperature(img, max_value, rv, logarithmic)
         implicit none
         ! dummy
         double precision, dimension(:, :), intent(in) :: img
         integer(kind=2), intent(in) :: max_value
+        logical, intent(in), optional :: logarithmic
 
         integer(kind=2), dimension(size(img, 1)*3, size(img, 2)), intent(inout) :: rv
 
@@ -179,7 +179,16 @@ module file_io
         do i=1, size(img, 1)
             do ii=1, size(img, 2)
                 if (img(i, ii) .gt. 0) then
-                    buffer = int( img(i,ii) * real(max_value) / img_max_value, kind=2)
+                    if (present(logarithmic)) then
+                        if (logarithmic) then
+                            buffer = int( log(img(i,ii)) * real(max_value) / img_max_value, kind=2)
+                        else
+                            buffer = int( img(i,ii) * real(max_value) / img_max_value, kind=2)
+                        end if
+                    else
+                        buffer = int( img(i,ii) * real(max_value) / img_max_value, kind=2)
+                    end if
+
                     ! red
                     rv(3*(i-1)+1, ii) = max_value
                     ! green
@@ -194,7 +203,17 @@ module file_io
                     ! blue
                     rv(3*(i-1)+3, ii) = max_value
                 else
-                    buffer = int( img(i,ii) * real(max_value) / img_min_value, kind=2)
+                    if (present(logarithmic)) then
+                        if (logarithmic) then
+                            buffer = int( log(-img(i,ii)) * real(max_value) / abs(img_min_value), kind=2)
+                        else
+                            buffer = int( img(i,ii) * real(max_value) / img_min_value, kind=2)
+                        end if
+                    else
+                        buffer = int( img(i,ii) * real(max_value) / img_min_value, kind=2)
+                    end if
+
+!                    buffer = int( img(i,ii) * real(max_value) / img_min_value, kind=2)
                     ! red
                     rv(3*(i-1)+1, ii) = max_value - buffer
                     ! green

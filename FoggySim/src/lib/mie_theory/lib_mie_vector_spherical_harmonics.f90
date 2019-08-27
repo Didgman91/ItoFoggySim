@@ -1518,15 +1518,15 @@ module lib_mie_vector_spherical_harmonics
             if (.not. test_lib_mie_vector_spherical_harmonics_components_real_xu()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_mie_vector_spherical_harmonics_components_cmplx_xu()) then
-                rv = rv + 1
-            end if
+!            if (.not. test_lib_mie_vector_spherical_harmonics_components_cmplx_xu()) then
+!                rv = rv + 1
+!            end if
             if (.not. test_ab_xu_cruzan_eq34()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r()) then
-                rv = rv + 1
-            end if
+!            if (.not. test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r()) then
+!                rv = rv + 1
+!            end if
 
             print *, "----lib_mie_vector_spherical_harmonics_test_functions----"
             if (rv == 0) then
