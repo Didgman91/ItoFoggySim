@@ -169,24 +169,22 @@ module file_io
         ! auxiliary
         integer :: i
         integer :: ii
-        double precision :: img_max_value
-        double precision :: img_min_value
+        double precision :: img_max_abs_value
         integer(kind=2) :: buffer
 
-        img_max_value = maxval(img)
-        img_min_value = minval(img)
+        img_max_abs_value = max(abs(maxval(img)), abs(minval(img)))
 
         do i=1, size(img, 1)
             do ii=1, size(img, 2)
                 if (img(i, ii) .gt. 0) then
                     if (present(logarithmic)) then
                         if (logarithmic) then
-                            buffer = int( log(img(i,ii)) * real(max_value) / img_max_value, kind=2)
+                            buffer = int( log(img(i,ii)) * real(max_value) / img_max_abs_value, kind=2)
                         else
-                            buffer = int( img(i,ii) * real(max_value) / img_max_value, kind=2)
+                            buffer = int( img(i,ii) * real(max_value) / img_max_abs_value, kind=2)
                         end if
                     else
-                        buffer = int( img(i,ii) * real(max_value) / img_max_value, kind=2)
+                        buffer = int( img(i,ii) * real(max_value) / img_max_abs_value, kind=2)
                     end if
 
                     ! red
@@ -205,12 +203,12 @@ module file_io
                 else
                     if (present(logarithmic)) then
                         if (logarithmic) then
-                            buffer = int( log(-img(i,ii)) * real(max_value) / abs(img_min_value), kind=2)
+                            buffer = int( log(-img(i,ii)) * real(max_value) / img_max_abs_value, kind=2)
                         else
-                            buffer = int( img(i,ii) * real(max_value) / img_min_value, kind=2)
+                            buffer = int( img(i,ii) * real(max_value) / img_max_abs_value, kind=2)
                         end if
                     else
-                        buffer = int( img(i,ii) * real(max_value) / img_min_value, kind=2)
+                        buffer = int( img(i,ii) * real(max_value) / img_max_abs_value, kind=2)
                     end if
 
 !                    buffer = int( img(i,ii) * real(max_value) / img_min_value, kind=2)

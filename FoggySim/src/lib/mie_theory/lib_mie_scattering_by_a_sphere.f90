@@ -8,6 +8,7 @@
 module lib_mie_scattering_by_a_sphere
     !$  use omp_lib
     use libmath
+    use lib_constants
     use lib_mie_vector_spherical_harmonics
     implicit none
 
@@ -241,17 +242,25 @@ module lib_mie_scattering_by_a_sphere
         !       e.g. n = (/ 1, 45 /) <-- size parameter
         !   alpha: double precision, optional(std: 0)
         !       incident angle with respect to the z-axis
+        !       codomain: 0..Pi
         !   beta: double precision, optional(std: 0)
         !       angle between the x axis and the projection of the wave vector on the x-y plane
+        !       codomain: 0..2Pi
+        !
+        ! Results
+        ! ----
+        !   field_s: type(spherical_coordinate_cmplx_type), dimension(2)
+        !       1: scattered e field
+        !       2: scattered h field
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu
         !
-        function get_e_field_scattered_xu_real(theta, phi, r, &
-                                               e_field_0, lambda, &
-                                               n_medium, r_particle, n_particle, &
-                                               n_range, &
-                                               alpha, beta) &
-                                               result (e_field_s)
+        function get_field_scattered_xu_real(theta, phi, r, &
+                                             e_field_0, lambda, &
+                                             n_medium, r_particle, n_particle, &
+                                             n_range, &
+                                             alpha, beta) &
+                                           result (field_s)
             implicit none
             ! dummy
             double precision, intent(in) :: theta
@@ -266,9 +275,12 @@ module lib_mie_scattering_by_a_sphere
             double precision, intent(in), optional :: alpha
             double precision, intent(in), optional :: beta
 
-            type(spherical_coordinate_cmplx_type) :: e_field_s
+            type(spherical_coordinate_cmplx_type), dimension(2) :: field_s
 
             ! auxiliary
+            type(spherical_coordinate_cmplx_type) :: e_field_s
+            type(spherical_coordinate_cmplx_type) :: h_field_s
+
             double precision :: k0 ! wave number = 2 pi / lambda
             double precision :: rho_particle ! r_particle * k0 * n_particle
 
@@ -292,6 +304,8 @@ module lib_mie_scattering_by_a_sphere
             type(list_list_cmplx) :: e_field_nm
             type(spherical_coordinate_cmplx_type), dimension(n_range(2)-n_range(1)+1) :: e_field_n_s
             type(spherical_coordinate_cmplx_type) :: buffer_e_field_n_s
+            type(spherical_coordinate_cmplx_type), dimension(n_range(2)-n_range(1)+1) :: h_field_n_s
+            type(spherical_coordinate_cmplx_type) :: buffer_h_field_n_s
 
             type(list_list_cmplx) :: p0_nm
             type(list_list_cmplx) :: q0_nm
@@ -404,11 +418,22 @@ module lib_mie_scattering_by_a_sphere
                     buffer_e_field_n_s%theta = cmplx(0,0)
                     buffer_e_field_n_s%phi = cmplx(0,0)
 
+                    h_field_n_s(i)%rho = cmplx(0,0)
+                    h_field_n_s(i)%theta = cmplx(0,0)
+                    h_field_n_s(i)%phi = cmplx(0,0)
+                    buffer_h_field_n_s%rho = cmplx(0,0)
+                    buffer_h_field_n_s%theta = cmplx(0,0)
+                    buffer_h_field_n_s%phi = cmplx(0,0)
+
                     do m=-n, n
                         if (calc_order_m%item(n)%item(m)) then
                             buffer_cmplx = cmplx(0, 1, kind=8) * e_field_nm%item(n)%item(m)
                             buffer_e_field_n_s = buffer_cmplx * (a_n(i)*N_nm(n)%coordinate(m) * p0_nm%item(n)%item(m) &
-                                                             +b_n(i)*M_nm(n)%coordinate(m) * q0_nm%item(n)%item(m))
+                                                                 +b_n(i)*M_nm(n)%coordinate(m) * q0_nm%item(n)%item(m))
+
+                            buffer_h_field_n_s = e_field_nm%item(n)%item(m) &
+                                                 * (b_n(i)*N_nm(n)%coordinate(m) * p0_nm%item(n)%item(m) &
+                                                    +a_n(i)*M_nm(n)%coordinate(m) * q0_nm%item(n)%item(m))
 #ifdef _DEBUG_
                             if (isnan(real(buffer_e_field_n_s%rho)) .or. isnan(aimag(buffer_e_field_n_s%rho)) &
                                 .or. isnan(real(buffer_e_field_n_s%phi)) .or. isnan(aimag(buffer_e_field_n_s%phi)) &
@@ -420,6 +445,7 @@ module lib_mie_scattering_by_a_sphere
                             end if
 #endif
                             e_field_n_s(i) = e_field_n_s(i) + buffer_e_field_n_s
+                            h_field_n_s(i) = h_field_n_s(i) + buffer_h_field_n_s
                         end if
                     end do
                 end do
@@ -428,8 +454,14 @@ module lib_mie_scattering_by_a_sphere
                 e_field_s%theta = cmplx(0,0,kind=8)
                 e_field_s%phi = cmplx(0,0,kind=8)
                 e_field_s%rho = cmplx(0,0,kind=8)
-                do i=1, n_range(2)-n_range(1)+1
+
+                h_field_s%theta = cmplx(0,0,kind=8)
+                h_field_s%phi = cmplx(0,0,kind=8)
+                h_field_s%rho = cmplx(0,0,kind=8)
+
+                do i=n_range(2)-n_range(1)+1, 1, -1
                     e_field_s = e_field_s + e_field_n_s(i)
+                    h_field_s = h_field_s + h_field_n_s(i)
                 end do
             else
                 ! inside the sphere
@@ -438,7 +470,18 @@ module lib_mie_scattering_by_a_sphere
                 e_field_s%rho = cmplx(0,0,kind=8)
             end if
 
-        end function get_e_field_scattered_xu_real
+            field_s(1) = e_field_s
+
+            ! omega = k * v
+            ! v = c0 / n_medium
+            ! mu = 1 <-- definition
+            !
+            !   k / (omega * mu) = k / ( k * v * 1 )
+            ! = k / ( k * c0 / n_medium )
+            ! = n_medium / c0
+            field_s(2) = h_field_s * n_medium / real(const_c0, kind=8)
+
+        end function get_field_scattered_xu_real
 
         ! calculates the scatterd electical field of a sphere
         !
@@ -1310,10 +1353,10 @@ module lib_mie_scattering_by_a_sphere
 !            if (.not. test_get_e_field_scattered_real()) then
 !                rv = rv + 1
 !            end if
-            if (.not. test_get_e_field_scattered_plane_section_real()) then
+            if (.not. test_get_field_scattered_plane_section_real()) then
                 rv = rv + 1
             end if
-!            if (.not. test_get_e_field_scattered_plane_section_cmplx()) then
+!            if (.not. test_get_field_scattered_plane_section_cmplx()) then
 !                rv = rv + 1
 !            end if
 
@@ -1600,9 +1643,10 @@ module lib_mie_scattering_by_a_sphere
                     integer(kind=4), dimension(2) :: n_range
 
                     double precision, dimension(number_of_values) :: degree_list
-                    type(spherical_coordinate_cmplx_type), dimension(number_of_values) :: e_field_s
+                    type(spherical_coordinate_cmplx_type), dimension(number_of_values, 2) :: field_s
                     type(cartesian_coordinate_cmplx_type), dimension(number_of_values) :: e_field_s_cart
-                    real(kind=8), dimension(number_of_values) :: i_field_s
+                    type(cartesian_coordinate_cmplx_type), dimension(number_of_values) :: h_field_s_cart
+                    type(cartesian_coordinate_cmplx_type), dimension(number_of_values) :: poynting_s
 
                     phi = 0.0
                     theta = Pi/2.0_8
@@ -1623,42 +1667,44 @@ module lib_mie_scattering_by_a_sphere
                     do i=1, number_of_values
                         degree_list(i) = start_angle + (i-1) * (stop_angle - start_angle) / number_of_values
                         theta = degree_list(i) * PI / 180.0_8
-                        e_field_s(i) = get_e_field_scattered_xu_real(theta, phi, r, e_field_0, lambda, n_medium, &
+                        field_s(i, 1:2) = get_field_scattered_xu_real(theta, phi, r, e_field_0, lambda, n_medium, &
                                                                 r_particle, n_particle, n_range)
-                        e_field_s_cart(i) = make_cartesian(e_field_s(i), theta, phi)
+                        e_field_s_cart(i) = make_cartesian(field_s(i, 1), theta, phi)
+                        h_field_s_cart(i) = make_cartesian(field_s(i, 2), theta, phi)
 
-                        ! calculate the intensities
-                        buffer_cmplx = abs(spherical_abs(e_field_s(i)))
-                        i_field_s(i) = real(buffer_cmplx * buffer_cmplx)
+                        ! calculate the Poynting vector: S = E x H
+                        poynting_s(i) = cross_product(e_field_s_cart(i), h_field_s_cart(i))
                     end do
 
                     ! write to csv
                     header(1) = "degree"
                     header(2) = "i_field_s"
                     u = 99
-                    open(unit=u, file="i_field_s.csv", status='unknown')
-                    rv = write_csv(u, header, degree_list, i_field_s)
+                    open(unit=u, file="poynting_s.csv", status='unknown')
+                    rv = write_csv(u, header, degree_list, real(poynting_s%x), &
+                                                           real(poynting_s%y), &
+                                                           real(poynting_s%z))
                     close(u)
 
-                    ! --- spherical components ---
-                    header(1) = "degree"
-                    header(2) = "e_field_s_rho"
-                    open(unit=u, file="e_field_s_rho.csv", status='unknown')
-                    rv = write_csv(u, header, degree_list &
-                                            , real(e_field_s(:)%rho))
-                    close(u)
-
-                    header(2) = "e_field_s_theta"
-                    open(unit=u, file="e_field_s_theta.csv", status='unknown')
-                    rv = write_csv(u, header, degree_list &
-                                            , real(e_field_s(:)%theta))
-                    close(u)
-
-                    header(2) = "e_field_s_phi"
-                    open(unit=u, file="e_field_s_phi.csv", status='unknown')
-                    rv = write_csv(u, header, degree_list &
-                                            , real(e_field_s(:)%phi))
-                    close(u)
+!                    ! --- spherical components ---
+!                    header(1) = "degree"
+!                    header(2) = "e_field_s_rho"
+!                    open(unit=u, file="e_field_s_rho.csv", status='unknown')
+!                    rv = write_csv(u, header, degree_list &
+!                                            , real(e_field_s(:)%rho))
+!                    close(u)
+!
+!                    header(2) = "e_field_s_theta"
+!                    open(unit=u, file="e_field_s_theta.csv", status='unknown')
+!                    rv = write_csv(u, header, degree_list &
+!                                            , real(e_field_s(:)%theta))
+!                    close(u)
+!
+!                    header(2) = "e_field_s_phi"
+!                    open(unit=u, file="e_field_s_phi.csv", status='unknown')
+!                    rv = write_csv(u, header, degree_list &
+!                                            , real(e_field_s(:)%phi))
+!                    close(u)
 
                     ! --- cartesian components ---
                     header(1) = "degree"
@@ -1682,7 +1728,7 @@ module lib_mie_scattering_by_a_sphere
 
                 end function test_get_e_field_scattered_real
 
-                function test_get_e_field_scattered_plane_section_real() result (rv)
+                function test_get_field_scattered_plane_section_real() result (rv)
                     use file_io
                     implicit none
                     ! dummy
@@ -1714,7 +1760,7 @@ module lib_mie_scattering_by_a_sphere
                     integer :: no_x_values
                     integer :: no_z_values
 
-                    type(spherical_coordinate_cmplx_type) :: buffer
+                    type(spherical_coordinate_cmplx_type), dimension(2) :: buffer_field
                     type(cartesian_coordinate_real_type) :: point_cartesian
                     type(spherical_coordinate_real_type) :: point_spherical
 
@@ -1723,6 +1769,12 @@ module lib_mie_scattering_by_a_sphere
                     double precision, dimension(:, :), allocatable :: e_field_s_real_y
                     double precision, dimension(:, :), allocatable :: e_field_s_real_z
 
+                    type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field_s
+
+                    type(cartesian_coordinate_real_type), dimension(:, :), allocatable :: poynting_s
+                    type(cartesian_coordinate_cmplx_type) :: buffer_cartesian_cmplx
+                    double precision, dimension(:, :), allocatable :: poynting_s_abs
+
                     ! CPU-time
                     real :: start, finish
                     ! WALL-time
@@ -1730,8 +1782,8 @@ module lib_mie_scattering_by_a_sphere
 
                     x_range = (/ -5.0_8 * unit_mu, 5.0_8 * unit_mu /)
                     z_range = (/ -5.0_8 * unit_mu, 10.0_8 * unit_mu /)
-!                    step_size = 0.02_8 * unit_mu
-                    step_size = 0.05_8 * unit_mu
+                    step_size = 0.02_8 * unit_mu
+!                    step_size = 0.04_8 * unit_mu
 
                     no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                     no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -1740,6 +1792,11 @@ module lib_mie_scattering_by_a_sphere
                     allocate(e_field_s_real_x(no_x_values, no_z_values))
                     allocate(e_field_s_real_y(no_x_values, no_z_values))
                     allocate(e_field_s_real_z(no_x_values, no_z_values))
+
+                    allocate(h_field_s(no_x_values, no_z_values))
+
+                    allocate(poynting_s(no_x_values, no_z_values))
+                    allocate(poynting_s_abs(no_x_values, no_z_values))
 
                     y = 0;
 
@@ -1766,9 +1823,9 @@ module lib_mie_scattering_by_a_sphere
                                                              (/ n_particle/n_medium /), &
                                                              (/ n_range(2) /))
 
-                    CALL SYSTEM_CLOCK(count_start, count_rate)
+                    call system_clock(count_start, count_rate)
                     call cpu_time(start)
-                    !$OMP PARALLEL DO PRIVATE(i, ii, x, z, point_cartesian, point_spherical, buffer)
+                    !$OMP PARALLEL DO PRIVATE(i, ii, x, z, point_cartesian, point_spherical, buffer_field)
                     do i=1, no_x_values
                         x = x_range(1) + (i-1) * step_size
                         do ii=1, no_z_values
@@ -1780,27 +1837,44 @@ module lib_mie_scattering_by_a_sphere
 
                             point_spherical = point_cartesian
 
-                            buffer = get_e_field_scattered_xu_real(point_spherical%theta, point_spherical%phi, &
-                                                                   point_spherical%rho, &
-                                                                   e_field_0, lambda, n_medium, &
-                                                                   r_particle, n_particle, n_range)!, &
-!                                                                   beta=PI/2.0_8)
-                            e_field_s(i, ii) = make_cartesian(buffer, point_spherical%theta, point_spherical%phi)
+                            buffer_field = get_field_scattered_xu_real(point_spherical%theta, point_spherical%phi, &
+                                                                       point_spherical%rho, &
+                                                                       e_field_0, lambda, n_medium, &
+                                                                       r_particle, n_particle, n_range)!, &
+!                                                                       beta=PI/2.0_8)
+                            e_field_s(i, ii) = make_cartesian(buffer_field(1), point_spherical%theta, point_spherical%phi)
+                            h_field_s(i, ii) = make_cartesian(buffer_field(2), point_spherical%theta, point_spherical%phi)
+
                             e_field_s_real_x(i, ii) = real(e_field_s(i, ii)%x)
                             e_field_s_real_y(i, ii) = real(e_field_s(i, ii)%y)
                             e_field_s_real_z(i, ii) = real(e_field_s(i, ii)%z)
+
+                            ! calculate the Poynting vector: S = E x H
+                            ! eq. 43
+                            h_field_s(i, ii)%x = conjg(h_field_s(i, ii)%x)
+                            h_field_s(i, ii)%y = conjg(h_field_s(i, ii)%y)
+                            h_field_s(i, ii)%z = conjg(h_field_s(i, ii)%z)
+
+                            buffer_cartesian_cmplx = cross_product(e_field_s(i, ii), h_field_s(i, ii))
+
+                            poynting_s(i, ii)%x = real(buffer_cartesian_cmplx%x) / 2.0_8
+                            poynting_s(i, ii)%y = real(buffer_cartesian_cmplx%y) / 2.0_8
+                            poynting_s(i, ii)%z = real(buffer_cartesian_cmplx%z) / 2.0_8
+
+                            poynting_s_abs(i, ii) = cartesian_abs(poynting_s(i, ii))
                         end do
                         print *, "  x-Value: ", x
                     end do
                     !$OMP END PARALLEL DO
                     call cpu_time(finish)
-                    CALL SYSTEM_CLOCK(count_finish, count_rate)
+                    call system_clock(count_finish, count_rate)
                     print *, "test_get_e_field_scattered_plane_section_real"
                     print '("  CPU-Time = ",f10.3," seconds.")',finish-start
 
                     print '("  WALL-Time = ",f10.3," seconds.")',(count_finish-count_start) / real(count_rate)
 
-                    ! wirte to PPM
+                    ! --- wirte to PPM ---
+                    ! e field
                     u = 99
                     open(unit=u, file="e_field_s_x.ppm", status='unknown')
                     rv = write_ppm_p3(u, e_field_s_real_x)
@@ -1814,9 +1888,28 @@ module lib_mie_scattering_by_a_sphere
                     rv = write_ppm_p3(u, e_field_s_real_z)
                     close(u)
 
-                end function test_get_e_field_scattered_plane_section_real
+                    ! Poynting
+                    u = 99
+                    open(unit=u, file="poynting_s_x.ppm", status='unknown')
+                    rv = write_ppm_p3(u, poynting_s(:,:)%x)
+                    close(u)
 
-                function test_get_e_field_scattered_plane_section_cmplx() result (rv)
+                    open(unit=u, file="poynting_s_y.ppm", status='unknown')
+                    rv = write_ppm_p3(u, poynting_s(:,:)%y)
+                    close(u)
+
+                    open(unit=u, file="poynting_s_z.ppm", status='unknown')
+                    rv = write_ppm_p3(u, poynting_s(:,:)%z)
+                    close(u)
+
+                    ! Poynting abs
+                    open(unit=u, file="poynting_s_abs.ppm", status='unknown')
+                    rv = write_ppm_p3(u, poynting_s_abs)
+                    close(u)
+
+                end function test_get_field_scattered_plane_section_real
+
+                function test_get_field_scattered_plane_section_cmplx() result (rv)
                     use file_io
                     implicit none
                     ! dummy
@@ -1926,7 +2019,7 @@ module lib_mie_scattering_by_a_sphere
                     rv = write_ppm_p3(u, e_field_s_real_z)
                     close(u)
 
-                end function test_get_e_field_scattered_plane_section_cmplx
+                end function test_get_field_scattered_plane_section_cmplx
 
         end function lib_mie_scattering_by_a_sphere_test_functions
 
