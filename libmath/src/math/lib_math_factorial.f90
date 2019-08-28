@@ -108,6 +108,8 @@ module lib_math_factorial
         !       1 <= n
         !   m: integer
         !       1 <= m <= n
+        !   caching: logical, optional ( std: true )
+        !       true: function uses cached results when caching has been initialised.
         !
         ! Result
         ! ----
@@ -198,6 +200,8 @@ module lib_math_factorial
         !       0 <= n
         !   m: integer
         !       0 <= m <= n
+        !   caching: logical, optional ( std: true )
+        !       true: function uses cached results when caching has been initialised.
         !
         ! Result
         ! ----
@@ -257,8 +261,6 @@ module lib_math_factorial
             integer(kind=4), intent(in) :: m
 
             real(kind=8) :: rv
-
-            ! auxiliary
 
             ! auxiliary
             integer(kind=4) :: i

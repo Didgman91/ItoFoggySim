@@ -155,7 +155,7 @@
                             							
                             <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.compiler.exe.release.858153170" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.release">
                                 								
-                                <option id="gnu.fortran.compiler.option.misc.other.2145883561" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fPIC" valueType="string"/>
+                                <option id="gnu.fortran.compiler.option.misc.other.2145883561" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fPIC -frecursive" valueType="string"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.653145088" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                                 							
