@@ -1276,16 +1276,19 @@ module lib_mie_vector_spherical_harmonics
             integer(kind=4), dimension(2) :: n_range
             integer(kind=1) :: z_selector
 
-            type(spherical_coordinate_cmplx_type), dimension(:, :, :, :), allocatable, intent(inout) :: A_mnkl
-            type(spherical_coordinate_cmplx_type), dimension(:, :, :, :), allocatable, intent(inout) :: B_mnkl
+            complex(kind=8), dimension(:, :, :, :), allocatable, intent(inout) :: A_mnkl
+            complex(kind=8), dimension(:, :, :, :), allocatable, intent(inout) :: B_mnkl
 
             ! auxiliary
             integer(kind=4) :: m
             integer(kind=4) :: n
-            integer(kind=4) :: k    ! here: synonym for mu (TeX: $ \mu $)
-            integer(kind=4) :: l    ! here: synonym for nu (TeX: $ \nu $)
+            integer(kind=4) :: mu
+            integer(kind=4) :: nu
             integer(kind=4) :: p
             integer(kind=4) :: q
+
+            real(kind=8) :: a
+            real(kind=8) :: b
 
             integer(kind=4) :: q_max
             integer(kind=4) :: q_max_a
@@ -1304,8 +1307,12 @@ module lib_mie_vector_spherical_harmonics
 
             double precision :: buffer_real
             complex(kind=8) :: buffer_cmplx
+            complex(kind=8) :: buffer_cmplx_a
+            complex(kind=8) :: buffer_cmplx_b
+            complex(kind=8) :: buffer_cmplx_e_m_mu_phi
 
             !$  integer(kind=4) :: j_max
+            !$  logical :: thread_first_run
 
             ! --- init ---
             ! eq. 5
@@ -1323,7 +1330,7 @@ module lib_mie_vector_spherical_harmonics
             allocate (buffer_pm(2, 1:2*n_range(2)))
             allocate (buffer_pd(2, 1:2*n_range(2)))
 
-            call init_list(p_k_minus_m_p, n_range(1), 2*n_range(2)-n_range(1)+1)
+            call init_list(p_k_minus_m_p, n_range(1)-1, 2*n_range(2)-n_range(1)+1+1)
 
             ! --- pre-calc ---
 
@@ -1380,34 +1387,95 @@ module lib_mie_vector_spherical_harmonics
                 end do
             end do
 
-
-
-
+            ! --- calculate A and B
             allocate(A_mnkl(-n_range(2):n_range(2), & ! m
                             n_range(1):n_range(2), & ! n
-                            -n_range(2):n_range(2), & ! k
-                            n_range(1):n_range(2))) ! l
+                            -n_range(2):n_range(2), & ! mu == k
+                            n_range(1):n_range(2))) ! nu == l
 
+            allocate(B_mnkl(-n_range(2):n_range(2), & ! m
+                            n_range(1):n_range(2), & ! n
+                            -n_range(2):n_range(2), & ! mu == k
+                            n_range(1):n_range(2))) ! nu == l
+            !$  thread_first_run = .true.
+            !$OMP PARALLEL DO PRIVATE(n, m, nu, mu, q_max_a, q_max_b, q_max, q, p, &
+            !$OMP  factorial, buffer_cmplx_a, buffer_cmplx_b, buffer_cmplx, &
+            !$OMP  buffer_real, buffer_cmplx_e_m_mu_phi, a, b) &
+            !$OMP  FIRSTPRIVATE(thread_first_run)
             do n=n_range(1), n_range(2)
+                !$  if (thread_first_run) then
+                !$    call fwig_thread_temp_init(2 * j_max)     ! multi threaded
+                !$    thread_first_run = .false.
+                !$  endif
                 do m=-n, n
-                    do l=n_range(1), n_range(2) ! here: synonym for nu (TeX: $ \nu $)
-                        do k=-l, l ! here: synonym for mu (TeX: $ \mu $)
-                            q_max_a = get_q_max_a(m, n, k, l)
-                            q_max_b = get_q_max_b(m, n, k, l)
+                    do nu=n_range(1), n_range(2)
+                        do mu=-nu, nu
+                            q_max_a = get_q_max_a(m, n, mu, nu)
+                            q_max_b = get_q_max_b(m, n, mu, nu)
+                            q_max = max(q_max_a, q_max_b)
 
-                            factorial = (2 * l + 1)
+                            factorial = (2 * nu + 1)
                             factorial = factorial * lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n, m)
-                            factorial = factorial * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(l, k)
+                            factorial = factorial * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(nu, mu)
                             factorial = factorial / real( 2 * n * ( n + 1 ) , kind=8)
 
+                            buffer_cmplx_a = cmplx(0,0)
+                            buffer_cmplx_b = cmplx(0,0)
+                            do q=0, q_max
+                                p = n + nu - 2 * q
+                                call ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b)
 
-!                            do q=0, q_max_a
-!                                A_mnkl(m, n, k, l)
-!                            end do
+                                if ((q .ge. 0) &
+                                    .and. (q .le. q_max_a)) then
+
+                                    buffer_real = (n*(n+1) + nu*(nu+1) - p*(p+1)) &
+                                                  * a * p_k_minus_m_p%item(p)%item(mu-m)
+                                    select case (z_selector)
+                                        case(1,2)
+                                            buffer_real = buffer_real * z_n_real(p)
+                                            buffer_cmplx_a = buffer_cmplx_a &
+                                                             + cmplx(0,1)**p * buffer_real
+                                        case(3,4)
+                                            buffer_cmplx = buffer_real * z_n_cmplx(p)
+                                            buffer_cmplx_a = buffer_cmplx_a &
+                                                             + cmplx(0,1)**p * buffer_cmplx
+                                    end select
+                                end if
+
+                                if ((q .ge. 1) &
+                                    .and. (q .le. q_max_b)) then
+
+                                    buffer_real = sqrt( ( real(p+1, kind=8)**2 - real(n-nu, kind=8)**2 ) &
+                                                            * ( real(n+nu+1, kind=8)**2 - real(p+1, kind=8)**2 ) ) &
+                                                      * b *  p_k_minus_m_p%item(p+1)%item(mu-m)
+
+                                    select case (z_selector)
+                                        case(1,2)
+                                            buffer_real = buffer_real * z_n_real(p+1)
+                                            buffer_cmplx_b = buffer_cmplx_b &
+                                                             + cmplx(0,1)**(p+1) * buffer_real
+                                        case(3,4)
+                                            buffer_cmplx = buffer_real * z_n_cmplx(p+1)
+                                            buffer_cmplx_b = buffer_cmplx_b &
+                                                             + cmplx(0,1)**(p+1) * buffer_cmplx
+                                    end select
+                                end if
+                            end do
+                            buffer_real = (mu-m) * phi
+                            buffer_cmplx_e_m_mu_phi = cmplx(cos(buffer_real), sin(buffer_real), kind=8)
+
+                            buffer_cmplx = (-1)**m * factorial * buffer_cmplx_e_m_mu_phi &
+                                           * buffer_cmplx_a
+                            A_mnkl(m, n, mu, nu) = buffer_cmplx
+
+                            buffer_cmplx = (-1)**(m+1) * factorial * buffer_cmplx_e_m_mu_phi &
+                                           * buffer_cmplx_b
+                            B_mnkl(m, n, mu, nu) = buffer_cmplx
                         end do
                     end do
                 end do
             end do
+            !$OMP END PARALLEL DO
 
 
         end subroutine lib_mie_vector_spherical_harmonics_tranlation_coefficient_real
@@ -1524,9 +1592,9 @@ module lib_mie_vector_spherical_harmonics
             if (.not. test_ab_xu_cruzan_eq34()) then
                 rv = rv + 1
             end if
-!            if (.not. test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r()) then
-!                rv = rv + 1
-!            end if
+            if (.not. test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r()) then
+                rv = rv + 1
+            end if
 
             print *, "----lib_mie_vector_spherical_harmonics_test_functions----"
             if (rv == 0) then
@@ -1940,25 +2008,91 @@ module lib_mie_vector_spherical_harmonics
                 ! dummy
                 logical :: rv
 
+                ! parameter
+                integer, parameter :: d = 2
+
                 ! auxiliary
+                integer :: i
+                double precision :: buffer
                 double precision :: x
                 double precision :: theta
                 double precision :: phi
                 integer(kind=4), dimension(2) :: n_range
                 integer(kind=1) :: z_selector
 
-                type(spherical_coordinate_cmplx_type), dimension(:, :, :, :), allocatable :: A_mnkl
-                type(spherical_coordinate_cmplx_type), dimension(:, :, :, :), allocatable :: B_mnkl
+                complex(kind=8), dimension(:, :, :, :), allocatable :: A_mnkl
+                complex(kind=8), dimension(:, :, :, :), allocatable :: B_mnkl
+
+
+                integer, dimension(d) :: m
+                integer, dimension(d) :: n
+                integer, dimension(d) :: mu
+                integer, dimension(d) :: nu
+                complex(kind=8), dimension(d) :: ground_truth_A
+                complex(kind=8), dimension(d) :: ground_truth_B
 
                 z_selector = 3
                 x = 2.0
                 theta = 0.5
                 phi = 0.5
-                n_range = (/ 1, 20 /)
+
+                m = (/ -2, 8 /)
+                n = (/ 11, 10 /)
+                mu = (/ 3, -9 /)
+                nu = (/ 9, 12 /)
+                ground_truth_A(1) = cmplx(.7726121583d+12, .1034255820d+13, kind=8)
+                ground_truth_B(1) = cmplx(.1222239141d+11, -0.9130398908d+10, kind=8)
+                ground_truth_A(2) = cmplx(.3663964990d+35, -.2762412192d+35, kind=8)
+                ground_truth_B(2) = cmplx(-.8370892023d+32, -.1110285257d+32, kind=8)
+
+                n_range = (/ 1, max(maxval(n), maxval(nu)) /)
                 call lib_mie_vector_spherical_harmonics_tranlation_coefficient_real(x, theta, phi, &
                                                                                     n_range, z_selector, &
                                                                                     A_mnkl, B_mnkl)
 
+                rv = .true.
+                print *, "test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r:"
+                print *, "  A:"
+                do i=1, d
+                    buffer = 1 - abs(real(ground_truth_A(i)) / real(A_mnkl(m(i), n(i), mu(i), nu(i))))
+                    if (abs(buffer) .gt. ground_truth_e) then
+                        print *, "    ", i, " (Re) difference: ", buffer, " : FAILED"
+                        print *, "    ", A_mnkl(m(i), n(i), mu(i), nu(i))
+                        rv = .false.
+                    else
+                        print *, "    ", i , ": (Re) OK"
+                    end if
+
+                    buffer = 1 - abs(aimag(ground_truth_A(i)) / aimag(A_mnkl(m(i), n(i), mu(i), nu(i))))
+                    if (abs(buffer) .gt. ground_truth_e) then
+                        print *, "    ", i, " (Im) difference: ", buffer, " : FAILED"
+                        print *, "    ", A_mnkl(m(i), n(i), mu(i), nu(i))
+                        rv = .false.
+                    else
+                        print *, "    ", i , ": (Im) OK"
+                    end if
+                end do
+
+                print *, "  B:"
+                do i=1, d
+                    buffer = 1 - abs(real(ground_truth_B(i)) / real(B_mnkl(m(i), n(i), mu(i), nu(i))))
+                    if (abs(buffer) .gt. ground_truth_e) then
+                        print *, "    ", i, " (Re) difference: ", buffer, " : FAILED"
+                        print *, "    ", B_mnkl(m(i), n(i), mu(i), nu(i))
+                        rv = .false.
+                    else
+                        print *, "    ", i , ": (Re) OK"
+                    end if
+
+                    buffer = 1 - abs(aimag(ground_truth_B(i)) / aimag(B_mnkl(m(i), n(i), mu(i), nu(i))))
+                    if (abs(buffer) .gt. ground_truth_e) then
+                        print *, "    ", i, " (Im) difference: ", buffer, " : FAILED"
+                        print *, "    ", B_mnkl(m(i), n(i), mu(i), nu(i))
+                        rv = .false.
+                    else
+                        print *, "    ", i , ": (Im) OK"
+                    end if
+                end do
 
             end function test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r
 
