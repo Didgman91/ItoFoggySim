@@ -39,7 +39,7 @@
                             							
                             <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="photran.managedbuild.target.gnu.platform.exe.debug.346743778" name="Debug Platform" osList="solaris,linux,hpux,aix,qnx" superClass="photran.managedbuild.target.gnu.platform.exe.debug"/>
                             							
-                            <builder buildPath="${workspace_loc:/libmath}/Debug" id="photran.managedbuild.target.gnu.builder.exe.debug.1811448768" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
+                            <builder buildPath="${workspace_loc:/libmath}/Debug" id="photran.managedbuild.target.gnu.builder.exe.debug.1811448768" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
                             							
                             <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.2135571687" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug">
                                 								

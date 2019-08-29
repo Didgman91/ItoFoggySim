@@ -43,7 +43,7 @@
                             							
                             <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="photran.managedbuild.target.gnu.platform.exe.debug.349864477" name="Debug Platform" osList="solaris,linux,hpux,aix,qnx" superClass="photran.managedbuild.target.gnu.platform.exe.debug"/>
                             							
-                            <builder buildPath="${workspace_loc:/SpeckleSim}/Debug" id="photran.managedbuild.target.gnu.builder.exe.debug.1040322371" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
+                            <builder buildPath="${workspace_loc:/SpeckleSim}/Debug" id="photran.managedbuild.target.gnu.builder.exe.debug.1040322371" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
                             							
                             <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.78808068" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug">
                                 								
