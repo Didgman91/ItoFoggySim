@@ -174,6 +174,7 @@ module file_io
 
         img_max_abs_value = max(abs(maxval(img)), abs(minval(img)))
 
+        !$OMP PARALLEL DO PRIVATE(i, ii, buffer)
         do i=1, size(img, 1)
             do ii=1, size(img, 2)
                 if (img(i, ii) .gt. 0) then
@@ -205,10 +206,10 @@ module file_io
                         if (logarithmic) then
                             buffer = int( log(-img(i,ii)) * real(max_value) / img_max_abs_value, kind=2)
                         else
-                            buffer = int( img(i,ii) * real(max_value) / img_max_abs_value, kind=2)
+                            buffer = int( -img(i,ii) * real(max_value) / img_max_abs_value, kind=2)
                         end if
                     else
-                        buffer = int( img(i,ii) * real(max_value) / img_max_abs_value, kind=2)
+                        buffer = int( -img(i,ii) * real(max_value) / img_max_abs_value, kind=2)
                     end if
 
 !                    buffer = int( img(i,ii) * real(max_value) / img_min_value, kind=2)
@@ -221,6 +222,7 @@ module file_io
                 end if
             end do
         end do
+        !$OMP END PARALLEL DO
     end subroutine
 
     ! writes up to three columns into a csv file

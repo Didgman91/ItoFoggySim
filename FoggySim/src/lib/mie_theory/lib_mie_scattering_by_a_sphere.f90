@@ -468,6 +468,10 @@ module lib_mie_scattering_by_a_sphere
                 e_field_s%theta = cmplx(0,0,kind=8)
                 e_field_s%phi = cmplx(0,0,kind=8)
                 e_field_s%rho = cmplx(0,0,kind=8)
+
+                h_field_s%theta = cmplx(0,0,kind=8)
+                h_field_s%phi = cmplx(0,0,kind=8)
+                h_field_s%rho = cmplx(0,0,kind=8)
             end if
 
             field_s(1) = e_field_s
@@ -1770,6 +1774,9 @@ module lib_mie_scattering_by_a_sphere
                     double precision, dimension(:, :), allocatable :: e_field_s_real_z
 
                     type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field_s
+                    double precision, dimension(:, :), allocatable :: h_field_s_real_x
+                    double precision, dimension(:, :), allocatable :: h_field_s_real_y
+                    double precision, dimension(:, :), allocatable :: h_field_s_real_z
 
                     type(cartesian_coordinate_real_type), dimension(:, :), allocatable :: poynting_s
                     type(cartesian_coordinate_cmplx_type) :: buffer_cartesian_cmplx
@@ -1781,9 +1788,9 @@ module lib_mie_scattering_by_a_sphere
                     INTEGER :: count_start, count_finish, count_rate
 
                     x_range = (/ -5.0_8 * unit_mu, 5.0_8 * unit_mu /)
-                    z_range = (/ -5.0_8 * unit_mu, 10.0_8 * unit_mu /)
-                    step_size = 0.02_8 * unit_mu
-!                    step_size = 0.04_8 * unit_mu
+                    z_range = (/ -5_8 * unit_mu, 10.0_8 * unit_mu /)
+!                    step_size = 0.02_8 * unit_mu
+                    step_size = 0.1_8 * unit_mu
 
                     no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                     no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -1794,6 +1801,9 @@ module lib_mie_scattering_by_a_sphere
                     allocate(e_field_s_real_z(no_x_values, no_z_values))
 
                     allocate(h_field_s(no_x_values, no_z_values))
+                    allocate(h_field_s_real_x(no_x_values, no_z_values))
+                    allocate(h_field_s_real_y(no_x_values, no_z_values))
+                    allocate(h_field_s_real_z(no_x_values, no_z_values))
 
                     allocate(poynting_s(no_x_values, no_z_values))
                     allocate(poynting_s_abs(no_x_values, no_z_values))
@@ -1815,6 +1825,8 @@ module lib_mie_scattering_by_a_sphere
                     if (n_range(2) .gt. 45) then
                         print *, "WARNING: max degree (45) reached: ", n_range(2)
                         n_range(2) = 45
+                    else
+                        print *, "NOTE: max degree = ", n_range(2)
                     end if
 
                     call lib_math_factorial_initialise_caching(n_range(2))
@@ -1848,6 +1860,10 @@ module lib_mie_scattering_by_a_sphere
                             e_field_s_real_x(i, ii) = real(e_field_s(i, ii)%x)
                             e_field_s_real_y(i, ii) = real(e_field_s(i, ii)%y)
                             e_field_s_real_z(i, ii) = real(e_field_s(i, ii)%z)
+
+                            h_field_s_real_x(i, ii) = real(h_field_s(i, ii)%x)
+                            h_field_s_real_y(i, ii) = real(h_field_s(i, ii)%y)
+                            h_field_s_real_z(i, ii) = real(h_field_s(i, ii)%z)
 
                             ! calculate the Poynting vector: S = E x H
                             ! eq. 43
@@ -1886,6 +1902,20 @@ module lib_mie_scattering_by_a_sphere
 
                     open(unit=u, file="e_field_s_z.ppm", status='unknown')
                     rv = write_ppm_p3(u, e_field_s_real_z)
+                    close(u)
+
+                    ! h field
+                    u = 99
+                    open(unit=u, file="h_field_s_x.ppm", status='unknown')
+                    rv = write_ppm_p3(u, h_field_s_real_x)
+                    close(u)
+
+                    open(unit=u, file="h_field_s_y.ppm", status='unknown')
+                    rv = write_ppm_p3(u, h_field_s_real_y)
+                    close(u)
+
+                    open(unit=u, file="h_field_s_z.ppm", status='unknown')
+                    rv = write_ppm_p3(u, h_field_s_real_z)
                     close(u)
 
                     ! Poynting

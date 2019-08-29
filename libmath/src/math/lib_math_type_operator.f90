@@ -707,7 +707,7 @@ module lib_math_type_operator
             ! dummy
             type (cartesian_coordinate_real_type), intent(in) :: rhs
 
-            complex(kind=8) :: rv
+            real(kind=lib_math_type_kind) :: rv
 
             rv = sqrt(rhs%x*rhs%x + rhs%y*rhs%y + rhs%z*rhs%z)
 
