@@ -114,7 +114,7 @@ module file_io
         logical :: rv
 
         ! parameter
-        character, parameter :: delimiter = ' '
+        character(len=*), parameter :: formatstr = '(10(I3, x, I3, x, I3, x))'
         integer(kind=2), parameter :: max_value = 255
 
         ! auxiliary
@@ -127,15 +127,16 @@ module file_io
         img_max_value = maxval(img)
         img_min_value = minval(img)
 
-        write(u, *) "P3"
-        write(u, *) size(img, 1), delimiter, size(img, 2)
-        write(u, *) max_value
-        write(u, *) "# The part above is the header"
-        write(u, *) "# P3   means this is a RGB color image in ASCII"
-        write(u, *) "# ", size(img, 1), delimiter, size(img, 2), "  is the width and height of the image in pixels"
-        write(u, *) "# pixel value range for each color: 0 - ", max_value
-        write(u, *) "# data point value range: ", img_min_value, " - ", img_max_value
-        write(u, *) "# The part below is image data: RGB triplets"
+        write(u, '(A)') "P3"
+        write(u, '(I6.1, X, I6.1)') size(img, 1), size(img, 2)
+        write(u, '(I3)') max_value
+        write(u, '(A)') "# The part above is the header"
+        write(u, '(A)') "# P3   means this is a RGB color image in ASCII"
+        write(u, '(A, I6.1, A, I6.1, A)') "# ", size(img, 1), " x ", size(img, 2), &
+                                          "  is the width and height of the image in pixels"
+        write(u, '(A, I3)') "# pixel value range for each color: 0 - ", max_value
+        write(u, '(A, EN17.2, A, EN17.2)') "# data point value range: ", img_min_value, " - ", img_max_value
+        write(u, '(A)') "# The part below is image data: RGB triplets"
 
         rv = .true.
 
@@ -151,7 +152,7 @@ module file_io
 
         if (rv) then
             do i=1, size(img_discretised_color, 2)
-                write(u, *) img_discretised_color(:, i)
+                write(u, formatstr) img_discretised_color(:, i)
             end do
         end if
 
