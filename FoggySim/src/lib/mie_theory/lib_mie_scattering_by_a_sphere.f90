@@ -859,8 +859,8 @@ module lib_mie_scattering_by_a_sphere
         !       second element: last index
         !       HINT: first element .le. second element
         !
-        ! Reference: Absorption and Scattering of Light by Small Particles, eq. (4.53)
-        subroutine get_coefficients_a_b_real(x, m, mu, mu1, n, a_n, b_n)
+        ! Reference: Absorption and Scattering of Light by Small Particles,Bohren and Huffman,  eq. (4.53)
+        subroutine get_coefficients_a_b_real_bohrenh(x, m, mu, mu1, n, a_n, b_n)
             implicit none
             ! dummy
             double precision :: x
@@ -914,7 +914,7 @@ module lib_mie_scattering_by_a_sphere
 
             b_n = numerator / denominator
 
-        end subroutine get_coefficients_a_b_real
+        end subroutine get_coefficients_a_b_real_bohrenh
 
         ! calculates the scattering coefficients
         !
@@ -940,7 +940,7 @@ module lib_mie_scattering_by_a_sphere
         !       HINT: first element .le. second element
         !
         ! Reference: Absorption and Scattering of Light by Small Particles, eq. (4.53)
-        subroutine get_coefficients_a_b_cmplx(x, m, mu, mu1, n, a_n, b_n)
+        subroutine get_coefficients_a_b_cmplx_bohrenh(x, m, mu, mu1, n, a_n, b_n)
             implicit none
             ! dummy
             complex(kind=8) :: x
@@ -1003,7 +1003,7 @@ module lib_mie_scattering_by_a_sphere
 
             b_n = numerator / denominator
 
-        end subroutine get_coefficients_a_b_cmplx
+        end subroutine get_coefficients_a_b_cmplx_bohrenh
 
         ! calculates the scattering coefficients
         !
@@ -1467,6 +1467,177 @@ module lib_mie_scattering_by_a_sphere
 
         end function get_n_c
 
+        ! Calculates the coefficients (of vector spherical components) of a plane incident wave
+        !
+        ! Argument
+        ! ----
+        !   k: type(cartesian_coordinate_real_type)
+        !       wave vector
+        !   d_j_0: type(cartesian_coordinate_real_type)
+        !       vector from the
+        !   n_range: integer, dimension(2)
+        !       first and last index (degree) of the sum to calculate the electical field
+        !       e.g. n = (/ 1, 45 /) <-- size parameter
+        !
+        ! Returns
+        ! ----
+        !   p: type(list_list_cmplx)
+        !
+        !   q: type(list_list_cmplx)
+        !
+        ! Reference: Electromagnetic scattering by an aggregate of spheres Yu-lin Xu, eq. 20
+        subroutine lib_mie_get_p_q_j_j(k, d_j_0, n_range, p, q)
+            implicit none
+            ! dummy
+            type(cartesian_coordinate_real_type), intent(in) :: k
+            type(cartesian_coordinate_real_type), intent(in) :: d_j_0
+            integer(kind=4), dimension(2),intent(in) :: n_range
+
+            type(list_list_cmplx), intent(inout) :: p
+            type(list_list_cmplx), intent(inout) :: q
+
+            ! auxiliary
+            double precision :: alpha
+            double precision :: beta
+
+            type(spherical_coordinate_real_type) :: k_spherical
+
+            double precision :: dot_k_d
+
+            complex(kind=8) :: exp_k_d
+
+            ! --- pre-calc ---
+            k_spherical = k
+
+            dot_k_d = dot_product(k, d_j_0)
+
+            exp_k_d = cmplx(cos(dot_k_d), sin(dot_k_d), kind=8)
+
+            alpha = k_spherical%theta
+            beta = k_spherical%phi
+
+            call lib_mie_get_p_q_j_j_core(exp_k_d, alpha, beta, n_range, p, q)
+
+        end subroutine
+
+        ! Calculates the coefficients (of vector spherical components) of a plane incident wave
+        !
+        ! Argument
+        ! ----
+        !   exp_k_d: complex
+        !       formula: exp(i k * d_j_0)
+        !           k: wave vector
+        !           d_j_0: vector from 0-th to j-th coordinate system
+        !   alpha: double precision
+        !       polar angle [0..Pi)
+        !       if 0: propagation direction along the z-axis
+        !   beta: double precision
+        !       azimuthal angle [0..2Pi)
+        !       if 0 and alpha = 0: The E-field oscillates along the x-axis.
+        !   n_range: integer, dimension(2)
+        !       first and last index (degree) of the sum to calculate the electical field
+        !       e.g. n = (/ 1, 45 /) <-- size parameter
+        !
+        ! Returns
+        ! ----
+        !   p: type(list_list_cmplx)
+        !
+        !   q: type(list_list_cmplx)
+        !
+        ! Reference: Electromagnetic scattering by an aggregate of spheres Yu-lin Xu, eq. 20
+        subroutine lib_mie_get_p_q_j_j_core(exp_k_d, alpha, beta, n_range, p, q)
+            implicit none
+            ! dummy
+            complex(kind=8), intent(in) :: exp_k_d
+            double precision, intent(in) :: alpha
+            double precision, intent(in) :: beta
+            integer(kind=4), dimension(2),intent(in) :: n_range
+
+            type(list_list_cmplx), intent(inout) :: p
+            type(list_list_cmplx), intent(inout) :: q
+
+            ! auxiliary
+!            double precision :: buffer_real
+            double precision :: buffer_real_n
+!            double complex :: buffer_cmplx
+            integer(kind=4) :: m
+            integer(kind=4) :: n
+
+            type(list_list_cmplx) :: p0_nm
+            type(list_list_cmplx) :: q0_nm
+            type(list_list_real) :: pi_nm
+            type(list_list_real) :: tau_nm
+
+            double precision :: sin_beta
+            double precision :: cos_beta
+
+            ! --- init ---
+            call init_list(p, n_range(1), n_range(2)-n_range(1)+1)
+            call init_list(q, n_range(1), n_range(2)-n_range(1)+1)
+            call init_list(p0_nm, n_range(1), n_range(2)-n_range(1)+1)
+            call init_list(q0_nm, n_range(1), n_range(2)-n_range(1)+1)
+
+            ! --- pre-calc ---
+            sin_beta = sin(beta)
+            cos_beta = cos(beta)
+
+            call lib_math_associated_legendre_polynomial_theta(alpha, n_range(2), pi_nm, tau_nm)
+
+            ! errata eq. (1) Equations (21) on p. 4577
+            do n=n_range(1), n_range(2)
+                buffer_real_n = 1.0d0 / real(n*(n+1), kind=8)
+                if (alpha .eq. 0.0) then
+                    p%item(n)%item(:) = 0.0
+                    q%item(n)%item(:) = 0.0
+                    call get_value(-1_4, n, p%item(n)%item(m), q%item(n)%item(m))
+                    call get_value(1_4, n, p%item(n)%item(m), q%item(n)%item(m))
+                else
+                    do m=-n, n
+                        call get_value(m, n, p%item(n)%item(m), q%item(n)%item(m))
+!                        buffer_real = -m * beta
+!                        buffer_cmplx = cmplx(cos(buffer_real), sin(buffer_real), kind=8)
+!
+!                        buffer_cmplx = buffer_real_n * buffer_cmplx
+!
+!                        p0_nm%item(n)%item(m) = tau_nm%item(n)%item(m) * buffer_cmplx
+!                        q0_nm%item(n)%item(m) = pi_nm%item(n)%item(m) * buffer_cmplx
+!
+!                        p%item(n)%item(m) = exp_k_d * p0_nm%item(n)%item(m)
+!                        q%item(n)%item(m) = exp_k_d * q0_nm%item(n)%item(m)
+                    end do
+                end if
+            end do
+
+            contains
+                ! errata eq. (1) Equations (21) on p. 4577
+                subroutine get_value(m, n, p, q)
+                    implicit none
+                    ! dummy
+                    integer(kind=4), intent(in) :: m
+                    integer(kind=4), intent(in) :: n
+
+                    complex(kind=lib_math_type_kind) :: p
+                    complex(kind=lib_math_type_kind) :: q
+
+                    ! auxiliaray
+                    double precision :: buffer_real
+                    double complex :: buffer_cmplx
+
+                    buffer_real = -m * beta
+                    buffer_cmplx = cmplx(cos(buffer_real), sin(buffer_real), kind=8)
+
+                    buffer_cmplx = buffer_real_n * buffer_cmplx
+
+                    p0_nm%item(n)%item(m) = tau_nm%item(n)%item(m) * buffer_cmplx
+                    q0_nm%item(n)%item(m) = pi_nm%item(n)%item(m) * buffer_cmplx
+
+                    p = exp_k_d * p0_nm%item(n)%item(m)
+                    q = exp_k_d * q0_nm%item(n)%item(m)
+
+                end subroutine
+
+        end subroutine lib_mie_get_p_q_j_j_core
+
         function lib_mie_scattering_by_a_sphere_test_functions() result (rv)
             implicit none
             ! dummy
@@ -1477,10 +1648,10 @@ module lib_mie_scattering_by_a_sphere
 
             rv = 0
 
-            if (.not. test_get_coefficients_a_b_real()) then
+            if (.not. test_get_coefficients_a_b_real_bohrenh()) then
                 rv = rv + 1
             end if
-!            if (.not. test_get_coefficients_a_b_cmplx()) then
+!            if (.not. test_get_coefficients_a_b_cmplx_bohrenh()) then
 !                rv = rv + 1
 !            end if
             if (.not. test_get_coefficients_a_b_real_barberh()) then
@@ -1509,7 +1680,7 @@ module lib_mie_scattering_by_a_sphere
 
             contains
 
-                function test_get_coefficients_a_b_real() result (rv)
+                function test_get_coefficients_a_b_real_bohrenh() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -1546,10 +1717,10 @@ module lib_mie_scattering_by_a_sphere
                     ground_truth_b_n(3) = cmplx(0.940931_8, -0.235754_8, kind=8)
                     ground_truth_b_n(4) = cmplx(0.999006_8, -0.0315159_8, kind=8)
 
-                    call get_coefficients_a_b_real(x, m, mu, mu1, n, a_n, b_n)
+                    call get_coefficients_a_b_real_bohrenh(x, m, mu, mu1, n, a_n, b_n)
 
                     rv = .true.
-                    print *, "test_get_coefficients_a_b_real:"
+                    print *, "test_get_coefficients_a_b_real_bohrenh:"
                     do i=n(1), n(2)
                         buffer = abs(a_n(i) - ground_truth_a_n(i))
                         if (buffer .gt. ground_truth_e) then
@@ -1568,9 +1739,9 @@ module lib_mie_scattering_by_a_sphere
                         end if
                     end do
 
-                end function test_get_coefficients_a_b_real
+                end function test_get_coefficients_a_b_real_bohrenh
 
-                function test_get_coefficients_a_b_cmplx() result (rv)
+                function test_get_coefficients_a_b_cmplx_bohrenh() result (rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -1608,10 +1779,10 @@ module lib_mie_scattering_by_a_sphere
                     ground_truth_b_n(4) = cmplx(0.947238_8, +0.177162_8, kind=8)
 
 
-                    call get_coefficients_a_b_cmplx(x, m, mu, mu1, n, a_n, b_n)
+                    call get_coefficients_a_b_cmplx_bohrenh(x, m, mu, mu1, n, a_n, b_n)
 
                     rv = .true.
-                    print *, "test_get_coefficients_a_b_cmplx:"
+                    print *, "test_get_coefficients_a_b_cmplx_bohrenh:"
                     do i=n(1), n(2)
                         buffer = abs(a_n(i) - ground_truth_a_n(i))
                         if (buffer .gt. ground_truth_e) then
@@ -1630,7 +1801,7 @@ module lib_mie_scattering_by_a_sphere
                         end if
                     end do
 
-                end function test_get_coefficients_a_b_cmplx
+                end function test_get_coefficients_a_b_cmplx_bohrenh
 
                 function test_get_coefficients_a_b_real_barberh() result (rv)
                     implicit none
