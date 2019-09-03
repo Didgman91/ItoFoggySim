@@ -180,7 +180,7 @@ module file_io
                 if (img(i, ii) .gt. 0) then
                     if (present(logarithmic)) then
                         if (logarithmic) then
-                            buffer = int( log(img(i,ii)) * real(max_value) / img_max_abs_value, kind=2)
+                            buffer = int( log(img(i,ii)+1) * real(max_value) / log(img_max_abs_value+1), kind=2)
                         else
                             buffer = int( img(i,ii) * real(max_value) / img_max_abs_value, kind=2)
                         end if
@@ -204,7 +204,7 @@ module file_io
                 else
                     if (present(logarithmic)) then
                         if (logarithmic) then
-                            buffer = int( log(-img(i,ii)) * real(max_value) / img_max_abs_value, kind=2)
+                            buffer = int( log(-img(i,ii)+1) * real(max_value) / log(img_max_abs_value+1), kind=2)
                         else
                             buffer = int( -img(i,ii) * real(max_value) / img_max_abs_value, kind=2)
                         end if
@@ -577,6 +577,7 @@ module file_io
 
         call test_write_ppm_p2
         call test_write_ppm_p3
+        call test_write_ppm_p3_log
 
         contains
 
@@ -623,6 +624,28 @@ module file_io
                 close(u)
 
             end subroutine test_write_ppm_p3
+
+            subroutine test_write_ppm_p3_log()
+                implicit none
+
+                ! auxiliary
+                integer :: u
+                double precision, allocatable, dimension(:, :) :: img
+
+                logical :: rv
+
+                allocate (img(10,3))
+
+                img = reshape((/ 0,0,0,1,2,3,4,5,6,7, &
+                                 0,0,0,0,0,0,0,0,0,0, &
+                                 -7,-6,-5,-4,-3,-2,-1,0,0,0 /), shape(img))
+
+                u = 99
+                open(unit=u, file="test.ppm", status='unknown')
+                rv = write_ppm_p3(u, img, logarithmic=.true.)
+                close(u)
+
+            end subroutine test_write_ppm_p3_log
 
     end subroutine
 
