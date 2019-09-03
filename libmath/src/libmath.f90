@@ -16,6 +16,7 @@ module libmath
 
             error_counter = 0
 
+            error_counter = error_counter + test_lib_math_auxiliaries()
             error_counter = error_counter + lib_math_factorial_test_functions()
             error_counter = error_counter + lib_math_type_operator_test_functions()
             error_counter = error_counter + lib_math_bessel_test_functions()

@@ -1,4 +1,5 @@
 module lib_math_public
+    use lib_math_auxiliaries
     use lib_math_type
     use lib_math_type_operator
     use lib_math_bessel
