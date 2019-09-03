@@ -19,6 +19,7 @@ module lib_math_type_operator
     public :: make_spherical
 
     public :: cross_product
+    public :: dot_product
 
     public :: lib_math_type_operator_test_functions
 
@@ -155,6 +156,13 @@ module lib_math_type_operator
         module procedure lib_math_cartesian_cross_product_real_list
         module procedure lib_math_cartesian_cross_product_cmplx
         module procedure lib_math_cartesian_cross_product_cmplx_list
+    end interface
+
+    interface dot_product
+        module procedure lib_math_cartesian_dot_product_real
+        module procedure lib_math_cartesian_dot_product_real_list
+        module procedure lib_math_cartesian_dot_product_cmplx
+        module procedure lib_math_cartesian_dot_product_cmplx_list
     end interface
 
     contains
@@ -1904,6 +1912,64 @@ module lib_math_type_operator
 
         end function
 
+        function lib_math_cartesian_dot_product_real (lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            type(cartesian_coordinate_real_type), intent(in) :: lhs
+            type(cartesian_coordinate_real_type), intent(in) :: rhs
+
+            real(kind=lib_math_type_kind) :: rv
+
+            rv = lhs%x * rhs%x + lhs%y * rhs%y + lhs%z * rhs%z
+
+        end function
+
+        function lib_math_cartesian_dot_product_real_list (lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            type(cartesian_coordinate_real_type), dimension(:), intent(in) :: lhs
+            type(cartesian_coordinate_real_type), dimensioN(lbound(lhs,1):ubound(lhs,1)), intent(in) :: rhs
+
+            real(kind=lib_math_type_kind), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lib_math_cartesian_dot_product_real(lhs(i), rhs(i))
+            end do
+
+        end function
+
+        function lib_math_cartesian_dot_product_cmplx (lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            type(cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            type(cartesian_coordinate_cmplx_type), intent(in) :: rhs
+
+            complex(kind=lib_math_type_kind) :: rv
+
+            rv = lhs%x * rhs%x + lhs%y * rhs%y + lhs%z * rhs%z
+
+        end function
+
+        function lib_math_cartesian_dot_product_cmplx_list (lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            type(cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: lhs
+            type(cartesian_coordinate_cmplx_type), dimensioN(lbound(lhs,1):ubound(lhs,1)), intent(in) :: rhs
+
+            complex(kind=lib_math_type_kind), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lib_math_cartesian_dot_product_cmplx(lhs(i), rhs(i))
+            end do
+
+        end function
+
         function lib_math_type_operator_test_functions() result (rv)
             implicit none
             ! dummy
@@ -2010,6 +2076,12 @@ module lib_math_type_operator
                 rv = rv + 1
             end if
             if (.not. test_lib_math_cartesian_cross_product_cmplx_list()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_cartesian_dot_product_real_list()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_cartesian_dot_product_cmplx_list()) then
                 rv = rv + 1
             end if
 
@@ -3887,6 +3959,124 @@ module lib_math_type_operator
                     end do
 
                 end function test_lib_math_cartesian_cross_product_cmplx_list
+
+                function test_lib_math_cartesian_dot_product_real_list() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    integer, parameter :: d = 4
+
+                    ! auxiliary
+                    integer :: i
+                    type(cartesian_coordinate_real_type), dimension(d) :: lhs
+                    type(cartesian_coordinate_real_type), dimensioN(d) :: rhs
+                    real(kind=lib_math_type_kind), dimension(d) :: res
+
+                    real(kind=lib_math_type_kind), dimension(d) :: ground_truth_res
+
+                    real(kind=lib_math_type_kind) :: buffer
+
+                    lhs(1)%x = 1
+                    lhs(1)%y = 0
+                    lhs(1)%z = 0
+                    lhs(2)%x = 0
+                    lhs(2)%y = 1
+                    lhs(2)%z = 0
+                    lhs(3)%x = 0
+                    lhs(3)%y = 0
+                    lhs(3)%z = 1
+                    lhs(4)%x = 4
+                    lhs(4)%y = 45.5
+                    lhs(4)%z = 50
+
+                    rhs(1)%x = 0
+                    rhs(1)%y = 1
+                    rhs(1)%z = 0
+                    rhs(2)%x = 0
+                    rhs(2)%y = 0
+                    rhs(2)%z = 1
+                    rhs(3)%x = 1
+                    rhs(3)%y = 0
+                    rhs(3)%z = 0
+                    rhs(4)%x = 5
+                    rhs(4)%y = 1
+                    rhs(4)%z = 0
+
+                    ground_truth_res(1) = 0
+                    ground_truth_res(2) = 0
+                    ground_truth_res(3) = 0
+                    ground_truth_res(4) = 65.5
+
+                    res = lib_math_cartesian_dot_product_real_list(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_cartesian_dot_product_real_list:"
+                    do i=1, d
+                        buffer = abs(res(i) - ground_truth_res(i))
+                        if (.not. evaluate(buffer, i)) rv = .false.
+                    end do
+
+                end function test_lib_math_cartesian_dot_product_real_list
+
+                function test_lib_math_cartesian_dot_product_cmplx_list() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    integer, parameter :: d = 4
+
+                    ! auxiliary
+                    integer :: i
+                    type(cartesian_coordinate_cmplx_type), dimension(d) :: lhs
+                    type(cartesian_coordinate_cmplx_type), dimensioN(d) :: rhs
+                    complex(kind=lib_math_type_kind), dimension(d) :: res
+
+                    complex(kind=lib_math_type_kind), dimension(d) :: ground_truth_res
+
+                    real(kind=lib_math_type_kind) :: buffer
+
+                    lhs(1)%x = 1
+                    lhs(1)%y = 0
+                    lhs(1)%z = 0
+                    lhs(2)%x = 0
+                    lhs(2)%y = 1
+                    lhs(2)%z = 0
+                    lhs(3)%x = 0
+                    lhs(3)%y = 0
+                    lhs(3)%z = 1
+                    lhs(4)%x = 4
+                    lhs(4)%y = 45.5
+                    lhs(4)%z = 50
+
+                    rhs(1)%x = 0
+                    rhs(1)%y = 1
+                    rhs(1)%z = 0
+                    rhs(2)%x = 0
+                    rhs(2)%y = 0
+                    rhs(2)%z = 1
+                    rhs(3)%x = 1
+                    rhs(3)%y = 0
+                    rhs(3)%z = 0
+                    rhs(4)%x = 5
+                    rhs(4)%y = 1
+                    rhs(4)%z = 0
+
+                    ground_truth_res(1) = 0
+                    ground_truth_res(2) = 0
+                    ground_truth_res(3) = 0
+                    ground_truth_res(4) = 65.5
+
+                    res = lib_math_cartesian_dot_product_cmplx_list(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_cartesian_dot_product_cmplx_list:"
+                    do i=1, d
+                        buffer = abs(res(i) - ground_truth_res(i))
+                        if (.not. evaluate(buffer, i)) rv = .false.
+                    end do
+
+                end function test_lib_math_cartesian_dot_product_cmplx_list
 
         end function lib_math_type_operator_test_functions
 
