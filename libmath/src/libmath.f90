@@ -28,7 +28,7 @@ module libmath
             else
                 print *, error_counter,"test_lib_math test(s) FAILED"
             end if
-            print *, "-----------------------------------------------------------"
+            print *, "------------------------------------------"
         end function
 
 end module

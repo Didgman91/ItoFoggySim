@@ -10,6 +10,7 @@ module lib_math_type_operator
     public :: operator (*)
     public :: operator (/)
     public :: assignment (=)
+    public :: abs
     public :: spherical_abs
     public :: cartesian_abs
     public :: init_list
@@ -23,6 +24,14 @@ module lib_math_type_operator
 
     ! ---- operator ----
     interface operator (+)
+        module procedure lib_math_cartesian_operator_add
+        module procedure lib_math_cartesian_operator_add_array
+        module procedure lib_math_cartesian_operator_0d_add_array
+        module procedure lib_math_cartesian_operator_array_add_0d
+        module procedure lib_math_list_cartesian_operator_add_array_cmplx
+        module procedure lib_math_list_cartesian_operator_0d_add_array_cmplx
+        module procedure lib_math_list_cartesian_operator_array_add_0d_cmplx
+
         module procedure lib_math_spherical_operator_add
         module procedure lib_math_spherical_operator_add_array
         module procedure lib_math_spherical_operator_0d_add_array
@@ -33,6 +42,12 @@ module lib_math_type_operator
     end interface
 
     interface operator (-)
+        module procedure lib_math_cartesian_operator_sub
+        module procedure lib_math_cartesian_operator_sub_array
+        module procedure lib_math_cartesian_operator_array_sub_0d
+        module procedure lib_math_list_cartesian_operator_sub_array_cmplx
+        module procedure lib_math_list_cartesian_operator_array_sub_0d_cmplx
+
         module procedure lib_math_spherical_operator_sub
         module procedure lib_math_spherical_operator_sub_array
         module procedure lib_math_spherical_operator_array_sub_0d
@@ -41,6 +56,19 @@ module lib_math_type_operator
     end interface
 
     interface operator (*)
+        module procedure lib_math_cartesian_operator_scalar_real_mul
+        module procedure lib_math_cartesian_operator_scalar_cmplx_mul
+        module procedure lib_math_cartesian_operator_mul_scalar_real
+        module procedure lib_math_cartesian_operator_mul_scalar_cmplx
+        module procedure lib_math_cartesian_operator_array_real_mul_array
+        module procedure lib_math_cartesian_operator_array_cmplx_mul_array
+        module procedure lib_math_cartesian_operator_0d_real_mul_array
+        module procedure lib_math_cartesian_operator_0d_cmplx_mul_array
+        module procedure lib_math_list_cartesian_operator_array_real_mul_array_c
+        module procedure lib_math_list_cartesian_operator_array_c_mul_array_cmplx
+        module procedure lib_math_list_cartesian_operator_real_mul_array_cmplx
+        module procedure lib_math_list_cartesian_operator_cmplx_mul_array_cmplx
+
         module procedure lib_math_spherical_operator_scalar_real_mul
         module procedure lib_math_spherical_operator_scalar_cmplx_mul
         module procedure lib_math_spherical_operator_mul_scalar_real
@@ -56,6 +84,17 @@ module lib_math_type_operator
     end interface
 
     interface operator (/)
+        module procedure lib_math_cartesian_operator_divide_by_scalar_real
+        module procedure lib_math_cartesian_operator_divide_by_scalar_cmplx
+        module procedure lib_math_cartesian_operator_array_divide_by_scalar_array_real
+        module procedure lib_math_cartesian_operator_array_divide_by_scalar_array_cmplx
+        module procedure lib_math_cartesian_operator_array_divide_by_0d_real
+        module procedure lib_math_cartesian_operator_array_divide_by_0d_cmplx
+        module procedure lib_math_list_cartesian_operator_array_divide_by_real_array
+        module procedure lib_math_list_cartesian_operator_c_array_divide_by_c_array
+        module procedure lib_math_list_cartesian_operator_array_divide_by_real
+        module procedure lib_math_list_cartesian_operator_array_divide_by_cmplx
+
         module procedure lib_math_spherical_operator_divide_by_scalar_real
         module procedure lib_math_spherical_operator_divide_by_scalar_cmplx
         module procedure lib_math_spherical_operator_array_divide_by_scalar_array_real
@@ -80,6 +119,13 @@ module lib_math_type_operator
     interface cartesian_abs
         module procedure lib_math_cartesian_operator_abs_cmplx
         module procedure lib_math_cartesian_operator_abs_real
+    end interface
+
+    interface abs
+        module procedure lib_math_cartesian_operator_abs_cmplx
+        module procedure lib_math_cartesian_operator_abs_real
+
+        module procedure lib_math_spherical_operator_abs_cmplx
     end interface
 
 
@@ -701,7 +747,111 @@ module lib_math_type_operator
 
         end function
 
-! ---- cartesian coordinates ----
+! ---- single cartesian coordinate ----
+        function lib_math_cartesian_operator_add(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = lhs%x + rhs%x
+            rv%y = lhs%y + rhs%y
+            rv%z = lhs%z + rhs%z
+
+        end function
+
+        function lib_math_cartesian_operator_sub(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = lhs%x - rhs%x
+            rv%y = lhs%y - rhs%y
+            rv%z = lhs%z - rhs%z
+
+        end function
+
+        function lib_math_cartesian_operator_scalar_real_mul(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            real(kind=8), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = lhs * rhs%x
+            rv%y = lhs * rhs%y
+            rv%z = lhs * rhs%z
+
+        end function
+
+        function lib_math_cartesian_operator_scalar_cmplx_mul(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            complex(kind=8), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = lhs * rhs%x
+            rv%y = lhs * rhs%y
+            rv%z = lhs * rhs%z
+
+        end function
+
+        function lib_math_cartesian_operator_mul_scalar_real(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            real(kind=8), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = lhs%x * rhs
+            rv%y = lhs%y * rhs
+            rv%z = lhs%z * rhs
+
+        end function
+
+        function lib_math_cartesian_operator_mul_scalar_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            complex(kind=8), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = lhs%x * rhs
+            rv%y = lhs%y * rhs
+            rv%z = lhs%z * rhs
+
+        end function
+
+        function lib_math_cartesian_operator_divide_by_scalar_real(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            real(kind=8), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = lhs%x / rhs
+            rv%y = lhs%y / rhs
+            rv%z = lhs%z / rhs
+
+        end function
+
+        function lib_math_cartesian_operator_divide_by_scalar_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            complex(kind=8), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = lhs%x / rhs
+            rv%y = lhs%y / rhs
+            rv%z = lhs%z / rhs
+
+        end function
+
         function lib_math_cartesian_operator_abs_real(rhs) result(rv)
             implicit none
             ! dummy
@@ -721,6 +871,478 @@ module lib_math_type_operator
             complex(kind=8) :: rv
 
             rv = sqrt(rhs%x*rhs%x + rhs%y*rhs%y + rhs%z*rhs%z)
+
+        end function
+
+! ---- array cartesian coordinate ----
+        function lib_math_cartesian_operator_add_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) + rhs(i)
+            end do
+
+        end function
+
+        function lib_math_cartesian_operator_sub_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) - rhs(i)
+            end do
+
+        end function
+
+        function lib_math_cartesian_operator_0d_add_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(rhs,1):ubound(rhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(rhs,1), ubound(rhs,1)
+                rv(i) = lhs + rhs(i)
+            end do
+
+        end function
+
+        function lib_math_cartesian_operator_array_add_0d(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) + rhs
+            end do
+
+        end function
+
+        function lib_math_cartesian_operator_array_sub_0d(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) - rhs
+            end do
+
+        end function
+
+        function lib_math_cartesian_operator_array_real_mul_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            real(kind=lib_math_type_kind), dimension(:), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) * rhs(i)
+            end do
+
+        end function
+
+        function lib_math_cartesian_operator_array_cmplx_mul_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            complex(kind=lib_math_type_kind), dimension(:), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) * rhs(i)
+            end do
+
+        end function
+
+        function lib_math_cartesian_operator_0d_real_mul_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            real(kind=lib_math_type_kind), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(rhs,1):ubound(rhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(rhs,1), ubound(rhs,1)
+                rv(i) = lhs * rhs(i)
+            end do
+
+        end function
+
+        function lib_math_cartesian_operator_0d_cmplx_mul_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            complex(kind=lib_math_type_kind), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(rhs,1):ubound(rhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(rhs,1), ubound(rhs,1)
+                rv(i) = lhs * rhs(i)
+            end do
+
+        end function
+
+        function lib_math_cartesian_operator_array_divide_by_scalar_array_real(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: lhs
+            real(kind=lib_math_type_kind), dimension(lbound(lhs,1):ubound(lhs,1)), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) / rhs(i)
+            end do
+
+        end function
+
+        function lib_math_cartesian_operator_array_divide_by_scalar_array_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: lhs
+            complex(kind=lib_math_type_kind), dimension(lbound(lhs,1):ubound(lhs,1)), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) / rhs(i)
+            end do
+
+        end function
+
+        function lib_math_cartesian_operator_array_divide_by_0d_real(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: lhs
+            real(kind=lib_math_type_kind), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) / rhs
+            end do
+
+        end function
+
+        function lib_math_cartesian_operator_array_divide_by_0d_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: lhs
+            complex(kind=lib_math_type_kind), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) / rhs
+            end do
+
+        end function
+
+! ---- list_cartesian_coordinate ----
+        function lib_math_list_cartesian_operator_add_array_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            if (lbound(lhs%coordinate,1) .eq. lbound(rhs%coordinate,1) .and. &
+                ubound(lhs%coordinate,1) .eq. ubound(rhs%coordinate,1)) then
+
+                allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
+
+                do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
+                    rv%coordinate(i) = lhs%coordinate(i) + rhs%coordinate(i)
+                end do
+            end if
+
+        end function
+
+        function lib_math_list_cartesian_operator_sub_array_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            if (lbound(lhs%coordinate,1) .eq. lbound(rhs%coordinate,1) .and. &
+                ubound(lhs%coordinate,1) .eq. ubound(rhs%coordinate,1)) then
+
+                allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
+
+                do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
+                    rv%coordinate(i) = lhs%coordinate(i) - rhs%coordinate(i)
+                end do
+            end if
+        end function
+
+        function lib_math_list_cartesian_operator_0d_add_array_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
+
+            do i=lbound(rhs%coordinate,1), ubound(rhs%coordinate,1)
+                rv%coordinate(i) = lhs + rhs%coordinate(i)
+            end do
+
+        end function
+
+        function lib_math_list_cartesian_operator_array_add_0d_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
+
+            do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
+                rv%coordinate(i) = lhs%coordinate(i) + rhs
+            end do
+
+        end function
+
+        function lib_math_list_cartesian_operator_array_sub_0d_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            type (cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
+
+            do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
+                rv%coordinate(i) = lhs%coordinate(i) - rhs
+            end do
+
+        end function
+
+        function lib_math_list_cartesian_operator_array_real_mul_array_c(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            real(kind=lib_math_type_kind), dimension(:), intent(in) :: lhs
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            if (lbound(lhs,1) .eq. lbound(rhs%coordinate,1) .and. &
+                ubound(lhs,1) .eq. ubound(rhs%coordinate,1)) then
+
+                allocate(rv%coordinate(lbound(lhs,1):ubound(lhs,1)))
+
+                do i=lbound(lhs,1), ubound(lhs,1)
+                    rv%coordinate(i) = lhs(i) * rhs%coordinate(i)
+                end do
+            else
+                print *, "lib_math_list_cartesian_operator_array_real_mul_array_c: ERROR"
+            end if
+
+        end function
+
+        function lib_math_list_cartesian_operator_array_c_mul_array_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            complex(kind=lib_math_type_kind), dimension(:), intent(in) :: lhs
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            if (lbound(lhs,1) .eq. lbound(rhs%coordinate,1) .and. &
+                ubound(lhs,1) .eq. ubound(rhs%coordinate,1)) then
+
+                allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
+
+                do i=lbound(lhs,1), ubound(lhs,1)
+                    rv%coordinate(i) = lhs(i) * rhs%coordinate(i)
+                end do
+
+            end if
+
+        end function
+
+        function lib_math_list_cartesian_operator_real_mul_array_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            real(kind=lib_math_type_kind), intent(in) :: lhs
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
+
+            do i=lbound(rhs%coordinate,1), ubound(rhs%coordinate,1)
+                rv%coordinate(i) = lhs * rhs%coordinate(i)
+            end do
+
+        end function
+
+        function lib_math_list_cartesian_operator_cmplx_mul_array_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            complex(kind=lib_math_type_kind), intent(in) :: lhs
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
+
+            do i=lbound(rhs%coordinate,1), ubound(rhs%coordinate,1)
+                rv%coordinate(i) = lhs * rhs%coordinate(i)
+            end do
+
+        end function
+
+        function lib_math_list_cartesian_operator_array_divide_by_real_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            real(kind=lib_math_type_kind), dimension(:), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            if (lbound(lhs%coordinate,1) .eq. lbound(rhs,1) .and. &
+                ubound(lhs%coordinate,1) .eq. ubound(rhs,1)) then
+
+                allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
+
+                do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
+                    rv%coordinate(i) = lhs%coordinate(i) / rhs(i)
+                end do
+
+            end if
+
+        end function
+
+        function lib_math_list_cartesian_operator_c_array_divide_by_c_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            complex(kind=lib_math_type_kind), dimension(:), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            if (lbound(lhs%coordinate,1) .eq. lbound(rhs,1) .and. &
+                ubound(lhs%coordinate,1) .eq. ubound(rhs,1)) then
+
+                allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
+
+                do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
+                    rv%coordinate(i) = lhs%coordinate(i) / rhs(i)
+                end do
+
+            end if
+
+        end function
+
+        function lib_math_list_cartesian_operator_array_divide_by_real(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            real(kind=lib_math_type_kind), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
+
+            do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
+                rv%coordinate(i) = lhs%coordinate(i) / rhs
+            end do
+
+        end function
+
+        function lib_math_list_cartesian_operator_array_divide_by_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (list_cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            complex(kind=lib_math_type_kind), intent(in) :: rhs
+            type (list_cartesian_coordinate_cmplx_type) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
+
+            do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
+                rv%coordinate(i) = lhs%coordinate(i) / rhs
+            end do
 
         end function
 
@@ -1331,6 +1953,47 @@ module lib_math_type_operator
             if (.not. test_lib_math_list_spherical_operator_array_divide_by_cmplx()) then
                 rv = rv + 1
             end if
+
+            if (.not. test_lib_math_list_cartesian_operator_add_array_cmplx()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cartesian_operator_sub_array_cmplx()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cartesian_operator_0d_add_array_cmplx()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cartesian_operator_array_add_0d_cmplx()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cartesian_operator_array_sub_0d_cmplx()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cartesian_operator_array_real_mul_array_c()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cartesian_operator_array_c_mul_array_cmplx()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cartesian_operator_real_mul_array_cmplx()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cartesian_operator_cmplx_mul_array_cmplx()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cartesian_operator_c_array_divide_by_r_array()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cartesian_operator_c_array_divide_by_c_array()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cartesian_operator_array_divide_by_real()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cartesian_operator_array_divide_by_cmplx()) then
+                rv = rv + 1
+            end if
+
             if (.not. test_lib_math_cartesian_point_to_spherical_point()) then
                 rv = rv + 1
             end if
@@ -1360,7 +2023,27 @@ module lib_math_type_operator
 
             contains
 
-                function get_test_values_1() result(rv)
+                function get_test_values_cartesian_1() result(rv)
+                    implicit none
+                    ! dummy
+                    type (cartesian_coordinate_cmplx_type) :: rv
+
+                    rv%y = cmplx(1,2, kind=8)
+                    rv%x = cmplx(3,4, kind=8)
+                    rv%z = cmplx(5,6, kind=8)
+                end function
+
+                function get_test_values_cartesian_2() result(rv)
+                    implicit none
+                    ! dummy
+                    type (cartesian_coordinate_cmplx_type) :: rv
+
+                    rv%y = cmplx(6,5, kind=8)
+                    rv%x = cmplx(4,3, kind=8)
+                    rv%z = cmplx(2,1, kind=8)
+                end function
+
+                function get_test_values_spherical_1() result(rv)
                     implicit none
                     ! dummy
                     type (spherical_coordinate_cmplx_type) :: rv
@@ -1370,7 +2053,7 @@ module lib_math_type_operator
                     rv%theta = cmplx(5,6, kind=8)
                 end function
 
-                function get_test_values_2() result(rv)
+                function get_test_values_spherical_2() result(rv)
                     implicit none
                     ! dummy
                     type (spherical_coordinate_cmplx_type) :: rv
@@ -1431,12 +2114,12 @@ module lib_math_type_operator
                     allocate(ground_truth_value%coordinate(d))
 
                     ! lhs
-                    lhs%coordinate(1) = get_test_values_1()
-                    lhs%coordinate(2) = get_test_values_1()
+                    lhs%coordinate(1) = get_test_values_spherical_1()
+                    lhs%coordinate(2) = get_test_values_spherical_1()
 
                     ! rhs
-                    rhs%coordinate(1) = get_test_values_1()
-                    rhs%coordinate(2) = get_test_values_2()
+                    rhs%coordinate(1) = get_test_values_spherical_1()
+                    rhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! ground truth
                     ground_truth_value%coordinate(1)%phi = cmplx(2,4, kind=8)
@@ -1486,12 +2169,12 @@ module lib_math_type_operator
                     allocate(ground_truth_value%coordinate(d))
 
                     ! lhs
-                    lhs%coordinate(1) = get_test_values_1()
-                    lhs%coordinate(2) = get_test_values_1()
+                    lhs%coordinate(1) = get_test_values_spherical_1()
+                    lhs%coordinate(2) = get_test_values_spherical_1()
 
                     ! rhs
-                    rhs%coordinate(1) = get_test_values_1()
-                    rhs%coordinate(2) = get_test_values_2()
+                    rhs%coordinate(1) = get_test_values_spherical_1()
+                    rhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! ground truth
                     ground_truth_value%coordinate(1)%phi = cmplx(0,0, kind=8)
@@ -1540,11 +2223,11 @@ module lib_math_type_operator
                     allocate(ground_truth_value%coordinate(d))
 
                     ! lhs
-                    lhs = get_test_values_1()
+                    lhs = get_test_values_spherical_1()
 
                     ! rhs
-                    rhs%coordinate(1) = get_test_values_1()
-                    rhs%coordinate(2) = get_test_values_2()
+                    rhs%coordinate(1) = get_test_values_spherical_1()
+                    rhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! ground truth
                     ground_truth_value%coordinate(1)%phi = cmplx(2,4, kind=8)
@@ -1593,11 +2276,11 @@ module lib_math_type_operator
                     allocate(ground_truth_value%coordinate(d))
 
                     ! lhs
-                    lhs%coordinate(1) = get_test_values_1()
-                    lhs%coordinate(2) = get_test_values_2()
+                    lhs%coordinate(1) = get_test_values_spherical_1()
+                    lhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! rhs
-                    rhs = get_test_values_1()
+                    rhs = get_test_values_spherical_1()
 
                     ! ground truth
                     ground_truth_value%coordinate(1)%phi = cmplx(2,4, kind=8)
@@ -1646,11 +2329,11 @@ module lib_math_type_operator
                     allocate(ground_truth_value%coordinate(d))
 
                     ! lhs
-                    lhs%coordinate(1) = get_test_values_1()
-                    lhs%coordinate(2) = get_test_values_2()
+                    lhs%coordinate(1) = get_test_values_spherical_1()
+                    lhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! rhs
-                    rhs = get_test_values_1()
+                    rhs = get_test_values_spherical_1()
 
                     ! ground truth
                     ground_truth_value%coordinate(1)%phi = cmplx(0,0, kind=8)
@@ -1703,8 +2386,8 @@ module lib_math_type_operator
                     lhs(2) = 5.0
 
                     ! rhs
-                    rhs%coordinate(1) = get_test_values_1()
-                    rhs%coordinate(2) = get_test_values_2()
+                    rhs%coordinate(1) = get_test_values_spherical_1()
+                    rhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! ground truth
                     ground_truth_value%coordinate(1)%phi = cmplx(2,4, kind=8)
@@ -1757,8 +2440,8 @@ module lib_math_type_operator
                     lhs(2) = cmplx(2, 0, kind=8)
 
                     ! rhs
-                    rhs%coordinate(1) = get_test_values_1()
-                    rhs%coordinate(2) = get_test_values_2()
+                    rhs%coordinate(1) = get_test_values_spherical_1()
+                    rhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! ground truth
                     ground_truth_value%coordinate(1)%phi = cmplx(-2,1, kind=8)
@@ -1810,8 +2493,8 @@ module lib_math_type_operator
                     lhs = 4
 
                     ! rhs
-                    rhs%coordinate(1) = get_test_values_1()
-                    rhs%coordinate(2) = get_test_values_2()
+                    rhs%coordinate(1) = get_test_values_spherical_1()
+                    rhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! ground truth
                     ground_truth_value%coordinate(1)%phi = cmplx(4,8, kind=8)
@@ -1863,8 +2546,8 @@ module lib_math_type_operator
                     lhs = cmplx(0, 4, kind=8)
 
                     ! rhs
-                    rhs%coordinate(1) = get_test_values_1()
-                    rhs%coordinate(2) = get_test_values_2()
+                    rhs%coordinate(1) = get_test_values_spherical_1()
+                    rhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! ground truth
                     ground_truth_value%coordinate(1)%phi = cmplx(-8,4, kind=8)
@@ -1913,8 +2596,8 @@ module lib_math_type_operator
                     allocate(ground_truth_value%coordinate(d))
 
                     ! lhs
-                    lhs%coordinate(1) = get_test_values_1()
-                    lhs%coordinate(2) = get_test_values_2()
+                    lhs%coordinate(1) = get_test_values_spherical_1()
+                    lhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! rhs
                     rhs(1) = 2.0
@@ -1967,8 +2650,8 @@ module lib_math_type_operator
                     allocate(ground_truth_value%coordinate(d))
 
                     ! lhs
-                    lhs%coordinate(1) = get_test_values_1()
-                    lhs%coordinate(2) = get_test_values_2()
+                    lhs%coordinate(1) = get_test_values_spherical_1()
+                    lhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! rhs
                     rhs(1) = cmplx(0, 2, kind=8)
@@ -2021,8 +2704,8 @@ module lib_math_type_operator
                     allocate(ground_truth_value%coordinate(d))
 
                     ! lhs
-                    lhs%coordinate(1) = get_test_values_1()
-                    lhs%coordinate(2) = get_test_values_2()
+                    lhs%coordinate(1) = get_test_values_spherical_1()
+                    lhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! rhs
                     rhs = 2
@@ -2074,8 +2757,8 @@ module lib_math_type_operator
                     allocate(ground_truth_value%coordinate(d))
 
                     ! lhs
-                    lhs%coordinate(1) = get_test_values_1()
-                    lhs%coordinate(2) = get_test_values_2()
+                    lhs%coordinate(1) = get_test_values_spherical_1()
+                    lhs%coordinate(2) = get_test_values_spherical_2()
 
                     ! rhs
                     rhs = cmplx(0, 2, kind=8)
@@ -2105,6 +2788,703 @@ module lib_math_type_operator
                     end do
 
                 end function test_lib_math_list_spherical_operator_array_divide_by_cmplx
+
+                function test_lib_math_list_cartesian_operator_add_array_cmplx() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_cartesian_coordinate_cmplx_type) :: lhs
+                    type (list_cartesian_coordinate_cmplx_type) :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_cartesian_1()
+                    lhs%coordinate(2) = get_test_values_cartesian_1()
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_cartesian_1()
+                    rhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(2,4, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(6,8, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(10,12, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(7,7, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(7,7, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(7,7, kind=8)
+
+                    value = lib_math_list_cartesian_operator_add_array_cmplx(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_add_array_cmplx:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, 'y')) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_add_array_cmplx
+
+                function test_lib_math_list_cartesian_operator_sub_array_cmplx() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_cartesian_coordinate_cmplx_type) :: lhs
+                    type (list_cartesian_coordinate_cmplx_type) :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_cartesian_1()
+                    lhs%coordinate(2) = get_test_values_cartesian_1()
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_cartesian_1()
+                    rhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(0,0, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(0,0, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(0,0, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(-5,-3, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(-1,1, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(3,5, kind=8)
+
+                    value = lib_math_list_cartesian_operator_sub_array_cmplx(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_sub_array_cmplx:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, 'y')) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_sub_array_cmplx
+
+                function test_lib_math_list_cartesian_operator_0d_add_array_cmplx() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (cartesian_coordinate_cmplx_type) :: lhs
+                    type (list_cartesian_coordinate_cmplx_type) :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs = get_test_values_cartesian_1()
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_cartesian_1()
+                    rhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(2,4, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(6,8, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(10,12, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(7,7, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(7,7, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(7,7, kind=8)
+
+                    value = lib_math_list_cartesian_operator_0d_add_array_cmplx(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_0d_add_array_cmplx:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, 'y')) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_0d_add_array_cmplx
+
+                function test_lib_math_list_cartesian_operator_array_add_0d_cmplx() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_cartesian_coordinate_cmplx_type) :: lhs
+                    type (cartesian_coordinate_cmplx_type) :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_cartesian_1()
+                    lhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! rhs
+                    rhs = get_test_values_cartesian_1()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(2,4, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(6,8, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(10,12, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(7,7, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(7,7, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(7,7, kind=8)
+
+                    value = lib_math_list_cartesian_operator_array_add_0d_cmplx(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_array_add_0d_cmplx:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, 'y')) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_array_add_0d_cmplx
+
+                function test_lib_math_list_cartesian_operator_array_sub_0d_cmplx() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_cartesian_coordinate_cmplx_type) :: lhs
+                    type (cartesian_coordinate_cmplx_type) :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_cartesian_1()
+                    lhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! rhs
+                    rhs = get_test_values_cartesian_1()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(0,0, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(0,0, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(0,0, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(5,3, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(1,-1, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(-3,-5, kind=8)
+
+                    value = lib_math_list_cartesian_operator_array_sub_0d_cmplx(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_array_sub_0d_cmplx:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, 'y')) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_array_sub_0d_cmplx
+
+                function test_lib_math_list_cartesian_operator_array_real_mul_array_c() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    real(kind=lib_math_type_kind), dimension(d) :: lhs
+                    type (list_cartesian_coordinate_cmplx_type)  :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs(1) = 2.0
+                    lhs(2) = 5.0
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_cartesian_1()
+                    rhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(2,4, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(6,8, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(10,12, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(30,25, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(20,15, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(10,5, kind=8)
+
+                    value = lib_math_list_cartesian_operator_array_real_mul_array_c(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_array_real_mul_array_c:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, 'y')) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_array_real_mul_array_c
+
+                function test_lib_math_list_cartesian_operator_array_c_mul_array_cmplx() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    complex(kind=lib_math_type_kind), dimension(d) :: lhs
+                    type (list_cartesian_coordinate_cmplx_type) :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs(1) = cmplx(0, 1, kind=8)
+                    lhs(2) = cmplx(2, 0, kind=8)
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_cartesian_1()
+                    rhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(-2,1, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(-4,3, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(-6,5, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(12,10, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(8,6, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(4,2, kind=8)
+
+                    value = lib_math_list_cartesian_operator_array_c_mul_array_cmplx(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_array_c_mul_array_cmplx:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, 'y')) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_array_c_mul_array_cmplx
+
+                function test_lib_math_list_cartesian_operator_real_mul_array_cmplx() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    real(kind=lib_math_type_kind) :: lhs
+                    type (list_cartesian_coordinate_cmplx_type) :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs = 4
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_cartesian_1()
+                    rhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(4,8, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(12,16, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(20,24, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(24,20, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(16,12, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(8,4, kind=8)
+
+                    value = lib_math_list_cartesian_operator_real_mul_array_cmplx(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_real_mul_array_cmplx:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, 'y')) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_real_mul_array_cmplx
+
+                function test_lib_math_list_cartesian_operator_cmplx_mul_array_cmplx() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    complex(kind=lib_math_type_kind) :: lhs
+                    type (list_cartesian_coordinate_cmplx_type) :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(rhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs = cmplx(0, 4, kind=8)
+
+                    ! rhs
+                    rhs%coordinate(1) = get_test_values_cartesian_1()
+                    rhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(-8,4, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(-16,12, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(-24,20, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(-20,24, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(-12,16, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(-4,8, kind=8)
+
+                    value = lib_math_list_cartesian_operator_cmplx_mul_array_cmplx(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_cmplx_mul_array_cmplx:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, 'y')) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_cmplx_mul_array_cmplx
+
+                function test_lib_math_list_cartesian_operator_c_array_divide_by_r_array() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_cartesian_coordinate_cmplx_type) :: lhs
+                    real(kind=lib_math_type_kind), dimension(d) :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_cartesian_1()
+                    lhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! rhs
+                    rhs(1) = 2.0
+                    rhs(2) = 4.0
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(0.5,1, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(1.5,2, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(2.5,3, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(1.5,1.25, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(1,0.75, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(0.5,0.25, kind=8)
+
+                    value = lib_math_list_cartesian_operator_array_divide_by_real_array(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_c_array_divide_by_r_array:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, 'y')) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_c_array_divide_by_r_array
+
+                function test_lib_math_list_cartesian_operator_c_array_divide_by_c_array() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_cartesian_coordinate_cmplx_type) :: lhs
+                    complex(kind=lib_math_type_kind), dimension(d) :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_cartesian_1()
+                    lhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! rhs
+                    rhs(1) = cmplx(0, 2, kind=8)
+                    rhs(2) = cmplx(0, 4, kind=8)
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(1, -0.5, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(2, -1.5, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(3, -2.5, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(1.25, -1.5, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(0.75, -1, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(0.25, -0.5, kind=8)
+
+                    value = lib_math_list_cartesian_operator_c_array_divide_by_c_array(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_c_array_divide_by_c_array:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, 'y')) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_c_array_divide_by_c_array
+
+                function test_lib_math_list_cartesian_operator_array_divide_by_real() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_cartesian_coordinate_cmplx_type) :: lhs
+                    real(kind=lib_math_type_kind) :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_cartesian_1()
+                    lhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! rhs
+                    rhs = 2
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(0.5, 1, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(1.5, 2, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(2.5, 3, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(3, 2.5, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(2, 1.5, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(1, 0.5, kind=8)
+
+                    value = lib_math_list_cartesian_operator_array_divide_by_real(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_array_divide_by_real:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, 'y')) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_array_divide_by_real
+
+                function test_lib_math_list_cartesian_operator_array_divide_by_cmplx() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    integer(kind=4), parameter :: d = 2
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+                    type (list_cartesian_coordinate_cmplx_type) :: lhs
+                    complex(kind=lib_math_type_kind) :: rhs
+                    type (list_cartesian_coordinate_cmplx_type) :: value
+
+                    type (list_cartesian_coordinate_cmplx_type) :: ground_truth_value
+
+                    allocate(lhs%coordinate(d))
+                    allocate(ground_truth_value%coordinate(d))
+
+                    ! lhs
+                    lhs%coordinate(1) = get_test_values_cartesian_1()
+                    lhs%coordinate(2) = get_test_values_cartesian_2()
+
+                    ! rhs
+                    rhs = cmplx(0, 2, kind=8)
+
+                    ! ground truth
+                    ground_truth_value%coordinate(1)%y = cmplx(1, -0.5, kind=8)
+                    ground_truth_value%coordinate(1)%x = cmplx(2, -1.5, kind=8)
+                    ground_truth_value%coordinate(1)%z = cmplx(3, -2.5, kind=8)
+
+                    ground_truth_value%coordinate(2)%y = cmplx(2.5, -3, kind=8)
+                    ground_truth_value%coordinate(2)%x = cmplx(1.5, -2, kind=8)
+                    ground_truth_value%coordinate(2)%z = cmplx(0.5, -1, kind=8)
+
+                    value = lib_math_list_cartesian_operator_array_divide_by_cmplx(lhs, rhs)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cartesian_operator_array_divide_by_cmplx:"
+                    do i=1, d
+                        buffer = abs(value%coordinate(i)%y - ground_truth_value%coordinate(i)%y)
+                        if (.not. evaluate(buffer, i, "y  ")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%x - ground_truth_value%coordinate(i)%x)
+                        if (.not. evaluate(buffer, i, "x  ")) rv = .false.
+
+                        buffer = abs(value%coordinate(i)%z - ground_truth_value%coordinate(i)%z)
+                        if (.not. evaluate(buffer, i, "z")) rv = .false.
+                    end do
+
+                end function test_lib_math_list_cartesian_operator_array_divide_by_cmplx
 
                 function test_lib_math_cartesian_point_to_spherical_point() result (rv)
                     implicit none
@@ -2196,7 +3576,7 @@ module lib_math_type_operator
                     logical :: rv
 
                     ! parameter
-                    integer, parameter :: d = 5
+                    integer, parameter :: d = 6
 
                     ! auxiliary
                     integer :: i
@@ -2228,6 +3608,9 @@ module lib_math_type_operator
                     theta(5) = 0.25 * PI
                     phi(5) = 1.5 * PI
 
+                    theta(6) = 0
+                    phi(6) = 0
+
                     ground_truth_lhs(1)%x = 1.0_8 / sqrt(2.0_8)
                     ground_truth_lhs(1)%y = cmplx(0,0)
                     ground_truth_lhs(1)%z = 1.0_8 / sqrt(2.0_8)
@@ -2247,6 +3630,10 @@ module lib_math_type_operator
                     ground_truth_lhs(5)%x = cmplx(0,0)
                     ground_truth_lhs(5)%y = - 1.0_8 / sqrt(2.0_8)
                     ground_truth_lhs(5)%z = 1.0_8 / sqrt(2.0_8)
+
+                    ground_truth_lhs(6)%x = cmplx(0,0)
+                    ground_truth_lhs(6)%y = cmplx(0,0)
+                    ground_truth_lhs(6)%z = 1.0_8
 
                     do i=1, d
                         lhs(i) = lib_math_spherical_components_to_cartesian_components_cmplx_a(rhs, &
@@ -2275,7 +3662,7 @@ module lib_math_type_operator
                     logical :: rv
 
                     ! parameter
-                    integer, parameter :: d = 5
+                    integer, parameter :: d = 6
 
                     ! auxiliary
                     integer :: i
@@ -2307,6 +3694,9 @@ module lib_math_type_operator
                     theta(5) = 0.25 * PI
                     phi(5) = 1.5 * PI
 
+                    theta(6) = 0
+                    phi(6) = 0
+
                     ground_truth_lhs(1)%rho = 1.0_8 / sqrt(2.0_8)
                     ground_truth_lhs(1)%theta = - 1.0_8 / sqrt(2.0_8)
                     ground_truth_lhs(1)%phi = cmplx(0,0)
@@ -2326,6 +3716,10 @@ module lib_math_type_operator
                     ground_truth_lhs(5)%rho = 1.0_8 / sqrt(2.0_8)
                     ground_truth_lhs(5)%theta = - 1.0_8 / sqrt(2.0_8)
                     ground_truth_lhs(5)%phi = cmplx(0,0)
+
+                    ground_truth_lhs(6)%rho = 1.0_8
+                    ground_truth_lhs(6)%theta = cmplx(0,0)
+                    ground_truth_lhs(6)%phi = cmplx(0,0)
 
                     do i=1, d
                         lhs(i) = lib_math_cartesian_components_to_spherical_components_cmplx_a(rhs, &
