@@ -294,9 +294,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) + rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -310,9 +312,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) - rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -326,9 +330,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(rhs,1), ubound(rhs,1)
                 rv(i) = lhs + rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -342,9 +348,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) + rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -358,9 +366,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) - rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -374,9 +384,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) * rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -390,9 +402,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) * rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -406,9 +420,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(rhs,1), ubound(rhs,1)
                 rv(i) = lhs * rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -422,9 +438,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(rhs,1), ubound(rhs,1)
                 rv(i) = lhs * rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -438,9 +456,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) / rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -454,9 +474,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) / rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -470,9 +492,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) / rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -486,9 +510,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) / rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -508,9 +534,11 @@ module lib_math_type_operator
 
                 allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
 
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                     rv%coordinate(i) = lhs%coordinate(i) + rhs%coordinate(i)
                 end do
+                !$OMP END PARALLEL DO
             end if
 
         end function
@@ -530,9 +558,11 @@ module lib_math_type_operator
 
                 allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
 
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                     rv%coordinate(i) = lhs%coordinate(i) - rhs%coordinate(i)
                 end do
+                !$OMP END PARALLEL DO
             end if
         end function
 
@@ -548,9 +578,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(rhs%coordinate,1), ubound(rhs%coordinate,1)
                 rv%coordinate(i) = lhs + rhs%coordinate(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -566,9 +598,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                 rv%coordinate(i) = lhs%coordinate(i) + rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -584,9 +618,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                 rv%coordinate(i) = lhs%coordinate(i) - rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -605,9 +641,11 @@ module lib_math_type_operator
 
                 allocate(rv%coordinate(lbound(lhs,1):ubound(lhs,1)))
 
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i=lbound(lhs,1), ubound(lhs,1)
                     rv%coordinate(i) = lhs(i) * rhs%coordinate(i)
                 end do
+                !$OMP END PARALLEL DO
             else
                 print *, "lib_math_list_spherical_operator_array_real_mul_array_c: ERROR"
             end if
@@ -629,9 +667,11 @@ module lib_math_type_operator
 
                 allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
 
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i=lbound(lhs,1), ubound(lhs,1)
                     rv%coordinate(i) = lhs(i) * rhs%coordinate(i)
                 end do
+                !$OMP END PARALLEL DO
 
             end if
 
@@ -649,9 +689,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(rhs%coordinate,1), ubound(rhs%coordinate,1)
                 rv%coordinate(i) = lhs * rhs%coordinate(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -667,9 +709,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(rhs%coordinate,1), ubound(rhs%coordinate,1)
                 rv%coordinate(i) = lhs * rhs%coordinate(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -688,9 +732,11 @@ module lib_math_type_operator
 
                 allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
 
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                     rv%coordinate(i) = lhs%coordinate(i) / rhs(i)
                 end do
+                !$OMP END PARALLEL DO
 
             end if
 
@@ -711,9 +757,11 @@ module lib_math_type_operator
 
                 allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
 
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                     rv%coordinate(i) = lhs%coordinate(i) / rhs(i)
                 end do
+                !$OMP END PARALLEL DO
 
             end if
 
@@ -731,9 +779,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                 rv%coordinate(i) = lhs%coordinate(i) / rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -749,9 +799,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                 rv%coordinate(i) = lhs%coordinate(i) / rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -893,9 +945,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) + rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -909,9 +963,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) - rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -925,9 +981,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(rhs,1), ubound(rhs,1)
                 rv(i) = lhs + rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -941,9 +999,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) + rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -957,9 +1017,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) - rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -973,9 +1035,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) * rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -989,9 +1053,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) * rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1005,9 +1071,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(rhs,1), ubound(rhs,1)
                 rv(i) = lhs * rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1021,9 +1089,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(rhs,1), ubound(rhs,1)
                 rv(i) = lhs * rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1037,9 +1107,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) / rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1053,9 +1125,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) / rhs(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1069,9 +1143,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) / rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1085,9 +1161,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lhs(i) / rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1107,9 +1185,11 @@ module lib_math_type_operator
 
                 allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
 
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                     rv%coordinate(i) = lhs%coordinate(i) + rhs%coordinate(i)
                 end do
+                !$OMP END PARALLEL DO
             end if
 
         end function
@@ -1129,9 +1209,11 @@ module lib_math_type_operator
 
                 allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
 
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                     rv%coordinate(i) = lhs%coordinate(i) - rhs%coordinate(i)
                 end do
+                !$OMP END PARALLEL DO
             end if
         end function
 
@@ -1147,9 +1229,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(rhs%coordinate,1), ubound(rhs%coordinate,1)
                 rv%coordinate(i) = lhs + rhs%coordinate(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1165,9 +1249,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                 rv%coordinate(i) = lhs%coordinate(i) + rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1183,9 +1269,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                 rv%coordinate(i) = lhs%coordinate(i) - rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1204,9 +1292,11 @@ module lib_math_type_operator
 
                 allocate(rv%coordinate(lbound(lhs,1):ubound(lhs,1)))
 
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i=lbound(lhs,1), ubound(lhs,1)
                     rv%coordinate(i) = lhs(i) * rhs%coordinate(i)
                 end do
+                !$OMP END PARALLEL DO
             else
                 print *, "lib_math_list_cartesian_operator_array_real_mul_array_c: ERROR"
             end if
@@ -1228,9 +1318,11 @@ module lib_math_type_operator
 
                 allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
 
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i=lbound(lhs,1), ubound(lhs,1)
                     rv%coordinate(i) = lhs(i) * rhs%coordinate(i)
                 end do
+                !$OMP END PARALLEL DO
 
             end if
 
@@ -1248,9 +1340,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(rhs%coordinate,1), ubound(rhs%coordinate,1)
                 rv%coordinate(i) = lhs * rhs%coordinate(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1266,9 +1360,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(rhs%coordinate,1):ubound(rhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(rhs%coordinate,1), ubound(rhs%coordinate,1)
                 rv%coordinate(i) = lhs * rhs%coordinate(i)
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1287,9 +1383,11 @@ module lib_math_type_operator
 
                 allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
 
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                     rv%coordinate(i) = lhs%coordinate(i) / rhs(i)
                 end do
+                !$OMP END PARALLEL DO
 
             end if
 
@@ -1310,9 +1408,11 @@ module lib_math_type_operator
 
                 allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
 
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                     rv%coordinate(i) = lhs%coordinate(i) / rhs(i)
                 end do
+                !$OMP END PARALLEL DO
 
             end if
 
@@ -1330,9 +1430,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                 rv%coordinate(i) = lhs%coordinate(i) / rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1348,9 +1450,11 @@ module lib_math_type_operator
 
             allocate(rv%coordinate(lbound(lhs%coordinate,1):ubound(lhs%coordinate,1)))
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs%coordinate,1), ubound(lhs%coordinate,1)
                 rv%coordinate(i) = lhs%coordinate(i) / rhs
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1875,9 +1979,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lib_math_cartesian_cross_product_real(lhs(i), rhs(i))
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1906,9 +2012,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lib_math_cartesian_cross_product_cmplx(lhs(i), rhs(i))
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1935,9 +2043,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lib_math_cartesian_dot_product_real(lhs(i), rhs(i))
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1964,9 +2074,11 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=lbound(lhs,1), ubound(lhs,1)
                 rv(i) = lib_math_cartesian_dot_product_cmplx(lhs(i), rhs(i))
             end do
+            !$OMP END PARALLEL DO
 
         end function
 
