@@ -135,7 +135,9 @@ module lib_math_type_operator
         module procedure lib_math_list_list_integer_sys_init
         module procedure lib_math_list_list_integer_init
         module procedure lib_math_list_list_real_init
+        module procedure lib_math_list_4_real_init
         module procedure lib_math_list_list_cmplx_init
+        module procedure lib_math_list_4_cmplx_init
         module procedure lib_math_list_spherical_coordinate_cmplx_type_init
     end interface
 
@@ -1609,6 +1611,86 @@ module lib_math_type_operator
             end do
 
         end subroutine lib_math_list_list_cmplx_init
+
+        ! Arguments
+        ! ----
+        !   list: type (list_4_real)
+        !       derived data type to initialize
+        !   fnu: integer
+        !       start index
+        !   n: integer
+        !       number of elements, n .GE. 1
+        !
+        subroutine lib_math_list_4_real_init(list, fnu_1, n_1, fnu_2, n_2)
+            implicit none
+            ! dummy
+            type (list_4_real), intent(inout) :: list
+            integer, intent(in) :: fnu_1
+            integer, intent(in) :: n_1
+            integer, intent(in) :: fnu_2
+            integer, intent(in) :: n_2
+
+            ! auxiliary
+            integer :: n
+            integer :: m
+            integer :: nu
+
+            if( allocated(list%item) ) then
+                deallocate( list%item )
+            end if
+
+            allocate( list%item(fnu_1:fnu_1+n_1-1) )
+            do n=fnu_1, fnu_1+n_1-1
+                allocate (list%item(n)%item(-n:n) )
+                do m=-n, n
+                    allocate (list%item(n)%item(m)%item(fnu_2:fnu_2+n_2-1))
+                    do nu=fnu_2, fnu_2+n_2-1
+                        allocate (list%item(n)%item(m)%item(nu)%item(-nu:nu))
+                    end do
+                end do
+            end do
+
+        end subroutine lib_math_list_4_real_init
+
+        ! Arguments
+        ! ----
+        !   list: type (list_4_cmplx)
+        !       derived data type to initialize
+        !   fnu: integer
+        !       start index
+        !   n: integer
+        !       number of elements, n .GE. 1
+        !
+        subroutine lib_math_list_4_cmplx_init(list, fnu_1, n_1, fnu_2, n_2)
+            implicit none
+            ! dummy
+            type (list_4_cmplx), intent(inout) :: list
+            integer, intent(in) :: fnu_1
+            integer, intent(in) :: n_1
+            integer, intent(in) :: fnu_2
+            integer, intent(in) :: n_2
+
+            ! auxiliary
+            integer :: n
+            integer :: m
+            integer :: nu
+
+            if( allocated(list%item) ) then
+                deallocate( list%item )
+            end if
+
+            allocate( list%item(fnu_1:fnu_1+n_1-1) )
+            do n=fnu_1, fnu_1+n_1-1
+                allocate (list%item(n)%item(-n:n) )
+                do m=-n, n
+                    allocate (list%item(n)%item(m)%item(fnu_2:fnu_2+n_2-1))
+                    do nu=fnu_2, fnu_2+n_2-1
+                        allocate (list%item(n)%item(m)%item(nu)%item(-nu:nu))
+                    end do
+                end do
+            end do
+
+        end subroutine lib_math_list_4_cmplx_init
 
         ! Arguments
         ! ----

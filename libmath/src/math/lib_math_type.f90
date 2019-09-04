@@ -78,12 +78,28 @@ module lib_math_type
         type(list_real), dimension(:), allocatable :: item
     end type
 
+    type list_list_list_real
+        type(list_list_real), dimension(:), allocatable :: item
+    end type
+
+    type list_4_real
+        type(list_list_list_real), dimension(:), allocatable :: item
+    end type
+
     type list_cmplx
         complex(kind=lib_math_type_kind), dimension(:), allocatable :: item
     end type
 
     type list_list_cmplx
         type(list_cmplx), dimension(:), allocatable :: item
+    end type
+
+    type list_list_list_cmplx
+        type(list_list_cmplx), dimension(:), allocatable :: item
+    end type
+
+    type list_4_cmplx
+        type(list_list_list_cmplx), dimension(:), allocatable :: item
     end type
 
 end module lib_math_type
