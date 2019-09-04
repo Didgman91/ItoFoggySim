@@ -1266,7 +1266,7 @@ module lib_mie_vector_spherical_harmonics
         !   A:
         !
         ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
-        subroutine lib_mie_vector_spherical_harmonics_tranlation_coefficient_real(x, theta, phi, n_range, z_selector,&
+        subroutine lib_mie_vector_spherical_harmonics_tranlation_coefficient_real(x, theta, phi, n_range, nu_range, z_selector,&
                                                                                   A_mnkl, B_mnkl)
             implicit none
             ! dummy
@@ -1274,10 +1274,11 @@ module lib_mie_vector_spherical_harmonics
             double precision, intent(in) :: theta
             double precision, intent(in) :: phi
             integer(kind=4), dimension(2) :: n_range
+            integer(kind=4), dimension(2) :: nu_range
             integer(kind=1) :: z_selector
 
-            complex(kind=8), dimension(:, :, :, :), allocatable, intent(inout) :: A_mnkl
-            complex(kind=8), dimension(:, :, :, :), allocatable, intent(inout) :: B_mnkl
+            type(list_4_cmplx), intent(inout) :: A_mnkl
+            type(list_4_cmplx), intent(inout) :: B_mnkl
 
             ! auxiliary
             integer(kind=4) :: m
@@ -1311,26 +1312,36 @@ module lib_mie_vector_spherical_harmonics
             complex(kind=8) :: buffer_cmplx_b
             complex(kind=8) :: buffer_cmplx_e_m_mu_phi
 
+            integer, dimension(2) :: n_max_range
+
             !$  integer(kind=4) :: j_max
             !$  logical :: thread_first_run
 
             ! --- init ---
+            n_max_range(1) = min(n_range(1), nu_range(1))
+            n_max_range(2) = max(n_range(2), nu_range(2))
+
             ! eq. 5
             ! p = n + nu - 2 * q
             ! worst case:
             !   q = 0
-            !   n = nu = n_range(2)
-            !   p = 2 * n_range(2) - 0
+            !   n = nu = n_max_range(2)
+            !   p = 2 * n_max_range(2) - 0
             !   b(p=p+1)
-            !   => j_max = 2 * n_range(2) + 1
+            !   => j_max = 2 * n_max_range(2) + 1
 
-            !$  j_max = 2 * n_range(2) + 1
+            !$  j_max = 2 * n_max_range(2) + 1
             !$  call fwig_thread_temp_init(2 * j_max)     ! multi threaded
 
-            allocate (buffer_pm(2, 1:2*n_range(2)))
-            allocate (buffer_pd(2, 1:2*n_range(2)))
+            allocate (buffer_pm(2, 1:2*n_max_range(2)))
+            allocate (buffer_pd(2, 1:2*n_max_range(2)))
 
-            call init_list(p_k_minus_m_p, n_range(1)-1, 2*n_range(2)-n_range(1)+1+1)
+            call init_list(p_k_minus_m_p, n_max_range(1)-1, 2*n_max_range(2)-n_max_range(1)+1+1)
+
+            call init_list(A_mnkl, n_range(1), n_range(2)-n_range(1)+1, &
+                                   nu_range(1), nu_range(2)-nu_range(1)+1)
+            call init_list(B_mnkl, n_range(1), n_range(2)-n_range(1)+1, &
+                                   nu_range(1), nu_range(2)-nu_range(1)+1)
 
             ! --- pre-calc ---
 
@@ -1338,23 +1349,23 @@ module lib_mie_vector_spherical_harmonics
             select case (z_selector)
                 case(1)
                     ! spherical Bessel function first kind j_n
-                    allocate(z_n_real(0:2*n_range(2)))
-                    z_n_real = lib_math_bessel_spherical_first_kind(x, 0, 2*n_range(2)+1)
+                    allocate(z_n_real(0:2*n_max_range(2)))
+                    z_n_real = lib_math_bessel_spherical_first_kind(x, 0, 2*n_max_range(2)+1)
                 case(2)
                     ! spherical Bessel function second kind y_n
-                    allocate(z_n_real(0:2*n_range(2)))
-                    z_n_real = lib_math_bessel_spherical_second_kind(x, 0, 2*n_range(2)+1)
+                    allocate(z_n_real(0:2*n_max_range(2)))
+                    z_n_real = lib_math_bessel_spherical_second_kind(x, 0, 2*n_max_range(2)+1)
                 case(3)
                     ! spherical Hankel function first kind   h^(1)_n
-                    allocate(z_n_cmplx(0:2*n_range(2)))
-                    z_n_cmplx = cmplx(lib_math_bessel_spherical_first_kind(x, 0, 2*n_range(2)+1), &
-                                      lib_math_bessel_spherical_second_kind(x, 0, 2*n_range(2)+1),&
+                    allocate(z_n_cmplx(0:2*n_max_range(2)))
+                    z_n_cmplx = cmplx(lib_math_bessel_spherical_first_kind(x, 0, 2*n_max_range(2)+1), &
+                                      lib_math_bessel_spherical_second_kind(x, 0, 2*n_max_range(2)+1),&
                                       kind=8)
-!                    z_n_cmplx = lib_math_hankel_spherical_1(x, 0, 2*n_range(2)+1)
+!                    z_n_cmplx = lib_math_hankel_spherical_1(x, 0, 2*n_max_range(2)+1)
                 case(4)
                     ! spherical Hankel function second kind   h^(2)_n
-                    allocate(z_n_cmplx(0:2*n_range(2)))
-                    z_n_cmplx = lib_math_hankel_spherical_2(x, 0, 2*n_range(2)+1)
+                    allocate(z_n_cmplx(0:2*n_max_range(2)))
+                    z_n_cmplx = lib_math_hankel_spherical_2(x, 0, 2*n_max_range(2)+1)
                 case default
                     z_n_real = 0
                     z_n_cmplx = cmplx(0,0)
@@ -1367,19 +1378,17 @@ module lib_mie_vector_spherical_harmonics
             ! Legendre Polynomial
             cos_theta = cos(theta)
             call lib_math_associated_legendre_polynomial(cos_theta, 0, &
-                                                         n_range(1), 2*n_range(2)-n_range(1)+1, &
+                                                         n_max_range(1), 2*n_max_range(2)-n_max_range(1)+1, &
                                                          buffer_pm, buffer_pd)
-            do n=1, 2*n_range(2)-n_range(1)
-                if (m .le. n) then
-                    p_k_minus_m_p%item(n_range(1)+n-1)%item(0) = buffer_pm(2,n)
-                end if
+            do n=1, 2*n_max_range(2)-n_max_range(1)
+                p_k_minus_m_p%item(n_max_range(1)+n-1)%item(0) = buffer_pm(2,n)
             end do
 
-            do m=1, 2*n_range(2)
+            do m=1, 2*n_max_range(2)
                 call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, m, &
-                                                                             m, 2*n_range(2)-n_range(1)+1, &
+                                                                             m, 2*n_max_range(2)-n_max_range(1)+1, &
                                                                              buffer_pm, buffer_pd)
-                do n=m, 2*n_range(2)-n_range(1)
+                do n=m, 2*n_max_range(2)-n_max_range(1)
                     if (m .le. n) then
                         p_k_minus_m_p%item(n)%item(-m) = buffer_pm(1,n-m+1)
                         p_k_minus_m_p%item(n)%item(m) = buffer_pm(2,n-m+1)
@@ -1388,15 +1397,6 @@ module lib_mie_vector_spherical_harmonics
             end do
 
             ! --- calculate A and B
-            allocate(A_mnkl(-n_range(2):n_range(2), & ! m
-                            n_range(1):n_range(2), & ! n
-                            -n_range(2):n_range(2), & ! mu == k
-                            n_range(1):n_range(2))) ! nu == l
-
-            allocate(B_mnkl(-n_range(2):n_range(2), & ! m
-                            n_range(1):n_range(2), & ! n
-                            -n_range(2):n_range(2), & ! mu == k
-                            n_range(1):n_range(2))) ! nu == l
             !$  thread_first_run = .true.
             !$OMP PARALLEL DO PRIVATE(n, m, nu, mu, q_max_a, q_max_b, q_max, q, p, &
             !$OMP  factorial, buffer_cmplx_a, buffer_cmplx_b, buffer_cmplx, &
@@ -1408,7 +1408,7 @@ module lib_mie_vector_spherical_harmonics
                 !$    thread_first_run = .false.
                 !$  endif
                 do m=-n, n
-                    do nu=n_range(1), n_range(2)
+                    do nu=nu_range(1), nu_range(2)
                         do mu=-nu, nu
                             q_max_a = get_q_max_a(m, n, mu, nu)
                             q_max_b = get_q_max_b(m, n, mu, nu)
@@ -1466,11 +1466,11 @@ module lib_mie_vector_spherical_harmonics
 
                             buffer_cmplx = (-1)**m * factorial * buffer_cmplx_e_m_mu_phi &
                                            * buffer_cmplx_a
-                            A_mnkl(m, n, mu, nu) = buffer_cmplx
+                            A_mnkl%item(n)%item(m)%item(nu)%item(mu) = buffer_cmplx
 
                             buffer_cmplx = (-1)**(m+1) * factorial * buffer_cmplx_e_m_mu_phi &
                                            * buffer_cmplx_b
-                            B_mnkl(m, n, mu, nu) = buffer_cmplx
+                            B_mnkl%item(n)%item(m)%item(nu)%item(mu) = buffer_cmplx
                         end do
                     end do
                 end do
@@ -2004,24 +2004,29 @@ module lib_mie_vector_spherical_harmonics
             end function test_ab_xu_cruzan_eq34
 
             function test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r() result(rv)
+                use file_io
                 implicit none
                 ! dummy
                 logical :: rv
 
                 ! parameter
-                integer, parameter :: d = 2
+                integer, parameter :: d = 4
+                character(len=*), parameter :: file_name = &
+                        "src/lib/mie_theory/lib_mie_vector_spherical_harmonics/ground_truth_AB_mnmunu.csv"
 
                 ! auxiliary
                 integer :: i
                 double precision :: buffer
+                double complex :: buffer_cmplx
                 double precision :: x
                 double precision :: theta
                 double precision :: phi
                 integer(kind=4), dimension(2) :: n_range
+                integer(kind=4), dimension(2) :: nu_range
                 integer(kind=1) :: z_selector
 
-                complex(kind=8), dimension(:, :, :, :), allocatable :: A_mnkl
-                complex(kind=8), dimension(:, :, :, :), allocatable :: B_mnkl
+                type(list_4_cmplx) :: A_mnkl
+                type(list_4_cmplx) :: B_mnkl
 
 
                 integer, dimension(d) :: m
@@ -2030,68 +2035,191 @@ module lib_mie_vector_spherical_harmonics
                 integer, dimension(d) :: nu
                 complex(kind=8), dimension(d) :: ground_truth_A
                 complex(kind=8), dimension(d) :: ground_truth_B
+!                type(list_list_cmplx) :: ground_truth_A
+!                type(list_list_cmplx) :: ground_truth_B
+
+                double precision :: erg
+                integer :: erg_exponent
+                double precision :: erg_mantissa
+
+                double precision, dimension(:,:), allocatable :: csv_data
+                integer :: csv_columns
 
                 z_selector = 3
                 x = 2.0
                 theta = 0.5
                 phi = 0.5
 
-                m = (/ -2, 8 /)
-                n = (/ 11, 10 /)
-                mu = (/ 3, -9 /)
-                nu = (/ 9, 12 /)
+!                n_range  = (/ 1, 5 /)
+!                nu_range = (/ 1, 5 /)
+!
+!                call init_list(ground_truth_A, n_range(1), n_range(2)-n_range(1)+1, nu_range(1), nu_range(2)-nu_range(1)+1)
+!                call init_list(ground_truth_B, n_range(1), n_range(2)-n_range(1)+1, &
+!                                               nu_range(1), nu_range(2)-nu_range(1)+1)
+!
+!                ! load ground truth
+!                if (file_exists(file_name)) then
+!                    csv_columns = 8
+!                    call read_csv(file_name, csv_columns, csv_data)
+!
+!                    do i=lbound(csv_data, 1), ubound(csv_data, 1)
+!                        m = int(csv_data(i, 1))
+!                        n = int(csv_data(i, 2))
+!                        mu = int(csv_data(i, 3))
+!                        nu = int(csv_data(i, 4))
+!
+!                        buffer_cmplx = cmplx(csv_data(i, 5), csv_data(i, 6), kind=8)
+!                        ground_truth_A%item(n)%item(m)%item(nu)%item(mu) = buffer_cmplx
+!
+!                        buffer_cmplx = cmplx(csv_data(i, 5), csv_data(i, 6), kind=8)
+!                        ground_truth_B%item(n)%item(m)%item(nu)%item(mu) = buffer_cmplx
+!                    end do
+!                end if
+                m =  (/ -2,  8,  0, -2 /)
+                n =  (/ 11, 10, 10,  6 /)
+                mu = (/ 3 , -9,  0, -2 /)
+                nu = (/ 9 , 12, 10, 10 /)
+!                m = (/ -2, 8 /)
+!                n = (/ 11, 10 /)
+!                mu = (/ 3, -9 /)
+!                nu = (/ 9, 12 /)
                 ground_truth_A(1) = cmplx(.7726121583d+12, .1034255820d+13, kind=8)
                 ground_truth_B(1) = cmplx(.1222239141d+11, -0.9130398908d+10, kind=8)
-                ground_truth_A(2) = cmplx(.3663964990d+35, -.2762412192d+35, kind=8)
-                ground_truth_B(2) = cmplx(-.8370892023d+32, -.1110285257d+32, kind=8)
 
-                n_range = (/ 1, max(maxval(n), maxval(nu)) /)
+                ground_truth_A(2) = cmplx(.3663964990d+35, -.2762412192d+35, kind=8)
+                ground_truth_B(2) = cmplx(-.8370892023d+32, -.1110285257d+33, kind=8)
+
+                ground_truth_A(3) = cmplx(.2969682019d+00, -.1928601440d+18, kind=8)
+                ground_truth_B(3) = cmplx(0.0, 0.0, kind=8)
+
+                ground_truth_A(4) = cmplx(.1377011649d-01, .2385575934d+13, kind=8)
+                ground_truth_B(4) = cmplx(-.3282035237d+12, .1587043209d-02, kind=8)
+
+                n_range = (/ 1, maxval(n) /)
+                nu_range = (/ 1, maxval(nu) /)
                 call lib_mie_vector_spherical_harmonics_tranlation_coefficient_real(x, theta, phi, &
-                                                                                    n_range, z_selector, &
+                                                                                    n_range, nu_range, z_selector, &
                                                                                     A_mnkl, B_mnkl)
 
+!                rv = .true.
+!                print *, "test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r:"
+!                print *, "  A:"
+!                do n=n_range(1), n_range(2)
+!                do m=-n, n
+!                do nu=nu_range(1), nu_range(2)
+!                do mu=-nu, nu
+!                    erg = real(A_mnkl%item(n)%item(m)%item(nu)%item(mu))
+!                    erg_exponent = int(log(abs(erg))/log(10D0))
+!                    erg_mantissa = erg / 10d0**erg_exponent
+!                    buffer = real(ground_truth_A%item(n)%item(m)%item(nu)%item(mu)) / 10d0**erg_exponent - erg_mantissa
+!                    if (abs(buffer) .gt. ground_truth_e) then
+!                        print *, "    ", i, " (Re) difference: ", buffer, " : FAILED"
+!                        print *, "    ", A_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i))
+!                        rv = .false.
+!                    else
+!                        print *, "    ", i , ": (Re) OK"
+!                    end if
+!
+!                    erg = aimag(A_mnkl%item(n)%item(m)%item(nu)%item(mu))
+!                    erg_exponent = int(log(abs(erg))/log(10D0))
+!                    erg_mantissa = erg / 10d0**erg_exponent
+!                    buffer = aimag(ground_truth_A%item(n)%item(m)%item(nu)%item(mu)) / 10d0**erg_exponent - erg_mantissa
+!                    if (abs(buffer) .gt. ground_truth_e) then
+!                        print *, "    ", i, " (Im) difference: ", buffer, " : FAILED"
+!                        print *, "    ", A_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i))
+!                        rv = .false.
+!                    else
+!                        print *, "    ", i , ": (Im) OK"
+!                    end if
+!                    print *, ""
+!                end do
+!                end do
+!                end do
+!                end do
+!
+!                print *, "  B:"
+!                do i=1, d
+!                    erg = real(B_mnkl%item(n)%item(m)%item(nu)%item(mu))
+!                    erg_exponent = int(log(abs(erg+1))/log(10D0))
+!                    erg_mantissa = erg / 10d0**erg_exponent
+!                    buffer = real(ground_truth_B%item(n)%item(m)%item(nu)%item(mu)) / 10d0**erg_exponent - erg_mantissa
+!                    if (abs(buffer) .gt. ground_truth_e) then
+!                        print *, "    ", i, " (Re) difference: ", buffer, " : FAILED"
+!                        print *, "    ", B_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i))
+!                        rv = .false.
+!                    else
+!                        print *, "    ", i , ": (Re) OK"
+!                    end if
+!
+!                    erg = aimag(B_mnkl%item(n)%item(m)%item(nu)%item(mu))
+!                    erg_exponent = int(log(abs(erg+1))/log(10D0))
+!                    erg_mantissa = erg / 10d0**erg_exponent
+!                    buffer = aimag(ground_truth_B%item(n)%item(m)%item(nu)%item(mu)) / 10d0**erg_exponent - erg_mantissa
+!                    if (abs(buffer) .gt. ground_truth_e) then
+!                        print *, "    ", i, " (Im) difference: ", buffer, " : FAILED"
+!                        print *, "    ", B_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i))
+!                        rv = .false.
+!                    else
+!                        print *, "    ", i , ": (Im) OK"
+!                    end if
+!                    print *, ""
+!                end do
                 rv = .true.
                 print *, "test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r:"
                 print *, "  A:"
                 do i=1, d
-                    buffer = 1 - abs(real(ground_truth_A(i)) / real(A_mnkl(m(i), n(i), mu(i), nu(i))))
+                    erg = real(A_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i)))
+                    erg_exponent = int(log(abs(erg))/log(10D0))
+                    erg_mantissa = erg / 10d0**erg_exponent
+                    buffer = real(ground_truth_A(i)) / 10d0**erg_exponent - erg_mantissa
                     if (abs(buffer) .gt. ground_truth_e) then
                         print *, "    ", i, " (Re) difference: ", buffer, " : FAILED"
-                        print *, "    ", A_mnkl(m(i), n(i), mu(i), nu(i))
+                        print *, "    ", A_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i))
                         rv = .false.
                     else
                         print *, "    ", i , ": (Re) OK"
                     end if
 
-                    buffer = 1 - abs(aimag(ground_truth_A(i)) / aimag(A_mnkl(m(i), n(i), mu(i), nu(i))))
+                    erg = aimag(A_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i)))
+                    erg_exponent = int(log(abs(erg))/log(10D0))
+                    erg_mantissa = erg / 10d0**erg_exponent
+                    buffer = aimag(ground_truth_A(i)) / 10d0**erg_exponent - erg_mantissa
                     if (abs(buffer) .gt. ground_truth_e) then
                         print *, "    ", i, " (Im) difference: ", buffer, " : FAILED"
-                        print *, "    ", A_mnkl(m(i), n(i), mu(i), nu(i))
+                        print *, "    ", A_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i))
                         rv = .false.
                     else
                         print *, "    ", i , ": (Im) OK"
                     end if
+                    print *, ""
                 end do
 
                 print *, "  B:"
                 do i=1, d
-                    buffer = 1 - abs(real(ground_truth_B(i)) / real(B_mnkl(m(i), n(i), mu(i), nu(i))))
+                    erg = real(B_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i)))
+                    erg_exponent = int(log(abs(erg+1))/log(10D0))
+                    erg_mantissa = erg / 10d0**erg_exponent
+                    buffer = real(ground_truth_B(i)) / 10d0**erg_exponent - erg_mantissa
                     if (abs(buffer) .gt. ground_truth_e) then
                         print *, "    ", i, " (Re) difference: ", buffer, " : FAILED"
-                        print *, "    ", B_mnkl(m(i), n(i), mu(i), nu(i))
+                        print *, "    ", B_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i))
                         rv = .false.
                     else
                         print *, "    ", i , ": (Re) OK"
                     end if
 
-                    buffer = 1 - abs(aimag(ground_truth_B(i)) / aimag(B_mnkl(m(i), n(i), mu(i), nu(i))))
+                    erg = aimag(B_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i)))
+                    erg_exponent = int(log(abs(erg+1))/log(10D0))
+                    erg_mantissa = erg / 10d0**erg_exponent
+                    buffer = aimag(ground_truth_B(i)) / 10d0**erg_exponent - erg_mantissa
                     if (abs(buffer) .gt. ground_truth_e) then
                         print *, "    ", i, " (Im) difference: ", buffer, " : FAILED"
-                        print *, "    ", B_mnkl(m(i), n(i), mu(i), nu(i))
+                        print *, "    ", B_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i))
                         rv = .false.
                     else
                         print *, "    ", i , ": (Im) OK"
                     end if
+                    print *, ""
                 end do
 
             end function test_lib_mie_vector_spherical_harmonics_tranlation_coeff_r

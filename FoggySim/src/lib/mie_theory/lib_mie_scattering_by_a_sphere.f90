@@ -10,11 +10,12 @@ module lib_mie_scattering_by_a_sphere
     use libmath
     use lib_constants
     use lib_mie_vector_spherical_harmonics
+    use lib_mie_type
     implicit none
 
     interface lib_mie_scattering_by_a_sphere_init
-        module procedure lib_mie_scattering_by_a_sphere_init_real
-        module procedure lib_mie_scattering_by_a_sphere_init_cmplx
+        module procedure lib_mie_scattering_by_a_sphere_init_coeff_ab_real
+        module procedure lib_mie_scattering_by_a_sphere_init_coeff_ab_cmplx
     end interface
 
     ! caching
@@ -34,11 +35,22 @@ module lib_mie_scattering_by_a_sphere
         complex(kind=8), dimension(:), allocatable :: b_n
     end type
 
+    type cache_coefficients_p_0_q_0_type
+        double precision :: alpha
+        double precision :: beta
+        integer :: n_max
+        type(list_list_cmplx), allocatable :: p_0
+        type(list_list_cmplx), allocatable :: q_0
+    end type
+
     type(cache_coefficients_a_b_real_barberh_type), dimension(:), allocatable :: cache_coefficients_a_b_real_barberh
     logical :: cache_coefficients_a_b_real_barberh_enabled = .false.
 
     type(cache_coefficients_a_b_cmplx_barberh_type), dimension(:), allocatable :: cache_coefficients_a_b_cmplx_barberh
     logical :: cache_coefficients_a_b_cmplx_barberh_enabled = .false.
+
+    type(cache_coefficients_p_0_q_0_type), dimension(:), allocatable :: cache_coefficients_p_0_q_0
+    logical :: cache_coefficients_p_0_q_0_enabled = .false.
 
     private
 
@@ -59,7 +71,7 @@ module lib_mie_scattering_by_a_sphere
         !       relative refractive index: m = N_1 / N
         !       N_1: refractive index of the particle
         !       N: refractive index of the medium
-        subroutine lib_mie_scattering_by_a_sphere_init_real(x, m, n_max)
+        subroutine lib_mie_scattering_by_a_sphere_init_coeff_ab_real(x, m, n_max)
             implicit none
             ! dummy
             double precision, dimension(:), intent(in) :: x
@@ -99,7 +111,7 @@ module lib_mie_scattering_by_a_sphere
 
             cache_coefficients_a_b_real_barberh_enabled = .true.
 
-        end subroutine lib_mie_scattering_by_a_sphere_init_real
+        end subroutine lib_mie_scattering_by_a_sphere_init_coeff_ab_real
 
         ! Argument
         ! ----
@@ -113,7 +125,7 @@ module lib_mie_scattering_by_a_sphere
         !       relative refractive index: m = N_1 / N
         !       N_1: refractive index of the particle
         !       N: refractive index of the medium
-        subroutine lib_mie_scattering_by_a_sphere_init_cmplx(x, m, n_max)
+        subroutine lib_mie_scattering_by_a_sphere_init_coeff_ab_cmplx(x, m, n_max)
             implicit none
             ! dummy
             double precision, dimension(:), intent(in) :: x
@@ -153,8 +165,60 @@ module lib_mie_scattering_by_a_sphere
 
             cache_coefficients_a_b_cmplx_barberh_enabled = .true.
 
-        end subroutine lib_mie_scattering_by_a_sphere_init_cmplx
+        end subroutine lib_mie_scattering_by_a_sphere_init_coeff_ab_cmplx
 
+        subroutine lib_mie_scattering_by_a_sphere_init_coeff_p0_q0(alpha, beta, n_max)
+            implicit none
+            ! dummy
+            double precision, dimension(:), intent(in) :: alpha
+            double precision, dimension(lbound(alpha, 1):ubound(alpha, 1)), intent(in) :: beta
+            integer(kind=4), dimension(lbound(alpha, 1):ubound(alpha, 1)) :: n_max
+
+            ! auxiliary
+            integer :: i
+
+            ! --- init: cache_coefficients_a_b_cmplx_barberh_x ---
+            if (allocated(cache_coefficients_p_0_q_0)) then
+                deallocate(cache_coefficients_p_0_q_0)
+            end if
+
+            allocate(cache_coefficients_p_0_q_0(size(alpha)))
+            cache_coefficients_p_0_q_0_enabled = .false.
+
+            do i=1, size(alpha)
+                cache_coefficients_p_0_q_0%alpha = alpha(i)
+                cache_coefficients_p_0_q_0%beta = beta(i)
+                cache_coefficients_p_0_q_0%n_max = n_max(i)
+
+                call lib_mie_get_p_q_j_j_core(alpha(i), beta(i), (/1, n_max(i)/), &
+                                              cache_coefficients_p_0_q_0(i)%p_0, &
+                                              cache_coefficients_p_0_q_0(i)%q_0)
+            end do
+
+            cache_coefficients_p_0_q_0_enabled = .true.
+
+        end subroutine
+
+        subroutine destructor
+            implicit none
+
+            ! --- deallocate caching ---
+            if (allocated(cache_coefficients_a_b_real_barberh)) then
+                deallocate(cache_coefficients_a_b_real_barberh)
+            end if
+            cache_coefficients_a_b_real_barberh_enabled = .false.
+
+            if (allocated(cache_coefficients_a_b_cmplx_barberh)) then
+                deallocate(cache_coefficients_a_b_cmplx_barberh)
+            end if
+            cache_coefficients_a_b_cmplx_barberh_enabled = .false.
+
+            if (allocated(cache_coefficients_p_0_q_0)) then
+                deallocate(cache_coefficients_p_0_q_0)
+            end if
+            cache_coefficients_p_0_q_0_enabled = .false.
+
+        end subroutine destructor
 
 !        ! calculates the scatterd electical field of a sphere
 !        !
@@ -401,7 +465,7 @@ module lib_mie_scattering_by_a_sphere
             end if
 
             k0 = 2.0_8 * PI / lambda
-            size_parameter = r_particle * k0 !* n_particle
+            size_parameter = r_particle * k0 * n_medium ! eq. 11
 
             cos_beta = cos(m_beta)
             sin_beta = sin(m_beta)
@@ -624,7 +688,7 @@ module lib_mie_scattering_by_a_sphere
             type(spherical_coordinate_cmplx_type) :: h_field_s
 
             double precision :: k0 ! wave number = 2 pi / lambda
-            double precision :: size_parameter !  = r_particle * k0
+            double precision :: size_parameter !  = r_particle * k0 * n_medium ! eq. 11
 
             double precision :: buffer_real
             complex(kind=8) :: buffer_cmplx
@@ -676,7 +740,7 @@ module lib_mie_scattering_by_a_sphere
 
 
             k0 = 2.0_8 * PI / lambda
-            size_parameter = r_particle * k0! * n_particle
+            size_parameter = r_particle * k0 * n_medium ! eq. 11
 
             cos_beta = cos(m_beta)
             sin_beta = sin(m_beta)
@@ -1023,6 +1087,7 @@ module lib_mie_scattering_by_a_sphere
         !       first element: start index
         !       second element: last index
         !       HINT: first element .le. second element
+        !   caching: logical (std: .true.)
         !
         ! Reference: Light Scattering by Particles, Barber, Hill, eq. (4.18)
         subroutine get_coefficients_a_b_real_barberh(x, m, n, a_n, b_n, caching)
@@ -1468,12 +1533,28 @@ module lib_mie_scattering_by_a_sphere
         end function get_n_c
 
         ! Calculates the coefficients (of vector spherical components) of a plane incident wave
+        ! - transverse magnetic mode (TM)
+        !
+        !                 z
+        !                 ^
+        !             K_j |
+        !                 --> x
+        !                ^
+        !               /
+        !           z  /d_j_0
+        !           ^ /
+        !       K_0 |/
+        !           --> x
+        !      ____________
+        !      ____k^______
+        !      _____|______
+        !      ____________ plane wave
         !
         ! Argument
         ! ----
         !   k: type(cartesian_coordinate_real_type)
         !       wave vector
-        !   d_j_0: type(cartesian_coordinate_real_type)
+        !   d_0_j: type(cartesian_coordinate_real_type)
         !       vector from the
         !   n_range: integer, dimension(2)
         !       first and last index (degree) of the sum to calculate the electical field
@@ -1482,15 +1563,16 @@ module lib_mie_scattering_by_a_sphere
         ! Returns
         ! ----
         !   p: type(list_list_cmplx)
-        !
+        !       coefficient of vector spherical componets
         !   q: type(list_list_cmplx)
+        !       coefficient of vector spherical componets
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres Yu-lin Xu, eq. 20
-        subroutine lib_mie_get_p_q_j_j(k, d_j_0, n_range, p, q)
+        subroutine lib_mie_get_p_q_j_j(k, d_0_j, n_range, p, q)
             implicit none
             ! dummy
             type(cartesian_coordinate_real_type), intent(in) :: k
-            type(cartesian_coordinate_real_type), intent(in) :: d_j_0
+            type(cartesian_coordinate_real_type), intent(in) :: d_0_j
             integer(kind=4), dimension(2),intent(in) :: n_range
 
             type(list_list_cmplx), intent(inout) :: p
@@ -1509,25 +1591,41 @@ module lib_mie_scattering_by_a_sphere
             ! --- pre-calc ---
             k_spherical = k
 
-            dot_k_d = dot_product(k, d_j_0)
-
-            exp_k_d = cmplx(cos(dot_k_d), sin(dot_k_d), kind=8)
-
             alpha = k_spherical%theta
             beta = k_spherical%phi
 
-            call lib_mie_get_p_q_j_j_core(exp_k_d, alpha, beta, n_range, p, q)
+            if (abs(d_0_j) .gt. 0.0) then
+                ! j-th coordinate system
+                dot_k_d = dot_product(k, d_0_j)
+                exp_k_d = cmplx(cos(dot_k_d), sin(dot_k_d), kind=8)
+                call lib_mie_get_p_q_j_j_core(alpha, beta, n_range, p, q, exp_k_d)
+            else
+                ! 0-th coordinate system
+                call lib_mie_get_p_q_j_j_core(alpha, beta, n_range, p, q)
+            end if
 
         end subroutine
 
         ! Calculates the coefficients (of vector spherical components) of a plane incident wave
+        ! - transverse magnetic mode (TM)
+        !
+        !                 z
+        !                 ^
+        !             K_j |
+        !                 --> x
+        !                ^
+        !               /
+        !           z  /d_j_0
+        !           ^ /
+        !       K_0 |/
+        !           --> x
+        !      ____________
+        !      ____k^______
+        !      _____|______
+        !      ____________ plane wave
         !
         ! Argument
         ! ----
-        !   exp_k_d: complex
-        !       formula: exp(i k * d_j_0)
-        !           k: wave vector
-        !           d_j_0: vector from 0-th to j-th coordinate system
         !   alpha: double precision
         !       polar angle [0..Pi)
         !       if 0: propagation direction along the z-axis
@@ -1537,6 +1635,11 @@ module lib_mie_scattering_by_a_sphere
         !   n_range: integer, dimension(2)
         !       first and last index (degree) of the sum to calculate the electical field
         !       e.g. n = (/ 1, 45 /) <-- size parameter
+        !   exp_k_d: complex, optional (std: 1.0, 0-th coordinate system)
+        !       formula: exp(i dot(k, d_0_j))
+        !           k: wave vector
+        !           d_0_j: vector from 0-th to j-th coordinate system
+        !   caching: logical (std: .true.)
         !
         ! Returns
         ! ----
@@ -1545,10 +1648,9 @@ module lib_mie_scattering_by_a_sphere
         !   q: type(list_list_cmplx)
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres Yu-lin Xu, eq. 20
-        subroutine lib_mie_get_p_q_j_j_core(exp_k_d, alpha, beta, n_range, p, q)
+        subroutine lib_mie_get_p_q_j_j_core(alpha, beta, n_range, p, q, exp_k_d, caching)
             implicit none
             ! dummy
-            complex(kind=8), intent(in) :: exp_k_d
             double precision, intent(in) :: alpha
             double precision, intent(in) :: beta
             integer(kind=4), dimension(2),intent(in) :: n_range
@@ -1556,54 +1658,80 @@ module lib_mie_scattering_by_a_sphere
             type(list_list_cmplx), intent(inout) :: p
             type(list_list_cmplx), intent(inout) :: q
 
+            complex(kind=8), intent(in), optional :: exp_k_d
+
+            logical, optional :: caching
+
             ! auxiliary
-!            double precision :: buffer_real
+            integer :: i
             double precision :: buffer_real_n
-!            double complex :: buffer_cmplx
             integer(kind=4) :: m
             integer(kind=4) :: n
 
-            type(list_list_cmplx) :: p0_nm
-            type(list_list_cmplx) :: q0_nm
             type(list_list_real) :: pi_nm
             type(list_list_real) :: tau_nm
 
             double precision :: sin_beta
             double precision :: cos_beta
 
+            logical :: m_caching
+            ! 0: p_0 and q_0 are not pre calculated
+            ! >0: element number of the cache array
+            integer :: cache_no
+
+            if (cache_coefficients_p_0_q_0_enabled) then
+                if (present(caching)) then
+                    m_caching = caching
+                else
+                    m_caching = .true.
+                end if
+            else
+                m_caching = .false.
+            end if
+
+            do i=1, size(cache_coefficients_p_0_q_0)
+                if ((cache_coefficients_p_0_q_0(i)%alpha .eq. alpha) &
+                    .and. (cache_coefficients_p_0_q_0(i)%beta .eq. beta) &
+                    .and. (cache_coefficients_p_0_q_0(i)%n_max .le. n_range(2))) then
+                    cache_no = i
+                else
+                    cache_no = 0
+                end if
+            end do
+
             ! --- init ---
-            call init_list(p, n_range(1), n_range(2)-n_range(1)+1)
-            call init_list(q, n_range(1), n_range(2)-n_range(1)+1)
-            call init_list(p0_nm, n_range(1), n_range(2)-n_range(1)+1)
-            call init_list(q0_nm, n_range(1), n_range(2)-n_range(1)+1)
+            if (alpha .eq. 0.d0) then
+                allocate(p%item(n_range(1):n_range(2)))
+                allocate(q%item(n_range(1):n_range(2)))
+
+                do i=n_range(1), n_range(2)
+                    allocate(p%item(i)%item(-1:1))
+                    allocate(q%item(i)%item(-1:1))
+                end do
+            else
+                call init_list(p, n_range(1), n_range(2)-n_range(1)+1)
+                call init_list(q, n_range(1), n_range(2)-n_range(1)+1)
+            end if
 
             ! --- pre-calc ---
-            sin_beta = sin(beta)
-            cos_beta = cos(beta)
+            if (cache_no .gt. 0) then
+                sin_beta = sin(beta)
+                cos_beta = cos(beta)
 
-            call lib_math_associated_legendre_polynomial_theta(alpha, n_range(2), pi_nm, tau_nm)
+                call lib_math_associated_legendre_polynomial_theta(alpha, n_range(2), pi_nm, tau_nm)
+            end if
 
             ! errata eq. (1) Equations (21) on p. 4577
             do n=n_range(1), n_range(2)
                 buffer_real_n = 1.0d0 / real(n*(n+1), kind=8)
-                if (alpha .eq. 0.0) then
-                    p%item(n)%item(:) = 0.0
-                    q%item(n)%item(:) = 0.0
-                    call get_value(-1_4, n, p%item(n)%item(m), q%item(n)%item(m))
-                    call get_value(1_4, n, p%item(n)%item(m), q%item(n)%item(m))
+                if (alpha .eq. 0.d0) then
+                    p%item(n)%item(:) = 0.d0
+                    q%item(n)%item(:) = 0.d0
+                    call get_value(-1_4, n, p%item(n)%item(-1), q%item(n)%item(-1))
+                    call get_value(1_4, n, p%item(n)%item(1), q%item(n)%item(1))
                 else
                     do m=-n, n
                         call get_value(m, n, p%item(n)%item(m), q%item(n)%item(m))
-!                        buffer_real = -m * beta
-!                        buffer_cmplx = cmplx(cos(buffer_real), sin(buffer_real), kind=8)
-!
-!                        buffer_cmplx = buffer_real_n * buffer_cmplx
-!
-!                        p0_nm%item(n)%item(m) = tau_nm%item(n)%item(m) * buffer_cmplx
-!                        q0_nm%item(n)%item(m) = pi_nm%item(n)%item(m) * buffer_cmplx
-!
-!                        p%item(n)%item(m) = exp_k_d * p0_nm%item(n)%item(m)
-!                        q%item(n)%item(m) = exp_k_d * q0_nm%item(n)%item(m)
                     end do
                 end if
             end do
@@ -1616,27 +1744,128 @@ module lib_mie_scattering_by_a_sphere
                     integer(kind=4), intent(in) :: m
                     integer(kind=4), intent(in) :: n
 
-                    complex(kind=lib_math_type_kind) :: p
-                    complex(kind=lib_math_type_kind) :: q
+                    complex(kind=lib_math_type_kind), intent(inout) :: p
+                    complex(kind=lib_math_type_kind), intent(inout) :: q
 
                     ! auxiliaray
                     double precision :: buffer_real
                     double complex :: buffer_cmplx
 
-                    buffer_real = -m * beta
-                    buffer_cmplx = cmplx(cos(buffer_real), sin(buffer_real), kind=8)
+                    if (cache_no .gt. 0) then
+                        p = cache_coefficients_p_0_q_0(cache_no)%p_0%item(m)%item(n)
+                        q = cache_coefficients_p_0_q_0(cache_no)%q_0%item(n)%item(n)
+                    else
+                        buffer_real = -m * beta
+                        buffer_cmplx = cmplx(cos(buffer_real), sin(buffer_real), kind=8)
 
-                    buffer_cmplx = buffer_real_n * buffer_cmplx
+                        buffer_cmplx = buffer_real_n * buffer_cmplx
 
-                    p0_nm%item(n)%item(m) = tau_nm%item(n)%item(m) * buffer_cmplx
-                    q0_nm%item(n)%item(m) = pi_nm%item(n)%item(m) * buffer_cmplx
+                        p = tau_nm%item(n)%item(m) * buffer_cmplx
+                        q = pi_nm%item(n)%item(m) * buffer_cmplx
+                    end if
 
-                    p = exp_k_d * p0_nm%item(n)%item(m)
-                    q = exp_k_d * q0_nm%item(n)%item(m)
+                    if (present(exp_k_d)) then
+                        p = exp_k_d * p
+                        q = exp_k_d * q
+                    end if
 
                 end subroutine
 
         end subroutine lib_mie_get_p_q_j_j_core
+
+        ! Reference: , eq. 30
+        subroutine lib_mie_get_interactive_scattering_coefficients(k, lambda, n_medium, &
+                                                                   sphere, sphere_parameter, sphere_j, &
+                                                                   a, b)
+            implicit none
+            ! dummy
+            type(spherical_coordinate_real_type), intent(in) :: k
+            double precision, intent(in) :: lambda
+            double precision, intent(in) :: n_medium
+            type(sphere_type), dimension(:), intent(in) :: sphere
+            type(sphere_parameter_type), dimension(:), intent(in) :: sphere_parameter
+            integer :: sphere_j
+            type(list_list_cmplx), intent(inout) :: a
+            type(list_list_cmplx), intent(inout) :: b
+
+            ! auxiliary
+            integer :: m
+            integer :: n
+            integer :: mu
+            integer :: nu
+            integer, dimension(2) :: n_range
+            integer, dimension(2) :: nu_range
+
+            integer :: l
+            integer :: i
+
+            type(list_list_cmplx) :: p
+            type(list_list_cmplx) :: q
+            type(list_cmplx) :: a_j_n
+            type(list_cmplx) :: b_j_n
+            type(list_cmplx) :: a_l_n
+            type(list_cmplx) :: b_l_n
+
+            i = sphere(sphere_j)%sphere_parameter_index
+            n_range = sphere_parameter(i)%n_range
+
+            do l=ubound(sphere, 1), lbound(sphere, 1)
+                if (l .ne. sphere_j) then
+                    i = sphere(l)%sphere_parameter_index
+                    nu_range = sphere_parameter(i)%n_range
+                    a_l_n = sphere_parameter(i)%a_n
+                    b_l_n = sphere_parameter(i)%b_n
+
+                    if (n .le. nu_range(2)) then
+                        do n=n_range(1), n_range(2)
+                            do m=-n, n
+
+
+                            end do
+                        end do
+                    end if
+                end if
+            end do
+
+!            contains
+!                subroutine calc_summand(a_munu, a_munumn, b_munu, b_munumn, )
+!                    implicit none
+!
+!                end subroutine calc_summand
+
+        end subroutine lib_mie_get_interactive_scattering_coefficients
+
+        subroutine lib_mie_set_sphere_parameter(lambda, n_medium, &
+                                                r_particle, n_particle,&
+                                                n_range, sphere_parameter)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: lambda
+            double precision, intent(in) :: n_medium
+            double precision, intent(in) :: r_particle
+            double complex, intent(in) :: n_particle
+            integer, dimension(2) :: n_range
+
+            type(sphere_parameter_type), intent(inout) :: sphere_parameter
+
+            ! auxiliary
+            double precision :: size_parameter
+
+            size_parameter = 2 * PI * n_medium * r_particle / lambda
+
+            sphere_parameter%n_range = n_range
+            sphere_parameter%size_parameter = size_parameter
+            sphere_parameter%radius = r_particle
+            sphere_parameter%refractive_index = n_particle
+
+            if (aimag(n_particle) .eq. 0d0) then
+                call get_coefficients_a_b_real_barberh(size_parameter, real(n_particle)/n_medium, n_range, &
+                                                       sphere_parameter%a_n%item, sphere_parameter%b_n%item)
+            else
+                call get_coefficients_a_b_cmplx_barberh(size_parameter, n_particle/n_medium, n_range, &
+                                                           sphere_parameter%a_n%item, sphere_parameter%b_n%item)
+            end if
+        end subroutine
 
         function lib_mie_scattering_by_a_sphere_test_functions() result (rv)
             implicit none
