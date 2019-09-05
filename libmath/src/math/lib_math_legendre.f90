@@ -893,6 +893,9 @@ module lib_math_legendre
             if (.not. test_lib_math_associated_legendre_polynomial_m0()) then
                 rv = rv + 1
             end if
+            if (.not. test_lib_math_associated_legendre_polynomial_m0_2()) then
+                rv = rv + 1
+            end if
             if (.not. test_lib_math_associated_legendre_polynomial_with_negative_m1()) then
                 rv = rv + 1
             end if
@@ -1363,6 +1366,93 @@ module lib_math_legendre
                 end do
 
             end function test_lib_math_associated_legendre_polynomial_m0
+
+            function test_lib_math_associated_legendre_polynomial_m0_2() result (rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! parameter
+                integer(kind=4), parameter :: fnu = 0
+                integer(kind=4), parameter :: n = 6
+                integer(kind=4), parameter :: m = 0
+
+                ! auxiliary
+                integer(kind=4) :: i
+                double precision :: x
+                double precision, dimension(n) :: pm
+                double precision, dimension(n) :: pd
+
+                double precision, dimension(n) :: ground_truth_pm
+                double precision, dimension(n) :: ground_truth_pd
+
+                double precision :: buffer
+
+                ! Values were generated with sageMath
+                !
+                ! source code:
+                !  >>>  var('l')
+                !  >>>  var('m')
+                !  >>>  var('x')
+                !  >>>
+                !  >>>  m=0
+                !  >>>
+                !  >>>  P_d(l,x) = derivative(legendre_P(l,x), x, m)
+                !  >>>  P_a(l,x) = (-1)**m * (1-x**2)**(m/2) * P_d(l,x)
+                !  >>>  P_ad(l,x) = derivative(P_a(l,x), x).simplify_full()
+                !  >>>
+                !  >>>  x=math.cos(0.5)
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_a(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_ad(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
+                ground_truth_pm(1) = 1.00000000000000_8
+                ground_truth_pm(2) = 0.877582561890373_8
+                ground_truth_pm(3) = 0.655226729401105_8
+                ground_truth_pm(4) = 0.373304211751205_8
+                ground_truth_pm(5) = 0.0818891693470757_8
+                ground_truth_pm(6) = -0.169287256752937_8
+
+                ground_truth_pd(1) = -0.000000000000000_8
+                ground_truth_pd(2) = 1.00000000000000_8
+                ground_truth_pd(3) = 2.63274768567112_8
+                ground_truth_pd(4) = 4.27613364700553_8
+                ground_truth_pd(5) = 5.24587716792955_8
+                ground_truth_pd(6) = 5.01313617112921_8
+
+                x = cos(0.5_8)
+
+                call lib_math_associated_legendre_polynomial(x, m, fnu, n, pm, pd, .true.)
+
+
+                rv = .true.
+                print *, "test_lib_math_associated_legendre_polynomial_m0_2:"
+                do i=1, n
+                    buffer = abs(pm(i) - ground_truth_pm(i))
+                    if (buffer .gt. ground_truth_e) then
+                        print *, "  ", i , "difference: ", buffer, " : FAILED"
+                        rv = .false.
+                    else
+                        print *, "  ", i, ": OK"
+                    end if
+                end do
+
+                print*, "  deriviation:"
+                do i=1, n
+                    buffer = abs(pd(i) - ground_truth_pd(i))
+                    if (buffer .gt. ground_truth_e) then
+                        print *, "  ", i , "difference: ", buffer, " : FAILED"
+                        rv = .false.
+                    else
+                        print *, "  ", i, ": OK"
+                    end if
+                end do
+
+            end function test_lib_math_associated_legendre_polynomial_m0_2
 
             function test_lib_math_associated_legendre_polynomial_with_negative_m1() result(rv)
                 implicit none
