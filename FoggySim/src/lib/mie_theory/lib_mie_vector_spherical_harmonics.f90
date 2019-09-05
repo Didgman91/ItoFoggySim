@@ -1575,8 +1575,15 @@ module lib_mie_vector_spherical_harmonics
 
             ! auxiliaray
             double precision, parameter :: ground_truth_e = 10.0_8**(-6.0_8)
+            ! CPU-time
+            real :: test_start, test_finish
+            ! WALL-time
+            INTEGER :: test_count_start, test_count_finish, test_count_rate
 
             rv = 0
+
+            call system_clock(test_count_start, test_count_rate)
+            call cpu_time(test_start)
 
             if (.not. test_lib_mie_vector_spherical_harmonics_components_real_xu()) then
                 rv = rv + 1
@@ -1591,13 +1598,20 @@ module lib_mie_vector_spherical_harmonics
                 rv = rv + 1
             end if
 
+            call cpu_time(test_finish)
+            call system_clock(test_count_finish, test_count_rate)
+
             print *, "----lib_mie_vector_spherical_harmonics_test_functions----"
+            print '("  CPU-Time = ",f10.3," seconds.")',test_finish-test_start
+            print '("  WALL-Time = ",f10.3," seconds.")',(test_count_finish-test_count_start) / real(test_count_rate)
+            print *, ""
             if (rv == 0) then
                 print *, "lib_mie_vector_spherical_harmonics_test_functions tests: OK"
             else
                 print *, rv,"lib_mie_vector_spherical_harmonics_test_functions test(s) FAILED"
             end if
             print *, "---------------------------------------------------------"
+            print *, ""
 
             contains
 

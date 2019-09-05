@@ -25,6 +25,11 @@ program main
     double precision :: x
     double precision :: erg
 
+    ! CPU-time
+    real :: test_start, test_finish
+    ! WALL-time
+    INTEGER :: test_count_start, test_count_finish, test_count_rate
+
 
     l = 3
     m = 1
@@ -46,6 +51,9 @@ program main
 
     call test_file_io
 
+    call system_clock(test_count_start, test_count_rate)
+    call cpu_time(test_start)
+
     error_counter = 0
     error_counter = error_counter + test_lib_math()
     error_counter = error_counter + lib_mie_vector_spherical_harmonics_test_functions()
@@ -58,18 +66,25 @@ program main
     !error_counter = error_counter + lib_ml_fmm_hf_test_functions()
     !error_counter = error_counter + lib_ml_fmm_test_functions()
 
-!    call lib_tree_benchmark()
-!     call lib_tree_hf_benchmark()
+    call cpu_time(test_finish)
+    call system_clock(test_count_finish, test_count_rate)
 
-    call lib_tree_destructor()
-!    call lib_tree_hf_destructor()
-
+    print *, ""
     print *, "-------------MAIN------------------"
+    print '("  CPU-Time = ",f10.3," seconds.")',test_finish-test_start
+    print '("  WALL-Time = ",f10.3," seconds.")',(test_count_finish-test_count_start) / real(test_count_rate)
+    print *, ""
     if (error_counter == 0) then
         print *, "All tests: OK"
     else
         print *, error_counter,"test(s) FAILED"
     end if
     print *, "-----------------------------------"
+
+!    call lib_tree_benchmark()
+!     call lib_tree_hf_benchmark()
+
+    call lib_tree_destructor()
+!    call lib_tree_hf_destructor()
 
 end program main
