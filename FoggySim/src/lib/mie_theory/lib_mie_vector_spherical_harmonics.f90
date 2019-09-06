@@ -10,10 +10,17 @@ module lib_mie_vector_spherical_harmonics
 
     ! --- public ---
     public :: lib_mie_vector_spherical_harmonics_components
+    public :: lib_mie_vector_spherical_harmonics_translation_coefficient
 
     interface lib_mie_vector_spherical_harmonics_components
         module procedure lib_mie_vector_spherical_harmonics_components_real_xu
         module procedure lib_mie_vector_spherical_harmonics_components_cmplx_xu
+    end interface
+
+    interface lib_mie_vector_spherical_harmonics_translation_coefficient
+        module procedure lib_mie_vector_spherical_harmonics_translation_coefficient_real
+        module procedure lib_mie_vector_spherical_harmonics_translation_coeff_spher_r
+        module procedure lib_mie_vector_spherical_harmonics_translation_coeff_carte_r
     end interface
 
     public :: lib_mie_vector_spherical_harmonics_test_functions
@@ -1263,11 +1270,14 @@ module lib_mie_vector_spherical_harmonics
         !
         ! Returns
         ! ----
-        !   A:
+        !   A_mnkl: type(list_4_cmplx)
+        !       4 dimensional matrix
+        !   B_mnkl: type(list_4_cmplx)
+        !       4 dimensional matrix
         !
         ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
         subroutine lib_mie_vector_spherical_harmonics_translation_coefficient_real(x, theta, phi, n_range, nu_range, z_selector,&
-                                                                                  A_mnkl, B_mnkl)
+                                                                                   A_mnkl, B_mnkl)
             implicit none
             ! dummy
             double precision, intent(in) :: x
@@ -1472,8 +1482,106 @@ module lib_mie_vector_spherical_harmonics
             end do
             !$OMP END PARALLEL DO
 
-
         end subroutine lib_mie_vector_spherical_harmonics_translation_coefficient_real
+
+        ! Calculation of the translation transformation coefficients
+        ! from the l-th coordinate system to the j-th coordinate system
+        !
+        ! Argument
+        ! ----
+        !   x: type(spherical_coordinate_real_type)
+        !       coordinate of the l-th coordinate system respect to the j-th coordinate system
+        !   n_range: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       CONDITION:
+        !           - first element .le. second element
+        !           - 0 <= n
+        !
+        !   z_selector: integer
+        !       1: spherical Bessel function first kind   j_n
+        !       2: spherical Bessel function second kind  y_n
+        !       3: spherical Hankel function first kind   h^(1)_n
+        !       4: spherical Hankel function second kind  h^(2)_n
+        !
+        ! Returns
+        ! ----
+        !   A_mnkl: type(list_4_cmplx)
+        !       4 dimensional matrix
+        !   B_mnkl: type(list_4_cmplx)
+        !       4 dimensional matrix
+        !
+        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
+        subroutine lib_mie_vector_spherical_harmonics_translation_coeff_spher_r(x, &
+                                                                                n_range, nu_range, z_selector,&
+                                                                                A_mnkl, B_mnkl)
+            implicit none
+            ! dummy
+            type(spherical_coordinate_real_type), intent(in) :: x
+            integer(kind=4), dimension(2) :: n_range
+            integer(kind=4), dimension(2) :: nu_range
+            integer(kind=1) :: z_selector
+
+            type(list_4_cmplx), intent(inout) :: A_mnkl
+            type(list_4_cmplx), intent(inout) :: B_mnkl
+
+            call lib_mie_vector_spherical_harmonics_translation_coefficient_real(x%rho, x%theta, x%phi, &
+                                                                                 n_range, nu_range, z_selector,&
+                                                                                 A_mnkl, B_mnkl)
+
+        end subroutine lib_mie_vector_spherical_harmonics_translation_coeff_spher_r
+
+        ! Calculation of the translation transformation coefficients
+        ! from the l-th coordinate system to the j-th coordinate system
+        !
+        ! Argument
+        ! ----
+        !   x: type(cartesian_coordinate_real_type)
+        !       coordinate of the l-th coordinate system respect to the j-th coordinate system
+        !   n_range: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       CONDITION:
+        !           - first element .le. second element
+        !           - 0 <= n
+        !
+        !   z_selector: integer
+        !       1: spherical Bessel function first kind   j_n
+        !       2: spherical Bessel function second kind  y_n
+        !       3: spherical Hankel function first kind   h^(1)_n
+        !       4: spherical Hankel function second kind  h^(2)_n
+        !
+        ! Returns
+        ! ----
+        !   A_mnkl: type(list_4_cmplx)
+        !       4 dimensional matrix
+        !   B_mnkl: type(list_4_cmplx)
+        !       4 dimensional matrix
+        !
+        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
+        subroutine lib_mie_vector_spherical_harmonics_translation_coeff_carte_r(x, &
+                                                                                n_range, nu_range, z_selector,&
+                                                                                A_mnkl, B_mnkl)
+            implicit none
+            ! dummy
+            type(cartesian_coordinate_real_type), intent(in) :: x
+            integer(kind=4), dimension(2) :: n_range
+            integer(kind=4), dimension(2) :: nu_range
+            integer(kind=1) :: z_selector
+
+            type(list_4_cmplx), intent(inout) :: A_mnkl
+            type(list_4_cmplx), intent(inout) :: B_mnkl
+
+            ! auxiliary
+            type(spherical_coordinate_real_type) :: m_x
+
+            m_x = x
+
+            call lib_mie_vector_spherical_harmonics_translation_coefficient_real(m_x%rho, m_x%theta, m_x%phi, &
+                                                                                 n_range, nu_range, z_selector,&
+                                                                                 A_mnkl, B_mnkl)
+
+        end subroutine lib_mie_vector_spherical_harmonics_translation_coeff_carte_r
 
         ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
         !            eq. 25
