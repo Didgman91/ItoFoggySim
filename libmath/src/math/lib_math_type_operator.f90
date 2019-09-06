@@ -25,6 +25,10 @@ module lib_math_type_operator
 
     ! ---- operator ----
     interface operator (+)
+        ! real coordinates
+        module procedure lib_math_cartesian_operator_real_add
+
+        ! cmplx coordinates
         module procedure lib_math_cartesian_operator_add
         module procedure lib_math_cartesian_operator_add_array
         module procedure lib_math_cartesian_operator_0d_add_array
@@ -43,6 +47,10 @@ module lib_math_type_operator
     end interface
 
     interface operator (-)
+        ! real coordinates
+        module procedure lib_math_cartesian_operator_real_sub
+
+        ! cmplx coordinates
         module procedure lib_math_cartesian_operator_sub
         module procedure lib_math_cartesian_operator_sub_array
         module procedure lib_math_cartesian_operator_array_sub_0d
@@ -57,6 +65,13 @@ module lib_math_type_operator
     end interface
 
     interface operator (*)
+        ! real coordinates
+        module procedure lib_math_cartesian_operator_real_scalar_real_mul
+        module procedure lib_math_cartesian_operator_real_scalar_cmplx_mul
+        module procedure lib_math_cartesian_operator_real_mul_scalar_real
+        module procedure lib_math_cartesian_operator_real_mul_scalar_cmplx
+
+        ! cmplx coordinates
         module procedure lib_math_cartesian_operator_scalar_real_mul
         module procedure lib_math_cartesian_operator_scalar_cmplx_mul
         module procedure lib_math_cartesian_operator_mul_scalar_real
@@ -85,6 +100,11 @@ module lib_math_type_operator
     end interface
 
     interface operator (/)
+        ! real coordinates
+        module procedure lib_math_cartesian_operator_real_divide_by_scalar_real
+        module procedure lib_math_cartesian_operator_real_divide_by_scalar_cmplx
+
+        ! cmplx coordinates
         module procedure lib_math_cartesian_operator_divide_by_scalar_real
         module procedure lib_math_cartesian_operator_divide_by_scalar_cmplx
         module procedure lib_math_cartesian_operator_array_divide_by_scalar_array_real
@@ -905,6 +925,110 @@ module lib_math_type_operator
             implicit none
             ! dummy
             type (cartesian_coordinate_cmplx_type), intent(in) :: lhs
+            complex(kind=8), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = lhs%x / rhs
+            rv%y = lhs%y / rhs
+            rv%z = lhs%z / rhs
+
+        end function
+
+                function lib_math_cartesian_operator_real_add(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_real_type), intent(in) :: lhs
+            type (cartesian_coordinate_real_type), intent(in) :: rhs
+            type (cartesian_coordinate_real_type) :: rv
+
+            rv%x = lhs%x + rhs%x
+            rv%y = lhs%y + rhs%y
+            rv%z = lhs%z + rhs%z
+
+        end function
+
+        function lib_math_cartesian_operator_real_sub(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_real_type), intent(in) :: lhs
+            type (cartesian_coordinate_real_type), intent(in) :: rhs
+            type (cartesian_coordinate_real_type) :: rv
+
+            rv%x = lhs%x - rhs%x
+            rv%y = lhs%y - rhs%y
+            rv%z = lhs%z - rhs%z
+
+        end function
+
+        function lib_math_cartesian_operator_real_scalar_real_mul(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            real(kind=8), intent(in) :: lhs
+            type (cartesian_coordinate_real_type), intent(in) :: rhs
+            type (cartesian_coordinate_real_type) :: rv
+
+            rv%x = lhs * rhs%x
+            rv%y = lhs * rhs%y
+            rv%z = lhs * rhs%z
+
+        end function
+
+        function lib_math_cartesian_operator_real_scalar_cmplx_mul(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            complex(kind=8), intent(in) :: lhs
+            type (cartesian_coordinate_real_type), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = lhs * rhs%x
+            rv%y = lhs * rhs%y
+            rv%z = lhs * rhs%z
+
+        end function
+
+        function lib_math_cartesian_operator_real_mul_scalar_real(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_real_type), intent(in) :: lhs
+            real(kind=8), intent(in) :: rhs
+            type (cartesian_coordinate_real_type) :: rv
+
+            rv%x = lhs%x * rhs
+            rv%y = lhs%y * rhs
+            rv%z = lhs%z * rhs
+
+        end function
+
+        function lib_math_cartesian_operator_real_mul_scalar_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_real_type), intent(in) :: lhs
+            complex(kind=8), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = lhs%x * rhs
+            rv%y = lhs%y * rhs
+            rv%z = lhs%z * rhs
+
+        end function
+
+        function lib_math_cartesian_operator_real_divide_by_scalar_real(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_real_type), intent(in) :: lhs
+            real(kind=8), intent(in) :: rhs
+            type (cartesian_coordinate_real_type) :: rv
+
+            rv%x = lhs%x / rhs
+            rv%y = lhs%y / rhs
+            rv%z = lhs%z / rhs
+
+        end function
+
+        function lib_math_cartesian_operator_real_divide_by_scalar_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_real_type), intent(in) :: lhs
             complex(kind=8), intent(in) :: rhs
             type (cartesian_coordinate_cmplx_type) :: rv
 
