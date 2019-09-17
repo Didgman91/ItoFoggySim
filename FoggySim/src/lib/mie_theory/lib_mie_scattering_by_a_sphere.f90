@@ -5,6 +5,8 @@
 !
 #define _DEBUG_
 
+!#define _ONLY_M_ 1
+
 module lib_mie_scattering_by_a_sphere
     !$  use omp_lib
     use libmath
@@ -449,7 +451,11 @@ module lib_mie_scattering_by_a_sphere
             call lib_math_associated_legendre_polynomial_theta(m_alpha, n_range(2), pi_nm, tau_nm)
             !$OMP PARALLEL DO PRIVATE(n, m, buffer_real, buffer_cmplx)
             do n=n_range(1), n_range(2)
+#ifdef _ONLY_M_
+                m=_ONLY_M_
+#else
                 do m=-n, n
+#endif
                     buffer_real = -m * m_beta
                     buffer_cmplx = cmplx(cos(buffer_real), sin(buffer_real), kind=8)
 
@@ -463,7 +469,9 @@ module lib_mie_scattering_by_a_sphere
                        .and. q0_nm%item(n)%item(m) .eq. cmplx(0,0)) then
                         calc_order_m%item(n)%item(m) = .false.
                     end if
+#ifndef _ONLY_M_
                 end do
+#endif
             end do
             !$OMP END PARALLEL DO
 
@@ -477,7 +485,11 @@ module lib_mie_scattering_by_a_sphere
                 ! eq. (5)
                 !$OMP PARALLEL DO PRIVATE(n, m, buffer_real)
                 do n=n_range(1), n_range(2)
+#ifdef _ONLY_M_
+                    m=_ONLY_M_
+#else
                     do m=-n, n
+#endif
                         if (calc_order_m%item(n)%item(m)) then
                             buffer_real = abs(e_field_0) * real((2*n+1), kind=8) &
                                           * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m)
@@ -496,7 +508,9 @@ module lib_mie_scattering_by_a_sphere
                                 calc_order_m%item(n)%item(m) = .false.
                             end if
                         end if
+#ifndef _ONLY_M_
                     end do
+#endif
                 end do
                 !$OMP END PARALLEL DO
 
@@ -519,15 +533,19 @@ module lib_mie_scattering_by_a_sphere
                     buffer_h_field_n_s%theta = cmplx(0,0)
                     buffer_h_field_n_s%phi = cmplx(0,0)
 
+#ifdef _ONLY_M_
+                    m=_ONLY_M_
+#else
                     do m=-n, n
+#endif
                         if (calc_order_m%item(n)%item(m)) then
                             buffer_cmplx = cmplx(0, 1, kind=8) * e_field_nm%item(n)%item(m)
                             buffer_e_field_n_s = buffer_cmplx * (a_n(i)*N_nm(n)%coordinate(m) * p0_nm%item(n)%item(m) &
                                                                  +b_n(i)*M_nm(n)%coordinate(m) * q0_nm%item(n)%item(m))
 
                             buffer_h_field_n_s = e_field_nm%item(n)%item(m) &
-                                                 * (b_n(i)*N_nm(n)%coordinate(m) * p0_nm%item(n)%item(m) &
-                                                    +a_n(i)*M_nm(n)%coordinate(m) * q0_nm%item(n)%item(m))
+                                                 * (b_n(i)*N_nm(n)%coordinate(m) * q0_nm%item(n)%item(m) &
+                                                    +a_n(i)*M_nm(n)%coordinate(m) * p0_nm%item(n)%item(m))
 #ifdef _DEBUG_
                             if (isnan(real(buffer_e_field_n_s%rho)) .or. isnan(aimag(buffer_e_field_n_s%rho)) &
                                 .or. isnan(real(buffer_e_field_n_s%phi)) .or. isnan(aimag(buffer_e_field_n_s%phi)) &
@@ -541,7 +559,9 @@ module lib_mie_scattering_by_a_sphere
                             e_field_n_s(i) = e_field_n_s(i) + buffer_e_field_n_s
                             h_field_n_s(i) = h_field_n_s(i) + buffer_h_field_n_s
                         end if
+#ifndef _ONLY_M_
                     end do
+#endif
                 end do
                 !$OMP END PARALLEL DO
 
@@ -720,8 +740,11 @@ module lib_mie_scattering_by_a_sphere
             call lib_math_associated_legendre_polynomial_theta(m_alpha, n_range(2), pi_nm, tau_nm)
             !$OMP PARALLEL DO PRIVATE(n, m, buffer_real, buffer_cmplx)
             do n=n_range(1), n_range(2)
-                 m=1
-!                do m=-n, n
+#ifdef _ONLY_M_
+                m=_ONLY_M_
+#else
+                do m=-n, n
+#endif
                     buffer_real = -m * m_beta
                     buffer_cmplx = cmplx(cos(buffer_real), sin(buffer_real), kind=8)
 
@@ -735,7 +758,9 @@ module lib_mie_scattering_by_a_sphere
                        .and. q0_nm%item(n)%item(m) .eq. cmplx(0,0)) then
                         calc_order_m%item(n)%item(m) = .false.
                     end if
-!                end do
+#ifndef _ONLY_M_
+                end do
+#endif
             end do
             !$OMP END PARALLEL DO
 
@@ -747,8 +772,11 @@ module lib_mie_scattering_by_a_sphere
             ! eq. (5)
             !$OMP PARALLEL DO PRIVATE(n, m, buffer_real)
             do n=n_range(1), n_range(2)
-                m=1
-!                do m=-n, n
+#ifdef _ONLY_M_
+                m=_ONLY_M_
+#else
+                do m=-n, n
+#endif
                     if (calc_order_m%item(n)%item(m)) then
                         buffer_real = abs(e_field_0) * real((2*n+1), kind=8) &
                                       * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m)
@@ -767,7 +795,9 @@ module lib_mie_scattering_by_a_sphere
                             calc_order_m%item(n)%item(m) = .false.
                         end if
                     end if
-!                end do
+#ifndef _ONLY_M_
+                end do
+#endif
             end do
             !$OMP END PARALLEL DO
 
@@ -790,26 +820,29 @@ module lib_mie_scattering_by_a_sphere
                 buffer_h_field_n_incident_0%theta = cmplx(0,0)
                 buffer_h_field_n_incident_0%phi = cmplx(0,0)
 
-                m=1
-!                do m=-n, n
+#ifdef _ONLY_M_
+                m=_ONLY_M_
+#else
+                do m=-n, n
+#endif
                     if (calc_order_m%item(n)%item(m)) then
                         buffer_cmplx = cmplx(0, 1, kind=8) * e_field_nm%item(n)%item(m)
-!                        buffer_e_field_n_incident_0 = buffer_cmplx &
-!                                                      * (N_nm(n)%coordinate(m) * p0_nm%item(n)%item(m) &
-!                                                         +M_nm(n)%coordinate(m) * q0_nm%item(n)%item(m))
-!
-!                        buffer_h_field_n_incident_0 = e_field_nm%item(n)%item(m) &
-!                                             * (N_nm(n)%coordinate(m) * p0_nm%item(n)%item(m) &
-!                                                +M_nm(n)%coordinate(m) * q0_nm%item(n)%item(m))
-!                        buffer_cmplx = cmplx(0, 1, kind=8)
-
                         buffer_e_field_n_incident_0 = buffer_cmplx &
-                                                      * (N_nm(n)%coordinate(m) &
-                                                         +M_nm(n)%coordinate(m) )
+                                                      * (N_nm(n)%coordinate(m) * p0_nm%item(n)%item(m) &
+                                                         +M_nm(n)%coordinate(m) * q0_nm%item(n)%item(m))
 
                         buffer_h_field_n_incident_0 = e_field_nm%item(n)%item(m) &
-                                             * (N_nm(n)%coordinate(m) &
-                                                +M_nm(n)%coordinate(m) )
+                                             * (M_nm(n)%coordinate(m) * p0_nm%item(n)%item(m) &
+                                                +N_nm(n)%coordinate(m) * q0_nm%item(n)%item(m))
+
+!                        buffer_cmplx = cmplx(0, 1, kind=8)
+!                        buffer_e_field_n_incident_0 = buffer_cmplx &
+!                                                      * (N_nm(n)%coordinate(m) &
+!                                                         +M_nm(n)%coordinate(m) )
+!
+!                        buffer_h_field_n_incident_0 = e_field_nm%item(n)%item(m) &
+!                                             * (N_nm(n)%coordinate(m) &
+!                                                +M_nm(n)%coordinate(m) )
 #ifdef _DEBUG_
                         if (isnan(real(buffer_e_field_n_incident_0%rho)) &
                             .or. isnan(aimag(buffer_e_field_n_incident_0%rho)) &
@@ -826,7 +859,9 @@ module lib_mie_scattering_by_a_sphere
                         e_field_n_incident_0(i) = e_field_n_incident_0(i) + buffer_e_field_n_incident_0
                         h_field_n_incident_0(i) = h_field_n_incident_0(i) + buffer_h_field_n_incident_0
                     end if
-!                end do
+#ifndef _ONLY_M_
+                end do
+#endif
             end do
             !$OMP END PARALLEL DO
 
