@@ -515,7 +515,7 @@ module lib_mie_scattering_by_a_sphere
                 !$OMP END PARALLEL DO
 
                 ! first line eq. (4)
-                !$OMP PARALLEL DO PRIVATE(n, m, i, buffer_cmplx)
+                !$OMP PARALLEL DO PRIVATE(n, m, i, buffer_cmplx, buffer_e_field_n_s, buffer_h_field_n_s)
                 do n= n_range(1), n_range(2)
                     i = n - n_range(1) + 1
 
@@ -550,7 +550,7 @@ module lib_mie_scattering_by_a_sphere
                             if (isnan(real(buffer_e_field_n_s%rho)) .or. isnan(aimag(buffer_e_field_n_s%rho)) &
                                 .or. isnan(real(buffer_e_field_n_s%phi)) .or. isnan(aimag(buffer_e_field_n_s%phi)) &
                                 .or. isnan(real(buffer_e_field_n_s%theta)) .or. isnan(aimag(buffer_e_field_n_s%theta)) ) then
-                                print *, "get_e_field_scattered_xu: ERROR"
+                                print *, "get_field_scattered_xu_real: ERROR"
                                 print *, "  e_field_n_s is NaN"
                                 print * , "  n = ", n
                                 print * , "  m = ", m
@@ -802,7 +802,7 @@ module lib_mie_scattering_by_a_sphere
             !$OMP END PARALLEL DO
 
             ! eq. (17)
-            !$OMP PARALLEL DO PRIVATE(n, m, i, buffer_cmplx)
+            !$OMP PARALLEL DO PRIVATE(n, m, i, buffer_cmplx, buffer_e_field_n_incident_0, buffer_h_field_n_incident_0)
             do n= n_range(1), n_range(2)
                 i = n - n_range(1) + 1
 
@@ -1055,7 +1055,7 @@ module lib_mie_scattering_by_a_sphere
                 call lib_mie_vector_spherical_harmonics_components(theta, phi, r, k0 * n_medium, n_range, z_selector, &
                                                                    M_nm, N_nm)
                 ! eq. (5)
-                !$OMP PARALLEL DO PRIVATE(n, buffer_real)
+                !$OMP PARALLEL DO PRIVATE(n, m, buffer_real)
                 do n=n_range(1), n_range(2)
                     do m=-n, n
                         if (calc_order_m%item(n)%item(m)) then
@@ -1081,7 +1081,7 @@ module lib_mie_scattering_by_a_sphere
                 !$OMP END PARALLEL DO
 
                 ! first line eq. (4)
-                !$OMP PARALLEL DO PRIVATE(n, i, buffer_cmplx)
+                !$OMP PARALLEL DO PRIVATE(n, m, i, buffer_cmplx, buffer_e_field_n_s, buffer_h_field_n_s)
                 do n= n_range(1), n_range(2)
                     i = n - n_range(1) + 1
 
@@ -1106,27 +1106,27 @@ module lib_mie_scattering_by_a_sphere
                                                              +b_n(i)*M_nm(n)%coordinate(m) * q0_nm%item(n)%item(m))
 
                             buffer_h_field_n_s = e_field_nm%item(n)%item(m) &
-                                                 * (b_n(i)*N_nm(n)%coordinate(m) * p0_nm%item(n)%item(m) &
-                                                    +a_n(i)*M_nm(n)%coordinate(m) * q0_nm%item(n)%item(m))
+                                                 * (b_n(i)*N_nm(n)%coordinate(m) * q0_nm%item(n)%item(m) &
+                                                    +a_n(i)*M_nm(n)%coordinate(m) * p0_nm%item(n)%item(m))
 
 #ifdef _DEBUG_
                             if (isnan(real(e_field_n_s(i)%rho)) .or. isnan(aimag(e_field_n_s(i)%rho)) &
                                 .or. isnan(real(e_field_n_s(i)%phi)) .or. isnan(aimag(e_field_n_s(i)%phi)) &
                                 .or. isnan(real(e_field_n_s(i)%theta)) .or. isnan(aimag(e_field_n_s(i)%theta)) ) then
-                                print *, "get_e_field_scattered_xu: ERROR"
+                                print *, "get_field_scattered_xu_cmplx: ERROR"
                                 print *, "  e_field_n_s is NaN"
                                 print * , "  n = ", n
                                 print * , "  m = ", m
                             end if
 
-!                            if (isinf(real(e_field_n_s(i)%rho)) .or. isinf(aimag(e_field_n_s(i)%rho)) &
-!                                .or. isinf(real(e_field_n_s(i)%phi)) .or. isinf(aimag(e_field_n_s(i)%phi)) &
-!                                .or. isinf(real(e_field_n_s(i)%theta)) .or. isinf(aimag(e_field_n_s(i)%theta)) ) then
-!                                print *, "get_e_field_scattered_xu: ERROR"
-!                                print *, "  e_field_n_s is infinity"
-!                                print * , "  n = ", n
-!                                print * , "  m = ", m
-!                            end if
+                            if (isinf(real(e_field_n_s(i)%rho)) .or. isinf(aimag(e_field_n_s(i)%rho)) &
+                                .or. isinf(real(e_field_n_s(i)%phi)) .or. isinf(aimag(e_field_n_s(i)%phi)) &
+                                .or. isinf(real(e_field_n_s(i)%theta)) .or. isinf(aimag(e_field_n_s(i)%theta)) ) then
+                                print *, "get_field_scattered_xu_cmplx: ERROR"
+                                print *, "  e_field_n_s is infinity"
+                                print * , "  n = ", n
+                                print * , "  m = ", m
+                            end if
 #endif
                             e_field_n_s(i) = e_field_n_s(i) + buffer_e_field_n_s
                             h_field_n_s(i) = h_field_n_s(i) + buffer_h_field_n_s
@@ -2352,6 +2352,9 @@ module lib_mie_scattering_by_a_sphere
                     double precision :: z
                     integer :: u
 
+                    double precision :: alpha
+                    double precision :: beta
+
                     double precision :: lambda
                     double precision :: k0
                     double precision :: e_field_0
@@ -2416,6 +2419,8 @@ module lib_mie_scattering_by_a_sphere
 
                     e_field_0 = 1
                     lambda = 0.7 * unit_mu
+                    alpha = 0!PI / 4D0
+                    beta = 0
 
                     n_medium = 1
 
@@ -2446,8 +2451,7 @@ module lib_mie_scattering_by_a_sphere
                             buffer_field = get_field_initial_incident_xu_real(point_spherical%theta, point_spherical%phi, &
                                                                        point_spherical%rho, &
                                                                        e_field_0, lambda, n_medium, &
-                                                                       n_range)!, &
-!                                                                       beta=PI/2.0_8)
+                                                                       n_range, alpha=alpha, beta=beta)
                             e_field_s(i, ii) = make_cartesian(buffer_field(1), point_spherical%theta, point_spherical%phi)
                             h_field_s(i, ii) = make_cartesian(buffer_field(2), point_spherical%theta, point_spherical%phi)
 
@@ -2680,6 +2684,7 @@ module lib_mie_scattering_by_a_sphere
                     call system_clock(count_start, count_rate)
                     call cpu_time(start)
                     !$OMP PARALLEL DO PRIVATE(i, ii, point_cartesian, point_spherical, buffer) &
+                    !$OMP  PRIVATE(buffer_cartesian_cmplx) &
                     !$OMP  FIRSTPRIVATE(x, y, z)
                     do i=1, no_x_values
                         x = x_range(1) + (i-1) * step_size
