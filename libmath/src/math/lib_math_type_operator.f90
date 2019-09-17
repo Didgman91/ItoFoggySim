@@ -1607,15 +1607,17 @@ module lib_math_type_operator
         !   n: integer
         !       number of elements, n .GE. 1
         !
-        subroutine lib_math_list_list_logical_init(list, fnu, n)
+        subroutine lib_math_list_list_logical_init(list, fnu, n, init_value)
             implicit none
             ! dummy
             type (list_list_logical), intent(inout) :: list
             integer, intent(in) :: fnu
             integer, intent(in) :: n
+            logical, intent(in), optional :: init_value
 
             ! auxiliary
             integer :: i
+            integer :: ii
 
             if( allocated(list%item) ) then
                 deallocate( list%item )
@@ -1625,6 +1627,14 @@ module lib_math_type_operator
             do i=fnu, fnu+n-1
                 allocate (list%item(i)%item(-i:i) )
             end do
+
+            if (present(init_value)) then
+                do i=fnu, fnu+n-1
+                    do ii=-i, i
+                        list%item(i)%item(ii) = init_value
+                    end do
+                end do
+            end if
 
         end subroutine lib_math_list_list_logical_init
 

@@ -155,10 +155,18 @@ module lib_mie_vector_spherical_harmonics
             call init_list(p_nm, n_range(1), number_of_members_n)
             call init_list(p_d_nm, n_range(1), number_of_members_n)
 
+            if (allocated(M_nm)) then
+                deallocate(M_nm)
+            end if
+
             allocate( M_nm(n_range(1):n_range(2)) )
             do i=n_range(1), n_range(2)
                 allocate (M_nm(i)%coordinate(-i:i))
             end do
+
+            if (allocated(N_nm)) then
+                deallocate(N_nm)
+            end if
 
             allocate( N_nm(n_range(1):n_range(2)) )
             do i=n_range(1), n_range(2)
@@ -1705,6 +1713,10 @@ module lib_mie_vector_spherical_harmonics
             if (.not. test_lib_mie_vector_spherical_harmonics_translation_coeff_r()) then
                 rv = rv + 1
             end if
+            if (.not. test_lib_mie_vector_spherical_harmonics_components_real_xu_2()) then
+                rv = rv + 1
+            end if
+
 
             call cpu_time(test_finish)
             call system_clock(test_count_finish, test_count_rate)
@@ -2042,6 +2054,86 @@ module lib_mie_vector_spherical_harmonics
                 end do
 
             end function test_lib_mie_vector_spherical_harmonics_components_cmplx_xu
+
+            function test_lib_mie_vector_spherical_harmonics_components_real_xu_2() result (rv)
+                use file_io
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! parameter
+                character(len=*), parameter :: file_name = "temp/spherical_harmonics.csv"
+                integer, parameter :: no = 1000
+
+                ! auxiliary
+                integer :: i
+                integer :: ii
+                integer :: n_value
+                integer :: m_value
+
+                double precision :: buffer
+                complex(kind=8) :: buffer_cmplx
+
+                double precision :: theta
+                double precision :: phi
+                double precision :: k
+                double precision :: r
+                integer(kind=VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND), dimension(2) :: n
+                integer(kind=1) :: z_selector
+
+                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: M_nm
+                type(list_spherical_coordinate_cmplx_type), dimension(:), allocatable :: N_nm
+
+                integer :: u
+                character(len=25), dimension(4) :: header
+                double precision, dimension(no) :: degree_list
+                double complex, dimension(no) :: M_values
+                double complex, dimension(no) :: N_values
+                double complex, dimension(no) :: MN_sum
+
+                theta = 0.2_8
+                phi = 0_8
+                ! n = 1
+                ! lam = 10**-6 m
+                ! k = n * 2 Pi / lam
+                k = 2.0_8 * PI !* 10.0_8**(6.0_8)
+                ! r = 50 * 10**-6 m
+                r = 50.0_8 !* 10.0_8**(-6.0_8)
+
+                z_selector = 3
+
+                n = (/ 1, 2 /)
+
+                rv = .false.
+
+                do i=1, no
+                    theta = (i-1) * PI / no
+                    degree_list(i) = theta
+
+                    ! calculate M_mn, N_mn
+                    call lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, r, k, n, z_selector, &
+                                                                           M_nm, N_nm)
+
+                    M_values(i) = M_nm(n(2))%coordinate(0)%rho
+                    N_values(i) = N_nm(n(2))%coordinate(0)%rho
+                    MN_sum(i) = M_values(i) + N_values(i)
+                end do
+
+                ! write to csv
+                header(1) = "theta / rad"
+                header(2) = "M"
+                header(3) = "N"
+                header(4) = "sum"
+                u = 99
+                open(unit=u, file=file_name, status='unknown')
+                rv = write_csv(u, header, degree_list, M_values, N_values, MN_sum)
+                close(u)
+
+                ! evaluate
+                rv = .true.
+                print *, "test_lib_mie_vector_spherical_harmonics_components_real_xu_2:"
+
+            end function test_lib_mie_vector_spherical_harmonics_components_real_xu_2
 
             function test_ab_xu_cruzan_eq34() result(rv)
                 implicit none

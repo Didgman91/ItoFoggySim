@@ -769,7 +769,7 @@ module lib_math_legendre
                 !$OMP PARALLEL DO PRIVATE(n, m)
                 do n=1, n_max
                     do m=-n, n
-                        tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative_limit(n, m, theta)
+                        tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative_limit(n, m)
                     end do
                 end do
                 !$OMP END PARALLEL DO

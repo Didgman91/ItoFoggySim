@@ -1,8 +1,8 @@
 module libmath_generated_functions
     use PiPoly
-    use limit_new
+    use PiPoly_limit
     use TauPoly
-    use poly_derivative_limit_new
+    use TauPoly_limit
     implicit none
 
 end module libmath_generated_functions
