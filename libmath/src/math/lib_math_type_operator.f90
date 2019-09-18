@@ -177,12 +177,14 @@ module lib_math_type_operator
         module procedure lib_math_spherical_components_to_cartesian_components_cmplx_a
         module procedure lib_math_spherical_components_to_cartesian_components_cmplx_c
         module procedure lib_math_spherical_components_to_cartesian_components_cmplx_s
+        module procedure lib_math_make_cartesian_coordiante
     end interface
 
     interface make_spherical
         module procedure lib_math_cartesian_components_to_spherical_components_cmplx_a
         module procedure lib_math_cartesian_components_to_spherical_components_cmplx_c
         module procedure lib_math_cartesian_components_to_spherical_components_cmplx_s
+        module procedure lib_math_make_spherical_coordiante
     end interface
 
     interface cross_product
@@ -2448,6 +2450,36 @@ module lib_math_type_operator
                                                                                 coordinate%theta, &
                                                                                 coordinate%phi)
         end function lib_math_cartesian_components_to_spherical_components_cmplx_s
+
+        function lib_math_make_cartesian_coordiante(x, y, z) result(rv)
+            implicit none
+            ! dummy
+            double precision :: x
+            double precision :: y
+            double precision :: z
+
+            type(cartesian_coordinate_real_type) :: rv
+
+            rv%x = x
+            rv%y = y
+            rv%z = z
+
+        end function lib_math_make_cartesian_coordiante
+
+        function lib_math_make_spherical_coordiante(rho, theta, phi) result(rv)
+            implicit none
+            ! dummy
+            double precision :: rho
+            double precision :: theta
+            double precision :: phi
+
+            type(spherical_coordinate_real_type) :: rv
+
+            rv%rho = rho
+            rv%theta = theta
+            rv%phi = phi
+
+        end function lib_math_make_spherical_coordiante
 
         function lib_math_cartesian_cross_product_real (lhs, rhs) result (rv)
             implicit none
