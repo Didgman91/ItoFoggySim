@@ -371,4 +371,110 @@ contains
         a(size_a_org+1:) = b
     end subroutine
 #endif
+
+    !               interpolation
+    !                  |
+    !  y ^             v
+    !    |   o   o   o Y o   o <-- data point
+    !    |
+    !    |   o   o   o Y o   o
+    !    |
+    !    |   o   o   o Y o   o
+    !    |
+    !    |---o---o---o-X-o---o-> x
+    !                  ^
+    !                  x-value
+    !
+    ! Argument
+    ! ----
+    !   data: double precision, dimension(:,:)
+    !       2-dimensional data set
+    !   x_column: integer
+    !       x column selector
+    !       IMPORTANT: "data" is sorted in ascending order in relation to this column
+    !   x_value: double precsison
+    !       x value
+    !
+    ! Returns
+    ! ----
+    !   rv: double precision, dimension(:)
+    !       interpolated values
+    subroutine data_interpolation(data, x_column, x_value, rv)
+        implicit none
+        ! dummy
+        double precision, dimension(:,:), intent(in) :: data
+        integer, intent(in) :: x_column
+        double precision, intent(in) :: x_value
+
+        double precision, dimension(size(data,2)) :: rv
+
+        ! auxiliary
+        integer :: row
+        integer :: column
+        double precision, dimension(size(data,2)) :: value_1
+        double precision, dimension(size(data,2)) :: value_2
+        double precision, dimension(2) :: point_1
+        double precision, dimension(2) :: point_2
+
+        if (x_column .ge. lbound(data, 2) &
+            .and. x_column .le. ubound(data, 2)) then
+
+            do row = lbound(data, 1)+1, ubound(data, 1)-1
+                if (x_value .lt. data(row, x_column)) then
+!                    rv = data(row-1, :)
+!                    exit
+
+                    value_1 = data(row-1, :)
+                    value_2 = data(row, :)
+
+                    point_1(1) = value_1(x_column)
+                    point_2(1) = value_2(x_column)
+                    do column=1, size(data,2)
+                        point_1(2) = value_1(column)
+                        point_2(2) = value_2(column)
+
+                        rv(column) = linear_interpolation(point_1, point_2, x_value)
+                    end do
+                    exit
+                end if
+            end do
+        end if
+
+    end subroutine
+
+    ! formula f(x) = y = mx + b
+    !
+    ! Argument
+    ! ----
+    !   point_1: double precision, dimension(2)
+    !       x and y value of point_1
+    !   point_2: double precision, dimension(2)
+    !       x and y value of point_2
+    !   x_value: double precision
+    !       x value of the evaluation point
+    !
+    ! Returns
+    ! ----
+    !   y: double precision
+    !       calculated y value of the evaluation point
+    !
+    function linear_interpolation(point_1, point_2, x_value) result (y)
+        implicit none
+        ! dummy
+        double precision, dimension(2), intent(in) :: point_1
+        double precision, dimension(2), intent(in) :: point_2
+        double precision, intent(in) :: x_value
+
+        double precision :: y
+
+        ! auxiliaray
+        double precision :: m
+        double precision :: b
+
+        m = ( point_2(2) - point_1(2) ) / (point_2(1) - point_1(1))
+        b = point_2(2) - m * point_2(1)
+
+        y = m * x_value +b
+
+    end function linear_interpolation
 end module toolbox
