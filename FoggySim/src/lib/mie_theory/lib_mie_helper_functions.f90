@@ -6,31 +6,285 @@ module lib_mie_helper_functions
 
     private
 
-    public :: lib_mie_hf_init_coeff_p0_q0
+    ! public functions
+    public :: lib_mie_hf_contructor
+!    public :: lib_mie_hf_init_coeff_p0_q0
     public :: lib_mie_hf_destructor
-    public :: lib_mie_hf_get_An
     public :: lib_mie_hf_get_n_c
     public :: lib_mie_hf_get_p_q_j_j
     public :: lib_mie_hf_calc_triple_sum
+
+    public :: lib_mie_helper_functions_test_functions
+
+    ! public interfaces
+    public :: lib_mie_hf_init_coeff_a_n_b_n     ! legacy: the hf_constructor should be used
+    public :: lib_mie_hf_get_coefficients_a_n_b_n
+
+    ! --- interace ---
+    interface lib_mie_hf_init_coeff_a_n_b_n
+        module procedure lib_mie_hf_init_coeff_a_n_b_n_real
+        module procedure lib_mie_hf_init_coeff_a_n_b_n_cmplx
+    end interface
+
+    interface lib_mie_hf_get_coefficients_a_n_b_n
+        module procedure get_coefficients_a_b_real_barberh
+        module procedure get_coefficients_a_b_cmplx_barberh
+    end interface
 
     interface lib_mie_hf_get_An
         module procedure get_An_real
         module procedure get_An_cmplx
     end interface lib_mie_hf_get_An
+    ! ~~~ interface ~~~
+
+    ! --- caching ---
+    type cache_coefficients_a_b_real_barberh_type
+        double precision :: x
+        double precision :: m
+        integer :: n_max
+        complex(kind=8), dimension(:), allocatable :: a_n
+        complex(kind=8), dimension(:), allocatable :: b_n
+    end type
+
+    type cache_coefficients_a_b_cmplx_barberh_type
+        double precision :: x
+        complex(kind=8) :: m
+        integer :: n_max
+        complex(kind=8), dimension(:), allocatable :: a_n
+        complex(kind=8), dimension(:), allocatable :: b_n
+    end type
+
+    type(cache_coefficients_a_b_real_barberh_type), dimension(:), allocatable :: cache_coefficients_a_b_real_barberh
+    logical :: cache_coefficients_a_b_real_barberh_enabled = .false.
+
+    type(cache_coefficients_a_b_cmplx_barberh_type), dimension(:), allocatable :: cache_coefficients_a_b_cmplx_barberh
+    logical :: cache_coefficients_a_b_cmplx_barberh_enabled = .false.
 
     type cache_coefficients_p_0_q_0_type
         double precision :: alpha
         double precision :: beta
         integer :: n_max
-        type(list_list_cmplx), allocatable :: p_0
-        type(list_list_cmplx), allocatable :: q_0
+        type(list_list_cmplx) :: p_0
+        type(list_list_cmplx) :: q_0
     end type
 
     type(cache_coefficients_p_0_q_0_type), dimension(:), allocatable :: cache_coefficients_p_0_q_0
     logical :: cache_coefficients_p_0_q_0_enabled = .false.
+    ! ~~~ caching ~~~
 
     contains
 
+        ! Initializes the caching where the size of n_max_ab and n_max_pq represents the number of cached values.
+        !
+        ! Argument
+        ! ----
+        !   n_max_ab: integer, dimension(:)
+        !       max degree of the a b coefficients
+        !   x: double precision, dimension(size(n_max_ab))
+        !       size parameter: x = k*r = 2 * PI * N * r / lambda
+        !       k: wavenumber
+        !       r: distance
+        !       N: refractive index of the medium
+        !       lambda: wave length
+        !   m: double complex, dimension(size(n_max_ab))
+        !       relative refractive index: m = N_1 / N
+        !       N_1: refractive index of the particle [double precision, double complex]
+        !       N: refractive index of the medium [double precision]
+        !   n_max_pq: integer, dimension(:)
+        !       max degree of the p q coefficients
+        !   alpha: double precision, dimension(size(n_max_pq)), optional(std: 0)
+        !       incident angle with respect to the z-axis
+        !       codomain: 0..Pi
+        !   beta: double precision, dimension(size(n_max_pq)), optional(std: 0)
+        !       angle between the x axis and the projection of the wave vector on the x-y plane
+        !       codomain: 0..2Pi
+        subroutine lib_mie_hf_contructor(n_max_ab, x, m, &
+                                         n_max_pq, alpha, beta)
+            implicit none
+            ! dummy
+            integer, dimension(:), intent(in) :: n_max_ab
+            double precision, dimension(size(n_max_ab)), intent(in) :: x
+            double complex, dimension(size(n_max_ab)), intent(in) :: m
+            integer, dimension(:), intent(in) :: n_max_pq
+            double precision, dimension(size(n_max_pq)), intent(in), optional :: alpha
+            double precision, dimension(size(n_max_pq)), intent(in), optional :: beta
+
+            ! auxiliary
+            integer :: i
+
+            integer :: counter_real
+            integer :: counter_cmplx
+
+            integer, dimension(size(n_max_ab)) :: n_max_ab_real
+            double precision, dimension(size(n_max_ab)) :: x_real
+            double precision, dimension(size(n_max_ab)) :: m_real
+
+            integer, dimension(size(n_max_ab)) :: n_max_ab_cmplx
+            double precision, dimension(size(n_max_ab)) :: x_cmplx
+            double complex, dimension(size(n_max_ab)) :: m_cmplx
+
+            double precision, dimension(size(n_max_pq)) :: m_alpha
+            double precision, dimension(size(n_max_pq)) :: m_beta
+
+            if (present(alpha)) then
+                m_alpha = alpha
+            else
+                m_alpha = 0
+            end if
+
+            if (present(beta)) then
+                m_beta = beta
+            else
+                m_beta = 0
+            end if
+
+            ! separate lists by only real and complex "m"
+            counter_real = 0
+            counter_cmplx = 0
+            do i=1, size(n_max_ab)
+                if (aimag(m(i)) .eq. 0D0) then
+                    counter_real = counter_real + 1
+                    n_max_ab_real(counter_real) = n_max_ab(i)
+                    x_real(counter_real) = x(i)
+                    m_real(counter_real) = real(m(i))
+                else
+                    counter_cmplx = counter_cmplx + 1
+                    n_max_ab_cmplx(counter_cmplx) = n_max_ab(i)
+                    x_cmplx(counter_cmplx) = x(i)
+                    m_cmplx(counter_cmplx) = m(i)
+                end if
+            end do
+
+            if (counter_real .gt. 0) then
+                call lib_mie_hf_init_coeff_a_n_b_n_real(x_real(1:counter_real), &
+                                                        m_real(1:counter_real), &
+                                                        n_max_ab_real(1:counter_real))
+            end if
+
+            if (counter_cmplx .gt. 0) then
+                call lib_mie_hf_init_coeff_a_n_b_n_cmplx(x_cmplx(1:counter_cmplx), &
+                                                         m_cmplx(1:counter_cmplx), &
+                                                         n_max_ab_cmplx(1:counter_cmplx))
+            end if
+
+            call lib_mie_hf_init_coeff_p0_q0(m_alpha, m_beta, n_max_pq)
+
+        end subroutine lib_mie_hf_contructor
+
+        ! Argument
+        ! ----
+        !   x: double precision, dimension(:)
+        !       size parameter: x = k*r = 2 * PI * N * r / lambda
+        !       k: wavenumber
+        !       r: distance
+        !       N: refractive index of the medium
+        !       lambda: wave length
+        !   m: real, dimension(size(x))
+        !       relative refractive index: m = N_1 / N
+        !       N_1: refractive index of the particle
+        !       N: refractive index of the medium
+        !   n_max: integer, dimension(size(x))
+        !       max degree
+        subroutine lib_mie_hf_init_coeff_a_n_b_n_real(x, m, n_max)
+            implicit none
+            ! dummy
+            double precision, dimension(:), intent(in) :: x
+            double precision, dimension(size(x)), intent(in) :: m
+            integer, dimension(size(x)), intent(in) :: n_max
+
+            ! auxiliary
+            integer :: i
+
+            complex(kind=8), dimension(:), allocatable :: a_n
+            complex(kind=8), dimension(:), allocatable :: b_n
+
+            ! --- init: cache_coefficients_a_b_real_barberh_x ---
+            if (allocated(cache_coefficients_a_b_real_barberh)) then
+                deallocate(cache_coefficients_a_b_real_barberh)
+            end if
+
+            allocate(cache_coefficients_a_b_real_barberh(size(x)))
+            cache_coefficients_a_b_real_barberh_enabled = .false.
+
+            do i=1, size(x)
+                cache_coefficients_a_b_real_barberh%x = x(i)
+                cache_coefficients_a_b_real_barberh%m = m(i)
+                cache_coefficients_a_b_real_barberh%n_max = n_max(i)
+
+                allocate(a_n(n_max(i)))
+                allocate(b_n(n_max(i)))
+
+                call lib_mie_hf_get_coefficients_a_n_b_n(x(i), m(i), (/ 1, n_max(i) /), a_n, b_n)
+
+                cache_coefficients_a_b_real_barberh(i)%a_n = a_n
+                cache_coefficients_a_b_real_barberh(i)%b_n = b_n
+
+                deallocate(a_n)
+                deallocate(b_n)
+            end do
+
+            cache_coefficients_a_b_real_barberh_enabled = .true.
+
+        end subroutine lib_mie_hf_init_coeff_a_n_b_n_real
+
+        ! Argument
+        ! ----
+        !   x: double precision
+        !       size parameter: x = k*r = 2 * PI * N * r / lambda
+        !       k: wavenumber
+        !       r: distance
+        !       N: refractive index of the medium
+        !       lambda: wave length
+        !   m: complex
+        !       relative refractive index: m = N_1 / N
+        !       N_1: refractive index of the particle
+        !       N: refractive index of the medium
+        subroutine lib_mie_hf_init_coeff_a_n_b_n_cmplx(x, m, n_max)
+            implicit none
+            ! dummy
+            double precision, dimension(:), intent(in) :: x
+            complex(kind=8), dimension(size(x)), intent(in) :: m
+            integer, dimension(size(x)), intent(in) :: n_max
+
+            ! auxiliary
+            integer :: i
+
+            complex(kind=8), dimension(:), allocatable :: a_n
+            complex(kind=8), dimension(:), allocatable :: b_n
+
+            ! --- init: cache_coefficients_a_b_cmplx_barberh_x ---
+            if (allocated(cache_coefficients_a_b_cmplx_barberh)) then
+                deallocate(cache_coefficients_a_b_cmplx_barberh)
+            end if
+
+            allocate(cache_coefficients_a_b_cmplx_barberh(size(x)))
+            cache_coefficients_a_b_cmplx_barberh_enabled = .false.
+
+            do i=1, size(x)
+                cache_coefficients_a_b_cmplx_barberh%x = x(i)
+                cache_coefficients_a_b_cmplx_barberh%m = m(i)
+                cache_coefficients_a_b_cmplx_barberh%n_max = n_max(i)
+
+                allocate(a_n(n_max(i)))
+                allocate(b_n(n_max(i)))
+
+                call lib_mie_hf_get_coefficients_a_n_b_n(x(i), m(i), (/ 1, n_max(i) /), a_n, b_n)
+
+                cache_coefficients_a_b_cmplx_barberh(i)%a_n = a_n
+                cache_coefficients_a_b_cmplx_barberh(i)%b_n = b_n
+
+                deallocate(a_n)
+                deallocate(b_n)
+            end do
+
+            cache_coefficients_a_b_cmplx_barberh_enabled = .true.
+
+        end subroutine lib_mie_hf_init_coeff_a_n_b_n_cmplx
+
+        ! Argument
+        ! ----
+        !   alpha: double precision
+        !
         subroutine lib_mie_hf_init_coeff_p0_q0(alpha, beta, n_max)
             implicit none
             ! dummy
@@ -50,13 +304,14 @@ module lib_mie_helper_functions
             cache_coefficients_p_0_q_0_enabled = .false.
 
             do i=1, size(alpha)
-                cache_coefficients_p_0_q_0%alpha = alpha(i)
-                cache_coefficients_p_0_q_0%beta = beta(i)
-                cache_coefficients_p_0_q_0%n_max = n_max(i)
+                cache_coefficients_p_0_q_0(i)%alpha = alpha(i)
+                cache_coefficients_p_0_q_0(i)%beta = beta(i)
+                cache_coefficients_p_0_q_0(i)%n_max = n_max(i)
 
                 call get_p_q_j_j_core(alpha(i), beta(i), (/1, n_max(i)/), &
                                       cache_coefficients_p_0_q_0(i)%p_0, &
-                                      cache_coefficients_p_0_q_0(i)%q_0)
+                                      cache_coefficients_p_0_q_0(i)%q_0, &
+                                      caching=.false.)
             end do
 
             cache_coefficients_p_0_q_0_enabled = .true.
@@ -65,12 +320,428 @@ module lib_mie_helper_functions
 
         subroutine lib_mie_hf_destructor
             implicit none
-            ! dummy
+
+            ! --- deallocate caching ---
+            if (allocated(cache_coefficients_a_b_real_barberh)) then
+                deallocate(cache_coefficients_a_b_real_barberh)
+            end if
+            cache_coefficients_a_b_real_barberh_enabled = .false.
+
+            if (allocated(cache_coefficients_a_b_cmplx_barberh)) then
+                deallocate(cache_coefficients_a_b_cmplx_barberh)
+            end if
+            cache_coefficients_a_b_cmplx_barberh_enabled = .false.
+
             if (allocated(cache_coefficients_p_0_q_0)) then
                 deallocate(cache_coefficients_p_0_q_0)
             end if
             cache_coefficients_p_0_q_0_enabled = .false.
         end subroutine
+
+        ! calculates the scattering coefficients
+        !
+        ! HINT: The refractive index has only a real value.
+        !
+        ! Arguments
+        ! ----
+        !   x: double precision
+        !       size parameter: x = k*r = 2 * PI * N * r / lambda
+        !       k: wavenumber
+        !       r: distance
+        !       N: refractive index of the medium
+        !       lambda: wave length
+        !   m: double precision
+        !       relative refractive index: m = N_1 / N
+        !       N_1: refractive index of the particle
+        !       N: refractive index of the medium
+        !   mu: double precision
+        !       permeability of the medium
+        !   mu1: double precision
+        !       permeability of the particle
+        !   n: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       HINT: first element .le. second element
+        !
+        ! Reference: Absorption and Scattering of Light by Small Particles,Bohren and Huffman,  eq. (4.53)
+        subroutine get_coefficients_a_b_real_bohrenh(x, m, mu, mu1, n, a_n, b_n)
+            implicit none
+            ! dummy
+            double precision :: x
+            double precision :: m
+            double precision :: mu
+            double precision :: mu1
+            integer(kind=4), dimension(2) :: n
+
+            complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+            complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+            ! auxiliary
+            complex(kind=8), dimension(n(2)-n(1)+1) :: numerator
+            complex(kind=8), dimension(n(2)-n(1)+1) :: denominator
+
+            double precision, dimension(n(2)-n(1)+1) :: j_n_x
+            double precision, dimension(n(2)-n(1)+1) :: j_n_mx
+            double precision, dimension(n(2)-n(1)+1) :: s_n_x
+            double precision, dimension(n(2)-n(1)+1) :: s_dn_x
+            double precision, dimension(n(2)-n(1)+1) :: s_n_mx
+            double precision, dimension(n(2)-n(1)+1) :: s_dn_mx
+
+            complex(kind=8), dimension(n(2)-n(1)+1) :: h_n_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: xi_n_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: xi_dn_x
+
+            double precision :: mx
+
+            integer(kind=4) :: number_of_n
+
+            number_of_n = n(2) - n(1) + 1
+
+            mx = m*x
+
+            s_dn_x = lib_math_riccati_s_derivative(x, n(1), number_of_n, s_n_x)
+            j_n_x = s_n_x / x
+
+            s_dn_mx = lib_math_riccati_s_derivative(mx, n(1), number_of_n, s_n_mx) * m
+            j_n_mx = s_n_mx / mx
+
+            xi_dn_x = lib_math_riccati_xi_derivative(x, n(1), number_of_n, xi_n_x)
+            h_n_x = xi_n_x / x
+
+            numerator = cmplx(mu * m*m * j_n_mx * s_dn_x - mu1 * j_n_x * s_dn_mx, 0.0, kind=8)
+            denominator = cmplx(mu * m*m * j_n_mx, 0.0, kind=8) * xi_dn_x - mu1 * h_n_x * s_dn_mx
+
+            a_n = numerator / denominator
+
+            numerator = cmplx(mu1 * j_n_mx * s_dn_x - mu * j_n_x * s_dn_mx, 0.0, kind=8)
+            denominator = cmplx(mu1 * j_n_mx, 0.0, kind=8) * xi_dn_x - mu * h_n_x * s_dn_mx
+
+            b_n = numerator / denominator
+
+        end subroutine get_coefficients_a_b_real_bohrenh
+
+        ! calculates the scattering coefficients
+        !
+        ! Arguments
+        ! ----
+        !   x: complex
+        !       size parameter: x = k*r = 2 * PI * N * r / lambda
+        !       k: wavenumber
+        !       r: distance
+        !       N: refractive index of the medium
+        !       lambda: wave length
+        !   m: complex
+        !       relative refractive index: m = N_1 / N
+        !       N_1: refractive index of the particle
+        !       N: refractive index of the medium
+        !   mu: double precision
+        !       permeability of the medium
+        !   mu1: double precision
+        !       permeability of the particle
+        !   n: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       HINT: first element .le. second element
+        !
+        ! Reference: Absorption and Scattering of Light by Small Particles, eq. (4.53)
+        subroutine get_coefficients_a_b_cmplx_bohrenh(x, m, mu, mu1, n, a_n, b_n)
+            implicit none
+            ! dummy
+            complex(kind=8) :: x
+            complex(kind=8) :: m
+            double precision :: mu
+            double precision :: mu1
+            integer(kind=4), dimension(2) :: n
+
+            complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+            complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+            ! auxiliary
+            complex(kind=8), dimension(n(2)-n(1)+1) :: numerator
+            complex(kind=8), dimension(n(2)-n(1)+1) :: denominator
+
+            complex(kind=8), dimension(n(2)-n(1)+1) :: j_n_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: j_n_mx
+            complex(kind=8), dimension(n(2)-n(1)+1) :: s_n_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: s_dn_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: s_n_mx
+            complex(kind=8), dimension(n(2)-n(1)+1) :: s_dn_mx
+
+            complex(kind=8), dimension(n(2)-n(1)+1) :: h_n_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: xi_n_x
+            complex(kind=8), dimension(n(2)-n(1)+1) :: xi_dn_x
+
+            complex(kind=8) :: mx
+
+            integer(kind=4) :: number_of_n
+
+            number_of_n = n(2) - n(1) + 1
+
+            mx = m*x
+
+            s_dn_x = lib_math_riccati_s_derivative(x, n(1), number_of_n, s_n_x)
+            j_n_x = s_n_x / x
+
+            s_dn_mx = lib_math_riccati_s_derivative(mx, n(1), number_of_n, s_n_mx) * m
+            j_n_mx = s_n_mx / mx
+
+            xi_dn_x = lib_math_riccati_xi_derivative(x, n(1), number_of_n, xi_n_x)
+            h_n_x = xi_n_x / x
+
+            ! --- test ---
+
+            numerator = mu * m*m * j_n_mx * s_dn_x
+            numerator = - mu1 * j_n_x * s_dn_mx
+
+            denominator = mu * m*m * j_n_mx * xi_dn_x
+            denominator = - mu1 * h_n_x * s_dn_mx
+
+            ! ~~~ test ~~~
+            numerator = mu * m*m * j_n_mx * s_dn_x - mu1 * j_n_x * s_dn_mx
+            denominator = mu * m*m * j_n_mx * xi_dn_x - mu1 * h_n_x * s_dn_mx
+
+            a_n = numerator / denominator
+
+            numerator = mu1 * j_n_mx * s_dn_x - mu * j_n_x * s_dn_mx
+            denominator = mu1 * j_n_mx * xi_dn_x - mu * h_n_x * s_dn_mx
+
+            b_n = numerator / denominator
+
+        end subroutine get_coefficients_a_b_cmplx_bohrenh
+
+        ! calculates the scattering coefficients
+        !
+        ! Arguments
+        ! ----
+        !   x: real
+        !       size parameter: x = k*r = 2 * PI * N * r / lambda
+        !       k: wavenumber
+        !       r: distance
+        !       N: refractive index of the medium
+        !       lambda: wave length
+        !   m: real
+        !       relative refractive index: m = N_1 / N
+        !       N_1: refractive index of the particle
+        !       N: refractive index of the medium
+        !   n: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       HINT: first element .le. second element
+        !   caching: logical (std: .true.)
+        !
+        ! Reference: Light Scattering by Particles, Barber, Hill, eq. (4.18)
+        subroutine get_coefficients_a_b_real_barberh(x, m, n, a_n, b_n, caching)
+            implicit none
+            ! dummy
+            real(kind=8), intent(in) :: x
+            real(kind=8), intent(in) :: m
+            integer(kind=4), dimension(2), intent(in) :: n
+
+            complex(kind=8), dimension(n(2)-n(1)+1), intent(inout) :: a_n
+            complex(kind=8), dimension(n(2)-n(1)+1), intent(inout) :: b_n
+
+            logical, intent(in), optional :: caching
+
+            ! auxiliary
+            integer :: i
+            complex(kind=8) :: numerator
+            complex(kind=8) :: denominator
+
+            complex(kind=8), dimension(n(2)-n(1)+2) :: j_n_x
+            complex(kind=8), dimension(n(2)-n(1)+2) :: h_n_x
+
+            real(kind=8), dimension(n(2)-n(1)+1) :: An
+
+            real(kind=8) :: mx
+            real(kind=8) :: n_div_x
+            real(kind=8) :: mAn
+            real(kind=8) :: An_div_m
+            real(kind=8) :: buffer
+
+            integer(kind=4) :: number_of_n
+
+            integer :: cache_no
+
+            ! 0: calculate
+            ! >0: array number
+            ! -1: search
+            cache_no = 0
+
+            if (cache_coefficients_a_b_real_barberh_enabled) then
+                if (present(caching)) then
+                    if (caching) then
+                        cache_no = -1
+                    end if
+                else
+                    cache_no = -1
+                end if
+            end if
+
+            ! search
+            if (cache_no .eq. -1) then
+                do i=1, size(cache_coefficients_a_b_real_barberh)
+                    if ((cache_coefficients_a_b_real_barberh(i)%x .eq. x) &
+                        .and. (cache_coefficients_a_b_real_barberh(i)%m .eq. m) &
+                        .and. (cache_coefficients_a_b_real_barberh(i)%n_max .ge. n(2)) ) then
+                        cache_no = i
+                        exit
+                    end if
+                end do
+            end if
+
+            if (cache_no .gt. 0) then
+                a_n = cache_coefficients_a_b_real_barberh(cache_no)%a_n(n(1):n(2))
+                b_n = cache_coefficients_a_b_real_barberh(cache_no)%b_n(n(1):n(2))
+            else
+
+                number_of_n = n(2) - n(1) + 1
+
+                mx = m*x
+
+                j_n_x = lib_math_bessel_spherical_first_kind(x, n(1)-1, number_of_n+1)
+                h_n_x = lib_math_hankel_spherical_1(x, n(1)-1, number_of_n+1)
+
+                An = lib_mie_hf_get_An(x, m, n(1), number_of_n)
+
+                !$OMP PARALLEL DO PRIVATE(i, mAn, n_div_x, buffer, numerator, denominator)
+                do i=1, number_of_n
+                    n_div_x = real(n(1)+i-1, kind=8) / x
+                    mAn = m * An(i)
+                    An_div_m = An(i) / m
+
+                    buffer = An_div_m + n_div_x
+                    numerator = buffer * j_n_x(i+1) - j_n_x(i)
+                    denominator = buffer * h_n_x(i+1) - h_n_x(i)
+
+                    a_n(i) = numerator / denominator
+
+                    buffer = mAn + n_div_x
+                    numerator = buffer * j_n_x(i+1) - j_n_x(i)
+                    denominator = buffer * h_n_x(i+1) - h_n_x(i)
+
+                    b_n(i) = numerator / denominator
+                end do
+                !$OMP END PARALLEL DO
+
+            end if
+
+        end subroutine get_coefficients_a_b_real_barberh
+
+        ! calculates the scattering coefficients
+        !
+        ! Arguments
+        ! ----
+        !   x: real
+        !       size parameter: x = k*r = 2 * PI * r / lambda
+        !       k: wavenumber
+        !       r: distance
+        !       N: refractive index of the medium
+        !       lambda: wave length
+        !   m: complex
+        !       relative refractive index: m = N_1 / N
+        !       N_1: refractive index of the particle
+        !       N: refractive index of the medium
+        !   n: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       HINT: first element .le. second element
+        !
+        ! Reference: Light Scattering by Particles, Barber, Hill, eq. (4.18)
+        subroutine get_coefficients_a_b_cmplx_barberh(x, m, n, a_n, b_n, caching)
+            implicit none
+            ! dummy
+            double precision :: x
+            complex(kind=8) :: m
+            integer(kind=4), dimension(2) :: n
+
+            complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+            complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+            logical, intent(in), optional :: caching
+
+            ! auxiliary
+            integer :: i
+            complex(kind=8) :: numerator
+            complex(kind=8) :: denominator
+
+            complex(kind=8), dimension(n(2)-n(1)+2) :: j_n_x
+            complex(kind=8), dimension(n(2)-n(1)+2) :: h_n_x
+
+            complex(kind=8), dimension(n(2)-n(1)+1) :: An
+
+            complex(kind=8) :: mx
+            complex(kind=8) :: n_div_x
+            complex(kind=8) :: mAn
+            complex(kind=8) :: An_div_m
+            complex(kind=8) :: buffer
+
+            integer(kind=4) :: number_of_n
+
+            integer :: cache_no
+
+            ! 0: calculate
+            ! >0: array number
+            ! -1: search
+            cache_no = 0
+
+            if (cache_coefficients_a_b_cmplx_barberh_enabled) then
+                if (present(caching)) then
+                    if (caching) then
+                        cache_no = -1
+                    end if
+                else
+                    cache_no = -1
+                end if
+            end if
+
+            ! search
+            if (cache_no .eq. -1) then
+                do i=1, size(cache_coefficients_a_b_cmplx_barberh)
+                    if ((cache_coefficients_a_b_cmplx_barberh(i)%x .eq. x) &
+                        .and. (cache_coefficients_a_b_cmplx_barberh(i)%m .eq. m) &
+                        .and. (cache_coefficients_a_b_cmplx_barberh(i)%n_max .ge. n(2)) ) then
+                        cache_no = i
+                        exit
+                    end if
+                end do
+            end if
+
+            if (cache_no .gt. 0) then
+                a_n = cache_coefficients_a_b_cmplx_barberh(cache_no)%a_n(n(1):n(2))
+                b_n = cache_coefficients_a_b_cmplx_barberh(cache_no)%b_n(n(1):n(2))
+            else
+
+                number_of_n = n(2) - n(1) + 1
+
+                mx = m*x
+
+                j_n_x = lib_math_bessel_spherical_first_kind(x, n(1)-1, number_of_n+1)
+                h_n_x = lib_math_hankel_spherical_1(x, n(1)-1, number_of_n+1)
+
+                An = lib_mie_hf_get_An(x, m, n(1), number_of_n)
+
+                !$OMP PARALLEL DO PRIVATE(i, mAn, n_div_x, An_div_m, buffer, numerator, denominator)
+                do i=1, number_of_n
+                    n_div_x = real(n(1)+i-1, kind=8) / x
+                    mAn = m * An(i)
+                    An_div_m = An(i) / m
+
+                    buffer = An_div_m + n_div_x
+                    numerator = buffer * j_n_x(i+1) - j_n_x(i)
+                    denominator = buffer * h_n_x(i+1) - h_n_x(i)
+
+                    a_n(i) = numerator / denominator
+
+                    buffer = mAn + n_div_x
+                    numerator = buffer * j_n_x(i+1) - j_n_x(i)
+                    denominator = buffer * h_n_x(i+1) - h_n_x(i)
+
+                    b_n(i) = numerator / denominator
+                end do
+                !$OMP END PARALLEL DO
+            end if
+
+        end subroutine get_coefficients_a_b_cmplx_barberh
 
         ! Calculates the logarithmic derivative An
         !
@@ -328,6 +999,7 @@ module lib_mie_helper_functions
         !   n_range: integer, dimension(2)
         !       first and last index (degree) of the sum to calculate the electical field
         !       e.g. n = (/ 1, 45 /) <-- size parameter
+        !   caching: logical (std: .true.)
         !
         ! Returns
         ! ----
@@ -337,7 +1009,7 @@ module lib_mie_helper_functions
         !       coefficient of vector spherical componets
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres Yu-lin Xu, eq. 20
-        subroutine lib_mie_hf_get_p_q_j_j(k, d_0_j, n_range, p, q)
+        subroutine lib_mie_hf_get_p_q_j_j(k, d_0_j, n_range, p, q, caching)
             implicit none
             ! dummy
             type(cartesian_coordinate_real_type), intent(in) :: k
@@ -346,6 +1018,8 @@ module lib_mie_helper_functions
 
             type(list_list_cmplx), intent(inout) :: p
             type(list_list_cmplx), intent(inout) :: q
+
+            logical, optional :: caching
 
             ! auxiliary
             double precision :: alpha
@@ -458,32 +1132,36 @@ module lib_mie_helper_functions
                 m_caching = .false.
             end if
 
-            do i=1, size(cache_coefficients_p_0_q_0)
-                if ((cache_coefficients_p_0_q_0(i)%alpha .eq. alpha) &
-                    .and. (cache_coefficients_p_0_q_0(i)%beta .eq. beta) &
-                    .and. (cache_coefficients_p_0_q_0(i)%n_max .le. n_range(2))) then
-                    cache_no = i
-                else
-                    cache_no = 0
-                end if
-            end do
-
-            ! --- init ---
-            if (alpha .eq. 0.d0) then
-                allocate(p%item(n_range(1):n_range(2)))
-                allocate(q%item(n_range(1):n_range(2)))
-
-                do i=n_range(1), n_range(2)
-                    allocate(p%item(i)%item(-1:1))
-                    allocate(q%item(i)%item(-1:1))
+            if (m_caching) then
+                do i=1, size(cache_coefficients_p_0_q_0)
+                    if ((cache_coefficients_p_0_q_0(i)%alpha .eq. alpha) &
+                        .and. (cache_coefficients_p_0_q_0(i)%beta .eq. beta) &
+                        .and. (cache_coefficients_p_0_q_0(i)%n_max .le. n_range(2))) then
+                        cache_no = i
+                    else
+                        cache_no = 0
+                    end if
                 end do
             else
-                call init_list(p, n_range(1), n_range(2)-n_range(1)+1)
-                call init_list(q, n_range(1), n_range(2)-n_range(1)+1)
+                cache_no = 0
             end if
 
+            ! --- init ---
+!            if (alpha .eq. 0.d0) then
+!                allocate(p%item(n_range(1):n_range(2)))
+!                allocate(q%item(n_range(1):n_range(2)))
+!
+!                do i=n_range(1), n_range(2)
+!                    allocate(p%item(i)%item(-1:1))
+!                    allocate(q%item(i)%item(-1:1))
+!                end do
+!            else
+                call init_list(p, n_range(1), n_range(2)-n_range(1)+1)
+                call init_list(q, n_range(1), n_range(2)-n_range(1)+1)
+!            end if
+
             ! --- pre-calc ---
-            if (cache_no .gt. 0) then
+            if (cache_no .eq. 0) then
                 sin_beta = sin(beta)
                 cos_beta = cos(beta)
 
@@ -521,8 +1199,8 @@ module lib_mie_helper_functions
                     double complex :: buffer_cmplx
 
                     if (cache_no .gt. 0) then
-                        p = cache_coefficients_p_0_q_0(cache_no)%p_0%item(m)%item(n)
-                        q = cache_coefficients_p_0_q_0(cache_no)%q_0%item(n)%item(n)
+                        p = cache_coefficients_p_0_q_0(cache_no)%p_0%item(n)%item(m)
+                        q = cache_coefficients_p_0_q_0(cache_no)%q_0%item(n)%item(m)
                     else
                         buffer_real = -m * beta
                         buffer_cmplx = cmplx(cos(buffer_real), sin(buffer_real), kind=8)
@@ -575,9 +1253,9 @@ module lib_mie_helper_functions
                                               f)
             implicit none
             ! dummy
-            type(simulation_parameter_type) :: simulation_parameter
-            type(sphere_type), dimension(:), intent(in) :: sphere
-            type(sphere_parameter_type), dimension(:), intent(in) :: sphere_parameter
+            type(lib_mie_simulation_parameter_type) :: simulation_parameter
+            type(lib_mie_sphere_type), dimension(:), intent(in) :: sphere
+            type(lib_mie_sphere_parameter_type), dimension(:), intent(in) :: sphere_parameter
             integer :: sphere_j
             integer(kind=1) :: z_selector
 
@@ -784,4 +1462,512 @@ module lib_mie_helper_functions
 
         end subroutine calc_inner_2sum
 
+        ! Argument
+        ! ----
+        !   a_nm: type(list_list_cmplx)
+        !       scattering coefficient
+        !   b_nm: type(list_list_cmplx)
+        !       scattering coefficient
+        !   k: double precision
+        !       wave number: k = 2 PI / lambda * n_medium
+        !       - lambda: wave length
+        !       - n_medium: refractive index of the medium
+        !
+        ! Returns
+        ! ----
+        !   c_sca: double precision
+        !       scattering cross section
+        !
+        ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 57
+        function get_scattering_cross_section(a_nm, b_nm, k) result (c_sca)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: a_nm
+            type(list_list_cmplx), intent(in) :: b_nm
+            double precision :: k
+
+            double precision :: c_sca
+
+            ! dummy
+            integer :: n
+            integer :: m
+
+            type(list_list_real) :: summand
+
+            double precision :: buffer_n
+
+
+            call init_list(summand, &
+                           lbound(a_nm%item, 1), &
+                           ubound(a_nm%item, 1) - lbound(a_nm%item, 1) + 1, &
+                           0D0)
+
+            buffer_n = 0D0
+            do n = lbound(a_nm%item, 1), ubound(a_nm%item, 1)
+                buffer_n = dble(n * (n + 1) * (2 * n + 1))
+                do m = -n, n
+                    summand%item(n)%item(m) = buffer_n &
+                                              * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m)
+                    summand%item(n)%item(m) = summand%item(n)%item(m) &
+                                              * ( abs(a_nm%item(n)%item(m))**2 &
+                                                  + abs(b_nm%item(n)%item(m))**2 )
+                end do
+            end do
+
+            c_sca = 0
+            do n = lbound(a_nm%item, 1), ubound(a_nm%item, 1)
+                do m = -n, n
+                    c_sca = c_sca + summand%item(n)%item(m)
+                end do
+            end do
+
+            c_sca = c_sca * 2D0 * PI / (k**2)
+
+        end function get_scattering_cross_section
+
+        function lib_mie_helper_functions_test_functions() result(rv)
+            use file_io
+            implicit none
+            ! dummy
+            integer :: rv
+
+            ! auxiliaray
+            double precision, parameter :: ground_truth_e = 10.0_8**(-6.0_8)
+
+            rv = 0
+
+            if (.not. test_get_coefficients_a_b_real_bohrenh()) then
+                rv = rv + 1
+            end if
+!            if (.not. test_get_coefficients_a_b_cmplx_bohrenh()) then
+!                rv = rv + 1
+!            end if
+            if (.not. test_get_coefficients_a_b_real_barberh()) then
+                rv = rv + 1
+            end if
+            if (.not. test_get_coefficients_a_b_cmplx_barberh()) then
+                rv = rv + 1
+            end if
+            if (.not. test_get_scattering_cross_section()) then
+                rv = rv + 1
+            end if
+
+            print *, ""
+            print *, "------lib_mie_scattering_by_a_sphere_test_functions------"
+            if (rv == 0) then
+                print *, "lib_mie_scattering_by_a_sphere_test_functions tests: OK"
+            else
+                print *, rv,"lib_mie_scattering_by_a_sphere_test_functions test(s) FAILED"
+            end if
+            print *, "---------------------------------------------------------"
+            print *, ""
+
+            contains
+
+            function test_get_coefficients_a_b_real_bohrenh() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+
+                    real(kind=8) :: x
+                    real(kind=8) :: m
+                    double precision :: mu
+                    double precision :: mu1
+                    integer(kind=4), dimension(2), parameter :: n = (/1, 4/)
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_b_n
+
+                    mu = 1
+                    mu1 = 1
+
+                    m = 1.5
+                    x= 10
+
+                    ground_truth_a_n(1) = cmplx(0.938111_8, +0.240954_8, kind=8)
+                    ground_truth_a_n(2) = cmplx(0.962707_8, +0.189478_8, kind=8)
+                    ground_truth_a_n(3) = cmplx(0.994996_8, +0.0705625_8, kind=8)
+                    ground_truth_a_n(4) = cmplx(0.99737_8, -0.0512159_8, kind=8)
+
+                    ground_truth_b_n(1) = cmplx(0.980385_8, -0.138672_8, kind=8)
+                    ground_truth_b_n(2) = cmplx(0.805329_8, +0.395947_8, kind=8)
+                    ground_truth_b_n(3) = cmplx(0.940931_8, -0.235754_8, kind=8)
+                    ground_truth_b_n(4) = cmplx(0.999006_8, -0.0315159_8, kind=8)
+
+                    call get_coefficients_a_b_real_bohrenh(x, m, mu, mu1, n, a_n, b_n)
+
+                    rv = .true.
+                    print *, "test_get_coefficients_a_b_real_bohrenh:"
+                    do i=n(1), n(2)
+                        buffer = abs(a_n(i) - ground_truth_a_n(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  a_n: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  a_n: ", i, ": OK"
+                        end if
+
+                        buffer = abs(b_n(i) - ground_truth_b_n(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  b_n: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  b_n: ", i, ": OK"
+                        end if
+                    end do
+
+                end function test_get_coefficients_a_b_real_bohrenh
+
+                function test_get_coefficients_a_b_cmplx_bohrenh() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+
+                    complex(kind=8) :: x
+                    complex(kind=8) :: m
+                    double precision :: mu
+                    double precision :: mu1
+                    integer(kind=4), dimension(2), parameter :: n = (/1, 4/)
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_b_n
+
+                    ! Reference: Electromagnetic scattering on spherical polydispersions,  D.Deirmendjian, p. 27
+                    m = cmplx(1.28, -1.37, kind=8)
+                    x= cmplx(20, 0, kind=8)
+!                    ground_truth_a_n(1) = cmplx(-0.22686_8+0.5_8, -0.12863_8, kind=8)
+!                    ground_truth_b_n(1) = cmplx(0.22864_8+0.5_8, 0.13377_8, kind=8)
+
+                    ground_truth_a_n(1) = cmplx(-181.13_8, -327.306_8, kind=8)
+                    ground_truth_a_n(2) = cmplx(81.2324_8, +94.3237_8, kind=8)
+                    ground_truth_a_n(3) = cmplx(-51.6918_8, -32.7439, kind=8)
+                    ground_truth_a_n(4) = cmplx(36.652_8, +5.67418_8, kind=8)
+
+                    ground_truth_b_n(1) = cmplx(0.367587_8, -0.463775_8, kind=8)
+                    ground_truth_b_n(2) = cmplx(0.722992_8, +0.427339_8, kind=8)
+                    ground_truth_b_n(3) = cmplx(0.159304_8, -0.340386_8, kind=8)
+                    ground_truth_b_n(4) = cmplx(0.947238_8, +0.177162_8, kind=8)
+
+
+                    call get_coefficients_a_b_cmplx_bohrenh(x, m, mu, mu1, n, a_n, b_n)
+
+                    rv = .true.
+                    print *, "test_get_coefficients_a_b_cmplx_bohrenh:"
+                    do i=n(1), n(2)
+                        buffer = abs(a_n(i) - ground_truth_a_n(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  a_n: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  a_n: ", i, ": OK"
+                        end if
+
+                        buffer = abs(b_n(i) - ground_truth_b_n(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  b_n: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  b_n: ", i, ": OK"
+                        end if
+                    end do
+
+                end function test_get_coefficients_a_b_cmplx_bohrenh
+
+                function test_get_coefficients_a_b_real_barberh() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+
+                    real(kind=8) :: x
+                    real(kind=8) :: m
+!                    double precision :: mu
+!                    double precision :: mu1
+                    integer(kind=4), dimension(2), parameter :: n = (/1, 4/)
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_b_n
+
+
+                    m = 1.5_8
+                    x = 10.0_8
+                    ! Reference: Light Scattering by Particles: Computational Methods, Barber Hill, program S2
+                    ! WARNING: same algorithm
+                    ground_truth_a_n(1) = cmplx(0.825333297_8, 0.379681736_8, kind=8)
+                    ground_truth_a_n(2) = cmplx(0.999948084_8, 0.0072028893_8, kind=8)
+                    ground_truth_a_n(3) = cmplx(0.970794678_8, 0.168381661_8, kind=8)
+                    ground_truth_a_n(4) = cmplx(0.995235085_8, -0.068863928_8, kind=8)
+
+                    ground_truth_b_n(1) = cmplx(0.997406423_8,0.0508609638_8, kind=8)
+                    ground_truth_b_n(2) = cmplx(0.885268927_8,0.318697095_8, kind=8)
+                    ground_truth_b_n(3) = cmplx(0.995330393_8,-0.0681746677_8, kind=8)
+                    ground_truth_b_n(4) = cmplx(0.998444855_8,-0.0394046269_8, kind=8)
+
+                    call get_coefficients_a_b_real_barberh(x, m, n, a_n, b_n)
+
+                    rv = .true.
+                    print *, "test_get_coefficients_a_b_real_barberh:"
+                    do i=n(1), n(2)
+                        buffer = abs(a_n(i) - ground_truth_a_n(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  a_n: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  a_n: ", i, ": OK"
+                        end if
+
+                        buffer = abs(b_n(i) - ground_truth_b_n(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  b_n: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  b_n: ", i, ": OK"
+                        end if
+                    end do
+
+                end function test_get_coefficients_a_b_real_barberh
+
+                function test_get_coefficients_a_b_cmplx_barberh() result (rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+
+                    double precision :: x
+                    complex(kind=8) :: m
+!                    double precision :: mu
+!                    double precision :: mu1
+                    integer(kind=4), dimension(2), parameter :: n = (/1, 4/)
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: ground_truth_b_n
+
+                    m = cmplx(1.28, -1.37, kind=8)
+                    x= 10.0_8
+
+                    ! Reference: Light Scattering by Particles: Computational Methods, Barber Hill, program S2
+                    ! WARNING: same algorithm
+                    ground_truth_a_n(1) = cmplx(-0.333899468_8, 0.472839594_8, kind=8)
+                    ground_truth_a_n(2) = cmplx(1.1025393_8, -0.765782595_8, kind=8)
+                    ground_truth_a_n(3) = cmplx(0.419178337_8, 0.996963501_8, kind=8)
+                    ground_truth_a_n(4) = cmplx(-0.174542636_8, -0.790816486_8, kind=8)
+
+                    ground_truth_b_n(1) = cmplx(1.31455839_8, -0.476593971_8, kind=8)
+                    ground_truth_b_n(2) = cmplx(-0.0436286479_8, 0.753336608_8, kind=8)
+                    ground_truth_b_n(3) = cmplx(0.495494395_8, -0.906942308_8, kind=8)
+                    ground_truth_b_n(4) = cmplx(1.16279888_8, 0.575285077_8, kind=8)
+
+                    call get_coefficients_a_b_cmplx_barberh(x, m, n, a_n, b_n)
+
+                    rv = .true.
+                    print *, "test_get_coefficients_a_b_cmplx_barberh:"
+                    do i=n(1), n(2)
+                        buffer = abs(a_n(i) - ground_truth_a_n(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  a_n: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  a_n: ", i, ": OK"
+                        end if
+
+                        buffer = abs(b_n(i) - ground_truth_b_n(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  b_n: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  b_n: ", i, ": OK"
+                        end if
+                    end do
+
+                end function test_get_coefficients_a_b_cmplx_barberh
+
+                function test_get_scattering_cross_section() result (rv)
+                    use toolbox
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+                    character(len=*), parameter :: file_name_refractive_index = &
+                                                "refractive_index/au_Johnson_Christy_1972_thick_film.csv"
+
+                    ! auxiliary
+                    integer :: i
+                    integer :: r
+                    integer :: n
+                    integer :: m
+
+                    type(list_cmplx) :: a_n
+                    type(list_cmplx) :: b_n
+
+                    type(list_list_cmplx) :: a_nm
+                    type(list_list_cmplx) :: b_nm
+                    double precision :: k
+                    double precision, dimension(:), allocatable :: c_sca
+
+                    double precision :: lambda ! wave length
+                    double precision :: lambda_start ! wave length
+                    double precision :: lambda_stop ! wave length
+                    double precision :: lambda_step ! wave length
+                    double precision, dimension(:), allocatable :: lambda_list ! wave length
+                    integer :: no
+
+                    double precision :: n_medium
+
+                    double precision :: r_particle
+                    double complex :: n_particle
+                    double complex, dimension(:), allocatable :: n_particle_list
+
+                    type(cartesian_coordinate_real_type) :: d_0_j
+
+                    double precision :: x
+
+                    integer(kind=4), dimension(2) :: n_range
+
+                    type(list_list_cmplx) :: p
+                    type(list_list_cmplx) :: q
+
+                    type(cartesian_coordinate_real_type) :: k_cartesian
+                    type(spherical_coordinate_real_type) :: k_spherical
+
+                    character(len=50) :: file_name_output
+                    integer :: u
+                    character(len=25), dimension(4) :: header
+                    character(len=25) :: str
+
+                    double precision, dimension(:,:), allocatable :: data_refractive_index
+                    double precision, dimension(:), allocatable :: data_refractive_index_interpolation
+
+                    lambda_start = 350 * unit_nm
+                    lambda_stop = 800 * unit_nm
+                    lambda_step = 1 * unit_nm
+
+                    n_medium = 1.33
+
+!                    r_particle = 25 * unit_nm
+!                    file_name_output = "temp/c_sca_ag_r_25nm.csv"
+                    ! https://refractiveindex.info/?shelf=main&book=Ag&page=Johnson
+!                    n_particle = cmplx(0.040000, 7.1155, kind=8)
+
+                    no = int( (lambda_stop - lambda_start) / lambda_step )
+
+                    allocate( c_sca(no) )
+                    allocate( lambda_list(no) )
+                    allocate( n_particle_list(no) )
+
+
+                    allocate( data_refractive_index_interpolation(3) )
+                    call read_csv(file_name_refractive_index, 3, data_refractive_index)
+
+                    do r=10, 100, 10
+                        r_particle = r * unit_nm
+                        if (r .lt. 100) then
+                            write(str, '(A1, I2)') "0", r
+                        else
+                            write(str, '(I3)') r
+                        end if
+                        file_name_output = "temp/c_sca_au_r_" // trim(str) // "nm.csv"
+
+                        do i = 1, no
+                            lambda = lambda_start + (i-1) * lambda_step
+                            lambda_list(i) = lambda
+                            k = 2D0 * PI * n_medium / lambda
+
+                            k_spherical = make_spherical(k, 0D0, 0D0)
+                            k_cartesian = k_spherical
+
+                            call data_interpolation(data_refractive_index, 1, lambda / unit_mu, &
+                                                    data_refractive_index_interpolation)
+                            n_particle = dcmplx(data_refractive_index_interpolation(2), &
+                                                data_refractive_index_interpolation(3))
+                            n_particle_list(i) = n_particle
+
+                            d_0_j%x = 0
+                            d_0_j%y = 0
+                            d_0_j%z = 0
+
+                            x = abs(k * r_particle)
+
+                            n_range(1) = 1
+                            n_range(2) = lib_mie_hf_get_n_c(x)
+                            if (n_range(2) .gt. 45) then
+                                print *, "WARNING: max degree (45) reached: ", n_range(2)
+                                n_range(2) = 45
+                            else
+                                print *, "NOTE: max degree = ", n_range(2)
+                            end if
+
+                            call lib_mie_hf_contructor((/ n_range(2) /), (/ x /), (/ n_particle / n_medium /), &
+                                                       (/n_range(2)/))
+
+                            call lib_mie_hf_get_p_q_j_j(k_cartesian, d_0_j, n_range, p, q)
+
+                            allocate (a_n%item(n_range(2)-n_range(1)+1))
+                            allocate (b_n%item(n_range(2)-n_range(1)+1))
+                            if (aimag(n_particle) .eq. 0) then
+                                call lib_mie_hf_get_coefficients_a_n_b_n(x, real(n_particle) / n_medium, n_range, &
+                                                                         a_n%item, b_n%item)
+                            else
+                                call lib_mie_hf_get_coefficients_a_n_b_n(x, n_particle / n_medium, n_range, &
+                                                                         a_n%item, b_n%item)
+                            end if
+
+
+                            call init_list(a_nm, n_range(1), n_range(2)-n_range(1)+1)
+                            call init_list(b_nm, n_range(1), n_range(2)-n_range(1)+1)
+                            do n = n_range(1), n_range(2)
+                                do m = -n, n
+                                    a_nm%item(n)%item(m) = a_n%item(n) * p%item(n)%item(m)
+                                    b_nm%item(n)%item(m) = b_n%item(n) * q%item(n)%item(m)
+                                end do
+                            end do
+
+                            c_sca(i) = get_scattering_cross_section(a_nm, b_nm, k)
+
+                            deallocate (a_n%item)
+                            deallocate (b_n%item)
+                        end do
+
+                        ! write to csv
+                        header(1) = "lambda / m"
+                        header(2) = "c_sca"
+                        header(3) = "n"
+                        header(4) = "k"
+                        u = 99
+                        open(unit=u, file=file_name_output, status='unknown')
+                        rv = write_csv(u, header, lambda_list, &
+                                                  c_sca, &
+                                                  real(n_particle_list), aimag(n_particle_list))
+                        close(u)
+                    end do
+
+                    rv = .true.
+                end function test_get_scattering_cross_section
+        end function lib_mie_helper_functions_test_functions
 end module lib_mie_helper_functions
