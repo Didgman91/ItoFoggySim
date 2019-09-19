@@ -1848,13 +1848,13 @@ module lib_mie_helper_functions
                                                 "refractive_index/H2O_Hale_Querry_1973_25_degree_Celsius.csv"
 
 
-                    character(len=*), parameter :: particle_str = "ag"
+                    character(len=*), parameter :: particle_str = "Ag"
                     character(len=*), parameter :: file_name_refractive_index_particle = &
-                                                "refractive_index/ag_Johnson_Christy_1972_thick_film.csv"
-!
-!                    character(len=*), parameter :: material_str = "au"
-!                    character(len=*), parameter :: file_name_refractive_index = &
-!                                                "refractive_index/au_Johnson_Christy_1972_thick_film.csv"
+                                                "refractive_index/Ag_Johnson_Christy_1972_thick_film.csv"
+
+!                    character(len=*), parameter :: particle_str = "Au"
+!                    character(len=*), parameter :: file_name_refractive_index_particle = &
+!                                                "refractive_index/Au_Johnson_Christy_1972_thick_film.csv"
 
                     ! auxiliary
                     integer :: i
@@ -1945,7 +1945,8 @@ module lib_mie_helper_functions
                         else
                             write(str, '(I3)') r
                         end if
-                        file_name_output = "temp/cross_section_" // trim(particle_str) // "_r_" // trim(str) // "nm_in_" &
+                        file_name_output = "temp/cross_section/cross_section_" &
+                                            // trim(particle_str) // "_r_" // trim(str) // "nm_in_" &
                                             // trim(medium_str) // ".csv"
 
                         do i = 1, no
