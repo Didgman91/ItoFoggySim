@@ -13,7 +13,7 @@ program main
 
     use lib_mie_vector_spherical_harmonics
 
-    use lib_mie_scattering_by_a_sphere
+    use lib_mie_single_sphere
 
     use light_scattering
     implicit none
@@ -57,7 +57,7 @@ program main
     error_counter = 0
     error_counter = error_counter + test_lib_math()
     error_counter = error_counter + lib_mie_vector_spherical_harmonics_test_functions()
-    error_counter = error_counter + lib_mie_scattering_by_a_sphere_test_functions()
+    error_counter = error_counter + lib_mie_ss_test_functions()
     error_counter = error_counter + lib_sort_test_functions()
     error_counter = error_counter + lib_test_hash_function()
     error_counter = error_counter + lib_tree_hf_test_functions()

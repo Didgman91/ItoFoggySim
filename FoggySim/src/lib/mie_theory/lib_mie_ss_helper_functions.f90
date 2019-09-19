@@ -1,6 +1,6 @@
 !#define _PRINT_NOTE_
 
-module lib_mie_helper_functions
+module lib_mie_ss_helper_functions
     use libmath
     use lib_mie_type
     use lib_mie_vector_spherical_harmonics
@@ -12,36 +12,35 @@ module lib_mie_helper_functions
     integer, parameter, public :: N_MAX = 45
 
     ! public functions
-    public :: lib_mie_hf_contructor
-!    public :: lib_mie_hf_init_coeff_p0_q0
-    public :: lib_mie_hf_destructor
-    public :: lib_mie_hf_get_n_c
-    public :: lib_mie_hf_get_p_q_j_j
-    public :: lib_mie_hf_calc_triple_sum
-    public :: lib_mie_hf_get_sphere_parameter
-    public :: lib_mie_hf_test_convergence_plane_wave
+    public :: lib_mie_ss_hf_contructor
+!    public :: lib_mie_ss_hf_init_coeff_p0_q0
+    public :: lib_mie_ss_hf_destructor
+    public :: lib_mie_ss_hf_get_n_c
+    public :: lib_mie_ss_hf_get_p_q_j_j
+    public :: lib_mie_ss_hf_calc_triple_sum
+    public :: lib_mie_ss_hf_test_convergence_plane_wave
 
     public :: lib_mie_helper_functions_test_functions
 
     ! public interfaces
-    public :: lib_mie_hf_init_coeff_a_n_b_n     ! legacy: the hf_constructor should be used
-    public :: lib_mie_hf_get_coefficients_a_n_b_n
+    public :: lib_mie_ss_hf_init_coeff_a_n_b_n     ! legacy: the hf_constructor should be used
+    public :: lib_mie_ss_hf_get_coefficients_a_n_b_n
 
     ! --- interace ---
-    interface lib_mie_hf_init_coeff_a_n_b_n
-        module procedure lib_mie_hf_init_coeff_a_n_b_n_real
-        module procedure lib_mie_hf_init_coeff_a_n_b_n_cmplx
+    interface lib_mie_ss_hf_init_coeff_a_n_b_n
+        module procedure lib_mie_ss_hf_init_coeff_a_n_b_n_real
+        module procedure lib_mie_ss_hf_init_coeff_a_n_b_n_cmplx
     end interface
 
-    interface lib_mie_hf_get_coefficients_a_n_b_n
+    interface lib_mie_ss_hf_get_coefficients_a_n_b_n
         module procedure get_coefficients_a_b_real_barberh
         module procedure get_coefficients_a_b_cmplx_barberh
     end interface
 
-    interface lib_mie_hf_get_An
+    interface lib_mie_ss_hf_get_An
         module procedure get_An_real
         module procedure get_An_cmplx
-    end interface lib_mie_hf_get_An
+    end interface lib_mie_ss_hf_get_An
     ! ~~~ interface ~~~
 
     ! --- caching ---
@@ -105,7 +104,7 @@ module lib_mie_helper_functions
         !   beta: double precision, dimension(size(n_max_pq)), optional(std: 0)
         !       angle between the x axis and the projection of the wave vector on the x-y plane
         !       codomain: 0..2Pi
-        subroutine lib_mie_hf_contructor(n_max_ab, x, m, &
+        subroutine lib_mie_ss_hf_contructor(n_max_ab, x, m, &
                                          n_max_pq, alpha, beta)
             implicit none
             ! dummy
@@ -163,20 +162,20 @@ module lib_mie_helper_functions
             end do
 
             if (counter_real .gt. 0) then
-                call lib_mie_hf_init_coeff_a_n_b_n_real(x_real(1:counter_real), &
+                call lib_mie_ss_hf_init_coeff_a_n_b_n_real(x_real(1:counter_real), &
                                                         m_real(1:counter_real), &
                                                         n_max_ab_real(1:counter_real))
             end if
 
             if (counter_cmplx .gt. 0) then
-                call lib_mie_hf_init_coeff_a_n_b_n_cmplx(x_cmplx(1:counter_cmplx), &
+                call lib_mie_ss_hf_init_coeff_a_n_b_n_cmplx(x_cmplx(1:counter_cmplx), &
                                                          m_cmplx(1:counter_cmplx), &
                                                          n_max_ab_cmplx(1:counter_cmplx))
             end if
 
-            call lib_mie_hf_init_coeff_p0_q0(m_alpha, m_beta, n_max_pq)
+            call lib_mie_ss_hf_init_coeff_p0_q0(m_alpha, m_beta, n_max_pq)
 
-        end subroutine lib_mie_hf_contructor
+        end subroutine lib_mie_ss_hf_contructor
 
         ! Argument
         ! ----
@@ -192,7 +191,7 @@ module lib_mie_helper_functions
         !       N: refractive index of the medium
         !   n_max: integer, dimension(size(x))
         !       max degree
-        subroutine lib_mie_hf_init_coeff_a_n_b_n_real(x, m, n_max)
+        subroutine lib_mie_ss_hf_init_coeff_a_n_b_n_real(x, m, n_max)
             implicit none
             ! dummy
             double precision, dimension(:), intent(in) :: x
@@ -221,7 +220,7 @@ module lib_mie_helper_functions
                 allocate(a_n(n_max(i)))
                 allocate(b_n(n_max(i)))
 
-                call lib_mie_hf_get_coefficients_a_n_b_n(x(i), m(i), (/ 1, n_max(i) /), a_n, b_n)
+                call lib_mie_ss_hf_get_coefficients_a_n_b_n(x(i), m(i), (/ 1, n_max(i) /), a_n, b_n)
 
                 cache_coefficients_a_b_real_barberh(i)%a_n = a_n
                 cache_coefficients_a_b_real_barberh(i)%b_n = b_n
@@ -232,7 +231,7 @@ module lib_mie_helper_functions
 
             cache_coefficients_a_b_real_barberh_enabled = .true.
 
-        end subroutine lib_mie_hf_init_coeff_a_n_b_n_real
+        end subroutine lib_mie_ss_hf_init_coeff_a_n_b_n_real
 
         ! Argument
         ! ----
@@ -246,7 +245,7 @@ module lib_mie_helper_functions
         !       relative refractive index: m = N_1 / N
         !       N_1: refractive index of the particle
         !       N: refractive index of the medium
-        subroutine lib_mie_hf_init_coeff_a_n_b_n_cmplx(x, m, n_max)
+        subroutine lib_mie_ss_hf_init_coeff_a_n_b_n_cmplx(x, m, n_max)
             implicit none
             ! dummy
             double precision, dimension(:), intent(in) :: x
@@ -275,7 +274,7 @@ module lib_mie_helper_functions
                 allocate(a_n(n_max(i)))
                 allocate(b_n(n_max(i)))
 
-                call lib_mie_hf_get_coefficients_a_n_b_n(x(i), m(i), (/ 1, n_max(i) /), a_n, b_n)
+                call lib_mie_ss_hf_get_coefficients_a_n_b_n(x(i), m(i), (/ 1, n_max(i) /), a_n, b_n)
 
                 cache_coefficients_a_b_cmplx_barberh(i)%a_n = a_n
                 cache_coefficients_a_b_cmplx_barberh(i)%b_n = b_n
@@ -286,13 +285,13 @@ module lib_mie_helper_functions
 
             cache_coefficients_a_b_cmplx_barberh_enabled = .true.
 
-        end subroutine lib_mie_hf_init_coeff_a_n_b_n_cmplx
+        end subroutine lib_mie_ss_hf_init_coeff_a_n_b_n_cmplx
 
         ! Argument
         ! ----
         !   alpha: double precision
         !
-        subroutine lib_mie_hf_init_coeff_p0_q0(alpha, beta, n_max)
+        subroutine lib_mie_ss_hf_init_coeff_p0_q0(alpha, beta, n_max)
             implicit none
             ! dummy
             double precision, dimension(:), intent(in) :: alpha
@@ -323,9 +322,9 @@ module lib_mie_helper_functions
 
             cache_coefficients_p_0_q_0_enabled = .true.
 
-        end subroutine lib_mie_hf_init_coeff_p0_q0
+        end subroutine lib_mie_ss_hf_init_coeff_p0_q0
 
-        subroutine lib_mie_hf_destructor
+        subroutine lib_mie_ss_hf_destructor
             implicit none
 
             ! --- deallocate caching ---
@@ -608,7 +607,7 @@ module lib_mie_helper_functions
                 j_n_x = lib_math_bessel_spherical_first_kind(x, n(1)-1, number_of_n+1)
                 h_n_x = lib_math_hankel_spherical_1(x, n(1)-1, number_of_n+1)
 
-                An = lib_mie_hf_get_An(x, m, n(1), number_of_n)
+                An = lib_mie_ss_hf_get_An(x, m, n(1), number_of_n)
 
                 !$OMP PARALLEL DO PRIVATE(i, mAn, n_div_x, buffer, numerator, denominator)
                 do i=1, number_of_n
@@ -725,7 +724,7 @@ module lib_mie_helper_functions
                 j_n_x = lib_math_bessel_spherical_first_kind(x, n(1)-1, number_of_n+1)
                 h_n_x = lib_math_hankel_spherical_1(x, n(1)-1, number_of_n+1)
 
-                An = lib_mie_hf_get_An(x, m, n(1), number_of_n)
+                An = lib_mie_ss_hf_get_An(x, m, n(1), number_of_n)
 
                 !$OMP PARALLEL DO PRIVATE(i, mAn, n_div_x, An_div_m, buffer, numerator, denominator)
                 do i=1, number_of_n
@@ -801,7 +800,7 @@ module lib_mie_helper_functions
             m_n_max = fnu + n - 1
 
             ! eq. (4.20)
-            m_n_mx = max(lib_mie_hf_get_n_c(abs(x)), int(abs(m_mx))) + 15
+            m_n_mx = max(lib_mie_ss_hf_get_n_c(abs(x)), int(abs(m_mx))) + 15
 
             m_buffer = cmplx(0.0, 0.0, kind=8)
             do i=m_n_mx, fnu+1, -1
@@ -865,7 +864,7 @@ module lib_mie_helper_functions
             m_n_max = fnu + n - 1
 
             ! eq. (4.20)
-            m_n_mx = max(lib_mie_hf_get_n_c(abs(x)), int(abs(m_mx))) + 15
+            m_n_mx = max(lib_mie_ss_hf_get_n_c(abs(x)), int(abs(m_mx))) + 15
 
             m_buffer = cmplx(0.0, 0.0, kind=8)
             do i=m_n_mx, fnu+1, -1
@@ -963,7 +962,7 @@ module lib_mie_helper_functions
         !       lambda: wavelength
         !
         ! Reference: Light Scattering by Particles: Computational Methods, PW Barber, S C Hill, eq. 4.16
-        function lib_mie_hf_get_n_c(x) result (rv)
+        function lib_mie_ss_hf_get_n_c(x) result (rv)
             implicit none
             ! dummy
             double precision :: x
@@ -977,7 +976,7 @@ module lib_mie_helper_functions
 
             rv = int(ceiling(dummy))
 
-        end function lib_mie_hf_get_n_c
+        end function lib_mie_ss_hf_get_n_c
 
         ! Calculates the coefficients (of vector spherical components) of a plane incident wave
         ! - transverse magnetic mode (TM)
@@ -1016,7 +1015,7 @@ module lib_mie_helper_functions
         !       coefficient of vector spherical componets
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres Yu-lin Xu, eq. 20
-        subroutine lib_mie_hf_get_p_q_j_j(k, d_0_j, n_range, p, q, caching)
+        subroutine lib_mie_ss_hf_get_p_q_j_j(k, d_0_j, n_range, p, q, caching)
             implicit none
             ! dummy
             type(cartesian_coordinate_real_type), intent(in) :: k
@@ -1054,7 +1053,7 @@ module lib_mie_helper_functions
                 call get_p_q_j_j_core(alpha, beta, n_range, p, q)
             end if
 
-        end subroutine lib_mie_hf_get_p_q_j_j
+        end subroutine lib_mie_ss_hf_get_p_q_j_j
 
         ! Calculates the coefficients (of vector spherical components) of a plane incident wave
         ! - transverse magnetic mode (TM)
@@ -1253,7 +1252,7 @@ module lib_mie_helper_functions
         !   b_j_nm: type(list_list_cmplx)
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 30, 35
-        subroutine lib_mie_hf_calc_triple_sum(simulation_parameter, &
+        subroutine lib_mie_ss_hf_calc_triple_sum(simulation_parameter, &
                                               sphere, sphere_parameter, sphere_j, &
                                               z_selector, &
                                               a_j_nm, b_j_nm, &
@@ -1363,7 +1362,7 @@ module lib_mie_helper_functions
             deallocate(buffer_sum_b_l)
 
 
-            call lib_mie_hf_get_p_q_j_j(k, d_0_j, n_range, p, q)
+            call lib_mie_ss_hf_get_p_q_j_j(k, d_0_j, n_range, p, q)
 
             call init_list(a_j_nm, n_range(1), n_range(2) - n_range(1) + 1)
             call init_list(b_j_nm, n_range(1), n_range(2) - n_range(1) + 1)
@@ -1489,7 +1488,7 @@ module lib_mie_helper_functions
         !       interactive scattering coefficient
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 12
-        subroutine lib_mie_hf_get_coefficient_a_nm_b_nm(x, n_particle, n_medium, p_nm, q_nm, a_nm, b_nm)
+        subroutine lib_mie_ss_hf_get_coefficient_a_nm_b_nm(x, n_particle, n_medium, p_nm, q_nm, a_nm, b_nm)
             implicit none
             ! dummy
             double precision, intent(in) :: x
@@ -1514,10 +1513,10 @@ module lib_mie_helper_functions
             allocate (a_n%item(n_range(2)-n_range(1)+1))
             allocate (b_n%item(n_range(2)-n_range(1)+1))
             if (aimag(n_particle) .eq. 0) then
-                call lib_mie_hf_get_coefficients_a_n_b_n(x, real(n_particle) / n_medium, n_range, &
+                call lib_mie_ss_hf_get_coefficients_a_n_b_n(x, real(n_particle) / n_medium, n_range, &
                                                          a_n%item, b_n%item)
             else
-                call lib_mie_hf_get_coefficients_a_n_b_n(x, n_particle / n_medium, n_range, &
+                call lib_mie_ss_hf_get_coefficients_a_n_b_n(x, n_particle / n_medium, n_range, &
                                                          a_n%item, b_n%item)
             end if
 
@@ -1530,7 +1529,7 @@ module lib_mie_helper_functions
                     b_nm%item(n)%item(m) = b_n%item(n) * q_nm%item(n)%item(m)
                 end do
             end do
-        end subroutine lib_mie_hf_get_coefficient_a_nm_b_nm
+        end subroutine lib_mie_ss_hf_get_coefficient_a_nm_b_nm
 
         ! Argument
         ! ---
@@ -1552,7 +1551,7 @@ module lib_mie_helper_functions
         !           >0: series converges absolutely (degree n = rv(1))
         !       rv(2): relative error [1/1000]
         !           ( cross_section(n=rv(1)) - cross_section(n=n_max) ) / cross_section(n=n_max)
-        function lib_mie_hf_test_convergence_plane_wave(lambda, n_medium, r_particle, n_particle) result(rv)
+        function lib_mie_ss_hf_test_convergence_plane_wave(lambda, n_medium, r_particle, n_particle) result(rv)
             implicit none
             ! dummy
             double precision, intent(in) :: lambda ! wave length
@@ -1593,7 +1592,7 @@ module lib_mie_helper_functions
 
             n_range(1) = 1
             n_range(2) = N_MAX
-            n_c = lib_mie_hf_get_n_c(x)
+            n_c = lib_mie_ss_hf_get_n_c(x)
             if (n_c .gt. 45) then
                print *, "WARNING: max degree (",N_MAX,") reached: ", n_c
                n_c = N_MAX
@@ -1603,13 +1602,13 @@ module lib_mie_helper_functions
 #endif
             end if
 
-            call lib_mie_hf_get_p_q_j_j(k_cartesian, d_0_j, n_range, p_nm, q_nm)
+            call lib_mie_ss_hf_get_p_q_j_j(k_cartesian, d_0_j, n_range, p_nm, q_nm)
 
-            call lib_mie_hf_get_coefficient_a_nm_b_nm(x, n_particle, n_medium, p_nm, q_nm, a_nm, b_nm)
+            call lib_mie_ss_hf_get_coefficient_a_nm_b_nm(x, n_particle, n_medium, p_nm, q_nm, a_nm, b_nm)
 
             rv = test_convergence_core(p_nm, q_nm, a_nm, b_nm, n_c)
 
-        end function lib_mie_hf_test_convergence_plane_wave
+        end function lib_mie_ss_hf_test_convergence_plane_wave
 
         ! Argument
         ! ----
@@ -1834,39 +1833,6 @@ module lib_mie_helper_functions
 
         end subroutine get_cross_section_core
 
-        function lib_mie_hf_get_sphere_parameter(lambda, n_medium, &
-                                              r_particle, n_particle,&
-                                              n_range) &
-                                            result (sphere_parameter)
-            implicit none
-            ! dummy
-            double precision, intent(in) :: lambda
-            double precision, intent(in) :: n_medium
-            double precision, intent(in) :: r_particle
-            double complex, intent(in) :: n_particle
-            integer, dimension(2) :: n_range
-
-            type(lib_mie_sphere_parameter_type) :: sphere_parameter
-
-            ! auxiliary
-            double precision :: size_parameter
-
-            size_parameter = 2 * PI * n_medium * r_particle / lambda
-
-            sphere_parameter%n_range = n_range
-            sphere_parameter%size_parameter = size_parameter
-            sphere_parameter%radius = r_particle
-            sphere_parameter%refractive_index = n_particle
-
-            if (aimag(n_particle) .eq. 0d0) then
-                call lib_mie_hf_get_coefficients_a_n_b_n(size_parameter, real(n_particle)/n_medium, n_range, &
-                                                       sphere_parameter%a_n%item, sphere_parameter%b_n%item)
-            else
-                call lib_mie_hf_get_coefficients_a_n_b_n(size_parameter, n_particle/n_medium, n_range, &
-                                                           sphere_parameter%a_n%item, sphere_parameter%b_n%item)
-            end if
-        end function lib_mie_hf_get_sphere_parameter
-
         function lib_mie_helper_functions_test_functions() result(rv)
             use file_io
             implicit none
@@ -1893,7 +1859,7 @@ module lib_mie_helper_functions
             if (.not. test_get_cross_section()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_mie_hf_test_convergence_plane_wave()) then
+            if (.not. test_lib_mie_ss_hf_test_convergence_plane_wave()) then
                 rv = rv + 1
             end if
 
@@ -2289,7 +2255,7 @@ module lib_mie_helper_functions
                             x = abs(k * r_particle)
 
                             n_range(1) = 1
-                            n_range(2) = lib_mie_hf_get_n_c(x)
+                            n_range(2) = lib_mie_ss_hf_get_n_c(x)
                             if (n_range(2) .gt. N_MAX) then
                                print *, "WARNING: max degree (", N_MAX, ") reached: ", n_range(2)
                                n_range(2) = N_MAX
@@ -2300,18 +2266,18 @@ module lib_mie_helper_functions
                             end if
                             n_range(2) = N_MAX
 
-                            call lib_mie_hf_contructor((/ n_range(2) /), (/ x /), (/ n_particle / n_medium /), &
+                            call lib_mie_ss_hf_contructor((/ n_range(2) /), (/ x /), (/ n_particle / n_medium /), &
                                                        (/n_range(2)/))
 
-                            call lib_mie_hf_get_p_q_j_j(k_cartesian, d_0_j, n_range, p, q)
+                            call lib_mie_ss_hf_get_p_q_j_j(k_cartesian, d_0_j, n_range, p, q)
 
                             allocate (a_n%item(n_range(2)-n_range(1)+1))
                             allocate (b_n%item(n_range(2)-n_range(1)+1))
                             if (aimag(n_particle) .eq. 0) then
-                                call lib_mie_hf_get_coefficients_a_n_b_n(x, real(n_particle) / n_medium, n_range, &
+                                call lib_mie_ss_hf_get_coefficients_a_n_b_n(x, real(n_particle) / n_medium, n_range, &
                                                                          a_n%item, b_n%item)
                             else
-                                call lib_mie_hf_get_coefficients_a_n_b_n(x, n_particle / n_medium, n_range, &
+                                call lib_mie_ss_hf_get_coefficients_a_n_b_n(x, n_particle / n_medium, n_range, &
                                                                          a_n%item, b_n%item)
                             end if
 
@@ -2349,7 +2315,7 @@ module lib_mie_helper_functions
                     rv = .true.
                 end function test_get_cross_section
 
-                function test_lib_mie_hf_test_convergence_plane_wave() result(rv)
+                function test_lib_mie_ss_hf_test_convergence_plane_wave() result(rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -2362,15 +2328,16 @@ module lib_mie_helper_functions
                     double complex :: n_particle
 
                     lambda = 700 * unit_nm
-                    n_medium = 1.33
+                    n_medium = 1
 
-                    r_particle = 2 * unit_mu
-                    ! https://refractiveindex.info/?shelf=main&book=Ag&page=Johnson
-                    n_particle = cmplx(0.040000, 7.1155, kind=8)
+                    r_particle = 5 * unit_mu
+!                    ! https://refractiveindex.info/?shelf=main&book=Ag&page=Johnson
+!                    n_particle = cmplx(0.040000, 7.1155, kind=8)
+                    n_particle = cmplx(1.33, 0, kind=8)
 
-                    print *, "test_lib_mie_hf_test_convergence_plane_wave"
+                    print *, "test_lib_mie_ss_hf_test_convergence_plane_wave"
 
-                    rv_convergence = lib_mie_hf_test_convergence_plane_wave(lambda, n_medium, r_particle, n_particle)
+                    rv_convergence = lib_mie_ss_hf_test_convergence_plane_wave(lambda, n_medium, r_particle, n_particle)
 
                     print *, "  lambda = ", lambda
                     print *, "  n_medium = ", n_medium
@@ -2380,6 +2347,6 @@ module lib_mie_helper_functions
                     print *, "  relative error = ", rv_convergence(2)
 
                     rv = .true.
-                end function test_lib_mie_hf_test_convergence_plane_wave
+                end function test_lib_mie_ss_hf_test_convergence_plane_wave
         end function lib_mie_helper_functions_test_functions
-end module lib_mie_helper_functions
+end module lib_mie_ss_helper_functions

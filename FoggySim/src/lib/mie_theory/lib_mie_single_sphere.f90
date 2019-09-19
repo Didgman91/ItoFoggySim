@@ -7,30 +7,80 @@
 
 !#define _ONLY_M_ 1
 
-module lib_mie_scattering_by_a_sphere
+module lib_mie_single_sphere
     !$  use omp_lib
     use libmath
     use lib_constants
     use lib_mie_vector_spherical_harmonics
     use lib_mie_type
-    use lib_mie_helper_functions
+    use lib_mie_ss_helper_functions
     implicit none
 
     private
 
     ! --- public ---
-    public :: lib_mie_destructor
+    public :: lib_mie_ss_destructor
 
-    public:: lib_mie_scattering_by_a_sphere_test_functions
+    public:: lib_mie_ss_test_functions
 
     contains
 
-        subroutine lib_mie_destructor
+        subroutine lib_mie_ss_destructor
             implicit none
 
-            call lib_mie_hf_destructor
+            call lib_mie_ss_hf_destructor
 
-        end subroutine lib_mie_destructor
+        end subroutine lib_mie_ss_destructor
+
+        ! Argument
+        ! ----
+        !   lambda_0: double precision
+        !       vacuum wave length
+        !   n_medium: double precision
+        !       refractive index of the medium
+        !   r_particle: double precision
+        !       radius of the particel
+        !   n_particle: double complex
+        !       refractive index of the particle
+        !   n_range: integer, dimension(2)
+        !       first and last index (degree) of the sum to calculate the electical field
+        !       e.g. n = (/ 1, 45 /)
+        !
+        ! Returns
+        ! ----
+        !   sphere_parameter: type(lib_mie_sshere_parameter_type)
+        function lib_mie_ss_get_sphere_parameter(lambda_0, n_medium, &
+                                              r_particle, n_particle,&
+                                              n_range) &
+                                            result (sphere_parameter)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: lambda_0
+            double precision, intent(in) :: n_medium
+            double precision, intent(in) :: r_particle
+            double complex, intent(in) :: n_particle
+            integer, dimension(2) :: n_range
+
+            type(lib_mie_sphere_parameter_type) :: sphere_parameter
+
+            ! auxiliary
+            double precision :: size_parameter
+
+            size_parameter = 2 * PI * n_medium * r_particle / lambda_0
+
+            sphere_parameter%n_range = n_range
+            sphere_parameter%size_parameter = size_parameter
+            sphere_parameter%radius = r_particle
+            sphere_parameter%refractive_index = n_particle
+
+            if (aimag(n_particle) .eq. 0d0) then
+                call lib_mie_ss_hf_get_coefficients_a_n_b_n(size_parameter, real(n_particle)/n_medium, n_range, &
+                                                       sphere_parameter%a_n%item, sphere_parameter%b_n%item)
+            else
+                call lib_mie_ss_hf_get_coefficients_a_n_b_n(size_parameter, n_particle/n_medium, n_range, &
+                                                           sphere_parameter%a_n%item, sphere_parameter%b_n%item)
+            end if
+        end function lib_mie_ss_get_sphere_parameter
 
         ! calculates the scatterd electical field of a sphere
         !
@@ -466,7 +516,7 @@ module lib_mie_scattering_by_a_sphere
             call init_list(calc_order_m, n_range(1), n_range(2)-n_range(1)+1, .true.)
 
             ! --- pre-calc ---
-            call lib_mie_hf_get_coefficients_a_n_b_n(size_parameter, n_particle/n_medium, n_range, a_n, b_n)
+            call lib_mie_ss_hf_get_coefficients_a_n_b_n(size_parameter, n_particle/n_medium, n_range, a_n, b_n)
 !            call get_coefficients_a_b_real(size_parameter, n_particle/n_medium, mu, mu1, n_range, a_n, b_n)
 
             ! errata eq. (1) Equations (21) on p. 4577
@@ -758,7 +808,7 @@ module lib_mie_scattering_by_a_sphere
             call init_list(calc_order_m, n_range(1), n_range(2)-n_range(1)+1, .true.)
 
             ! --- pre-calc ---
-            call lib_mie_hf_get_coefficients_a_n_b_n(size_parameter, n_particle/n_medium, n_range, a_n, b_n)
+            call lib_mie_ss_hf_get_coefficients_a_n_b_n(size_parameter, n_particle/n_medium, n_range, a_n, b_n)
 
             ! errata eq. (1) Equations (21) on p. 4577
             call lib_math_associated_legendre_polynomial_theta(m_alpha, n_range(2), pi_nm, tau_nm)
@@ -937,7 +987,7 @@ module lib_mie_scattering_by_a_sphere
         !
         !
         ! Reference: [1] Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 30
-        subroutine lib_mie_get_interactive_scattering_coefficients(k, lambda, n_medium, &
+        subroutine lib_mie_ss_get_interactive_scattering_coefficients(k, lambda, n_medium, &
                                                                    sphere, sphere_parameter, sphere_j, &
                                                                    z_selector, &
                                                                    a, b)
@@ -959,7 +1009,7 @@ module lib_mie_scattering_by_a_sphere
             integer :: nu
 
 
-        end subroutine lib_mie_get_interactive_scattering_coefficients
+        end subroutine lib_mie_ss_get_interactive_scattering_coefficients
 
         ! Argument
         ! ----
@@ -981,7 +1031,7 @@ module lib_mie_scattering_by_a_sphere
         !
         !
 
-        function lib_mie_scattering_by_a_sphere_test_functions() result (rv)
+        function lib_mie_ss_test_functions() result (rv)
             implicit none
             ! dummy
             integer :: rv
@@ -1017,16 +1067,16 @@ module lib_mie_scattering_by_a_sphere
             call system_clock(test_count_finish, test_count_rate)
 
             print *, ""
-            print *, "------lib_mie_scattering_by_a_sphere_test_functions------"
+            print *, "------lib_mie_ss_scattering_by_a_sphere_test_functions------"
             print '("  CPU-Time = ",f10.3," seconds.")',test_finish-test_start
             print '("  WALL-Time = ",f10.3," seconds.")',(test_count_finish-test_count_start) / real(test_count_rate)
             print *, ""
             if (rv == 0) then
-                print *, "lib_mie_scattering_by_a_sphere_test_functions tests: OK"
+                print *, "lib_mie_ss_test_functions tests: OK"
             else
-                print *, rv,"lib_mie_scattering_by_a_sphere_test_functions test(s) FAILED"
+                print *, rv,"lib_mie_ss_test_functions test(s) FAILED"
             end if
-            print *, "---------------------------------------------------------"
+            print *, "------------------------------------------------------------"
             print *, ""
 
             contains
@@ -1080,7 +1130,7 @@ module lib_mie_scattering_by_a_sphere
                     k0 = 2 * PI / lambda
 
                     n_range(1) = 1
-                    n_range(2) = lib_mie_hf_get_n_c(r_particle * k0 * n_particle)
+                    n_range(2) = lib_mie_ss_hf_get_n_c(r_particle * k0 * n_particle)
 
                     do i=1, number_of_values
                         degree_list(i) = start_angle + (i-1) * (stop_angle - start_angle) / number_of_values
@@ -1480,7 +1530,7 @@ module lib_mie_scattering_by_a_sphere
                     k0 = 2 * PI / lambda
 
                     n_range(1) = 1
-                    n_range(2) = lib_mie_hf_get_n_c(r_particle * k0)! * n_particle)
+                    n_range(2) = lib_mie_ss_hf_get_n_c(r_particle * k0)! * n_particle)
                     if (n_range(2) .gt. N_MAX) then
                         print *, "WARNING: max degree (", N_MAX, ") reached: ", n_range(2)
                         n_range(2) = N_MAX
@@ -1490,7 +1540,7 @@ module lib_mie_scattering_by_a_sphere
 
                     call lib_math_factorial_initialise_caching(n_range(2))
 
-                    call lib_mie_hf_init_coeff_a_n_b_n((/ r_particle * k0 * n_medium /), &
+                    call lib_mie_ss_hf_init_coeff_a_n_b_n((/ r_particle * k0 * n_medium /), &
                                                        (/ n_particle/n_medium /), &
                                                        (/ n_range(2) /))
 
@@ -1740,8 +1790,8 @@ module lib_mie_scattering_by_a_sphere
                     k0 = 2 * PI / lambda
 
                     n_range(1) = 1
-!                    n_range(2) = min(45, lib_mie_hf_get_n_c(r_particle * k0 * abs(n_particle))) ! todo: abs??
-                    n_range(2) = lib_mie_hf_get_n_c(r_particle * k0)
+!                    n_range(2) = min(45, lib_mie_ss_hf_get_n_c(r_particle * k0 * abs(n_particle))) ! todo: abs??
+                    n_range(2) = lib_mie_ss_hf_get_n_c(r_particle * k0)
                     if (n_range(2) .gt. N_MAX) then
                         print *, "WARNING: max degree (", N_MAX, ") reached: ", n_range(2)
                         n_range(2) = N_MAX
@@ -1899,7 +1949,7 @@ module lib_mie_scattering_by_a_sphere
 
                 end function test_get_field_scattered_plane_section_cmplx
 
-        end function lib_mie_scattering_by_a_sphere_test_functions
+        end function lib_mie_ss_test_functions
 
-end module lib_mie_scattering_by_a_sphere
+end module lib_mie_single_sphere
 
