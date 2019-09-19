@@ -1,3 +1,5 @@
+!#define _PRINT_NOTE_
+
 module lib_mie_helper_functions
     use libmath
     use lib_mie_type
@@ -6,6 +8,9 @@ module lib_mie_helper_functions
 
     private
 
+    ! public parameter
+    integer, parameter, public :: N_MAX = 45
+
     ! public functions
     public :: lib_mie_hf_contructor
 !    public :: lib_mie_hf_init_coeff_p0_q0
@@ -13,6 +18,8 @@ module lib_mie_helper_functions
     public :: lib_mie_hf_get_n_c
     public :: lib_mie_hf_get_p_q_j_j
     public :: lib_mie_hf_calc_triple_sum
+    public :: lib_mie_hf_get_sphere_parameter
+    public :: lib_mie_hf_test_convergence_plane_wave
 
     public :: lib_mie_helper_functions_test_functions
 
@@ -1311,9 +1318,9 @@ module lib_mie_helper_functions
                 b_j_nm_old = sphere(sphere_j)%b_nm
             end if
 
-            lambda = simulation_parameter%lambda
+            lambda = simulation_parameter%illumination%lambda_0
             n_medium = simulation_parameter%refractive_index_medium
-            k = simulation_parameter%wave_vector
+            k = simulation_parameter%illumination%wave_vector_0 * n_medium
 
 
             allocate(buffer_sum_a_l(lbound(sphere, 1):ubound(sphere, 1)))
@@ -1464,6 +1471,253 @@ module lib_mie_helper_functions
 
         ! Argument
         ! ----
+        !   x: double precision
+        !       size parameter
+        !   m: double complex
+        !       relative refractive index
+        !       m = n_particle / n_medium
+        !   p_nm: type(list_list_cmplx)
+        !       illuminiation coefficient
+        !   q_nm: type(list_list_cmplx)
+        !       illuminiation coefficient
+        !
+        ! Returns
+        ! ----
+        !   a_nm: type(list_list_cmplx)
+        !       interactive scattering coefficient
+        !   b_nm: type(list_list_cmplx)
+        !       interactive scattering coefficient
+        !
+        ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 12
+        subroutine lib_mie_hf_get_coefficient_a_nm_b_nm(x, n_particle, n_medium, p_nm, q_nm, a_nm, b_nm)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: x
+            double complex, intent(in) :: n_particle
+            double precision, intent(in) :: n_medium
+            type(list_list_cmplx), intent(in) :: p_nm
+            type(list_list_cmplx), intent(in) :: q_nm
+
+            type(list_list_cmplx) :: a_nm
+            type(list_list_cmplx) :: b_nm
+
+            ! auxiliary
+            integer :: n
+            integer :: m
+            type(list_cmplx) :: a_n
+            type(list_cmplx) :: b_n
+            integer, dimension(2) :: n_range
+
+            n_range(1) = lbound(p_nm%item, 1)
+            n_range(2) = ubound(p_nm%item, 1)
+
+            allocate (a_n%item(n_range(2)-n_range(1)+1))
+            allocate (b_n%item(n_range(2)-n_range(1)+1))
+            if (aimag(n_particle) .eq. 0) then
+                call lib_mie_hf_get_coefficients_a_n_b_n(x, real(n_particle) / n_medium, n_range, &
+                                                         a_n%item, b_n%item)
+            else
+                call lib_mie_hf_get_coefficients_a_n_b_n(x, n_particle / n_medium, n_range, &
+                                                         a_n%item, b_n%item)
+            end if
+
+
+            call init_list(a_nm, n_range(1), n_range(2)-n_range(1)+1)
+            call init_list(b_nm, n_range(1), n_range(2)-n_range(1)+1)
+            do n = n_range(1), n_range(2)
+                do m = -n, n
+                    a_nm%item(n)%item(m) = a_n%item(n) * p_nm%item(n)%item(m)
+                    b_nm%item(n)%item(m) = b_n%item(n) * q_nm%item(n)%item(m)
+                end do
+            end do
+        end subroutine lib_mie_hf_get_coefficient_a_nm_b_nm
+
+        ! Argument
+        ! ---
+        !   lambda: double precision
+        !       wave length
+        !   n_medium: double precision
+        !       refractive index of the medium
+        !   r_particle: double precision
+        !       radius of the sphere
+        !   n_particle: double complex
+        !       refractive index of the sphere
+        !
+        ! Returns
+        ! ----
+        !   rv: integer, dimension(2)
+        !       rv(1):
+        !           -1: series may converge or diverge
+        !            0: series diverges
+        !           >0: series converges absolutely (degree n = rv(1))
+        !       rv(2): relative error [1/1000]
+        !           ( cross_section(n=rv(1)) - cross_section(n=n_max) ) / cross_section(n=n_max)
+        function lib_mie_hf_test_convergence_plane_wave(lambda, n_medium, r_particle, n_particle) result(rv)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: lambda ! wave length
+            double precision, intent(in) :: n_medium
+
+            double precision, intent(in) :: r_particle
+            double complex, intent(in) :: n_particle
+
+            integer, dimension(2) :: rv
+
+            ! auxiliary
+            integer :: n_c
+            integer, dimension(2) :: n_range
+
+            type(list_list_cmplx) :: a_nm
+            type(list_list_cmplx) :: b_nm
+
+            type(list_list_cmplx) :: p_nm
+            type(list_list_cmplx) :: q_nm
+
+            double precision :: x
+            double precision :: k
+
+            type(cartesian_coordinate_real_type) :: d_0_j
+
+            type(cartesian_coordinate_real_type) :: k_cartesian
+
+            d_0_j%x = 0
+            d_0_j%y = 0
+            d_0_j%z = 0
+
+            k = 2D0 * PI * n_medium / lambda
+            k_cartesian%x = 0
+            k_cartesian%y = 0
+            k_cartesian%z = k
+
+            x = abs(k * r_particle)
+
+            n_range(1) = 1
+            n_range(2) = N_MAX
+            n_c = lib_mie_hf_get_n_c(x)
+            if (n_c .gt. 45) then
+               print *, "WARNING: max degree (",N_MAX,") reached: ", n_c
+               n_c = N_MAX
+#ifdef _PRINT_NOTE_
+            else
+                print *, "NOTE: max degree = ", n_c
+#endif
+            end if
+
+            call lib_mie_hf_get_p_q_j_j(k_cartesian, d_0_j, n_range, p_nm, q_nm)
+
+            call lib_mie_hf_get_coefficient_a_nm_b_nm(x, n_particle, n_medium, p_nm, q_nm, a_nm, b_nm)
+
+            rv = test_convergence_core(p_nm, q_nm, a_nm, b_nm, n_c)
+
+        end function lib_mie_hf_test_convergence_plane_wave
+
+        ! Argument
+        ! ----
+        !   p_nm: type(list_list_cmplx)
+        !       illumination coefficient
+        !   q_nm: type(list_list_cmplx)
+        !       illumination coefficient
+        !   a_nm: type(list_list_cmplx)
+        !       scattering coefficient
+        !   b_nm: type(list_list_cmplx)
+        !       scatteirng coefficient
+        !   n_c: integer
+        !       calculated highest degree n for a convergent algorithm
+        !
+        ! Returns
+        ! ----
+        !   rv: integer, dimension(2)
+        !       rv(1):
+        !           -1: series may converge or diverge
+        !            0: series diverges
+        !           >0: series converges absolutely (degree n = rv(1))
+        !       rv(2): relative error [1/1000]
+        !           >=0: abs( cross_section(n=rv(1)) - cross_section(n=n_max) )**" / abs(cross_section(n=n_max))**2
+        !            -1: rv(1) .le. 0
+        function test_convergence_core(p_nm, q_nm, a_nm, b_nm, n_c) result(rv)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: a_nm
+            type(list_list_cmplx), intent(in) :: b_nm
+
+            type(list_list_cmplx), intent(in) :: p_nm
+            type(list_list_cmplx), intent(in) :: q_nm
+
+            integer, intent(in) :: n_c
+
+            integer, dimension(2) :: rv
+
+            ! auxiliary
+            integer :: n
+            integer :: m
+            integer(kind=4), dimension(2) :: n_range
+
+            type(list_list_real) :: summand_sca
+            type(list_list_real) :: summand_ext
+
+            double precision, dimension(:), allocatable :: c_sca_n
+            double precision, dimension(:), allocatable :: c_ext_n
+            double precision :: buffer_sca
+            double precision :: buffer_ext
+
+            integer :: r_sca
+            integer :: r_ext
+
+            n_range(1) = lbound(p_nm%item, 1)
+            n_range(2) = ubound(p_nm%item, 1)
+
+            allocate( c_sca_n(n_range(1):n_range(2)) )
+            allocate( c_ext_n(n_range(1):n_range(2)) )
+
+            call get_cross_section_core(p_nm, q_nm, a_nm, b_nm, &
+                                        summand_sca, summand_ext)
+
+            !$OMP PARALLEL DO PRIVATE(n, m, buffer_sca, buffer_ext)
+            do n = n_range(1), n_range(2)
+                buffer_sca = 0
+                buffer_ext = 0
+                do m = -n, n
+                    buffer_sca = buffer_sca + summand_sca%item(n)%item(m)
+                    buffer_ext = buffer_ext + summand_sca%item(n)%item(m)
+                end do
+                c_sca_n(n) = buffer_sca
+                c_ext_n(n) = buffer_ext
+            end do
+            !$OMP END PARALLEL DO
+
+            ! test with n_c
+            r_sca = lib_math_convergence_root_test(c_sca_n(n_range(1):n_c))
+            r_ext = lib_math_convergence_root_test(c_ext_n(n_range(1):n_c))
+
+            if (r_sca .gt. 0 .and. r_ext .gt. 0) then
+                rv(1) = n_c
+            else
+                ! test with "n_max" = 45
+                r_sca = lib_math_convergence_root_test(c_sca_n)
+                r_ext = lib_math_convergence_root_test(c_ext_n)
+
+                if (r_sca .gt. 0 .and. r_ext .gt. 0) then
+                    rv(1) = max(r_sca, r_ext, n_c)
+                else
+                    rv(1) = min(r_sca, r_ext)
+                end if
+            end if
+
+            if (rv(1) .gt. 0) then
+                buffer_sca = sum(c_sca_n(n_range(1):n_c))
+                buffer_ext = sum(c_ext_n(n_range(1):n_c))
+
+                buffer_sca = abs(buffer_sca - sum(c_sca_n))**2 / abs(sum(c_sca_n))**2
+                buffer_ext = abs(buffer_ext - sum(c_ext_n))**2 / abs(sum(c_ext_n))**2
+
+                rv(2) = int(ceiling(max(buffer_sca, buffer_ext) * 1000))
+            else
+                rv(2) = -1
+            end if
+        end function test_convergence_core
+
+        ! Argument
+        ! ----
         !   a_nm: type(list_list_cmplx)
         !       scattering coefficient
         !   b_nm: type(list_list_cmplx)
@@ -1503,9 +1757,53 @@ module lib_mie_helper_functions
             type(list_list_real) :: summand_sca
             type(list_list_real) :: summand_ext
 
+            double precision :: buffer_sca
+            double precision :: buffer_ext
+
+            call get_cross_section_core(p_0_nm, q_0_nm, a_nm, b_nm, summand_sca, summand_ext)
+
+            c_sca = 0
+            c_ext = 0
+            do n = lbound(a_nm%item, 1), ubound(a_nm%item, 1)
+!                m=1
+                buffer_sca = 0
+                buffer_ext = 0
+                do m = -n, n
+                    buffer_sca = buffer_sca + summand_sca%item(n)%item(m)
+                    buffer_ext = buffer_ext + summand_ext%item(n)%item(m)
+                end do
+                c_sca = c_sca + buffer_sca
+                c_ext = c_ext + buffer_ext
+            end do
+
+            c_sca = c_sca * 2D0 * PI / (k**2)
+            c_ext = c_ext * 2D0 * PI / (k**2)
+            c_abs = c_ext - c_sca
+
+            c(1) = c_sca
+            c(2) = c_ext
+            c(3) = c_abs
+
+        end function get_cross_section
+
+        subroutine get_cross_section_core(p_0_nm, q_0_nm, a_nm, b_nm, &
+                                          summand_sca, summand_ext)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: p_0_nm
+            type(list_list_cmplx), intent(in) :: q_0_nm
+            type(list_list_cmplx), intent(in) :: a_nm
+            type(list_list_cmplx), intent(in) :: b_nm
+!            double precision, intent(in) :: k
+
+            type(list_list_real) :: summand_sca
+            type(list_list_real) :: summand_ext
+
+            ! auxiliary
+            integer :: n
+            integer :: m
             double precision :: buffer_n
             double precision :: buffer_real
-
 
             call init_list(summand_sca, &
                            lbound(a_nm%item, 1), &
@@ -1534,25 +1832,40 @@ module lib_mie_helper_functions
             end do
             !$OMP END PARALLEL DO
 
-            c_sca = 0
-            c_ext = 0
-            do n = lbound(a_nm%item, 1), ubound(a_nm%item, 1)
-!                m=1
-                do m = -n, n
-                    c_sca = c_sca + summand_sca%item(n)%item(m)
-                    c_ext = c_ext + summand_ext%item(n)%item(m)
-                end do
-            end do
+        end subroutine get_cross_section_core
 
-            c_sca = c_sca * 2D0 * PI / (k**2)
-            c_ext = c_ext * 2D0 * PI / (k**2)
-            c_abs = c_ext - c_sca
+        function lib_mie_hf_get_sphere_parameter(lambda, n_medium, &
+                                              r_particle, n_particle,&
+                                              n_range) &
+                                            result (sphere_parameter)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: lambda
+            double precision, intent(in) :: n_medium
+            double precision, intent(in) :: r_particle
+            double complex, intent(in) :: n_particle
+            integer, dimension(2) :: n_range
 
-            c(1) = c_sca
-            c(2) = c_ext
-            c(3) = c_abs
+            type(lib_mie_sphere_parameter_type) :: sphere_parameter
 
-        end function get_cross_section
+            ! auxiliary
+            double precision :: size_parameter
+
+            size_parameter = 2 * PI * n_medium * r_particle / lambda
+
+            sphere_parameter%n_range = n_range
+            sphere_parameter%size_parameter = size_parameter
+            sphere_parameter%radius = r_particle
+            sphere_parameter%refractive_index = n_particle
+
+            if (aimag(n_particle) .eq. 0d0) then
+                call lib_mie_hf_get_coefficients_a_n_b_n(size_parameter, real(n_particle)/n_medium, n_range, &
+                                                       sphere_parameter%a_n%item, sphere_parameter%b_n%item)
+            else
+                call lib_mie_hf_get_coefficients_a_n_b_n(size_parameter, n_particle/n_medium, n_range, &
+                                                           sphere_parameter%a_n%item, sphere_parameter%b_n%item)
+            end if
+        end function lib_mie_hf_get_sphere_parameter
 
         function lib_mie_helper_functions_test_functions() result(rv)
             use file_io
@@ -1578,6 +1891,9 @@ module lib_mie_helper_functions
                 rv = rv + 1
             end if
             if (.not. test_get_cross_section()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_mie_hf_test_convergence_plane_wave()) then
                 rv = rv + 1
             end if
 
@@ -1884,7 +2200,6 @@ module lib_mie_helper_functions
 
                     double precision :: r_particle
                     double complex :: n_particle
-                    double complex, dimension(:), allocatable :: n_particle_list
 
                     type(cartesian_coordinate_real_type) :: d_0_j
 
@@ -1911,7 +2226,7 @@ module lib_mie_helper_functions
 
                     lambda_start = 350 * unit_nm
                     lambda_stop = 800 * unit_nm
-                    lambda_step = 1 * unit_nm
+                    lambda_step = 10 * unit_nm
 
 !                    r_particle = 25 * unit_nm
 !                    file_name_output = "temp/c_sca_ag_r_25nm.csv"
@@ -1924,7 +2239,6 @@ module lib_mie_helper_functions
                     allocate( c_ext(no) )
                     allocate( c_abs(no) )
                     allocate( lambda_list(no) )
-                    allocate( n_particle_list(no) )
 
                     do i = 1, no
                         lambda_list(i) = lambda_start + (i-1) * lambda_step
@@ -1937,7 +2251,9 @@ module lib_mie_helper_functions
                     allocate( data_refractive_index_particle_interpolation(3) )
                     call read_csv(file_name_refractive_index_particle, 3, data_refractive_index_particle)
 
-                    do r=10, 100, 10
+
+                    print *, "test_get_cross_section"
+                    do r=10, 100, 20
 !                    do r=100, 400, 100
                         r_particle = r * unit_nm
                         if (r .lt. 100) then
@@ -1960,7 +2276,6 @@ module lib_mie_helper_functions
                                                     data_refractive_index_particle_interpolation)
                             n_particle = dcmplx(data_refractive_index_particle_interpolation(2), &
                                                 data_refractive_index_particle_interpolation(3))
-                            n_particle_list(i) = n_particle
 
                             call data_interpolation(data_refractive_index_medium, 1, lambda / unit_mu, &
                                                     data_refractive_index_medium_interpolation)
@@ -1975,12 +2290,15 @@ module lib_mie_helper_functions
 
                             n_range(1) = 1
                             n_range(2) = lib_mie_hf_get_n_c(x)
-                            if (n_range(2) .gt. 45) then
-                                print *, "WARNING: max degree (45) reached: ", n_range(2)
-                                n_range(2) = 45
+                            if (n_range(2) .gt. N_MAX) then
+                               print *, "WARNING: max degree (", N_MAX, ") reached: ", n_range(2)
+                               n_range(2) = N_MAX
+#ifdef _PRINT_NOTE_
                             else
                                 print *, "NOTE: max degree = ", n_range(2)
+#endif
                             end if
+                            n_range(2) = N_MAX
 
                             call lib_mie_hf_contructor((/ n_range(2) /), (/ x /), (/ n_particle / n_medium /), &
                                                        (/n_range(2)/))
@@ -2030,5 +2348,38 @@ module lib_mie_helper_functions
 
                     rv = .true.
                 end function test_get_cross_section
+
+                function test_lib_mie_hf_test_convergence_plane_wave() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer, dimension(2) :: rv_convergence
+                    double precision :: lambda
+                    double precision :: n_medium
+                    double precision :: r_particle
+                    double complex :: n_particle
+
+                    lambda = 700 * unit_nm
+                    n_medium = 1.33
+
+                    r_particle = 2 * unit_mu
+                    ! https://refractiveindex.info/?shelf=main&book=Ag&page=Johnson
+                    n_particle = cmplx(0.040000, 7.1155, kind=8)
+
+                    print *, "test_lib_mie_hf_test_convergence_plane_wave"
+
+                    rv_convergence = lib_mie_hf_test_convergence_plane_wave(lambda, n_medium, r_particle, n_particle)
+
+                    print *, "  lambda = ", lambda
+                    print *, "  n_medium = ", n_medium
+                    print *, "  r_particle = ", r_particle
+                    print *, "  n_particle = ", n_particle
+                    print *, "  convergence with n = ", rv_convergence(1)
+                    print *, "  relative error = ", rv_convergence(2)
+
+                    rv = .true.
+                end function test_lib_mie_hf_test_convergence_plane_wave
         end function lib_mie_helper_functions_test_functions
 end module lib_mie_helper_functions
