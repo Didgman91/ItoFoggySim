@@ -1475,55 +1475,84 @@ module lib_mie_helper_functions
         !
         ! Returns
         ! ----
-        !   c_sca: double precision
-        !       scattering cross section
+        !   c: double precision, dimension(3)
+        !       c(1): scattering cross section
+        !       c(2): extinction cross section
+        !       c(3): absorption cross section
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 57
-        function get_scattering_cross_section(a_nm, b_nm, k) result (c_sca)
+        function get_cross_section(p_0_nm, q_0_nm, a_nm, b_nm, k) result (c)
             implicit none
             ! dummy
+            type(list_list_cmplx), intent(in) :: p_0_nm
+            type(list_list_cmplx), intent(in) :: q_0_nm
             type(list_list_cmplx), intent(in) :: a_nm
             type(list_list_cmplx), intent(in) :: b_nm
-            double precision :: k
+            double precision, intent(in) :: k
 
-            double precision :: c_sca
+            double precision, dimension(3) :: c
 
             ! dummy
             integer :: n
             integer :: m
 
-            type(list_list_real) :: summand
+            double precision :: c_sca
+            double precision :: c_ext
+            double precision :: c_abs
+
+            type(list_list_real) :: summand_sca
+            type(list_list_real) :: summand_ext
 
             double precision :: buffer_n
+            double precision :: buffer_real
 
 
-            call init_list(summand, &
+            call init_list(summand_sca, &
+                           lbound(a_nm%item, 1), &
+                           ubound(a_nm%item, 1) - lbound(a_nm%item, 1) + 1, &
+                           0D0)
+            call init_list(summand_ext, &
                            lbound(a_nm%item, 1), &
                            ubound(a_nm%item, 1) - lbound(a_nm%item, 1) + 1, &
                            0D0)
 
-            buffer_n = 0D0
+            !$OMP PARALLEL DO PRIVATE(n, m, buffer_n, buffer_real)
             do n = lbound(a_nm%item, 1), ubound(a_nm%item, 1)
                 buffer_n = dble(n * (n + 1) * (2 * n + 1))
                 do m = -n, n
-                    summand%item(n)%item(m) = buffer_n &
-                                              * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m)
-                    summand%item(n)%item(m) = summand%item(n)%item(m) &
-                                              * ( abs(a_nm%item(n)%item(m))**2 &
-                                                  + abs(b_nm%item(n)%item(m))**2 )
+                    summand_sca%item(n)%item(m) = buffer_n &
+                                                  * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m)
+                    summand_sca%item(n)%item(m) = summand_sca%item(n)%item(m) &
+                                                  * ( abs(a_nm%item(n)%item(m))**2 &
+                                                      + abs(b_nm%item(n)%item(m))**2 )
+
+                    buffer_real = real( conjg(p_0_nm%item(n)%item(m)) * a_nm%item(n)%item(m)  &
+                                        + conjg(q_0_nm%item(n)%item(m)) * b_nm%item(n)%item(m) )
+                    summand_ext%item(n)%item(m) = summand_sca%item(n)%item(m) &
+                                                  * buffer_real
                 end do
             end do
+            !$OMP END PARALLEL DO
 
             c_sca = 0
+            c_ext = 0
             do n = lbound(a_nm%item, 1), ubound(a_nm%item, 1)
+!                m=1
                 do m = -n, n
-                    c_sca = c_sca + summand%item(n)%item(m)
+                    c_sca = c_sca + summand_sca%item(n)%item(m)
+                    c_ext = c_ext + summand_ext%item(n)%item(m)
                 end do
             end do
 
             c_sca = c_sca * 2D0 * PI / (k**2)
+            c_ext = c_ext * 2D0 * PI / (k**2)
+            c_abs = c_ext - c_sca
 
-        end function get_scattering_cross_section
+            c(1) = c_sca
+            c(2) = c_ext
+            c(3) = c_abs
+
+        end function get_cross_section
 
         function lib_mie_helper_functions_test_functions() result(rv)
             use file_io
@@ -1548,7 +1577,7 @@ module lib_mie_helper_functions
             if (.not. test_get_coefficients_a_b_cmplx_barberh()) then
                 rv = rv + 1
             end if
-            if (.not. test_get_scattering_cross_section()) then
+            if (.not. test_get_cross_section()) then
                 rv = rv + 1
             end if
 
@@ -1807,15 +1836,25 @@ module lib_mie_helper_functions
 
                 end function test_get_coefficients_a_b_cmplx_barberh
 
-                function test_get_scattering_cross_section() result (rv)
+                function test_get_cross_section() result (rv)
                     use toolbox
                     implicit none
                     ! dummy
                     logical :: rv
 
                     ! parameter
-                    character(len=*), parameter :: file_name_refractive_index = &
-                                                "refractive_index/au_Johnson_Christy_1972_thick_film.csv"
+                    character(len=*), parameter :: medium_str = "H2O"
+                    character(len=*), parameter :: file_name_refractive_index_medium = &
+                                                "refractive_index/H2O_Hale_Querry_1973_25_degree_Celsius.csv"
+
+
+                    character(len=*), parameter :: particle_str = "ag"
+                    character(len=*), parameter :: file_name_refractive_index_particle = &
+                                                "refractive_index/ag_Johnson_Christy_1972_thick_film.csv"
+!
+!                    character(len=*), parameter :: material_str = "au"
+!                    character(len=*), parameter :: file_name_refractive_index = &
+!                                                "refractive_index/au_Johnson_Christy_1972_thick_film.csv"
 
                     ! auxiliary
                     integer :: i
@@ -1829,7 +1868,10 @@ module lib_mie_helper_functions
                     type(list_list_cmplx) :: a_nm
                     type(list_list_cmplx) :: b_nm
                     double precision :: k
+                    double precision, dimension(3) :: c
                     double precision, dimension(:), allocatable :: c_sca
+                    double precision, dimension(:), allocatable :: c_ext
+                    double precision, dimension(:), allocatable :: c_abs
 
                     double precision :: lambda ! wave length
                     double precision :: lambda_start ! wave length
@@ -1861,14 +1903,15 @@ module lib_mie_helper_functions
                     character(len=25), dimension(4) :: header
                     character(len=25) :: str
 
-                    double precision, dimension(:,:), allocatable :: data_refractive_index
-                    double precision, dimension(:), allocatable :: data_refractive_index_interpolation
+                    double precision, dimension(:,:), allocatable :: data_refractive_index_medium
+                    double precision, dimension(:), allocatable :: data_refractive_index_medium_interpolation
+
+                    double precision, dimension(:,:), allocatable :: data_refractive_index_particle
+                    double precision, dimension(:), allocatable :: data_refractive_index_particle_interpolation
 
                     lambda_start = 350 * unit_nm
                     lambda_stop = 800 * unit_nm
                     lambda_step = 1 * unit_nm
-
-                    n_medium = 1.33
 
 !                    r_particle = 25 * unit_nm
 !                    file_name_output = "temp/c_sca_ag_r_25nm.csv"
@@ -1878,35 +1921,50 @@ module lib_mie_helper_functions
                     no = int( (lambda_stop - lambda_start) / lambda_step )
 
                     allocate( c_sca(no) )
+                    allocate( c_ext(no) )
+                    allocate( c_abs(no) )
                     allocate( lambda_list(no) )
                     allocate( n_particle_list(no) )
 
+                    do i = 1, no
+                        lambda_list(i) = lambda_start + (i-1) * lambda_step
+                    end do
 
-                    allocate( data_refractive_index_interpolation(3) )
-                    call read_csv(file_name_refractive_index, 3, data_refractive_index)
+
+                    allocate( data_refractive_index_medium_interpolation(3) )
+                    call read_csv(file_name_refractive_index_medium, 3, data_refractive_index_medium)
+
+                    allocate( data_refractive_index_particle_interpolation(3) )
+                    call read_csv(file_name_refractive_index_particle, 3, data_refractive_index_particle)
 
                     do r=10, 100, 10
+!                    do r=100, 400, 100
                         r_particle = r * unit_nm
                         if (r .lt. 100) then
                             write(str, '(A1, I2)') "0", r
                         else
                             write(str, '(I3)') r
                         end if
-                        file_name_output = "temp/c_sca_au_r_" // trim(str) // "nm.csv"
+                        file_name_output = "temp/cross_section_" // trim(particle_str) // "_r_" // trim(str) // "nm_in_" &
+                                            // trim(medium_str) // ".csv"
 
                         do i = 1, no
-                            lambda = lambda_start + (i-1) * lambda_step
-                            lambda_list(i) = lambda
+                            lambda = lambda_list(i)
                             k = 2D0 * PI * n_medium / lambda
 
                             k_spherical = make_spherical(k, 0D0, 0D0)
                             k_cartesian = k_spherical
 
-                            call data_interpolation(data_refractive_index, 1, lambda / unit_mu, &
-                                                    data_refractive_index_interpolation)
-                            n_particle = dcmplx(data_refractive_index_interpolation(2), &
-                                                data_refractive_index_interpolation(3))
+                            call data_interpolation(data_refractive_index_particle, 1, lambda / unit_mu, &
+                                                    data_refractive_index_particle_interpolation)
+                            n_particle = dcmplx(data_refractive_index_particle_interpolation(2), &
+                                                data_refractive_index_particle_interpolation(3))
                             n_particle_list(i) = n_particle
+
+                            call data_interpolation(data_refractive_index_medium, 1, lambda / unit_mu, &
+                                                    data_refractive_index_medium_interpolation)
+                            n_medium = real(dcmplx(data_refractive_index_medium_interpolation(2), &
+                                                data_refractive_index_medium_interpolation(3)))
 
                             d_0_j%x = 0
                             d_0_j%y = 0
@@ -1948,7 +2006,10 @@ module lib_mie_helper_functions
                                 end do
                             end do
 
-                            c_sca(i) = get_scattering_cross_section(a_nm, b_nm, k)
+                            c = get_cross_section(p, q, a_nm, b_nm, k)
+                            c_sca(i) = c(1)
+                            c_ext(i) = c(2)
+                            c_abs(i) = c(3)
 
                             deallocate (a_n%item)
                             deallocate (b_n%item)
@@ -1957,17 +2018,16 @@ module lib_mie_helper_functions
                         ! write to csv
                         header(1) = "lambda / m"
                         header(2) = "c_sca"
-                        header(3) = "n"
-                        header(4) = "k"
+                        header(3) = "c_ext"
+                        header(4) = "c_abs"
                         u = 99
                         open(unit=u, file=file_name_output, status='unknown')
                         rv = write_csv(u, header, lambda_list, &
-                                                  c_sca, &
-                                                  real(n_particle_list), aimag(n_particle_list))
+                                                  c_sca, c_ext, c_abs)
                         close(u)
                     end do
 
                     rv = .true.
-                end function test_get_scattering_cross_section
+                end function test_get_cross_section
         end function lib_mie_helper_functions_test_functions
 end module lib_mie_helper_functions
