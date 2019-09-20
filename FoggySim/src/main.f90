@@ -14,6 +14,7 @@ program main
     use lib_mie_vector_spherical_harmonics
 
     use lib_mie_single_sphere
+    use lib_mie_ss_helper_functions
 
     use light_scattering
     implicit none
@@ -57,6 +58,7 @@ program main
     error_counter = 0
     error_counter = error_counter + test_lib_math()
     error_counter = error_counter + lib_mie_vector_spherical_harmonics_test_functions()
+    error_counter = error_counter + lib_mie_ss_helper_functions_test_functions()
     error_counter = error_counter + lib_mie_ss_test_functions()
     error_counter = error_counter + lib_sort_test_functions()
     error_counter = error_counter + lib_test_hash_function()
@@ -71,8 +73,8 @@ program main
 
     print *, ""
     print *, "-------------MAIN------------------"
-    print '("  CPU-Time = ",f10.3," seconds.")',test_finish-test_start
-    print '("  WALL-Time = ",f10.3," seconds.")',(test_count_finish-test_count_start) / real(test_count_rate)
+    print '("    CPU-Time = ",f10.3," seconds.")',test_finish-test_start
+    print '("    WALL-Time = ",f10.3," seconds.")',(test_count_finish-test_count_start) / real(test_count_rate)
     print *, ""
     if (error_counter == 0) then
         print *, "All tests: OK"

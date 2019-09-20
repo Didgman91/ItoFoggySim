@@ -64,12 +64,32 @@ module lib_mie_type
         type(list_cmplx) :: b_n
     end type lib_mie_sphere_parameter_type
 
+    ! Depending on the initial definition of the electromagnetic wave,
+    ! the spherical harmonics have to be calculated differently.
+    !
+    ! case: exp(i (k x + omega t) // actual case
+    !   z_selector_incident_wave = 1
+    !   z_selector_scatterd_wave = 3
+    !   z_selector_translation = 3
+    !
+    ! case: exp(-i (k x + omega t)
+    !   z_selector_incident_wave = 2
+    !   z_selector_scatterd_wave = 4
+    !   z_selector_translation = 4
+    !
+    type lib_mie_vector_spherical_harmonics_type
+        integer(kind=1) :: z_selector_incident_wave
+        integer(kind=1) :: z_selector_scatterd_wave
+        integer(kind=1) :: z_selector_translation
+    end type lib_mie_vector_spherical_harmonics_type
+
     ! simulation parameter
     type lib_mie_simulation_parameter_type
         double precision :: refractive_index_medium
-        type(lib_mie_illumination_parameter) :: illumination
+        type(lib_mie_illumination_parameter), dimension(:), allocatable :: illumination
         type(lib_mie_sphere_type), dimension(:), allocatable :: sphere_list
         type(lib_mie_sphere_parameter_type), dimension(:), allocatable :: sphere_parameter_list
+        type(lib_mie_vector_spherical_harmonics_type) :: spherical_harmonics
     end type lib_mie_simulation_parameter_type
 
 end module lib_mie_type

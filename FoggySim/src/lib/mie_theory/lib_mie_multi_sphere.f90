@@ -1,6 +1,7 @@
 module lib_mie_multi_sphere
+    use libmath
     use lib_mie_type
-    use lib_mie_single_sphere
+    use lib_mie_ms_helper_functions
     implicit none
 
     private

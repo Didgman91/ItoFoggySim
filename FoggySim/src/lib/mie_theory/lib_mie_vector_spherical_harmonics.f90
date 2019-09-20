@@ -1253,6 +1253,33 @@ module lib_mie_vector_spherical_harmonics
         ! Calculation of the translation transformation coefficients
         ! from the l-th coordinate system to the j-th coordinate system
         !
+        !
+        !
+        !            z ^
+        !              |
+        !          K_l |----> x
+        !             /
+        !            /
+        !     theta / d_lj
+        !      z ^ /
+        !        |/
+        !    K_j |-----> x
+        !
+        !   theta = angle(z_j, d_lj)
+        !
+        !
+        !              z
+        !          K_l o----> x
+        !             /
+        !            /
+        !           / d_lj
+        !          /
+        !        z/ phi
+        !    K_j o-----> x
+        !
+        !   phi = angle(d_lj, x_j)
+        !
+        !
         ! Argument
         ! ----
         !   x: double precision

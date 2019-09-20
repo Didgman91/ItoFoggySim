@@ -17,10 +17,10 @@ module lib_mie_ss_helper_functions
     public :: lib_mie_ss_hf_destructor
     public :: lib_mie_ss_hf_get_n_c
     public :: lib_mie_ss_hf_get_p_q_j_j
-    public :: lib_mie_ss_hf_calc_triple_sum
+!    public :: lib_mie_ss_hf_calc_triple_sum
     public :: lib_mie_ss_hf_test_convergence_plane_wave
 
-    public :: lib_mie_helper_functions_test_functions
+    public :: lib_mie_ss_helper_functions_test_functions
 
     ! public interfaces
     public :: lib_mie_ss_hf_init_coeff_a_n_b_n     ! legacy: the hf_constructor should be used
@@ -41,6 +41,11 @@ module lib_mie_ss_helper_functions
         module procedure get_An_real
         module procedure get_An_cmplx
     end interface lib_mie_ss_hf_get_An
+
+    interface lib_mie_ss_hf_get_p_q_j_j
+        module procedure lib_mie_ss_hf_get_p_q_j_j_single_wave
+        module procedure lib_mie_ss_hf_get_p_q_j_j_multi_wave
+    end interface
     ! ~~~ interface ~~~
 
     ! --- caching ---
@@ -1015,7 +1020,7 @@ module lib_mie_ss_helper_functions
         !       coefficient of vector spherical componets
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres Yu-lin Xu, eq. 20
-        subroutine lib_mie_ss_hf_get_p_q_j_j(k, d_0_j, n_range, p, q, caching)
+        subroutine lib_mie_ss_hf_get_p_q_j_j_single_wave(k, d_0_j, n_range, p, q, caching)
             implicit none
             ! dummy
             type(cartesian_coordinate_real_type), intent(in) :: k
@@ -1047,13 +1052,93 @@ module lib_mie_ss_helper_functions
                 ! j-th coordinate system
                 dot_k_d = dot_product(k, d_0_j)
                 exp_k_d = cmplx(cos(dot_k_d), sin(dot_k_d), kind=8)
-                call get_p_q_j_j_core(alpha, beta, n_range, p, q, exp_k_d)
+                call get_p_q_j_j_core(alpha, beta, n_range, p, q, exp_k_d, caching=caching)
             else
                 ! 0-th coordinate system
-                call get_p_q_j_j_core(alpha, beta, n_range, p, q)
+                call get_p_q_j_j_core(alpha, beta, n_range, p, q, caching=caching)
             end if
 
-        end subroutine lib_mie_ss_hf_get_p_q_j_j
+        end subroutine lib_mie_ss_hf_get_p_q_j_j_single_wave
+
+        ! Calculates the coefficients (of vector spherical components) of multiple plane incident waves
+        ! - transverse magnetic mode (TM)
+        !
+        !                 z
+        !                 ^
+        !             K_j |
+        !                 --> x
+        !                ^
+        !               /
+        !           z  /d_j_0
+        !           ^ /
+        !       K_0 |/
+        !           --> x
+        !      ____________
+        !      ____k^______
+        !      _____|______
+        !      ____________ plane wave
+        !
+        ! Argument
+        ! ----
+        !   k: type(cartesian_coordinate_real_type)
+        !       wave vector
+        !   d_0_j: type(cartesian_coordinate_real_type)
+        !       vector from the
+        !   n_range: integer, dimension(2)
+        !       first and last index (degree) of the sum to calculate the electical field
+        !       e.g. n = (/ 1, 45 /) <-- size parameter
+        !   caching: logical (std: .true.)
+        !
+        ! Returns
+        ! ----
+        !   p: type(list_list_cmplx)
+        !       coefficient of vector spherical componets
+        !   q: type(list_list_cmplx)
+        !       coefficient of vector spherical componets
+        !
+        ! Reference: Electromagnetic scattering by an aggregate of spheres Yu-lin Xu, eq. 20
+        subroutine lib_mie_ss_hf_get_p_q_j_j_multi_wave(illumination, n_medium, d_0_j, n_range, p_nm, q_nm, caching)
+            implicit none
+            ! dummy
+            type(lib_mie_illumination_parameter), dimension(:), intent(in) :: illumination
+            double precision :: n_medium
+            type(cartesian_coordinate_real_type), intent(in) :: d_0_j
+            integer(kind=4), dimension(2),intent(in) :: n_range
+
+            type(list_list_cmplx), intent(inout) :: p_nm
+            type(list_list_cmplx), intent(inout) :: q_nm
+
+            logical, optional :: caching
+
+            ! auxiliary
+            integer :: i
+
+            type(cartesian_coordinate_real_type) :: k
+            type(cartesian_coordinate_real_type) :: d_i_j
+
+            type(list_list_cmplx), dimension(size(illumination)) :: buffer_p_nm
+            type(list_list_cmplx), dimension(size(illumination)) :: buffer_q_nm
+
+            !$OMP PARALLEL DO PRIVATE(i, d_i_j, k)
+            do i = 1, size(illumination)
+                d_i_j = d_0_j - illumination(i)%d_0_i
+                k = illumination(i)%wave_vector_0 * n_medium
+
+                call lib_mie_ss_hf_get_p_q_j_j_single_wave(k, d_i_j, n_range, &
+                                                           buffer_p_nm(i), buffer_q_nm(i),&
+                                                           caching=caching)
+            end do
+            !$OMP END PARALLEL DO
+
+            call init_list(p_nm, n_range(1), n_range(2)-n_range(1)+1, dcmplx(0,0))
+            call init_list(q_nm, n_range(1), n_range(2)-n_range(1)+1, dcmplx(0,0))
+
+            do i = 1, size(illumination)
+                p_nm = p_nm + buffer_p_nm(i)
+                q_nm = q_nm + buffer_q_nm(i)
+            end do
+
+        end subroutine lib_mie_ss_hf_get_p_q_j_j_multi_wave
 
         ! Calculates the coefficients (of vector spherical components) of a plane incident wave
         ! - transverse magnetic mode (TM)
@@ -1226,247 +1311,247 @@ module lib_mie_ss_helper_functions
 
         end subroutine get_p_q_j_j_core
 
-        ! Arguments
-        ! ----
-        !   simulation_parameter: type(simulation_parameter_type)
-        !   sphere: type(sphere_type), dimension(:)
-        !       list of spheres
-        !   sphere_parameter: type(sphere_parameter_type), dimension(:)
-        !       list of shared sphere parameters
-        !   z_selector: integer
-        !       parameter of the spherical harmonics
-        !       values:
-        !           1: spherical Bessel function first kind   j_n
-        !           2: spherical Bessel function second kind  y_n
-        !           3: spherical Hankel function first kind   h^(1)_n
-        !           4: spherical Hankel function second kind  h^(2)_n
-        !   f: double precision, optional (std: 1)
-        !       numerical factor (0, 1]
-        !       "In our actual calculations, some multi-
-        !        sphere systems do not converge if f 5 1, but they do
-        !        converge when the value of f is reduced to, say, 0.7."[1]
-        !
-        ! Returns
-        ! ----
-        !   a_j_nm: type(list_list_cmplx)
-        !   b_j_nm: type(list_list_cmplx)
-        !
-        ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 30, 35
-        subroutine lib_mie_ss_hf_calc_triple_sum(simulation_parameter, &
-                                              sphere, sphere_parameter, sphere_j, &
-                                              z_selector, &
-                                              a_j_nm, b_j_nm, &
-                                              f)
-            implicit none
-            ! dummy
-            type(lib_mie_simulation_parameter_type) :: simulation_parameter
-            type(lib_mie_sphere_type), dimension(:), intent(in) :: sphere
-            type(lib_mie_sphere_parameter_type), dimension(:), intent(in) :: sphere_parameter
-            integer :: sphere_j
-            integer(kind=1) :: z_selector
-
-            type(list_list_cmplx), intent(inout) :: a_j_nm
-            type(list_list_cmplx), intent(inout) :: b_j_nm
-
-            double precision, intent(in), optional :: f
-
-            ! auxiliary
-            integer :: n
-            integer :: nu
-
-            integer :: l
-            integer :: i
-
-            double precision :: lambda
-            double precision :: n_medium
-            type(cartesian_coordinate_real_type) :: k
-
-            integer, dimension(2) :: n_range
-            integer, dimension(2) :: nu_range
-
-            type(list_list_cmplx) :: p
-            type(list_list_cmplx) :: q
-            type(list_cmplx) :: a_j_n
-            type(list_cmplx) :: b_j_n
-            type(list_cmplx) :: a_l_nu
-            type(list_cmplx) :: b_l_nu
-            type(list_list_cmplx) :: a_l_numu
-            type(list_list_cmplx) :: b_l_numu
-            type(list_4_cmplx) :: A_nmnumu
-            type(list_4_cmplx) :: B_nmnumu
-            type(cartesian_coordinate_real_type) :: d_0_j
-            type(cartesian_coordinate_real_type) :: d_0_l
-            type(cartesian_coordinate_real_type) :: x
-
-            type(list_list_cmplx) :: buffer_sum_a
-            type(list_list_cmplx) :: buffer_sum_b
-            type(list_list_cmplx), dimension(:), allocatable :: buffer_sum_a_l
-            type(list_list_cmplx), dimension(:), allocatable :: buffer_sum_b_l
-
-            type(list_list_cmplx) :: a_j_nm_old
-            type(list_list_cmplx) :: b_j_nm_old
-
-            i = sphere(sphere_j)%sphere_parameter_index
-            n_range = sphere_parameter(i)%n_range
-            d_0_j = sphere(sphere_j)%d_0_j
-            a_j_n = sphere_parameter(i)%a_n
-            b_j_n = sphere_parameter(i)%b_n
-
-            if (present(f)) then
-                a_j_nm_old = sphere(sphere_j)%a_nm
-                b_j_nm_old = sphere(sphere_j)%b_nm
-            end if
-
-            lambda = simulation_parameter%illumination%lambda_0
-            n_medium = simulation_parameter%refractive_index_medium
-            k = simulation_parameter%illumination%wave_vector_0 * n_medium
-
-
-            allocate(buffer_sum_a_l(lbound(sphere, 1):ubound(sphere, 1)))
-            allocate(buffer_sum_b_l(lbound(sphere, 1):ubound(sphere, 1)))
-
-            ! calculate the triple sum
-            !$OMP PARALLEL DO PRIVATE(l, i, nu_range, a_l_nu, b_l_nu, d_0_l, &
-            !$OMP&  a_nmnumu, b_nmnumu, x, p, q, nu)
-            do l=ubound(sphere, 1), lbound(sphere, 1)
-                if (l .ne. sphere_j) then
-                    i = sphere(l)%sphere_parameter_index
-                    nu_range = sphere_parameter(i)%n_range
-                    a_l_numu = sphere(l)%a_nm
-                    b_l_numu = sphere(l)%b_nm
-                    d_0_l = sphere(l)%d_0_j
-
-                    x = (d_0_l - d_0_j) * n_medium / lambda
-
-                    call lib_mie_vector_spherical_harmonics_translation_coefficient(x, &
-                                                                                    n_range, nu_range, z_selector,&
-                                                                                    a_nmnumu, b_nmnumu)
-
-
-                    call calc_inner_2sum(a_l_numu, b_l_numu, a_nmnumu, b_nmnumu, &
-                                         buffer_sum_a_l(l), buffer_sum_b_l(l))
-
-                end if
-            end do
-            !$OMP END PARALLEL DO
-
-            call init_list(buffer_sum_a, n_range(1), n_range(2) - n_range(1) + 1, cmplx(0, 0, kind=lib_math_type_kind))
-            call init_list(buffer_sum_b, n_range(1), n_range(2) - n_range(1) + 1, cmplx(0, 0, kind=lib_math_type_kind))
-            ! final summation of the triple sum
-            do l=lbound(sphere, 1), ubound(sphere, 1)
-                buffer_sum_a = buffer_sum_a + buffer_sum_a_l(l)
-                buffer_sum_b = buffer_sum_b + buffer_sum_b_l(l)
-            end do
-
-            deallocate(buffer_sum_a_l)
-            deallocate(buffer_sum_b_l)
-
-
-            call lib_mie_ss_hf_get_p_q_j_j(k, d_0_j, n_range, p, q)
-
-            call init_list(a_j_nm, n_range(1), n_range(2) - n_range(1) + 1)
-            call init_list(b_j_nm, n_range(1), n_range(2) - n_range(1) + 1)
-
-            a_j_nm = p - buffer_sum_a
-            b_j_nm = q - buffer_sum_b
-
-            !$OMP PARALLEL DO PRIVATE(n)
-            do n=n_range(1), n_range(2)
-                a_j_nm%item(n)%item(:) = a_j_n%item(n) * a_j_nm%item(n)%item(:)
-                b_j_nm%item(n)%item(:) = b_j_n%item(n) * b_j_nm%item(n)%item(:)
-            end do
-            !$OMP END PARALLEL DO
-
-            if (present(f)) then
-                a_j_nm = (1.0d0 - f) * a_j_nm_old + f * a_j_nm
-                b_j_nm = (1.0d0 - f) * b_j_nm_old + f * b_j_nm
-            end if
-
-        end subroutine
-
-        ! Calculates the two inner sums of eq. 30 (interactive scattering coefficients)
-        !
-        ! Argument
-        ! ----
-        !   a_l_munu: type(list_list_cmplx)
-        !       Mie coefficient of the l-th sphere
-        !       restriction: same dimension as b_l_munu
-        !   b_l_munu: type(list_list_cmplx)
-        !       Mie coefficient of the l-th sphere
-        !       restriction: same dimension as a_l_munu
-        !   a_munumn: type(list_4_cmplx)
-        !       translation coefficient
-        !       restriction: same dimension as b_munumn
-        !   b_munumn: type(list_4_cmplx)
-        !       translation coefficient
-        !       restriction: same dimension as a_munumn
-        !
-        ! Returns
-        ! ----
-        !   a_2sum: double complex
-        !
-        !
-        ! Reference:Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 30
-        subroutine calc_inner_2sum(a_l_munu, b_l_munu, a_munumn, b_munumn, &
-                                   a_2sum, b_2sum)
-            implicit none
-            ! dummy
-            type(list_list_cmplx), intent(in) :: a_l_munu
-            type(list_list_cmplx), intent(in) :: b_l_munu
-            type(list_4_cmplx), intent(in) :: a_munumn
-            type(list_4_cmplx), intent(in) :: b_munumn
-
-            type(list_list_cmplx), intent(inout) :: a_2sum
-            type(list_list_cmplx), intent(inout) :: b_2sum
-
-            ! auxiliary
-            integer :: n
-            integer :: m
-            integer :: nu
-            integer :: mu
-
-            integer, dimension(2) :: n_range
-            integer, dimension(2) :: nu_range
-
-            double complex :: buffer_cmplx
-
-            ! set boundaries
-            n_range(1) = lbound(a_munumn%item, 1)
-            n_range(2) = ubound(a_munumn%item, 1)
-            nu_range(1) = max(lbound(a_munumn%item(n_range(1))%item(0)%item, 1), 1)
-            nu_range(2) = ubound(a_munumn%item(n_range(1))%item(0)%item, 1)
-
-            call init_list(a_2sum, n_range(1), n_range(2)-n_range(1)+1)
-            call init_list(b_2sum, n_range(1), n_range(2)-n_range(1)+1)
-
-            ! calculate the summand
-            !$OMP PARALLEL DO PRIVATE(n, m)
-            do n=n_range(1), n_range(2)
-                do m=-n, n
-                    !$OMP PARALLEL DO PRIVATE(nu, mu, buffer_cmplx)
-                    do nu=nu_range(1), nu_range(2)
-                        do mu=-nu, nu
-                            ! summand of a_j_mn
-                            ! first line eq. 30
-                            buffer_cmplx = a_l_munu%item(nu)%item(mu) * a_munumn%item(n)%item(m)%item(nu)%item(mu)
-                            buffer_cmplx = buffer_cmplx &
-                                           + b_l_munu%item(nu)%item(mu) * b_munumn%item(n)%item(m)%item(nu)%item(mu)
-                            a_2sum%item(n)%item(m) = buffer_cmplx
-
-                            ! summand of b_j_mn
-                            ! second line eq. 30
-                            buffer_cmplx = a_l_munu%item(nu)%item(mu) * b_munumn%item(n)%item(m)%item(nu)%item(mu)
-                            buffer_cmplx = buffer_cmplx &
-                                           + b_l_munu%item(nu)%item(mu) * a_munumn%item(n)%item(m)%item(nu)%item(mu)
-                            b_2sum%item(n)%item(m) = buffer_cmplx
-                        end do
-                    end do
-                    !$OMP END PARALLEL DO
-                end do
-            end do
-            !$OMP END PARALLEL DO
-
-        end subroutine calc_inner_2sum
+!        ! Arguments
+!        ! ----
+!        !   simulation_parameter: type(simulation_parameter_type)
+!        !   sphere: type(sphere_type), dimension(:)
+!        !       list of spheres
+!        !   sphere_parameter: type(sphere_parameter_type), dimension(:)
+!        !       list of shared sphere parameters
+!        !   z_selector: integer
+!        !       parameter of the spherical harmonics
+!        !       values:
+!        !           1: spherical Bessel function first kind   j_n
+!        !           2: spherical Bessel function second kind  y_n
+!        !           3: spherical Hankel function first kind   h^(1)_n
+!        !           4: spherical Hankel function second kind  h^(2)_n
+!        !   f: double precision, optional (std: 1)
+!        !       numerical factor (0, 1]
+!        !       "In our actual calculations, some multi-
+!        !        sphere systems do not converge if f 5 1, but they do
+!        !        converge when the value of f is reduced to, say, 0.7."[1]
+!        !
+!        ! Returns
+!        ! ----
+!        !   a_j_nm: type(list_list_cmplx)
+!        !   b_j_nm: type(list_list_cmplx)
+!        !
+!        ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 30, 35
+!        subroutine lib_mie_ss_hf_calc_triple_sum(simulation_parameter, &
+!                                              sphere, sphere_parameter, sphere_j, &
+!                                              z_selector, &
+!                                              a_j_nm, b_j_nm, &
+!                                              f)
+!            implicit none
+!            ! dummy
+!            type(lib_mie_simulation_parameter_type) :: simulation_parameter
+!            type(lib_mie_sphere_type), dimension(:), intent(in) :: sphere
+!            type(lib_mie_sphere_parameter_type), dimension(:), intent(in) :: sphere_parameter
+!            integer :: sphere_j
+!            integer(kind=1) :: z_selector
+!
+!            type(list_list_cmplx), intent(inout) :: a_j_nm
+!            type(list_list_cmplx), intent(inout) :: b_j_nm
+!
+!            double precision, intent(in), optional :: f
+!
+!            ! auxiliary
+!            integer :: n
+!            integer :: nu
+!
+!            integer :: l
+!            integer :: i
+!
+!            double precision :: lambda
+!            double precision :: n_medium
+!            type(cartesian_coordinate_real_type) :: k
+!
+!            integer, dimension(2) :: n_range
+!            integer, dimension(2) :: nu_range
+!
+!            type(list_list_cmplx) :: p
+!            type(list_list_cmplx) :: q
+!            type(list_cmplx) :: a_j_n
+!            type(list_cmplx) :: b_j_n
+!            type(list_cmplx) :: a_l_nu
+!            type(list_cmplx) :: b_l_nu
+!            type(list_list_cmplx) :: a_l_numu
+!            type(list_list_cmplx) :: b_l_numu
+!            type(list_4_cmplx) :: A_nmnumu
+!            type(list_4_cmplx) :: B_nmnumu
+!            type(cartesian_coordinate_real_type) :: d_0_j
+!            type(cartesian_coordinate_real_type) :: d_0_l
+!            type(cartesian_coordinate_real_type) :: x
+!
+!            type(list_list_cmplx) :: buffer_sum_a
+!            type(list_list_cmplx) :: buffer_sum_b
+!            type(list_list_cmplx), dimension(:), allocatable :: buffer_sum_a_l
+!            type(list_list_cmplx), dimension(:), allocatable :: buffer_sum_b_l
+!
+!            type(list_list_cmplx) :: a_j_nm_old
+!            type(list_list_cmplx) :: b_j_nm_old
+!
+!            i = sphere(sphere_j)%sphere_parameter_index
+!            n_range = sphere_parameter(i)%n_range
+!            d_0_j = sphere(sphere_j)%d_0_j
+!            a_j_n = sphere_parameter(i)%a_n
+!            b_j_n = sphere_parameter(i)%b_n
+!
+!            if (present(f)) then
+!                a_j_nm_old = sphere(sphere_j)%a_nm
+!                b_j_nm_old = sphere(sphere_j)%b_nm
+!            end if
+!
+!            lambda = simulation_parameter%illumination%lambda_0
+!            n_medium = simulation_parameter%refractive_index_medium
+!            k = simulation_parameter%illumination%wave_vector_0 * n_medium
+!
+!
+!            allocate(buffer_sum_a_l(lbound(sphere, 1):ubound(sphere, 1)))
+!            allocate(buffer_sum_b_l(lbound(sphere, 1):ubound(sphere, 1)))
+!
+!            ! calculate the triple sum
+!            !$OMP PARALLEL DO PRIVATE(l, i, nu_range, a_l_nu, b_l_nu, d_0_l, &
+!            !$OMP&  a_nmnumu, b_nmnumu, x, p, q, nu)
+!            do l=ubound(sphere, 1), lbound(sphere, 1)
+!                if (l .ne. sphere_j) then
+!                    i = sphere(l)%sphere_parameter_index
+!                    nu_range = sphere_parameter(i)%n_range
+!                    a_l_numu = sphere(l)%a_nm
+!                    b_l_numu = sphere(l)%b_nm
+!                    d_0_l = sphere(l)%d_0_j
+!
+!                    x = (d_0_l - d_0_j) * n_medium / lambda
+!
+!                    call lib_mie_vector_spherical_harmonics_translation_coefficient(x, &
+!                                                                                    n_range, nu_range, z_selector,&
+!                                                                                    a_nmnumu, b_nmnumu)
+!
+!
+!                    call calc_inner_2sum(a_l_numu, b_l_numu, a_nmnumu, b_nmnumu, &
+!                                         buffer_sum_a_l(l), buffer_sum_b_l(l))
+!
+!                end if
+!            end do
+!            !$OMP END PARALLEL DO
+!
+!            call init_list(buffer_sum_a, n_range(1), n_range(2) - n_range(1) + 1, cmplx(0, 0, kind=lib_math_type_kind))
+!            call init_list(buffer_sum_b, n_range(1), n_range(2) - n_range(1) + 1, cmplx(0, 0, kind=lib_math_type_kind))
+!            ! final summation of the triple sum
+!            do l=lbound(sphere, 1), ubound(sphere, 1)
+!                buffer_sum_a = buffer_sum_a + buffer_sum_a_l(l)
+!                buffer_sum_b = buffer_sum_b + buffer_sum_b_l(l)
+!            end do
+!
+!            deallocate(buffer_sum_a_l)
+!            deallocate(buffer_sum_b_l)
+!
+!
+!            call lib_mie_ss_hf_get_p_q_j_j(k, d_0_j, n_range, p, q)
+!
+!            call init_list(a_j_nm, n_range(1), n_range(2) - n_range(1) + 1)
+!            call init_list(b_j_nm, n_range(1), n_range(2) - n_range(1) + 1)
+!
+!            a_j_nm = p - buffer_sum_a
+!            b_j_nm = q - buffer_sum_b
+!
+!            !$OMP PARALLEL DO PRIVATE(n)
+!            do n=n_range(1), n_range(2)
+!                a_j_nm%item(n)%item(:) = a_j_n%item(n) * a_j_nm%item(n)%item(:)
+!                b_j_nm%item(n)%item(:) = b_j_n%item(n) * b_j_nm%item(n)%item(:)
+!            end do
+!            !$OMP END PARALLEL DO
+!
+!            if (present(f)) then
+!                a_j_nm = (1.0d0 - f) * a_j_nm_old + f * a_j_nm
+!                b_j_nm = (1.0d0 - f) * b_j_nm_old + f * b_j_nm
+!            end if
+!
+!        end subroutine
+!
+!        ! Calculates the two inner sums of eq. 30 (interactive scattering coefficients)
+!        !
+!        ! Argument
+!        ! ----
+!        !   a_l_munu: type(list_list_cmplx)
+!        !       Mie coefficient of the l-th sphere
+!        !       restriction: same dimension as b_l_munu
+!        !   b_l_munu: type(list_list_cmplx)
+!        !       Mie coefficient of the l-th sphere
+!        !       restriction: same dimension as a_l_munu
+!        !   a_munumn: type(list_4_cmplx)
+!        !       translation coefficient
+!        !       restriction: same dimension as b_munumn
+!        !   b_munumn: type(list_4_cmplx)
+!        !       translation coefficient
+!        !       restriction: same dimension as a_munumn
+!        !
+!        ! Returns
+!        ! ----
+!        !   a_2sum: double complex
+!        !
+!        !
+!        ! Reference:Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 30
+!        subroutine calc_inner_2sum(a_l_munu, b_l_munu, a_munumn, b_munumn, &
+!                                   a_2sum, b_2sum)
+!            implicit none
+!            ! dummy
+!            type(list_list_cmplx), intent(in) :: a_l_munu
+!            type(list_list_cmplx), intent(in) :: b_l_munu
+!            type(list_4_cmplx), intent(in) :: a_munumn
+!            type(list_4_cmplx), intent(in) :: b_munumn
+!
+!            type(list_list_cmplx), intent(inout) :: a_2sum
+!            type(list_list_cmplx), intent(inout) :: b_2sum
+!
+!            ! auxiliary
+!            integer :: n
+!            integer :: m
+!            integer :: nu
+!            integer :: mu
+!
+!            integer, dimension(2) :: n_range
+!            integer, dimension(2) :: nu_range
+!
+!            double complex :: buffer_cmplx
+!
+!            ! set boundaries
+!            n_range(1) = lbound(a_munumn%item, 1)
+!            n_range(2) = ubound(a_munumn%item, 1)
+!            nu_range(1) = max(lbound(a_munumn%item(n_range(1))%item(0)%item, 1), 1)
+!            nu_range(2) = ubound(a_munumn%item(n_range(1))%item(0)%item, 1)
+!
+!            call init_list(a_2sum, n_range(1), n_range(2)-n_range(1)+1)
+!            call init_list(b_2sum, n_range(1), n_range(2)-n_range(1)+1)
+!
+!            ! calculate the summand
+!            !$OMP PARALLEL DO PRIVATE(n, m)
+!            do n=n_range(1), n_range(2)
+!                do m=-n, n
+!                    !$OMP PARALLEL DO PRIVATE(nu, mu, buffer_cmplx)
+!                    do nu=nu_range(1), nu_range(2)
+!                        do mu=-nu, nu
+!                            ! summand of a_j_mn
+!                            ! first line eq. 30
+!                            buffer_cmplx = a_l_munu%item(nu)%item(mu) * a_munumn%item(n)%item(m)%item(nu)%item(mu)
+!                            buffer_cmplx = buffer_cmplx &
+!                                           + b_l_munu%item(nu)%item(mu) * b_munumn%item(n)%item(m)%item(nu)%item(mu)
+!                            a_2sum%item(n)%item(m) = buffer_cmplx
+!
+!                            ! summand of b_j_mn
+!                            ! second line eq. 30
+!                            buffer_cmplx = a_l_munu%item(nu)%item(mu) * b_munumn%item(n)%item(m)%item(nu)%item(mu)
+!                            buffer_cmplx = buffer_cmplx &
+!                                           + b_l_munu%item(nu)%item(mu) * a_munumn%item(n)%item(m)%item(nu)%item(mu)
+!                            b_2sum%item(n)%item(m) = buffer_cmplx
+!                        end do
+!                    end do
+!                    !$OMP END PARALLEL DO
+!                end do
+!            end do
+!            !$OMP END PARALLEL DO
+!
+!        end subroutine calc_inner_2sum
 
         ! Argument
         ! ----
@@ -1833,7 +1918,7 @@ module lib_mie_ss_helper_functions
 
         end subroutine get_cross_section_core
 
-        function lib_mie_helper_functions_test_functions() result(rv)
+        function lib_mie_ss_helper_functions_test_functions() result(rv)
             use file_io
             implicit none
             ! dummy
@@ -2348,5 +2433,5 @@ module lib_mie_ss_helper_functions
 
                     rv = .true.
                 end function test_lib_mie_ss_hf_test_convergence_plane_wave
-        end function lib_mie_helper_functions_test_functions
+        end function lib_mie_ss_helper_functions_test_functions
 end module lib_mie_ss_helper_functions
