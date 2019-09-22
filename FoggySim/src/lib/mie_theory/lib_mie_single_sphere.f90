@@ -32,56 +32,6 @@ module lib_mie_single_sphere
 
         end subroutine lib_mie_ss_destructor
 
-        ! Argument
-        ! ----
-        !   lambda_0: double precision
-        !       vacuum wave length
-        !   n_medium: double precision
-        !       refractive index of the medium
-        !   r_particle: double precision
-        !       radius of the particel
-        !   n_particle: double complex
-        !       refractive index of the particle
-        !   n_range: integer, dimension(2)
-        !       first and last index (degree) of the sum to calculate the electical field
-        !       e.g. n = (/ 1, 45 /)
-        !
-        ! Returns
-        ! ----
-        !   sphere_parameter: type(lib_mie_sshere_parameter_type)
-        function lib_mie_ss_get_sphere_parameter(lambda_0, n_medium, &
-                                              r_particle, n_particle,&
-                                              n_range) &
-                                            result (sphere_parameter)
-            implicit none
-            ! dummy
-            double precision, intent(in) :: lambda_0
-            double precision, intent(in) :: n_medium
-            double precision, intent(in) :: r_particle
-            double complex, intent(in) :: n_particle
-            integer, dimension(2) :: n_range
-
-            type(lib_mie_sphere_parameter_type) :: sphere_parameter
-
-            ! auxiliary
-            double precision :: size_parameter
-
-            size_parameter = 2 * PI * n_medium * r_particle / lambda_0
-
-            sphere_parameter%n_range = n_range
-            sphere_parameter%size_parameter = size_parameter
-            sphere_parameter%radius = r_particle
-            sphere_parameter%refractive_index = n_particle
-
-            if (aimag(n_particle) .eq. 0d0) then
-                call lib_mie_ss_hf_get_coefficients_a_n_b_n(size_parameter, real(n_particle)/n_medium, n_range, &
-                                                       sphere_parameter%a_n%item, sphere_parameter%b_n%item)
-            else
-                call lib_mie_ss_hf_get_coefficients_a_n_b_n(size_parameter, n_particle/n_medium, n_range, &
-                                                           sphere_parameter%a_n%item, sphere_parameter%b_n%item)
-            end if
-        end function lib_mie_ss_get_sphere_parameter
-
         ! calculates the scatterd electical field of a sphere
         !
         ! Setup

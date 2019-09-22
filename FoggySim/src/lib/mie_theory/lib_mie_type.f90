@@ -25,7 +25,7 @@ module lib_mie_type
     ! K_i: illumination coordinate system
     !
     type lib_mie_illumination_parameter
-        integer :: illumination_type    ! 1: plane wave
+        integer :: type    ! 1: plane wave
         double precision :: lambda_0 ! wave_length_vaccum
         type(cartesian_coordinate_real_type) :: d_0_i
         type(cartesian_coordinate_real_type) :: wave_vector_0 ! |k| = 2 Pi / lambda
