@@ -1134,8 +1134,8 @@ module lib_mie_ss_helper_functions
             call init_list(q_nm, n_range(1), n_range(2)-n_range(1)+1, dcmplx(0,0))
 
             do i = 1, size(illumination)
-                p_nm = p_nm + buffer_p_nm(i)
-                q_nm = q_nm + buffer_q_nm(i)
+                p_nm = p_nm + illumination(i)%g * buffer_p_nm(i)
+                q_nm = q_nm + illumination(i)%g * buffer_q_nm(i)
             end do
 
         end subroutine lib_mie_ss_hf_get_p_q_j_j_multi_wave

@@ -1676,6 +1676,7 @@ module lib_mie_single_sphere
                     k0 = 2 * PI / lambda
 
                     illumination(:)%lambda_0 = lambda
+                    illumination(:)%g = 1
 
                     buffer_car%x = 0
                     buffer_car%y = 0

@@ -27,8 +27,9 @@ module lib_mie_type
     type lib_mie_illumination_parameter
         integer :: type    ! 1: plane wave
         double precision :: lambda_0 ! wave_length_vaccum
-        type(cartesian_coordinate_real_type) :: d_0_i
-        type(cartesian_coordinate_real_type) :: wave_vector_0 ! |k| = 2 Pi / lambda
+        double precision :: g ! e_x_field_0 / e_field_0
+        type(cartesian_coordinate_real_type) :: d_0_i ! [m]
+        type(cartesian_coordinate_real_type) :: wave_vector_0 ! |k| = 2 Pi / lambda, wave_vector = [1/m]
     end type lib_mie_illumination_parameter
 
     ! sphere
