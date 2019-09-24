@@ -4,6 +4,12 @@ module lib_mie_type
 
     public
 
+    type lib_mie_illumination_plane_wave_parameter
+        double precision :: g ! e_x_field_0 / e_field_0
+        type(cartesian_coordinate_real_type) :: d_0_i ! [m]
+        type(cartesian_coordinate_real_type) :: wave_vector_0 ! |k| = 2 Pi / lambda, wave_vector = [1/m]
+    end type lib_mie_illumination_plane_wave_parameter
+
     ! illumination parameter
     !
     !             _________
@@ -26,13 +32,11 @@ module lib_mie_type
     !
     type lib_mie_illumination_parameter
         integer :: type    ! 1: plane wave
+        double precision :: e_field_0 ! [V/m]
         double precision :: lambda_0 ! wave_length_vaccum
-        double precision :: g ! e_x_field_0 / e_field_0
-        type(cartesian_coordinate_real_type) :: d_0_i ! [m]
-        type(cartesian_coordinate_real_type) :: wave_vector_0 ! |k| = 2 Pi / lambda, wave_vector = [1/m]
+        type(lib_mie_illumination_plane_wave_parameter), dimension(:), allocatable :: plane_wave
     end type lib_mie_illumination_parameter
 
-    ! sphere
     !                 z
     !                 ^
     !             K_j |
@@ -87,7 +91,7 @@ module lib_mie_type
     ! simulation parameter
     type lib_mie_simulation_parameter_type
         double precision :: refractive_index_medium
-        type(lib_mie_illumination_parameter), dimension(:), allocatable :: illumination
+        type(lib_mie_illumination_parameter) :: illumination
         type(lib_mie_sphere_type), dimension(:), allocatable :: sphere_list
         type(lib_mie_sphere_parameter_type), dimension(:), allocatable :: sphere_parameter_list
         type(lib_mie_vector_spherical_harmonics_type) :: spherical_harmonics

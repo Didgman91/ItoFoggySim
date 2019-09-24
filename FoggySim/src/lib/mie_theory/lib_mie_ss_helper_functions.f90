@@ -12,18 +12,19 @@ module lib_mie_ss_helper_functions
     integer, parameter, public :: N_MAX = 45
 
     ! public functions
-    public :: lib_mie_ss_hf_contructor
-!    public :: lib_mie_ss_hf_init_coeff_p0_q0
+!    public :: lib_mie_ss_hf_contructor
+    public :: lib_mie_ss_hf_init_coeff_p0_q0
     public :: lib_mie_ss_hf_destructor
     public :: lib_mie_ss_hf_get_n_c
     public :: lib_mie_ss_hf_get_p_q_j_j
 !    public :: lib_mie_ss_hf_calc_triple_sum
-    public :: lib_mie_ss_hf_test_convergence_plane_wave
+    public :: lib_mie_ss_hf_get_coefficient_a_nm_b_nm
+    public :: lib_mie_ss_hf_test_convergence_core
 
     public :: lib_mie_ss_helper_functions_test_functions
 
     ! public interfaces
-    public :: lib_mie_ss_hf_init_coeff_a_n_b_n     ! legacy: the hf_constructor should be used
+    public :: lib_mie_ss_hf_init_coeff_a_n_b_n
     public :: lib_mie_ss_hf_get_coefficients_a_n_b_n
 
     ! --- interace ---
@@ -85,102 +86,102 @@ module lib_mie_ss_helper_functions
 
     contains
 
-        ! Initializes the caching where the size of n_max_ab and n_max_pq represents the number of cached values.
-        !
-        ! Argument
-        ! ----
-        !   n_max_ab: integer, dimension(:)
-        !       max degree of the a b coefficients
-        !   x: double precision, dimension(size(n_max_ab))
-        !       size parameter: x = k*r = 2 * PI * N * r / lambda
-        !       k: wavenumber
-        !       r: distance
-        !       N: refractive index of the medium
-        !       lambda: wave length
-        !   m: double complex, dimension(size(n_max_ab))
-        !       relative refractive index: m = N_1 / N
-        !       N_1: refractive index of the particle [double precision, double complex]
-        !       N: refractive index of the medium [double precision]
-        !   n_max_pq: integer, dimension(:)
-        !       max degree of the p q coefficients
-        !   alpha: double precision, dimension(size(n_max_pq)), optional(std: 0)
-        !       incident angle with respect to the z-axis
-        !       codomain: 0..Pi
-        !   beta: double precision, dimension(size(n_max_pq)), optional(std: 0)
-        !       angle between the x axis and the projection of the wave vector on the x-y plane
-        !       codomain: 0..2Pi
-        subroutine lib_mie_ss_hf_contructor(n_max_ab, x, m, &
-                                         n_max_pq, alpha, beta)
-            implicit none
-            ! dummy
-            integer, dimension(:), intent(in) :: n_max_ab
-            double precision, dimension(size(n_max_ab)), intent(in) :: x
-            double complex, dimension(size(n_max_ab)), intent(in) :: m
-            integer, dimension(:), intent(in) :: n_max_pq
-            double precision, dimension(size(n_max_pq)), intent(in), optional :: alpha
-            double precision, dimension(size(n_max_pq)), intent(in), optional :: beta
-
-            ! auxiliary
-            integer :: i
-
-            integer :: counter_real
-            integer :: counter_cmplx
-
-            integer, dimension(size(n_max_ab)) :: n_max_ab_real
-            double precision, dimension(size(n_max_ab)) :: x_real
-            double precision, dimension(size(n_max_ab)) :: m_real
-
-            integer, dimension(size(n_max_ab)) :: n_max_ab_cmplx
-            double precision, dimension(size(n_max_ab)) :: x_cmplx
-            double complex, dimension(size(n_max_ab)) :: m_cmplx
-
-            double precision, dimension(size(n_max_pq)) :: m_alpha
-            double precision, dimension(size(n_max_pq)) :: m_beta
-
-            if (present(alpha)) then
-                m_alpha = alpha
-            else
-                m_alpha = 0
-            end if
-
-            if (present(beta)) then
-                m_beta = beta
-            else
-                m_beta = 0
-            end if
-
-            ! separate lists by only real and complex "m"
-            counter_real = 0
-            counter_cmplx = 0
-            do i=1, size(n_max_ab)
-                if (aimag(m(i)) .eq. 0D0) then
-                    counter_real = counter_real + 1
-                    n_max_ab_real(counter_real) = n_max_ab(i)
-                    x_real(counter_real) = x(i)
-                    m_real(counter_real) = real(m(i))
-                else
-                    counter_cmplx = counter_cmplx + 1
-                    n_max_ab_cmplx(counter_cmplx) = n_max_ab(i)
-                    x_cmplx(counter_cmplx) = x(i)
-                    m_cmplx(counter_cmplx) = m(i)
-                end if
-            end do
-
-            if (counter_real .gt. 0) then
-                call lib_mie_ss_hf_init_coeff_a_n_b_n_real(x_real(1:counter_real), &
-                                                        m_real(1:counter_real), &
-                                                        n_max_ab_real(1:counter_real))
-            end if
-
-            if (counter_cmplx .gt. 0) then
-                call lib_mie_ss_hf_init_coeff_a_n_b_n_cmplx(x_cmplx(1:counter_cmplx), &
-                                                         m_cmplx(1:counter_cmplx), &
-                                                         n_max_ab_cmplx(1:counter_cmplx))
-            end if
-
-            call lib_mie_ss_hf_init_coeff_p0_q0(m_alpha, m_beta, n_max_pq)
-
-        end subroutine lib_mie_ss_hf_contructor
+!        ! Initializes the caching where the size of n_max_ab and n_max_pq represents the number of cached values.
+!        !
+!        ! Argument
+!        ! ----
+!        !   n_max_ab: integer, dimension(:)
+!        !       max degree of the a b coefficients
+!        !   x: double precision, dimension(size(n_max_ab))
+!        !       size parameter: x = k*r = 2 * PI * N * r / lambda
+!        !       k: wavenumber
+!        !       r: distance
+!        !       N: refractive index of the medium
+!        !       lambda: wave length
+!        !   m: double complex, dimension(size(n_max_ab))
+!        !       relative refractive index: m = N_1 / N
+!        !       N_1: refractive index of the particle [double precision, double complex]
+!        !       N: refractive index of the medium [double precision]
+!        !   n_max_pq: integer, dimension(:)
+!        !       max degree of the p q coefficients
+!        !   alpha: double precision, dimension(size(n_max_pq)), optional(std: 0)
+!        !       incident angle with respect to the z-axis
+!        !       codomain: 0..Pi
+!        !   beta: double precision, dimension(size(n_max_pq)), optional(std: 0)
+!        !       angle between the x axis and the projection of the wave vector on the x-y plane
+!        !       codomain: 0..2Pi
+!        subroutine lib_mie_ss_hf_contructor(n_max_ab, x, m, &
+!                                         n_max_pq, alpha, beta)
+!            implicit none
+!            ! dummy
+!            integer, dimension(:), intent(in) :: n_max_ab
+!            double precision, dimension(size(n_max_ab)), intent(in) :: x
+!            double complex, dimension(size(n_max_ab)), intent(in) :: m
+!            integer, dimension(:), intent(in) :: n_max_pq
+!            double precision, dimension(size(n_max_pq)), intent(in), optional :: alpha
+!            double precision, dimension(size(n_max_pq)), intent(in), optional :: beta
+!
+!            ! auxiliary
+!            integer :: i
+!
+!            integer :: counter_real
+!            integer :: counter_cmplx
+!
+!            integer, dimension(size(n_max_ab)) :: n_max_ab_real
+!            double precision, dimension(size(n_max_ab)) :: x_real
+!            double precision, dimension(size(n_max_ab)) :: m_real
+!
+!            integer, dimension(size(n_max_ab)) :: n_max_ab_cmplx
+!            double precision, dimension(size(n_max_ab)) :: x_cmplx
+!            double complex, dimension(size(n_max_ab)) :: m_cmplx
+!
+!            double precision, dimension(size(n_max_pq)) :: m_alpha
+!            double precision, dimension(size(n_max_pq)) :: m_beta
+!
+!            if (present(alpha)) then
+!                m_alpha = alpha
+!            else
+!                m_alpha = 0
+!            end if
+!
+!            if (present(beta)) then
+!                m_beta = beta
+!            else
+!                m_beta = 0
+!            end if
+!
+!            ! separate lists by pure real and complex "m"
+!            counter_real = 0
+!            counter_cmplx = 0
+!            do i=1, size(n_max_ab)
+!                if (aimag(m(i)) .eq. 0D0) then
+!                    counter_real = counter_real + 1
+!                    n_max_ab_real(counter_real) = n_max_ab(i)
+!                    x_real(counter_real) = x(i)
+!                    m_real(counter_real) = real(m(i))
+!                else
+!                    counter_cmplx = counter_cmplx + 1
+!                    n_max_ab_cmplx(counter_cmplx) = n_max_ab(i)
+!                    x_cmplx(counter_cmplx) = x(i)
+!                    m_cmplx(counter_cmplx) = m(i)
+!                end if
+!            end do
+!
+!            if (counter_real .gt. 0) then
+!                call lib_mie_ss_hf_init_coeff_a_n_b_n_real(x_real(1:counter_real), &
+!                                                        m_real(1:counter_real), &
+!                                                        n_max_ab_real(1:counter_real))
+!            end if
+!
+!            if (counter_cmplx .gt. 0) then
+!                call lib_mie_ss_hf_init_coeff_a_n_b_n_cmplx(x_cmplx(1:counter_cmplx), &
+!                                                         m_cmplx(1:counter_cmplx), &
+!                                                         n_max_ab_cmplx(1:counter_cmplx))
+!            end if
+!
+!            call lib_mie_ss_hf_init_coeff_p0_q0(m_alpha, m_beta, n_max_pq)
+!
+!        end subroutine lib_mie_ss_hf_contructor
 
         ! Argument
         ! ----
@@ -194,8 +195,8 @@ module lib_mie_ss_helper_functions
         !       relative refractive index: m = N_1 / N
         !       N_1: refractive index of the particle
         !       N: refractive index of the medium
-        !   n_max: integer, dimension(size(x))
-        !       max degree
+        !   n_max: integer, dimension(size(:))
+        !       maximum degree of the polynomials
         subroutine lib_mie_ss_hf_init_coeff_a_n_b_n_real(x, m, n_max)
             implicit none
             ! dummy
@@ -250,6 +251,8 @@ module lib_mie_ss_helper_functions
         !       relative refractive index: m = N_1 / N
         !       N_1: refractive index of the particle
         !       N: refractive index of the medium
+        !   n_max: integer, dimension(:)
+        !       maximum degree of the polynomials
         subroutine lib_mie_ss_hf_init_coeff_a_n_b_n_cmplx(x, m, n_max)
             implicit none
             ! dummy
@@ -294,8 +297,12 @@ module lib_mie_ss_helper_functions
 
         ! Argument
         ! ----
-        !   alpha: double precision
-        !
+        !   alpha: double precision, dimension(:)
+        !       polar angle [0, Pi)
+        !   beta: double precision, dimension(:)
+        !       azimuthal angle [0, 2 Pi)
+        !   n_max: integer, dimension(:)
+        !       maximum degree of the polynomials
         subroutine lib_mie_ss_hf_init_coeff_p0_q0(alpha, beta, n_max)
             implicit none
             ! dummy
@@ -1100,7 +1107,7 @@ module lib_mie_ss_helper_functions
         subroutine lib_mie_ss_hf_get_p_q_j_j_multi_wave(illumination, n_medium, d_0_j, n_range, p_nm, q_nm, caching)
             implicit none
             ! dummy
-            type(lib_mie_illumination_parameter), dimension(:), intent(in) :: illumination
+            type(lib_mie_illumination_parameter), intent(in) :: illumination
             double precision :: n_medium
             type(cartesian_coordinate_real_type), intent(in) :: d_0_j
             integer(kind=4), dimension(2),intent(in) :: n_range
@@ -1116,13 +1123,13 @@ module lib_mie_ss_helper_functions
             type(cartesian_coordinate_real_type) :: k
             type(cartesian_coordinate_real_type) :: d_i_j
 
-            type(list_list_cmplx), dimension(size(illumination)) :: buffer_p_nm
-            type(list_list_cmplx), dimension(size(illumination)) :: buffer_q_nm
+            type(list_list_cmplx), dimension(size(illumination%plane_wave)) :: buffer_p_nm
+            type(list_list_cmplx), dimension(size(illumination%plane_wave)) :: buffer_q_nm
 
             !$OMP PARALLEL DO PRIVATE(i, d_i_j, k)
-            do i = 1, size(illumination)
-                d_i_j = d_0_j - illumination(i)%d_0_i
-                k = illumination(i)%wave_vector_0 * n_medium
+            do i = 1, size(illumination%plane_wave)
+                d_i_j = d_0_j - illumination%plane_wave(i)%d_0_i
+                k = illumination%plane_wave(i)%wave_vector_0 * n_medium
 
                 call lib_mie_ss_hf_get_p_q_j_j_single_wave(k, d_i_j, n_range, &
                                                            buffer_p_nm(i), buffer_q_nm(i),&
@@ -1133,9 +1140,9 @@ module lib_mie_ss_helper_functions
             call init_list(p_nm, n_range(1), n_range(2)-n_range(1)+1, dcmplx(0,0))
             call init_list(q_nm, n_range(1), n_range(2)-n_range(1)+1, dcmplx(0,0))
 
-            do i = 1, size(illumination)
-                p_nm = p_nm + illumination(i)%g * buffer_p_nm(i)
-                q_nm = q_nm + illumination(i)%g * buffer_q_nm(i)
+            do i = 1, size(illumination%plane_wave)
+                p_nm = p_nm + illumination%plane_wave(i)%g * buffer_p_nm(i)
+                q_nm = q_nm + illumination%plane_wave(i)%g * buffer_q_nm(i)
             end do
 
         end subroutine lib_mie_ss_hf_get_p_q_j_j_multi_wave
@@ -1616,84 +1623,7 @@ module lib_mie_ss_helper_functions
             end do
         end subroutine lib_mie_ss_hf_get_coefficient_a_nm_b_nm
 
-        ! Argument
-        ! ---
-        !   lambda: double precision
-        !       wave length
-        !   n_medium: double precision
-        !       refractive index of the medium
-        !   r_particle: double precision
-        !       radius of the sphere
-        !   n_particle: double complex
-        !       refractive index of the sphere
-        !
-        ! Returns
-        ! ----
-        !   rv: integer, dimension(2)
-        !       rv(1):
-        !           -1: series may converge or diverge
-        !            0: series diverges
-        !           >0: series converges absolutely (degree n = rv(1))
-        !       rv(2): relative error [1/1000]
-        !           ( cross_section(n=rv(1)) - cross_section(n=n_max) ) / cross_section(n=n_max)
-        function lib_mie_ss_hf_test_convergence_plane_wave(lambda, n_medium, r_particle, n_particle) result(rv)
-            implicit none
-            ! dummy
-            double precision, intent(in) :: lambda ! wave length
-            double precision, intent(in) :: n_medium
 
-            double precision, intent(in) :: r_particle
-            double complex, intent(in) :: n_particle
-
-            integer, dimension(2) :: rv
-
-            ! auxiliary
-            integer :: n_c
-            integer, dimension(2) :: n_range
-
-            type(list_list_cmplx) :: a_nm
-            type(list_list_cmplx) :: b_nm
-
-            type(list_list_cmplx) :: p_nm
-            type(list_list_cmplx) :: q_nm
-
-            double precision :: x
-            double precision :: k
-
-            type(cartesian_coordinate_real_type) :: d_0_j
-
-            type(cartesian_coordinate_real_type) :: k_cartesian
-
-            d_0_j%x = 0
-            d_0_j%y = 0
-            d_0_j%z = 0
-
-            k = 2D0 * PI * n_medium / lambda
-            k_cartesian%x = 0
-            k_cartesian%y = 0
-            k_cartesian%z = k
-
-            x = abs(k * r_particle)
-
-            n_range(1) = 1
-            n_range(2) = N_MAX
-            n_c = lib_mie_ss_hf_get_n_c(x)
-            if (n_c .gt. 45) then
-               print *, "WARNING: max degree (",N_MAX,") reached: ", n_c
-               n_c = N_MAX
-#ifdef _PRINT_NOTE_
-            else
-                print *, "NOTE: max degree = ", n_c
-#endif
-            end if
-
-            call lib_mie_ss_hf_get_p_q_j_j(k_cartesian, d_0_j, n_range, p_nm, q_nm)
-
-            call lib_mie_ss_hf_get_coefficient_a_nm_b_nm(x, n_particle, n_medium, p_nm, q_nm, a_nm, b_nm)
-
-            rv = test_convergence_core(p_nm, q_nm, a_nm, b_nm, n_c)
-
-        end function lib_mie_ss_hf_test_convergence_plane_wave
 
         ! Argument
         ! ----
@@ -1718,7 +1648,7 @@ module lib_mie_ss_helper_functions
         !       rv(2): relative error [1/1000]
         !           >=0: abs( cross_section(n=rv(1)) - cross_section(n=n_max) )**" / abs(cross_section(n=n_max))**2
         !            -1: rv(1) .le. 0
-        function test_convergence_core(p_nm, q_nm, a_nm, b_nm, n_c) result(rv)
+        function lib_mie_ss_hf_test_convergence_core(p_nm, q_nm, a_nm, b_nm, n_c) result(rv)
             implicit none
             ! dummy
             type(list_list_cmplx), intent(in) :: a_nm
@@ -1798,7 +1728,7 @@ module lib_mie_ss_helper_functions
             else
                 rv(2) = -1
             end if
-        end function test_convergence_core
+        end function lib_mie_ss_hf_test_convergence_core
 
         ! Argument
         ! ----
@@ -1942,9 +1872,6 @@ module lib_mie_ss_helper_functions
                 rv = rv + 1
             end if
             if (.not. test_get_cross_section()) then
-                rv = rv + 1
-            end if
-            if (.not. test_lib_mie_ss_hf_test_convergence_plane_wave()) then
                 rv = rv + 1
             end if
 
@@ -2351,8 +2278,8 @@ module lib_mie_ss_helper_functions
                             end if
                             n_range(2) = N_MAX
 
-                            call lib_mie_ss_hf_contructor((/ n_range(2) /), (/ x /), (/ n_particle / n_medium /), &
-                                                       (/n_range(2)/))
+                            call lib_mie_ss_hf_init_coeff_p0_q0((/ 0D0 /), (/ 0D0 /), (/ n_range(2) /))
+                            call lib_mie_ss_hf_init_coeff_a_n_b_n_cmplx((/ x /), (/ n_particle / n_medium /), (/ n_range(2) /))
 
                             call lib_mie_ss_hf_get_p_q_j_j(k_cartesian, d_0_j, n_range, p, q)
 
@@ -2399,39 +2326,5 @@ module lib_mie_ss_helper_functions
 
                     rv = .true.
                 end function test_get_cross_section
-
-                function test_lib_mie_ss_hf_test_convergence_plane_wave() result(rv)
-                    implicit none
-                    ! dummy
-                    logical :: rv
-
-                    ! auxiliary
-                    integer, dimension(2) :: rv_convergence
-                    double precision :: lambda
-                    double precision :: n_medium
-                    double precision :: r_particle
-                    double complex :: n_particle
-
-                    lambda = 700 * unit_nm
-                    n_medium = 1
-
-                    r_particle = 5 * unit_mu
-!                    ! https://refractiveindex.info/?shelf=main&book=Ag&page=Johnson
-!                    n_particle = cmplx(0.040000, 7.1155, kind=8)
-                    n_particle = cmplx(1.33, 0, kind=8)
-
-                    print *, "test_lib_mie_ss_hf_test_convergence_plane_wave"
-
-                    rv_convergence = lib_mie_ss_hf_test_convergence_plane_wave(lambda, n_medium, r_particle, n_particle)
-
-                    print *, "  lambda = ", lambda
-                    print *, "  n_medium = ", n_medium
-                    print *, "  r_particle = ", r_particle
-                    print *, "  n_particle = ", n_particle
-                    print *, "  convergence with n = ", rv_convergence(1)
-                    print *, "  relative error = ", rv_convergence(2)
-
-                    rv = .true.
-                end function test_lib_mie_ss_hf_test_convergence_plane_wave
         end function lib_mie_ss_helper_functions_test_functions
 end module lib_mie_ss_helper_functions

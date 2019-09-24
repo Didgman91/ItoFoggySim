@@ -191,7 +191,9 @@
                         						
                         <entry excluding="lib|data_types" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
                         						
-                        <entry excluding="math|tree|mlfmm|mie_theory|light_scattering_by_particles" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
+                        <entry excluding="field|math|tree|mlfmm|mie_theory|light_scattering_by_particles" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
+                        						
+                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/field"/>
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/light_scattering_by_particles"/>
                         						
@@ -325,7 +327,9 @@
                         						
                         <entry excluding="lib|data_types" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
                         						
-                        <entry excluding="math|tree|mlfmm|mie_theory|light_scattering_by_particles" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
+                        <entry excluding="field|math|tree|mlfmm|mie_theory|light_scattering_by_particles" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
+                        						
+                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/field"/>
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/light_scattering_by_particles"/>
                         						
@@ -517,7 +521,9 @@
                         						
                         <entry excluding="lib|data_types" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
                         						
-                        <entry excluding="math|tree|mlfmm|mie_theory|light_scattering_by_particles" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
+                        <entry excluding="field|math|tree|mlfmm|mie_theory|light_scattering_by_particles" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib"/>
+                        						
+                        <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/field"/>
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/lib/light_scattering_by_particles"/>
                         						
