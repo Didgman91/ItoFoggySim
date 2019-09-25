@@ -19,7 +19,10 @@ module file_io
 
     interface write_csv
         module procedure write_csv_real
+        module procedure write_csv_real_array
         module procedure write_csv_cmplx
+        module procedure write_csv_cmplx_array_1d
+        module procedure write_csv_cmplx_array_2d
         module procedure write_csv_real_cmplx
     end interface
 
@@ -286,6 +289,52 @@ module file_io
     !   header:
     !
     !
+    function write_csv_real_array(u, c, header) result (rv)
+        implicit none
+        ! dummy
+        integer, intent(in) :: u
+        double precision, dimension(:,:) :: c
+        character(len=*), dimension(:), optional :: header
+
+        logical :: rv
+
+        ! parameter
+        character, parameter :: delimiter = ','
+
+        ! auxiliary
+        integer :: i
+        integer :: ii
+        character(len=511) :: dummy_str
+
+        if ( present(header) ) then
+            dummy_str = trim(header(1))
+            do i=2, size(header)
+                dummy_str = trim(dummy_str) // delimiter // trim(header(i))
+            end do
+            write(u, *) trim(dummy_str)
+        end if
+
+        do i = lbound(c, 1), ubound(c, 1)
+            ii = lbound(c, 2)
+            write(u, '(ES25.16)', advance='no') c(i, ii)
+            do ii = lbound(c, 2)+1, ubound(c, 2)
+                write(u, '(A, ES25.16)', advance='no') delimiter, c(i, ii)
+            end do
+            write(u, *) '' ! line break
+        end do
+
+        rv = .true.
+
+    end function
+
+    ! writes up to three columns into a csv file
+    !
+    ! Argument
+    !   u: integer
+    !       >>> open(unit=u, file=trim(filename), status='new')
+    !   header:
+    !
+    !
     function write_csv_cmplx(u, header, c1, c2, c3) result (rv)
         implicit none
         ! dummy
@@ -325,6 +374,130 @@ module file_io
                 write(u, *) real(c1(i)), delimiter, aimag(c2(i))
             end if
         end do
+
+        rv = .true.
+
+    end function
+
+    ! writes up to three columns into a csv file
+    !
+    ! Argument
+    !   u: integer
+    !       >>> open(unit=u, file=trim(filename), status='new')
+    !   header:
+    !
+    !
+    function write_csv_cmplx_array_1d(u, c, header) result (rv)
+        implicit none
+        ! dummy
+        integer, intent(in) :: u
+        double complex, dimension(:) :: c
+        character(len=*), dimension(:), optional :: header
+
+        logical :: rv
+
+        ! parameter
+        character, parameter :: delimiter = ','
+
+        ! auxiliary
+        integer :: i
+        character(len=511) :: dummy_str
+        character(len=25), dimension(2) :: m_header
+
+        m_header(1) = "index"
+        m_header(2) = "value"
+
+        if ( present(header) ) then
+            dummy_str = trim(header(1))
+            do i=2, size(header)
+                dummy_str = trim(dummy_str) // delimiter // trim(header(i)) // "(real)" // delimiter // trim(header(i)) // "(cmplx)"
+            end do
+            write(u, *) trim(dummy_str)
+
+            do i = lbound(c, 1), ubound(c, 1)
+                write(u, '(A, ES25.16, A, ES25.16)') i, delimiter, real(c(i)), delimiter, aimag(c(i))
+            end do
+        else
+            dummy_str = trim(m_header(1))
+            do i=2, size(m_header)
+                dummy_str = trim(dummy_str) // delimiter // trim(m_header(i)) // "(real)" // delimiter &
+                                                         // trim(m_header(i)) // "(cmplx)"
+            end do
+            write(u, *) trim(dummy_str)
+
+            do i = lbound(c, 1), ubound(c, 1)
+                write(u, '(I6, A, ES25.16, A, ES25.16)') i, delimiter, real(c(i)), delimiter, aimag(c(i))
+            end do
+        end if
+
+        rv = .true.
+
+    end function
+
+    ! writes up to three columns into a csv file
+    !
+    ! Argument
+    !   u: integer
+    !       >>> open(unit=u, file=trim(filename), status='new')
+    !   header:
+    !
+    !
+    function write_csv_cmplx_array_2d(u, c, header) result (rv)
+        implicit none
+        ! dummy
+        integer, intent(in) :: u
+        double complex, dimension(:,:) :: c
+        character(len=*), dimension(:), optional :: header
+
+        logical :: rv
+
+        ! parameter
+        character, parameter :: delimiter = ','
+
+        ! auxiliary
+        integer :: i
+        integer :: ii
+        character(len=10000) :: dummy_str
+        character(len=25), dimension(2) :: m_header
+        character(len=6) :: int_str
+
+
+
+        if ( present(header) ) then
+            dummy_str = trim(header(1))
+            do i=2, size(header)
+                dummy_str = trim(dummy_str) // delimiter // trim(header(i)) // "(real)" // delimiter // trim(header(i)) // "(cmplx)"
+            end do
+            write(u, *) trim(dummy_str)
+
+            do i = lbound(c, 1), ubound(c, 1)
+                ii = lbound(c, 2)
+                write(u, '(ES25.16, A, ES25.16)', advance='no') real(c(i, ii)), delimiter, aimag(c(i, ii))
+                do ii = lbound(c, 2)+1, ubound(c, 2)
+                    write(u, '(A, ES25.16, A, ES25.16)', advance='no') delimiter, real(c(i, ii)), delimiter, aimag(c(i, ii))
+                end do
+                write(u, *) '' ! line break
+            end do
+        else
+            m_header(1) = "row \ column"
+            m_header(2) = " "
+            dummy_str = trim(m_header(1))
+            do i=lbound(c, 2), ubound(c, 2)
+                write(int_str, '(I6)') i
+                dummy_str = trim(dummy_str) // delimiter // int_str // trim(m_header(2)) // "(real)" // delimiter &
+                                                         // int_str // trim(m_header(2)) // "(cmplx)"
+            end do
+            write(u, *) trim(dummy_str)
+
+            do i = lbound(c, 1), ubound(c, 1)
+                ii = lbound(c, 2)
+                write(u, '(I6, A, ES25.16, A, ES25.16)', advance='no') i, delimiter, real(c(i, ii)), delimiter, aimag(c(i, ii))
+                do ii = lbound(c, 2)+1, ubound(c, 2)
+                    write(u, '(A, ES25.16, A, ES25.16)', advance='no') delimiter, real(c(i, ii)), delimiter, aimag(c(i, ii))
+                end do
+                write(u, *) '' ! line break
+            end do
+        end if
 
         rv = .true.
 
