@@ -71,6 +71,7 @@ module lib_mie_multi_sphere
         end subroutine lib_mie_ms_get_interactive_scattering_coefficients
 
         subroutine lib_mie_ms_calculate_scattering_coefficients_ab_nm(simulation)
+            use file_io
             implicit none
             ! dummy
             type(lib_mie_simulation_parameter_type), intent(inout) :: simulation
@@ -80,12 +81,34 @@ module lib_mie_multi_sphere
             double complex, dimension(:), allocatable :: vector_x
             double complex, dimension(:), allocatable :: vector_b
 
+            ! test
+            logical :: test
+
             ! initial values
             call lib_mie_ss_calculate_scattering_coefficients_ab_nm(simulation)
 
+            ! test
+            simulation%sphere_parameter_list(1)%n_range = (/ 1, 3 /)
+            simulation%sphere_parameter_list(2)%n_range = (/ 1, 3 /)
+            ! ~~~ test ~~~
+
             ! convert dataset for solver
             call lib_mie_type_func_solver_get_vector_b(simulation, vector_b)
-            call lib_mie_type_func_solver_get_matrix_a(simulation, matrix_a)
+!            call lib_mie_type_func_solver_get_matrix_a(simulation, matrix_a)
+            call lib_mie_type_func_solver_set_sphere_parameter_ab_nm(vector_b, simulation)
+            ! test
+            open(unit=99, file="temp/matrix_a.csv", status="unknown")
+            test = write_csv(99, matrix_a)
+            close(99)
+
+            open(unit=99, file="temp/a_n_1.csv", status="unknown")
+            test = write_csv(99, simulation%sphere_parameter_list(1)%a_n%item)
+            close(99)
+
+            open(unit=99, file="temp/a_n_2.csv", status="unknown")
+            test = write_csv(99, simulation%sphere_parameter_list(2)%a_n%item)
+            close(99)
+            ! ~~~ test ~~~
 
             call lib_mie_type_func_solver_get_vector_x(simulation, vector_x)
 
@@ -292,7 +315,8 @@ module lib_mie_multi_sphere
 
                 ! set spheres
                 allocate(simulation%sphere_list(2))
-                simulation%sphere_list(:)%sphere_parameter_index = 1
+                simulation%sphere_list(1)%sphere_parameter_index = 1
+                simulation%sphere_list(2)%sphere_parameter_index = 2
 
                 sphere_d_0_j%x = -2 * unit_mu
                 sphere_d_0_j%y = 0
@@ -301,12 +325,13 @@ module lib_mie_multi_sphere
 
                 sphere_d_0_j%x = 2 * unit_mu
                 sphere_d_0_j%y = 0
-                sphere_d_0_j%z = 0
+                sphere_d_0_j%z = 1
                 simulation%sphere_list(2)%d_0_j = sphere_d_0_j
 
                 ! set sphere parameter
-                allocate(simulation%sphere_parameter_list(1))
+                allocate(simulation%sphere_parameter_list(2))
 
+                ! set 1
                 r_particle = 1 * unit_mu
                 n_particle = dcmplx(1.33_8, 0)
 
@@ -321,8 +346,26 @@ module lib_mie_multi_sphere
                     print *, "  rv(2): ", n_range(2)
                 end if
 
-
                 simulation%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
+                                                                                          r_particle, n_particle, &
+                                                                                          n_range)
+
+                ! set 2
+                r_particle = 0.5 * unit_mu
+                n_particle = dcmplx(1.33_8, 0)
+
+                n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
+                if (n_range(1) .gt. 0) then
+                    n_range(2) = n_range(1)
+                    n_range(1) = 1
+                else
+                    print *, "test_lib_mie_ms_get_field: ERROR"
+                    print *, "  lib_mie_ss_test_convergence_plane_wave"
+                    print *, "  rv(1): ", n_range(1)
+                    print *, "  rv(2): ", n_range(2)
+                end if
+
+                simulation%sphere_parameter_list(2) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
                                                                                           r_particle, n_particle, &
                                                                                           n_range)
 
@@ -356,11 +399,12 @@ module lib_mie_multi_sphere
                         x_0%z = z
 
                         field = lib_mie_ms_get_field(simulation, x_0)
+                        e_field_s(i,ii) = field(1)
+                        h_field_s(i,ii) = field(2)
                     end do
                  end do
 
                 rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
-
 
 
             end function

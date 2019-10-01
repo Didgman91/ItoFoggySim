@@ -165,12 +165,12 @@ module lib_mie_type_functions
 
             ! auxiliary
             integer :: i
-            integer :: ii
-            integer :: n
-            integer :: m
 
             integer :: first_sphere
             integer :: last_sphere
+
+            integer :: first
+            integer :: last
 
             integer :: sphere_parameter_no
 
@@ -182,6 +182,9 @@ module lib_mie_type_functions
 
             type(list_list_cmplx), dimension(:), allocatable :: p_nm
             type(list_list_cmplx), dimension(:), allocatable :: q_nm
+
+            double complex, dimension(:), allocatable :: buffer_array
+
 
             first_sphere = lbound(simulation_parameter%sphere_list, 1)
             last_sphere = ubound(simulation_parameter%sphere_list, 1)
@@ -210,25 +213,27 @@ module lib_mie_type_functions
             counter_sum = 2 * sum(counter)
 
             if (allocated(vector_b)) then
-                deallocate(vector_b)
+                if (size(vector_b, 1) .ne. counter_sum) then
+                    deallocate(vector_b)
+                    allocate(vector_b(counter_sum))
+                end if
+            else
+                allocate(vector_b(counter_sum))
             end if
-            allocate(vector_b(counter_sum))
 
-            vector_b = 0
-
-            ii = 1
+            !$OMP PARALLEL DO PRIVATE(i, first, last, buffer_array)
             do i = first_sphere, last_sphere
-                sphere_parameter_no = simulation_parameter%sphere_list(i)%sphere_parameter_index
-                n_range = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%n_range
+                call make_array(p_nm(i), buffer_array)
+                first = 2 * (sum(counter(first_sphere:i)) - counter(i)) + 1
+                last = first + counter(i) - 1
+                vector_b(first:last) = buffer_array
 
-                do n = n_range(1), n_range(2)
-                    do m = -n, n
-                        vector_b(ii) = p_nm(i)%item(n)%item(m)
-                        vector_b(ii+1) = q_nm(i)%item(n)%item(m)
-                        ii = ii + 2
-                    end do
-                end do
+                call make_array(q_nm(i), buffer_array)
+                first = last + 1
+                last = first + counter(i) - 1
+                vector_b(first:last) = buffer_array
             end do
+            !$OMP END PARALLEL DO
 
         end subroutine lib_mie_type_func_solver_get_vector_b
 
@@ -247,7 +252,8 @@ module lib_mie_type_functions
         !
         ! Returns
         ! ----
-        !   vector_b: double complex, dimension(:)
+        !   vector_x: double complex, dimension(:)
+        !       a_nm, b_nm coefficients of all spheres
         !
         ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
         !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
@@ -260,12 +266,12 @@ module lib_mie_type_functions
 
             ! auxiliary
             integer :: i
-            integer :: ii
-            integer :: n
-            integer :: m
 
             integer :: first_sphere
             integer :: last_sphere
+
+            integer :: first
+            integer :: last
 
             integer :: sphere_parameter_no
 
@@ -273,6 +279,8 @@ module lib_mie_type_functions
             integer :: counter_sum
 
             integer(kind=4), dimension(2) :: n_range
+
+            double complex, dimension(:), allocatable :: buffer_array
 
             first_sphere = lbound(simulation_parameter%sphere_list, 1)
             last_sphere = ubound(simulation_parameter%sphere_list, 1)
@@ -291,25 +299,27 @@ module lib_mie_type_functions
             counter_sum = 2 * sum(counter)
 
             if (allocated(vector_x)) then
-                deallocate(vector_x)
+                if (size(vector_x, 1) .ne. counter_sum) then
+                    deallocate(vector_x)
+                    allocate(vector_x(counter_sum))
+                end if
+            else
+                allocate(vector_x(counter_sum))
             end if
-            allocate(vector_x(counter_sum))
 
-            vector_x = 0
-
-            ii = 1
+            !$OMP PARALLEL DO PRIVATE(i, first, last, buffer_array)
             do i = first_sphere, last_sphere
-                sphere_parameter_no = simulation_parameter%sphere_list(i)%sphere_parameter_index
-                n_range = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%n_range
+                call make_array(simulation_parameter%sphere_list(i)%a_nm, buffer_array)
+                first = 2 * (sum(counter(first_sphere:i)) - counter(i)) + 1
+                last = first + counter(i) - 1
+                vector_x(first:last) = buffer_array
 
-                do n = n_range(1), n_range(2)
-                    do m = -n, n
-                        vector_x(ii) = simulation_parameter%sphere_list(i)%a_nm%item(n)%item(m)
-                        vector_x(ii+1) = simulation_parameter%sphere_list(i)%b_nm%item(n)%item(m)
-                        ii = ii + 2
-                    end do
-                end do
+                call make_array(simulation_parameter%sphere_list(i)%b_nm, buffer_array)
+                first = last + 1
+                last = first + counter(i) - 1
+                vector_x(first:last) = buffer_array
             end do
+            !$OMP END PARALLEL DO
 
         end subroutine lib_mie_type_func_solver_get_vector_x
 
@@ -341,33 +351,51 @@ module lib_mie_type_functions
 
             ! auxiliary
             integer :: i
-            integer :: ii
-            integer :: n
-            integer :: m
+
+            integer :: first
+            integer :: last
 
             integer :: first_sphere
             integer :: last_sphere
 
             integer :: sphere_parameter_no
 
-            integer(kind=4), dimension(2) :: n_range
+            integer, dimension(:,:), allocatable :: n_range
+            integer, dimension(:), allocatable :: counter
+
+            type(list_list_cmplx) :: buffer_list
 
             first_sphere = lbound(simulation_parameter%sphere_list, 1)
             last_sphere = ubound(simulation_parameter%sphere_list, 1)
 
-            ii = 1
+            allocate(n_range(first_sphere:last_sphere, 2))
+            allocate(counter(first_sphere:last_sphere))
+
+            counter = 0
             do i = first_sphere, last_sphere
                 sphere_parameter_no = simulation_parameter%sphere_list(i)%sphere_parameter_index
-                n_range = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%n_range
+                n_range(i, :) = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%n_range
 
-                do n = n_range(1), n_range(2)
-                    do m = -n, n
-                        simulation_parameter%sphere_list(i)%a_nm%item(n)%item(m) = vector_x(ii)
-                        simulation_parameter%sphere_list(i)%b_nm%item(n)%item(m) = vector_x(ii+1)
-                        ii = ii + 2
-                    end do
-                end do
+                counter(i) = (1 + n_range(i, 2))**2 - n_range(i, 1)**2
             end do
+
+            !$OMP PARALLEL DO PRIVATE(i, first, last, buffer_list)
+            do i = first_sphere, last_sphere
+                first = 2 * (sum(counter(first_sphere:i)) - counter(i)) + 1
+                last = first + counter(i) - 1
+                call make_list(vector_x(first:last), &
+                               n_range(i, 1), n_range(i, 2) - n_range(i, 1) + 1, &
+                               buffer_list)
+                call move_alloc(buffer_list%item, simulation_parameter%sphere_list(i)%a_nm%item)
+
+                first = last + 1
+                last = first + counter(i) - 1
+                call make_list(vector_x(first:last), &
+                               n_range(i, 1), n_range(i, 2) - n_range(i, 1) + 1, &
+                               buffer_list)
+                call move_alloc(buffer_list%item, simulation_parameter%sphere_list(i)%b_nm%item)
+            end do
+            !$OMP END PARALLEL DO
 
         end subroutine lib_mie_type_func_solver_set_sphere_parameter_ab_nm
 
@@ -387,21 +415,24 @@ module lib_mie_type_functions
         ! Returns
         ! ----
         !   vector_b: double complex, dimension(:)
+        !       result of the matrix vector multiplication
         !
         ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
         !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
-        subroutine lib_mie_type_func_solver_get_matrix_a(simulation_parameter, matrix_a)
+        subroutine lib_mie_type_func_solver_calculate_vector_b(simulation_parameter, vector_b)
             implicit none
             ! dummy
             type(lib_mie_simulation_parameter_type), intent(in) :: simulation_parameter
 
-            double complex, dimension(:,:), allocatable, intent(inout) :: matrix_a
+            double complex, dimension(:), allocatable, intent(inout) :: vector_b
 
             ! auxiliary
             integer :: i
             integer :: ii
             integer :: m_i
             integer :: m_ii
+            integer :: m_i_start
+            integer :: m_ii_start
             integer :: n
             integer :: m
             integer :: nu
@@ -480,54 +511,76 @@ module lib_mie_type_functions
 
             counter_sum = 2 * sum(counter)
 
-            if (allocated(matrix_a)) then
-                deallocate(matrix_a)
-            end if
-            allocate(matrix_a(counter_sum, counter_sum))
+!            if (allocated(matrix_a)) then
+!                deallocate(matrix_a)
+!            end if
+!            allocate(matrix_a(counter_sum, counter_sum))
+!
+!            matrix_a = 0
+!
+!!            m_i = 1
+!!            m_ii = 1
+!            do i = first_sphere, last_sphere
+!                do ii = first_sphere, last_sphere
+!
+!                    if (i .eq. ii) then
+!                        sphere_parameter_no = simulation_parameter%sphere_list(i)%sphere_parameter_index
+!                        n_range_j = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%n_range
+!
+!                        m_i_start = sum(counter(1:i,ii)) - counter(i,ii) + 1
+!                        m_ii_start = sum(counter(i,1:ii)) - counter(i,ii) + 1
+!
+!                        m_i = m_i_start
+!                        m_ii = m_ii_start
+!                        do n = n_range_j(1), n_range_j(2)
+!                            do m = -n, n
+!    !                            matrix_a(m_i, m_ii) = 1D0
+!    !                            matrix_a(m_i+1, m_ii+1) = 1D0
+!
+!                                ! test
+!                                matrix_a(m_i, m_ii) = a_n(i)%item(n)
+!                                matrix_a(m_i+1, m_ii+1) = b_n(i)%item(n)
+!                                ! ~~~ test ~~~
+!
+!                                m_i = m_i + 2
+!                                m_ii = m_ii + 2
+!                            end do
+!                        end do
+!                    else
+!!                        d_0_j = simulation_parameter%sphere_list(i)%d_0_j
+!!                        sphere_parameter_no = simulation_parameter%sphere_list(i)%sphere_parameter_index
+!!                        n_range_j = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%n_range
+!!
+!!                        d_0_l = simulation_parameter%sphere_list(i)%d_0_j
+!!                        sphere_parameter_no = simulation_parameter%sphere_list(i)%sphere_parameter_index
+!!                        n_range_l = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%n_range
+!!
+!!                        m_i_start = sum(counter(1:i,ii)) - counter(i,ii) + 1
+!!                        m_ii_start = sum(counter(i,1:ii)) - counter(i,ii) + 1
+!!
+!!                        m_i = m_i_start
+!!                        do n = n_range_l(1), n_range_l(2)
+!!                            do m = -n, n
+!!                                m_ii = m_ii_start
+!!                                do nu = n_range_l(1), n_range_l(2)
+!!                                    do mu = -nu, nu
+!!                                        matrix_a(m_i, m_ii) = a_nmnumu(i, ii)%item(n)%item(m)%item(nu)%item(mu)
+!!                                        matrix_a(m_i, m_ii+1) = b_nmnumu(i, ii)%item(n)%item(m)%item(nu)%item(mu)
+!!
+!!                                        matrix_a(m_i+1, m_ii+1) = a_nmnumu(i, ii)%item(n)%item(m)%item(nu)%item(mu)
+!!                                        matrix_a(m_i+1, m_ii) = b_nmnumu(i, ii)%item(n)%item(m)%item(nu)%item(mu)
+!!
+!!                                        m_ii = m_ii + 2
+!!                                    end do
+!!                                end do
+!!                            end do
+!!                            m_i = m_i + 2
+!!                        end do
+!                    end if
+!                end do
+!            end do
 
-            matrix_a = 0
-
-            m_i = 1
-            m_ii = 1
-            do i = first_sphere, last_sphere
-                do ii = first_sphere, last_sphere
-
-                    if (i .eq. ii) then
-                        sphere_parameter_no = simulation_parameter%sphere_list(i)%sphere_parameter_index
-                        n_range_j = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%n_range
-
-                        do n = n_range_j(1), n_range_j(2)
-                            matrix_a(m_ii, m_i) = 1D0 / a_n(i)%item(n)
-                            matrix_a(m_ii, m_i+1) = 1D0 / b_n(i)%item(n)
-                            m_i = m_i + 2
-                        end do
-                    else
-                        d_0_j = simulation_parameter%sphere_list(i)%d_0_j
-                        sphere_parameter_no = simulation_parameter%sphere_list(i)%sphere_parameter_index
-                        n_range_j = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%n_range
-
-                        d_0_l = simulation_parameter%sphere_list(i)%d_0_j
-                        sphere_parameter_no = simulation_parameter%sphere_list(i)%sphere_parameter_index
-                        n_range_l = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%n_range
-
-                        ! todo: bug fix: freeze m, n per row of matrix_a
-                        do n = n_range_j(1), n_range_j(2)
-                            do m = -n, n
-                                do nu = n_range_l(1), n_range_l(2)
-                                    do mu = -nu, nu
-                                        matrix_a(m_ii, m_i) = a_nmnumu(i, ii)%item(n)%item(m)%item(nu)%item(mu)
-                                        matrix_a(m_ii, m_i+1) = b_nmnumu(i, ii)%item(n)%item(m)%item(nu)%item(mu)
-                                        m_i = m_i + 2
-                                    end do
-                                end do
-                            end do
-                        end do
-                    end if
-                end do
-                m_ii = m_ii + 1
-            end do
-
-        end subroutine lib_mie_type_func_solver_get_matrix_a
+        end subroutine lib_mie_type_func_solver_calculate_vector_b
 
         function lib_mie_type_functions_test_functions() result(rv)
             implicit none
