@@ -13,7 +13,11 @@ module lib_math_type_operator
     public :: abs
     public :: spherical_abs
     public :: cartesian_abs
+
     public :: init_list
+    public :: make_list
+    public :: make_array
+    public :: get_structure
 
     public :: make_cartesian
     public :: make_spherical
@@ -171,6 +175,21 @@ module lib_math_type_operator
         module procedure lib_math_list_list_cmplx_init
         module procedure lib_math_list_4_cmplx_init
         module procedure lib_math_list_spherical_coordinate_cmplx_type_init
+    end interface
+
+    interface make_list
+        module procedure lib_math_array_make_list_list_cmplx
+        module procedure lib_math_array_make_list_of_list_list_cmplx
+    end interface
+
+    interface make_array
+        module procedure lib_math_list_list_make_array_cmplx
+        module procedure lib_math_list_of_list_list_make_array_cmplx
+    end interface
+
+    interface get_structure
+        module procedure lib_math_get_list_list_structure_cmplx
+        module procedure lib_math_get_list_of_list_list_structure_cmplx
     end interface
 
     interface make_cartesian
@@ -1880,6 +1899,253 @@ module lib_math_type_operator
 
         end subroutine lib_math_list_4_cmplx_init
 
+        ! Argument
+        ! ----
+        !   list: type(list_list_cmplx)
+        !       list of lists like: list%item(2)%item(-2:2)
+        !
+        ! Returns
+        ! ----
+        !   array: complex(kind=lib_math_type_kind), dimension(:)
+        !       all elements of list as an array
+        !
+        !   list%item(n)%item(m): element (n,m) -> array element
+        !
+        !   array | (1,-1) | (1,0) | (1,1) | (2,-2) | (2,-1) | (2,0) | ...
+        !
+        subroutine lib_math_list_list_make_array_cmplx(list, array)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: list
+
+            complex(kind=lib_math_type_kind), dimension(:), allocatable, intent(inout) :: array
+
+            ! auxiliary
+            integer :: n
+            integer :: first
+            integer :: last
+            integer, dimension(2) :: n_range
+
+            n_range(1) = lbound(list%item, 1)
+            n_range(2) = ubound(list%item, 1)
+
+            if (allocated(array)) then
+                deallocate(array)
+            end if
+            n = (1 + n_range(2))**2 - n_range(1)**2
+            allocate(array(n))
+
+            first = 1
+            do n = n_range(1), n_range(2)
+                last = first + 2 * n ! +1 -1
+                array(first:last) = list%item(n)%item
+                first = last + 1
+            end do
+
+        end subroutine lib_math_list_list_make_array_cmplx
+
+        ! Argument
+        ! ----
+        !   array: complex(kind=lib_math_type_kind), dimension(:)
+        !       all elements of list as an array
+        !   fnu: integer
+        !       start index of the list
+        !   n: integer
+        !       number of elements, n .GE. 1
+        !
+        !
+        ! Returns
+        ! ----
+        !   list: type(list_list_cmplx)
+        !       list of lists like: list%item(2)%item(-2:2)
+        !
+        !   list%item(n)%item(m): element (n,m) -> array element
+        !
+        !   array | (1,-1) | (1,0) | (1,1) | (2,-2) | (2,-1) | (2,0) | ...
+        !
+        subroutine lib_math_array_make_list_list_cmplx(array, fnu, n, list)
+            implicit none
+            ! dummy
+            complex(kind=lib_math_type_kind), dimension(:), intent(in) :: array
+            integer, intent(in) :: fnu
+            integer, intent(in) :: n
+
+            type(list_list_cmplx), intent(inout) :: list
+
+            ! auxiliary
+            integer :: m_i
+            integer :: m_no_of_elements
+            integer :: m_n
+            integer :: m_m
+            integer :: m_first
+            integer :: m_last
+
+            m_no_of_elements = (1 + fnu+n-1)**2 - fnu**2
+            if (size(array, 1) .ge. m_no_of_elements) then
+                call init_list(list, fnu, n)
+
+!                m_i = lbound(array, 1)
+                m_first = lbound(array, 1)
+                do m_n = fnu, fnu + n - 1
+                    m_last = m_first + 2 * m_n ! + 1 - 1
+                    list%item(m_n)%item(:) = array(m_first:m_last)
+                    m_first = m_last + 1
+!                    do m_m = -m_n, m_n
+!                        list%item(m_n)%item(m_m) = array(m_i)
+!                        m_i = m_i + 1
+!                    end do
+                end do
+            else
+                call init_list(list, fnu, n, cmplx(0, 0, kind=lib_math_type_kind))
+
+                m_i = ubound(array, 1)
+                do m_n = fnu, fnu + n - 1
+                    do m_m = -m_n, m_n
+                        list%item(m_n)%item(m_m) = array(m_i)
+                        m_i = m_i + 1
+                        if (m_i .ge. m_no_of_elements) then
+                            return
+                        end if
+                    end do
+                end do
+            end if
+        end subroutine lib_math_array_make_list_list_cmplx
+
+        ! Argument
+        ! ----
+        !   list: type(list_list_cmplx), dimension(:)
+        !       list of lists like: list%item(2)%item(-2:2)
+        !
+        ! Returns
+        ! ----
+        !   array: complex(kind=lib_math_type_kind), dimension(:)
+        !       all elements of list as an array
+        !
+        !   list%item(n)%item(m): element (n,m) -> array element
+        !
+        !   array | (1,-1) | (1,0) | (1,1) | (2,-2) | (2,-1) | (2,0) | ...
+        !
+        subroutine lib_math_list_of_list_list_make_array_cmplx(list, array)
+            implicit none
+            type(list_list_cmplx), dimension(:), intent(in) :: list
+
+            complex(kind=lib_math_type_kind), dimension(:), allocatable, intent(inout) :: array
+
+            ! auxiliary
+            integer :: i
+            integer, dimension(lbound(list, 1):ubound(list, 1)) :: no_of_elements
+            integer :: start
+            integer :: last
+            integer, dimension(lbound(list, 1):ubound(list, 1), 2) :: n_range
+            complex(kind=lib_math_type_kind), dimension(:), allocatable :: buffer_array
+
+            do i = lbound(list, 1), ubound(list, 1)
+                n_range(i, 1) = lbound(list(i)%item, 1)
+                n_range(i, 2) = ubound(list(i)%item, 1)
+
+                no_of_elements(i) = (1 + n_range(i, 2))**2 - (n_range(i, 1))**2
+            end do
+
+            if (allocated(array)) then
+                deallocate(array)
+            end if
+            allocate(array(sum(no_of_elements)))
+
+            !$OMP PARALLEL DO PRIVATE(i, buffer_array, start, last)
+            do i = lbound(list, 1), ubound(list, 1)
+                call lib_math_list_list_make_array_cmplx(list(i), buffer_array)
+
+                start = sum(no_of_elements(lbound(list, 1):i)) - no_of_elements(i) + 1
+                last = start + no_of_elements(i) - 1
+
+                array(start:last) = buffer_array
+            end do
+            !$OMP END PARALLEL DO
+
+        end subroutine lib_math_list_of_list_list_make_array_cmplx
+
+        subroutine lib_math_array_make_list_of_list_list_cmplx(array, fnu, n, list)
+            implicit none
+            ! dummy
+            complex(kind=lib_math_type_kind), dimension(:), intent(in) :: array
+
+            integer, dimension(:) :: fnu
+            integer, dimension(lbound(fnu, 1):ubound(fnu, 1)) :: n
+            type(list_list_cmplx), dimension(:), allocatable, intent(inout) :: list
+
+            ! auxiliary
+            integer :: i
+            integer :: start
+            integer :: last
+            integer, dimension(lbound(fnu, 1):ubound(fnu, 1)) :: no_of_elements
+            integer, dimension(lbound(fnu, 1):ubound(fnu, 1), 2) :: n_range
+            type(list_list_cmplx) :: buffer_list
+
+
+            if (allocated(list)) then
+                deallocate(list)
+            end if
+            allocate(list(lbound(fnu, 1):ubound(fnu, 1)))
+
+            no_of_elements = 0
+            do i = lbound(fnu, 1), ubound(fnu, 1)
+                n_range(i, 1) = fnu(i)
+                n_range(i, 2) = fnu(i) + n(i) - 1
+
+                no_of_elements(i) = (1 + n_range(i, 2))**2 - n_range(i, 1)**2
+
+                call init_list(list(i), n_range(i, 1), n_range(i, 2) - n_range(i, 1) + 1)
+            end do
+
+            if (sum(no_of_elements) .eq. size(array, 1)) then
+
+                !$OMP PARALLEL DO PRIVATE(i, buffer_list, start, last)
+                do i = lbound(fnu, 1), ubound(fnu, 1)
+
+                    start = sum(no_of_elements(lbound(fnu, 1):i)) - no_of_elements(i) + 1
+                    last = start + no_of_elements(i) - 1
+                    call lib_math_array_make_list_list_cmplx(array(start:last), fnu(i), n(i), buffer_list)
+
+                    list(i) = buffer_list
+                end do
+                !$OMP END PARALLEL DO
+            end if
+
+        end subroutine lib_math_array_make_list_of_list_list_cmplx
+
+        subroutine lib_math_get_list_list_structure_cmplx(list, fnu, n)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: list
+            integer, intent(inout) :: fnu
+            integer, intent(inout) :: n
+
+            fnu = lbound(list%item, 1)
+            n = ubound(list%item, 1) - lbound(list%item, 1) + 1
+        end subroutine lib_math_get_list_list_structure_cmplx
+
+        subroutine lib_math_get_list_of_list_list_structure_cmplx(list, fnu, n)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), dimension(:), intent(in) :: list
+            integer, dimension(:), allocatable, intent(inout) :: fnu
+            integer, dimension(:), allocatable, intent(inout) :: n
+
+            ! auxiliary
+            integer :: i
+
+            if (allocated(fnu)) deallocate(fnu)
+            allocate(fnu(lbound(list, 1):ubound(list, 1)))
+
+            if (allocated(n)) deallocate(n)
+            allocate(n(lbound(list, 1):ubound(list, 1)))
+
+            do i = lbound(list, 1), ubound(list, 1)
+                call lib_math_get_list_list_structure_cmplx(list(i), fnu(i), n(i))
+            end do
+
+        end subroutine lib_math_get_list_of_list_list_structure_cmplx
+
         ! Elementwise addition
         !
         ! Arguments
@@ -2721,6 +2987,13 @@ module lib_math_type_operator
                 rv = rv + 1
             end if
             if (.not. test_lib_math_cartesian_dot_product_cmplx_list()) then
+                rv = rv + 1
+            end if
+
+            if (.not. test_lib_math_list_of_list_list_make_array_cmplx()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_array_make_list_of_list_list_cmplx()) then
                 rv = rv + 1
             end if
 
@@ -4716,6 +4989,98 @@ module lib_math_type_operator
                     end do
 
                 end function test_lib_math_cartesian_dot_product_cmplx_list
+
+                function test_lib_math_list_of_list_list_make_array_cmplx() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer :: i
+                    type(list_list_cmplx), dimension(:), allocatable :: list
+                    complex(kind=lib_math_type_kind), dimension(:), allocatable :: array
+                    complex(kind=lib_math_type_kind), dimension(:), allocatable :: ground_truth_array
+
+                    double precision :: buffer
+
+                    allocate(list(2))
+
+                    call init_list(list(1), 1, 1)
+                    call init_list(list(2), 1, 2)
+
+                    list(1)%item(1)%item = (/ 1, 2, 3 /)
+
+                    list(2)%item(1)%item = (/ 1, 2, 3 /)
+                    list(2)%item(2)%item = (/ 4, 5, 6, 7, 8 /)
+
+                    i = (1+1)**2-1**2 + (1+2)**2 - 1**2
+                    allocate(ground_truth_array(i))
+                    ground_truth_array = (/ 1, 2, 3, 1, 2, 3, 4, 5, 6, 7, 8 /)
+
+                    call lib_math_list_of_list_list_make_array_cmplx(list, array)
+
+                    rv = .true.
+                    print *, "test_lib_math_list_of_list_list_make_array_cmplx:"
+                    do i=1, size(ground_truth_array, 1)
+                        buffer = abs(array(i) - ground_truth_array(i))
+                        if (.not. evaluate(buffer, i)) rv = .false.
+                    end do
+
+                end function test_lib_math_list_of_list_list_make_array_cmplx
+
+                function test_lib_math_array_make_list_of_list_list_cmplx() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer :: i
+                    integer :: n
+                    integer :: m
+                    complex(kind=lib_math_type_kind), dimension(:), allocatable :: array
+                    type(list_list_cmplx), dimension(:), allocatable :: list
+                    type(list_list_cmplx), dimension(:), allocatable :: ground_truth_list
+                    integer, dimension(:), allocatable :: list_fnu
+                    integer, dimension(:), allocatable :: list_n
+
+                    double precision :: buffer
+                    character(len=30) :: str
+
+                    allocate(ground_truth_list(2))
+
+                    call init_list(ground_truth_list(1), 1, 1)
+                    call init_list(ground_truth_list(2), 1, 2)
+
+                    ground_truth_list(1)%item(1)%item = (/ 1, 2, 3 /)
+
+                    ground_truth_list(2)%item(1)%item = (/ 1, 2, 3 /)
+                    ground_truth_list(2)%item(2)%item = (/ 4, 5, 6, 7, 8 /)
+
+                    i = (1+1)**2-1**2 + (1+2)**2 - 1**2
+                    allocate(array(i))
+                    array = (/ 1, 2, 3, 1, 2, 3, 4, 5, 6, 7, 8 /)
+
+!                    list_fnu(:) = 1
+!                    list_n(1) = 1
+!                    list_n(2) = 2
+
+                    call lib_math_get_list_of_list_list_structure_cmplx(ground_truth_list, list_fnu, list_n)
+
+                    call lib_math_array_make_list_of_list_list_cmplx(array, list_fnu, list_n, list)
+
+                    rv = .true.
+                    print *, "test_lib_math_array_make_list_of_list_list_cmplx:"
+                    do i=1, size(ground_truth_list, 1)
+                        do n = list_fnu(i), list_fnu(i) + list_n(i) - 1
+                            do m = -n, n
+                                buffer = abs(list(i)%item(n)%item(m) - ground_truth_list(i)%item(n)%item(m))
+                                write(str, '(2X, A, 1X, I2, 3X, A, 1X, I2)') "n =", n, "m =", m
+                                if (.not. evaluate(buffer, i, trim(str))) rv = .false.
+                            end do
+                        end do
+                    end do
+
+                end function test_lib_math_array_make_list_of_list_list_cmplx
 
         end function lib_math_type_operator_test_functions
 
