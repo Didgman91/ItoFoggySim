@@ -23,6 +23,7 @@ module libmath
             error_counter = error_counter + lib_math_legendre_test_functions()
             error_counter = error_counter + lib_math_wigner_test_functions()
             error_counter = error_counter + lib_math_solver_test_functions()
+            error_counter = error_counter + lib_math_vector_spherical_harmonics_test_functions()
 
             print *, "-------------test_lib_math----------------"
             if (error_counter == 0) then

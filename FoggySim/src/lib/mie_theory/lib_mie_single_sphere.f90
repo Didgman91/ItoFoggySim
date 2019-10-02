@@ -324,7 +324,7 @@ module lib_mie_single_sphere
 
             z_selector = 1
 
-            call lib_mie_vector_spherical_harmonics_components(theta, phi, r, k0 * n_medium, n_range, z_selector, &
+            call lib_math_vector_spherical_harmonics_components(theta, phi, r, k0 * n_medium, n_range, z_selector, &
                                                                M_nm, N_nm)
             ! eq. (5)
             !$OMP PARALLEL DO PRIVATE(n, m, buffer_real)
@@ -573,7 +573,7 @@ module lib_mie_single_sphere
 
             z_selector = 1
 
-            call lib_mie_vector_spherical_harmonics_components(theta, phi, r, k0 * n_medium, n_range, z_selector, &
+            call lib_math_vector_spherical_harmonics_components(theta, phi, r, k0 * n_medium, n_range, z_selector, &
                                                                M_nm, N_nm)
             ! eq. (5)
             !$OMP PARALLEL DO PRIVATE(n, m, buffer_real)
@@ -877,7 +877,7 @@ module lib_mie_single_sphere
                 ! outside the sphere
                 z_selector = 3
 
-                call lib_mie_vector_spherical_harmonics_components(theta, phi, r, k0 * n_medium, n_range, z_selector, &
+                call lib_math_vector_spherical_harmonics_components(theta, phi, r, k0 * n_medium, n_range, z_selector, &
                                                                    M_nm, N_nm)
                 ! eq. (5)
                 !$OMP PARALLEL DO PRIVATE(n, m, buffer_real)
@@ -1160,7 +1160,7 @@ module lib_mie_single_sphere
             if ( r .ge. r_particle) then
                 z_selector = 3
 
-                call lib_mie_vector_spherical_harmonics_components(theta, phi, r, k0 * n_medium, n_range, z_selector, &
+                call lib_math_vector_spherical_harmonics_components(theta, phi, r, k0 * n_medium, n_range, z_selector, &
                                                                    M_nm, N_nm)
                 ! eq. (5)
                 !$OMP PARALLEL DO PRIVATE(n, m, buffer_real)
@@ -1447,7 +1447,7 @@ module lib_mie_single_sphere
 
             if ( x_j_spherical%rho .ge. sphere_parameter%radius) then
                 ! outside the sphere
-                call lib_mie_vector_spherical_harmonics_components(x_j_spherical%theta, x_j_spherical%phi, x_j_spherical%rho, &
+                call lib_math_vector_spherical_harmonics_components(x_j_spherical%theta, x_j_spherical%phi, x_j_spherical%rho, &
                                                                    k_0 * n_medium, &
                                                                    n_range, m_z_selector_outside, &
                                                                    M_nm, N_nm)

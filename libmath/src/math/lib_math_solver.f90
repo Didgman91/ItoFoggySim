@@ -113,8 +113,8 @@ module lib_math_solver
                 matrix_a = reshape((/dcmplx(4, 2), dcmplx(1, 0.2), &
                                      dcmplx(1, 4), dcmplx(3, 1)/), shape(matrix_a))
 
-                b = (/ 1, 2 /)
-                x_initial  = (/ 0.1, 0.5 /)
+                b = (/ dcmplx(1, 0), dcmplx(2, 0) /)
+                x_initial  = (/ dcmplx(0.1,0), dcmplx(0.5,0) /)
 
                 x = lib_math_solver_conjugate_gradient_method(matrix_a, x_initial, b)
 

@@ -59,7 +59,6 @@ program main
 
     error_counter = 0
     error_counter = error_counter + test_lib_math()
-    error_counter = error_counter + lib_mie_vector_spherical_harmonics_test_functions()
     error_counter = error_counter + lib_mie_ss_helper_functions_test_functions()
 !    error_counter = error_counter + lib_mie_single_sphere_test_functions()
     error_counter = error_counter + lib_mie_multi_sphere_test_functions()

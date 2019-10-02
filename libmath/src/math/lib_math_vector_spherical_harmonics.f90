@@ -1,29 +1,35 @@
 !#define _DEBUG_
 
 
-module lib_mie_vector_spherical_harmonics
+module lib_math_vector_spherical_harmonics
     !$  use omp_lib
-    use libmath
+    use lib_math_type
+    use lib_math_type_operator
+    use lib_math_bessel
+    use lib_math_legendre
+    use lib_math_factorial
+    use lib_math_wigner
+    use lib_math_constants
     implicit none
 
     private
 
     ! --- public ---
-    public :: lib_mie_vector_spherical_harmonics_components
-    public :: lib_mie_vector_spherical_harmonics_translation_coefficient
+    public :: lib_math_vector_spherical_harmonics_components
+    public :: lib_math_vector_spherical_harmonics_translation_coefficient
 
-    interface lib_mie_vector_spherical_harmonics_components
-        module procedure lib_mie_vector_spherical_harmonics_components_real_xu
-        module procedure lib_mie_vector_spherical_harmonics_components_cmplx_xu
+    interface lib_math_vector_spherical_harmonics_components
+        module procedure lib_math_vector_spherical_harmonics_components_real_xu
+        module procedure lib_math_vector_spherical_harmonics_components_cmplx_xu
     end interface
 
-    interface lib_mie_vector_spherical_harmonics_translation_coefficient
-        module procedure lib_mie_vector_spherical_harmonics_translation_coefficient_real
-        module procedure lib_mie_vector_spherical_harmonics_translation_coeff_spher_r
-        module procedure lib_mie_vector_spherical_harmonics_translation_coeff_carte_r
+    interface lib_math_vector_spherical_harmonics_translation_coefficient
+        module procedure lib_math_vector_spherical_harmonics_translation_coeff_r
+        module procedure lib_math_vector_spherical_harmonics_translation_coeff_spher_r
+        module procedure lib_math_vector_spherical_harmonics_translation_coeff_carte_r
     end interface
 
-    public :: lib_mie_vector_spherical_harmonics_test_functions
+    public :: lib_math_vector_spherical_harmonics_test_functions
 
     ! --- parameter ---
     integer(kind=1), parameter :: VECTOR_SPHERICAL_HARMONICS_COMPONENT_NUMBER_KIND = 4
@@ -39,7 +45,7 @@ module lib_mie_vector_spherical_harmonics
         ! ----
         !   j_max: integer
         !
-        subroutine lib_mie_vector_spherical_harmonic_contructor(j_max)
+        subroutine lib_math_vector_spherical_harmonic_contructor(j_max)
             implicit none
             ! dummy
             integer(kind=4), intent(in) :: j_max
@@ -52,7 +58,7 @@ module lib_mie_vector_spherical_harmonics
             call fwig_temp_init(2 * j_max)      ! single threaded
             !$  end if
 
-        end subroutine lib_mie_vector_spherical_harmonic_contructor
+        end subroutine lib_math_vector_spherical_harmonic_contructor
 
         ! calculation of the components of the vector spherical harmonic
         !
@@ -92,7 +98,7 @@ module lib_mie_vector_spherical_harmonics
         !           \times \frac{1}{k r} \frac{d}{d r}\left[r z_{n}^{(J)}(k r)\right] \exp (i m \phi) $$
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 2
-        subroutine lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, r, k, n_range, z_selector, &
+        subroutine lib_math_vector_spherical_harmonics_components_real_xu(theta, phi, r, k, n_range, z_selector, &
                                                       M_nm, N_nm)
             implicit none
             
@@ -214,7 +220,7 @@ module lib_mie_vector_spherical_harmonics
                     r_cmplx = cmplx(0,0)
                     r_d_real = 0
                     r_d_cmplx = cmplx(0,0)
-                    print*, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                    print*, "lib_math_vector_spherical_harmonics_components_real_xu: ERROR"
                     print*, "  undefined z_selector value: ", z_selector
                     return
             end select
@@ -276,7 +282,7 @@ module lib_mie_vector_spherical_harmonics
                     if (isnan(real(M_nm(n)%coordinate(m)%rho))   .or. isnan(aimag(M_nm(n)%coordinate(m)%rho)) .or. &
                         isnan(real(M_nm(n)%coordinate(m)%phi))   .or. isnan(aimag(M_nm(n)%coordinate(m)%phi)) .or. &
                         isnan(real(M_nm(n)%coordinate(m)%theta)) .or. isnan(aimag(M_nm(n)%coordinate(m)%theta)) ) then
-                        print *, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                        print *, "lib_math_vector_spherical_harmonics_components_real_xu: ERROR"
                         print *, "  M_nm(n)%coordinate(m) is NaN"
                         print *, "  n = ", n
                         print *, "  m = ", m
@@ -304,7 +310,7 @@ module lib_mie_vector_spherical_harmonics
                     if (isnan(real(M_nm(n)%coordinate(m)%rho))   .or. isnan(aimag(M_nm(n)%coordinate(m)%rho)) .or. &
                         isnan(real(M_nm(n)%coordinate(m)%phi))   .or. isnan(aimag(M_nm(n)%coordinate(m)%phi)) .or. &
                         isnan(real(M_nm(n)%coordinate(m)%theta)) .or. isnan(aimag(M_nm(n)%coordinate(m)%theta)) ) then
-                        print *, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                        print *, "lib_math_vector_spherical_harmonics_components_real_xu: ERROR"
                         print *, "  M_nm(n)%coordinate(m) is NaN"
                         print *, "  n = ", n
                         print *, "  m = ", m
@@ -338,7 +344,7 @@ module lib_mie_vector_spherical_harmonics
                     if (isnan(real(N_nm(n)%coordinate(m)%rho))   .or. isnan(aimag(N_nm(n)%coordinate(m)%rho)) .or. &
                         isnan(real(N_nm(n)%coordinate(m)%phi))   .or. isnan(aimag(N_nm(n)%coordinate(m)%phi)) .or. &
                         isnan(real(N_nm(n)%coordinate(m)%theta)) .or. isnan(aimag(N_nm(n)%coordinate(m)%theta)) ) then
-                        print *, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                        print *, "lib_math_vector_spherical_harmonics_components_real_xu: ERROR"
                         print *, "  N_nm(n)%coordinate(m) is NaN"
                         print *, "  n = ", n
                         print *, "  m = ", m
@@ -367,7 +373,7 @@ module lib_mie_vector_spherical_harmonics
                     if (isnan(real(N_nm(n)%coordinate(m)%rho))   .or. isnan(aimag(N_nm(n)%coordinate(m)%rho)) .or. &
                         isnan(real(N_nm(n)%coordinate(m)%phi))   .or. isnan(aimag(N_nm(n)%coordinate(m)%phi)) .or. &
                         isnan(real(N_nm(n)%coordinate(m)%theta)) .or. isnan(aimag(N_nm(n)%coordinate(m)%theta)) ) then
-                        print *, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                        print *, "lib_math_vector_spherical_harmonics_components_real_xu: ERROR"
                         print *, "  N_nm(n)%coordinate(m) is NaN"
                         print *, "  n = ", n
                         print *, "  m = ", m
@@ -379,7 +385,7 @@ module lib_mie_vector_spherical_harmonics
                     !$OMP END PARALLEL DO
             end select
 
-        end subroutine lib_mie_vector_spherical_harmonics_components_real_xu
+        end subroutine lib_math_vector_spherical_harmonics_components_real_xu
 
         ! calculation of the components of the vector spherical harmonic
         !
@@ -417,7 +423,7 @@ module lib_mie_vector_spherical_harmonics
         !           \times \frac{1}{k r} \frac{d}{d r}\left[r z_{n}^{(J)}(k r)\right] \exp (i m \phi) $$
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 2
-        subroutine lib_mie_vector_spherical_harmonics_components_cmplx_xu(theta, phi, k, r, n_range, z_selector, &
+        subroutine lib_math_vector_spherical_harmonics_components_cmplx_xu(theta, phi, k, r, n_range, z_selector, &
                                                       M_nm, N_nm)
             implicit none
 
@@ -519,7 +525,7 @@ module lib_mie_vector_spherical_harmonics
 
                     r_cmplx = cmplx(0,0)
                     r_d_cmplx = cmplx(0,0)
-                    print*, "lib_mie_vector_spherical_harmonics_M_emn: ERROR"
+                    print*, "lib_math_vector_spherical_harmonics_M_emn: ERROR"
                     print*, "  undefined z_selector value: ", z_selector
                     return
             end select
@@ -578,7 +584,7 @@ module lib_mie_vector_spherical_harmonics
             if (isnan(real(M_nm(n)%coordinate(m)%rho))   .or. isnan(aimag(M_nm(n)%coordinate(m)%rho)) .or. &
                 isnan(real(M_nm(n)%coordinate(m)%phi))   .or. isnan(aimag(M_nm(n)%coordinate(m)%phi)) .or. &
                 isnan(real(M_nm(n)%coordinate(m)%theta)) .or. isnan(aimag(M_nm(n)%coordinate(m)%theta)) ) then
-                print *, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                print *, "lib_math_vector_spherical_harmonics_components_real_xu: ERROR"
                 print *, "  M_nm(n)%coordinate(m) is NaN"
                 print *, "  n = ", n
                 print *, "  m = ", m
@@ -608,7 +614,7 @@ module lib_mie_vector_spherical_harmonics
             if (isnan(real(N_nm(n)%coordinate(m)%rho))   .or. isnan(aimag(N_nm(n)%coordinate(m)%rho)) .or. &
                 isnan(real(N_nm(n)%coordinate(m)%phi))   .or. isnan(aimag(N_nm(n)%coordinate(m)%phi)) .or. &
                 isnan(real(N_nm(n)%coordinate(m)%theta)) .or. isnan(aimag(N_nm(n)%coordinate(m)%theta)) ) then
-                print *, "lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                print *, "lib_math_vector_spherical_harmonics_components_real_xu: ERROR"
                 print *, "  N_nm(n)%coordinate(m) is NaN"
                 print *, "  n = ", n
                 print *, "  m = ", m
@@ -619,7 +625,7 @@ module lib_mie_vector_spherical_harmonics
             end do
             !$OMP END PARALLEL DO
 
-        end subroutine lib_mie_vector_spherical_harmonics_components_cmplx_xu
+        end subroutine lib_math_vector_spherical_harmonics_components_cmplx_xu
 
 !        ! calculation of the components of the vector spherical harmonic
 !        !
@@ -655,7 +661,7 @@ module lib_mie_vector_spherical_harmonics
 !        ! LaTeX: $$ \begin{aligned} \mathbf{M}_{e m n}=& \frac{-m}{\sin \theta} \sin m \phi P_{n}^{m}(\cos \theta) z_{n}(\rho) \hat{\mathbf{e}}_{\theta} \\ &-\cos m \phi \frac{d P_{n}^{m}(\cos \theta)}{d \theta} z_{n}(\rho) \hat{\mathbf{e}}_{\phi} \end{aligned} $$
 !        !
 !        ! Reference: Absorption and Scattering of Light by Small Particles, eq. 4.17, 4.18, 4.19, 4.20
-!        subroutine lib_mie_vector_spherical_harmonics_components_real(theta, phi, rho, m, n, z_selector, &
+!        subroutine lib_math_vector_spherical_harmonics_components_real(theta, phi, rho, m, n, z_selector, &
 !                                                      M_emn, M_omn, N_emn, N_omn, &
 !                                                      not_calc_Memn, not_calc_Momn, not_calc_Nemn, not_calc_Nomn)
 !            implicit none
@@ -816,7 +822,7 @@ module lib_mie_vector_spherical_harmonics
 !                    r_cmplx = cmplx(0,0)
 !                    r_d_real = 0
 !                    r_d_cmplx = cmplx(0,0)
-!                    print*, "lib_mie_vector_spherical_harmonics_M_emn: ERROR"
+!                    print*, "lib_math_vector_spherical_harmonics_M_emn: ERROR"
 !                    print*, "  undefined z_selector value: ", z_selector
 !                    return
 !            end select
@@ -974,7 +980,7 @@ module lib_mie_vector_spherical_harmonics
 !            end if
 !
 !
-!        end subroutine lib_mie_vector_spherical_harmonics_components_real
+!        end subroutine lib_math_vector_spherical_harmonics_components_real
 
         ! calculation of the components of the vector spherical harmonic
         !
@@ -1010,7 +1016,7 @@ module lib_mie_vector_spherical_harmonics
         ! LaTeX: $$ \begin{aligned} \mathbf{M}_{e m n}=& \frac{-m}{\sin \theta} \sin m \phi P_{n}^{m}(\cos \theta) z_{n}(\rho) \hat{\mathbf{e}}_{\theta} \\ &-\cos m \phi \frac{d P_{n}^{m}(\cos \theta)}{d \theta} z_{n}(\rho) \hat{\mathbf{e}}_{\phi} \end{aligned} $$
         !
         ! Reference: Absorption and Scattering of Light by Small Particles, eq. 4.17
-        subroutine lib_mie_vector_spherical_harmonics_components_cmplx(theta, phi, rho, m, n, z_selector, &
+        subroutine lib_math_vector_spherical_harmonics_components_cmplx(theta, phi, rho, m, n, z_selector, &
                                                       M_emn, M_omn, N_emn, N_omn, &
                                                       not_calc_Memn, not_calc_Momn, not_calc_Nemn, not_calc_Nomn)
             implicit none
@@ -1162,7 +1168,7 @@ module lib_mie_vector_spherical_harmonics
 
                     r_cmplx = cmplx(0,0)
                     r_d_cmplx = cmplx(0,0)
-                    print*, "lib_mie_vector_spherical_harmonics_M_emn: ERROR"
+                    print*, "lib_math_vector_spherical_harmonics_M_emn: ERROR"
                     print*, "  undefined z_selector value: ", z_selector
                     return
             end select
@@ -1248,7 +1254,7 @@ module lib_mie_vector_spherical_harmonics
             end if
 
 
-        end subroutine lib_mie_vector_spherical_harmonics_components_cmplx
+        end subroutine lib_math_vector_spherical_harmonics_components_cmplx
 
         ! Calculation of the translation transformation coefficients
         ! from the l-th coordinate system to the j-th coordinate system
@@ -1311,8 +1317,10 @@ module lib_mie_vector_spherical_harmonics
         !       4 dimensional matrix
         !
         ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
-        subroutine lib_mie_vector_spherical_harmonics_translation_coefficient_real(x, theta, phi, n_range, nu_range, z_selector,&
-                                                                                   A_mnkl, B_mnkl)
+        subroutine lib_math_vector_spherical_harmonics_translation_coeff_r(x, theta, phi, &
+                                                                                    n_range, nu_range, &
+                                                                                    z_selector, &
+                                                                                    A_mnkl, B_mnkl)
             implicit none
             ! dummy
             double precision, intent(in) :: x
@@ -1412,7 +1420,7 @@ module lib_mie_vector_spherical_harmonics
                     z_n_real = 0
                     z_n_cmplx = cmplx(0,0)
 
-                    print*, "lib_mie_vector_spherical_harmonics_translation_coefficient_real: ERROR"
+                    print*, "lib_math_vector_spherical_harmonics_translation_coeff_r: ERROR"
                     print*, "  undefined z_selector value[1-4]: ", z_selector
                     return
             end select
@@ -1517,7 +1525,7 @@ module lib_mie_vector_spherical_harmonics
             end do
             !$OMP END PARALLEL DO
 
-        end subroutine lib_mie_vector_spherical_harmonics_translation_coefficient_real
+        end subroutine lib_math_vector_spherical_harmonics_translation_coeff_r
 
         ! Calculation of the translation transformation coefficients
         ! from the l-th coordinate system to the j-th coordinate system
@@ -1547,7 +1555,7 @@ module lib_mie_vector_spherical_harmonics
         !       4 dimensional matrix
         !
         ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
-        subroutine lib_mie_vector_spherical_harmonics_translation_coeff_spher_r(x, &
+        subroutine lib_math_vector_spherical_harmonics_translation_coeff_spher_r(x, &
                                                                                 n_range, nu_range, z_selector,&
                                                                                 A_mnkl, B_mnkl)
             implicit none
@@ -1560,11 +1568,11 @@ module lib_mie_vector_spherical_harmonics
             type(list_4_cmplx), intent(inout) :: A_mnkl
             type(list_4_cmplx), intent(inout) :: B_mnkl
 
-            call lib_mie_vector_spherical_harmonics_translation_coefficient_real(x%rho, x%theta, x%phi, &
+            call lib_math_vector_spherical_harmonics_translation_coeff_r(x%rho, x%theta, x%phi, &
                                                                                  n_range, nu_range, z_selector,&
                                                                                  A_mnkl, B_mnkl)
 
-        end subroutine lib_mie_vector_spherical_harmonics_translation_coeff_spher_r
+        end subroutine lib_math_vector_spherical_harmonics_translation_coeff_spher_r
 
         ! Calculation of the translation transformation coefficients
         ! from the l-th coordinate system to the j-th coordinate system
@@ -1594,7 +1602,7 @@ module lib_mie_vector_spherical_harmonics
         !       4 dimensional matrix
         !
         ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
-        subroutine lib_mie_vector_spherical_harmonics_translation_coeff_carte_r(x, &
+        subroutine lib_math_vector_spherical_harmonics_translation_coeff_carte_r(x, &
                                                                                 n_range, nu_range, z_selector,&
                                                                                 A_mnkl, B_mnkl)
             implicit none
@@ -1612,11 +1620,11 @@ module lib_mie_vector_spherical_harmonics
 
             m_x = x
 
-            call lib_mie_vector_spherical_harmonics_translation_coefficient_real(m_x%rho, m_x%theta, m_x%phi, &
+            call lib_math_vector_spherical_harmonics_translation_coeff_r(m_x%rho, m_x%theta, m_x%phi, &
                                                                                  n_range, nu_range, z_selector,&
                                                                                  A_mnkl, B_mnkl)
 
-        end subroutine lib_mie_vector_spherical_harmonics_translation_coeff_carte_r
+        end subroutine lib_math_vector_spherical_harmonics_translation_coeff_carte_r
 
         ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
         !            eq. 25
@@ -1711,7 +1719,7 @@ module lib_mie_vector_spherical_harmonics
 
         end subroutine ab_xu_cruzan_eq34
 
-        function lib_mie_vector_spherical_harmonics_test_functions() result (rv)
+        function lib_math_vector_spherical_harmonics_test_functions() result (rv)
             implicit none
             ! dummy
             integer :: rv
@@ -1728,19 +1736,19 @@ module lib_mie_vector_spherical_harmonics
             call system_clock(test_count_start, test_count_rate)
             call cpu_time(test_start)
 
-            if (.not. test_lib_mie_vector_spherical_harmonics_components_real_xu()) then
+            if (.not. test_lib_math_vector_spherical_harmonics_components_real_xu()) then
                 rv = rv + 1
             end if
-!            if (.not. test_lib_mie_vector_spherical_harmonics_components_cmplx_xu()) then
+!            if (.not. test_lib_math_vector_spherical_harmonics_components_cmplx_xu()) then
 !                rv = rv + 1
 !            end if
             if (.not. test_ab_xu_cruzan_eq34()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_mie_vector_spherical_harmonics_translation_coeff_r()) then
+            if (.not. test_lib_math_vector_spherical_harmonics_translation_coeff_r()) then
                 rv = rv + 1
             end if
-            if (.not. test_lib_mie_vector_spherical_harmonics_components_real_xu_2()) then
+            if (.not. test_lib_math_vector_spherical_harmonics_components_real_xu_2()) then
                 rv = rv + 1
             end if
 
@@ -1748,21 +1756,21 @@ module lib_mie_vector_spherical_harmonics
             call cpu_time(test_finish)
             call system_clock(test_count_finish, test_count_rate)
 
-            print *, "----lib_mie_vector_spherical_harmonics_test_functions----"
+            print *, "----lib_math_vector_spherical_harmonics_test_functions----"
             print '("  CPU-Time = ",f10.3," seconds.")',test_finish-test_start
             print '("  WALL-Time = ",f10.3," seconds.")',(test_count_finish-test_count_start) / real(test_count_rate)
             print *, ""
             if (rv == 0) then
-                print *, "lib_mie_vector_spherical_harmonics_test_functions tests: OK"
+                print *, "lib_math_vector_spherical_harmonics_test_functions tests: OK"
             else
-                print *, rv,"lib_mie_vector_spherical_harmonics_test_functions test(s) FAILED"
+                print *, rv,"lib_math_vector_spherical_harmonics_test_functions test(s) FAILED"
             end if
             print *, "---------------------------------------------------------"
             print *, ""
 
             contains
 
-!            function test_lib_mie_vector_spherical_harmonics_components_real() result (rv)
+!            function test_lib_math_vector_spherical_harmonics_components_real() result (rv)
 !                implicit none
 !                ! dummy
 !                logical :: rv
@@ -1794,13 +1802,13 @@ module lib_mie_vector_spherical_harmonics
 !                m = (/ 1, 1 /)
 !                n = (/ 1, 3 /)
 !
-!                call lib_mie_vector_spherical_harmonics_components_real(theta, phi, rho, m, n, z_selector, &
+!                call lib_math_vector_spherical_harmonics_components_real(theta, phi, rho, m, n, z_selector, &
 !                                                                        M_emn, M_omn, N_emn, N_omn)
 !
 !
 !            end function
 
-            function test_lib_mie_vector_spherical_harmonics_components_real_xu() result (rv)
+            function test_lib_math_vector_spherical_harmonics_components_real_xu() result (rv)
                 use file_io
                 implicit none
                 ! dummy
@@ -1808,9 +1816,9 @@ module lib_mie_vector_spherical_harmonics
 
                 ! parameter
                 character(len=*), parameter :: file_name_M_mn = &
-                     "src/lib/mie_theory/lib_mie_vector_spherical_harmonics/ground_truth_M_mn.csv"
+                     "ground_truth/lib_math_vector_spherical_harmonics/ground_truth_M_mn.csv"
                  character(len=*), parameter :: file_name_N_mn = &
-                     "src/lib/mie_theory/lib_mie_vector_spherical_harmonics/ground_truth_N_mn.csv"
+                     "ground_truth/lib_math_vector_spherical_harmonics/ground_truth_N_mn.csv"
 
                 ! auxiliary
                 integer :: i
@@ -1874,7 +1882,7 @@ module lib_mie_vector_spherical_harmonics
                         ground_truth_M_mn(n_value)%coordinate(m_value)%phi = buffer_cmplx
                     end do
                 else
-                    print *, "test_lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                    print *, "test_lib_math_vector_spherical_harmonics_components_real_xu: ERROR"
                     print *, "  file does not exist"
                     print *, "  file_name: ", file_name_M_mn
 
@@ -1900,7 +1908,7 @@ module lib_mie_vector_spherical_harmonics
                         ground_truth_N_mn(n_value)%coordinate(m_value)%phi = buffer_cmplx
                     end do
                 else
-                    print *, "test_lib_mie_vector_spherical_harmonics_components_real_xu: ERROR"
+                    print *, "test_lib_math_vector_spherical_harmonics_components_real_xu: ERROR"
                     print *, "  file does not exist"
                     print *, "  file_name: ", file_name_N_mn
 
@@ -1908,12 +1916,12 @@ module lib_mie_vector_spherical_harmonics
                 end if
 
                 ! calculate M_mn, N_mn
-                call lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, r, k, n, z_selector, &
+                call lib_math_vector_spherical_harmonics_components_real_xu(theta, phi, r, k, n, z_selector, &
                                                                            M_mn, N_mn)
 
                 ! evaluate
                 rv = .true.
-                print *, "test_lib_mie_vector_spherical_harmonics_components_real_xu:"
+                print *, "test_lib_math_vector_spherical_harmonics_components_real_xu:"
                 print *, "  M_mn:"
                 do i=n(1), n(2)
                     do ii=-i, i
@@ -1940,9 +1948,9 @@ module lib_mie_vector_spherical_harmonics
                     end do
                 end do
 
-            end function test_lib_mie_vector_spherical_harmonics_components_real_xu
+            end function test_lib_math_vector_spherical_harmonics_components_real_xu
 
-            function test_lib_mie_vector_spherical_harmonics_components_cmplx_xu() result (rv)
+            function test_lib_math_vector_spherical_harmonics_components_cmplx_xu() result (rv)
                 use file_io
                 implicit none
                 ! dummy
@@ -1950,9 +1958,9 @@ module lib_mie_vector_spherical_harmonics
 
                 ! parameter
                 character(len=*), parameter :: file_name_M_mn = &
-                     "src/lib/mie_theory/lib_mie_vector_spherical_harmonics/ground_truth_M_mn_cmplx.csv"
+                     "ground_truth/lib_math_vector_spherical_harmonics/ground_truth_M_mn_cmplx.csv"
                  character(len=*), parameter :: file_name_N_mn = &
-                     "src/lib/mie_theory/lib_mie_vector_spherical_harmonics/ground_truth_N_mn_cmplx.csv"
+                     "ground_truth/lib_math_vector_spherical_harmonics/ground_truth_N_mn_cmplx.csv"
 
                 ! auxiliary
                 integer :: i
@@ -2014,7 +2022,7 @@ module lib_mie_vector_spherical_harmonics
                         ground_truth_M_mn(n_value)%coordinate(m_value)%phi = buffer_cmplx
                     end do
                 else
-                    print *, "test_lib_mie_vector_spherical_harmonics_components_cmplx_xu: ERROR"
+                    print *, "test_lib_math_vector_spherical_harmonics_components_cmplx_xu: ERROR"
                     print *, "  file does not exist"
                     print *, "  file_name: ", file_name_M_mn
 
@@ -2040,7 +2048,7 @@ module lib_mie_vector_spherical_harmonics
                         ground_truth_N_mn(n_value)%coordinate(m_value)%phi = buffer_cmplx
                     end do
                 else
-                    print *, "test_lib_mie_vector_spherical_harmonics_components_cmplx_xu: ERROR"
+                    print *, "test_lib_math_vector_spherical_harmonics_components_cmplx_xu: ERROR"
                     print *, "  file does not exist"
                     print *, "  file_name: ", file_name_N_mn
 
@@ -2048,12 +2056,12 @@ module lib_mie_vector_spherical_harmonics
                 end if
 
                 ! calculate M_mn, N_mn
-                call lib_mie_vector_spherical_harmonics_components_cmplx_xu(theta, phi, k, r, n, z_selector, &
+                call lib_math_vector_spherical_harmonics_components_cmplx_xu(theta, phi, k, r, n, z_selector, &
                                                                            M_mn, N_mn)
 
                 ! evaluate
                 rv = .true.
-                print *, "test_lib_mie_vector_spherical_harmonics_components_cmplx_xu:"
+                print *, "test_lib_math_vector_spherical_harmonics_components_cmplx_xu:"
                 print *, "  M_mn:"
                 do i=n(1), n(2)
                     do ii=-i, i
@@ -2080,9 +2088,9 @@ module lib_mie_vector_spherical_harmonics
                     end do
                 end do
 
-            end function test_lib_mie_vector_spherical_harmonics_components_cmplx_xu
+            end function test_lib_math_vector_spherical_harmonics_components_cmplx_xu
 
-            function test_lib_mie_vector_spherical_harmonics_components_real_xu_2() result (rv)
+            function test_lib_math_vector_spherical_harmonics_components_real_xu_2() result (rv)
                 use file_io
                 implicit none
                 ! dummy
@@ -2138,7 +2146,7 @@ module lib_mie_vector_spherical_harmonics
                     degree_list(i) = theta
 
                     ! calculate M_mn, N_mn
-                    call lib_mie_vector_spherical_harmonics_components_real_xu(theta, phi, r, k, n, z_selector, &
+                    call lib_math_vector_spherical_harmonics_components_real_xu(theta, phi, r, k, n, z_selector, &
                                                                            M_nm, N_nm)
 
                     M_values(i) = M_nm(n(2))%coordinate(0)%rho
@@ -2158,9 +2166,9 @@ module lib_mie_vector_spherical_harmonics
 
                 ! evaluate
                 rv = .true.
-                print *, "test_lib_mie_vector_spherical_harmonics_components_real_xu_2:"
+                print *, "test_lib_math_vector_spherical_harmonics_components_real_xu_2:"
 
-            end function test_lib_mie_vector_spherical_harmonics_components_real_xu_2
+            end function test_lib_math_vector_spherical_harmonics_components_real_xu_2
 
             function test_ab_xu_cruzan_eq34() result(rv)
                 implicit none
@@ -2239,7 +2247,7 @@ module lib_mie_vector_spherical_harmonics
 
             end function test_ab_xu_cruzan_eq34
 
-            function test_lib_mie_vector_spherical_harmonics_translation_coeff_r() result(rv)
+            function test_lib_math_vector_spherical_harmonics_translation_coeff_r() result(rv)
                 use file_io
                 implicit none
                 ! dummy
@@ -2248,7 +2256,7 @@ module lib_mie_vector_spherical_harmonics
                 ! parameter
                 integer, parameter :: d = 4
                 character(len=*), parameter :: file_name = &
-                        "src/lib/mie_theory/lib_mie_vector_spherical_harmonics/ground_truth_AB_mnmunu.csv"
+                        "ground_truth/lib_math_vector_spherical_harmonics/ground_truth_AB_mnmunu.csv"
                 character(len=*), parameter :: format = '(10(X)A, ES19.9)'
                 ! auxiliary
                 integer :: i
@@ -2333,12 +2341,12 @@ module lib_mie_vector_spherical_harmonics
 !
 !                n_range = (/ 1, maxval(n) /)
 !                nu_range = (/ 1, maxval(nu) /)
-                call lib_mie_vector_spherical_harmonics_translation_coefficient_real(x, theta, phi, &
-                                                                                    n_range, nu_range, z_selector, &
-                                                                                    A_mnkl, B_mnkl)
+                call lib_math_vector_spherical_harmonics_translation_coeff_r(x, theta, phi, &
+                                                                             n_range, nu_range, z_selector, &
+                                                                             A_mnkl, B_mnkl)
 
                 rv = .true.
-                print *, "test_lib_mie_vector_spherical_harmonics_translation_coeff_r:"
+                print *, "test_lib_math_vector_spherical_harmonics_translation_coeff_r:"
                 print *, "  A:"
                 do n=n_range(1), n_range(2)
                 do m=-n, n
@@ -2421,7 +2429,7 @@ module lib_mie_vector_spherical_harmonics
                 end do
                 end do
 !                rv = .true.
-!                print *, "test_lib_mie_vector_spherical_harmonics_translation_coeff_r:"
+!                print *, "test_lib_math_vector_spherical_harmonics_translation_coeff_r:"
 !                print *, "  A:"
 !                do i=1, d
 !                    erg = real(A_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i)))
@@ -2477,10 +2485,16 @@ module lib_mie_vector_spherical_harmonics
 !                    end if
 !                    print *, ""
 !                end do
+                else
+                    print *, "test_lib_math_vector_spherical_harmonics_translation_coeff_r: ERROR"
+                    print *, "  file does not exist"
+                    print *, "  file_name: ", file_name_N_mn
+
+                    return
                 end if
 
-            end function test_lib_mie_vector_spherical_harmonics_translation_coeff_r
+            end function test_lib_math_vector_spherical_harmonics_translation_coeff_r
 
-        end function lib_mie_vector_spherical_harmonics_test_functions
+        end function lib_math_vector_spherical_harmonics_test_functions
 
-end module lib_mie_vector_spherical_harmonics
+end module lib_math_vector_spherical_harmonics
