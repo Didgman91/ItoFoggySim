@@ -10,6 +10,7 @@ module lib_math_type_operator
     public :: operator (*)
     public :: operator (/)
     public :: assignment (=)
+    public :: sum
     public :: abs
     public :: spherical_abs
     public :: cartesian_abs
@@ -113,6 +114,11 @@ module lib_math_type_operator
         ! list list
         module procedure lib_math_list_list_real_mul_real
         module procedure lib_math_list_list_cmplx_mul_real
+
+        module procedure lib_math_list_list_cmplx_mul_cmplx
+        module procedure lib_math_cmplx_mul_list_list_cmplx
+
+        module procedure lib_math_list_list_cmplx_mul_list_list_cmplx
     end interface
 
     interface operator (/)
@@ -165,6 +171,10 @@ module lib_math_type_operator
         module procedure lib_math_spherical_operator_abs_cmplx
     end interface
 
+    interface sum
+        module procedure lib_math_list_list_cmplx_sum
+        module procedure lib_math_list_list_real_sum
+    end interface
 
     interface init_list
         module procedure lib_math_list_list_logical_init
@@ -221,6 +231,14 @@ module lib_math_type_operator
     end interface
 
     contains
+        subroutine lib_math_plus_plus(lhs)
+            implicit none
+            ! dummy
+            integer, intent(inout) :: lhs
+
+            lhs = lhs + 1
+
+        end subroutine
 
 ! ---- single spherical coordinate ----
         function lib_math_spherical_operator_add(lhs, rhs) result(rv)
@@ -1901,6 +1919,66 @@ module lib_math_type_operator
 
         ! Argument
         ! ----
+        !   rhs: type(list_list_cmplx)
+        !       list of list with complex numbers
+        !
+        ! Returns
+        ! ----
+        !   rv: complex(kind=lib_math_type_kind)
+        !       the sum of all elements of *rhs*
+        function lib_math_list_list_real_sum(rhs) result(rv)
+            implicit none
+            ! dummy
+            type(list_list_real), intent(in) :: rhs
+
+            real(kind=lib_math_type_kind) :: rv
+
+            ! auxiliry
+            integer :: n
+            real(kind=lib_math_type_kind), dimension(lbound(rhs%item, 1):ubound(rhs%item, 1)) :: buffer
+
+            !$OMP PARALLEL DO PRIVATE(n)
+            do n = lbound(rhs%item, 1), ubound(rhs%item, 1)
+                buffer(n) = sum(rhs%item(n)%item)
+            end do
+            !$OMP END PARALLEL DO
+
+            rv = sum(buffer)
+
+        end function lib_math_list_list_real_sum
+
+        ! Argument
+        ! ----
+        !   rhs: type(list_list_cmplx)
+        !       list of list with complex numbers
+        !
+        ! Returns
+        ! ----
+        !   rv: complex(kind=lib_math_type_kind)
+        !       the sum of all elements of *rhs*
+        function lib_math_list_list_cmplx_sum(rhs) result(rv)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: rhs
+
+            complex(kind=lib_math_type_kind) :: rv
+
+            ! auxiliry
+            integer :: n
+            complex(kind=lib_math_type_kind), dimension(lbound(rhs%item, 1):ubound(rhs%item, 1)) :: buffer
+
+            !$OMP PARALLEL DO PRIVATE(n)
+            do n = lbound(rhs%item, 1), ubound(rhs%item, 1)
+                buffer(n) = sum(rhs%item(n)%item)
+            end do
+            !$OMP END PARALLEL DO
+
+            rv = sum(buffer)
+
+        end function lib_math_list_list_cmplx_sum
+
+        ! Argument
+        ! ----
         !   list: type(list_list_cmplx)
         !       list of lists like: list%item(2)%item(-2:2)
         !
@@ -2372,6 +2450,96 @@ module lib_math_type_operator
             !$OMP END PARALLEL DO
 
         end function lib_math_list_list_cmplx_mul_real
+
+        ! Elementwise multiplication
+        !
+        ! Arguments
+        ! ----
+        !   lhs: complex(kind=lib_math_type_kind)
+        !   rhs: type(list_list_cmplx)
+        !
+        ! Retruns
+        ! ----
+        !   rv: type(list_list_cmplx)
+        function lib_math_cmplx_mul_list_list_cmplx(lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            complex(kind=lib_math_type_kind), intent(in) :: lhs
+            type(list_list_cmplx), intent(in) :: rhs
+
+            type(list_list_cmplx) :: rv
+
+            ! auxiliary
+            integer :: n
+            integer :: m
+
+            call init_list(rv, lbound(rhs%item, 1), ubound(rhs%item, 1) - lbound(rhs%item, 1) + 1)
+
+            !$OMP PARALLEL DO PRIVATE(n, m)
+            do n=lbound(rhs%item, 1), ubound(rhs%item, 1)
+                do m=-n, n
+                    rv%item(n)%item(m) = lhs * rhs%item(n)%item(m)
+                end do
+            end do
+            !$OMP END PARALLEL DO
+
+        end function lib_math_cmplx_mul_list_list_cmplx
+
+        ! Elementwise multiplication
+        !
+        ! Arguments
+        ! ----
+        !   lhs: type(list_list_cmplx)
+        !   rhs: complex(kind=lib_math_type_kind)
+        !
+        ! Retruns
+        ! ----
+        !   rv: type(list_list_cmplx)
+        function lib_math_list_list_cmplx_mul_cmplx(lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: lhs
+            complex(kind=lib_math_type_kind), intent(in) :: rhs
+
+            type(list_list_cmplx) :: rv
+
+            rv = lib_math_cmplx_mul_list_list_cmplx(rhs, lhs)
+
+        end function lib_math_list_list_cmplx_mul_cmplx
+
+        ! Elementwise multiplication
+        !
+        ! Arguments
+        ! ----
+        !   lhs: type(list_list_cmplx)
+        !   rhs: type(list_list_cmplx)
+        !
+        ! Retruns
+        ! ----
+        !   rv: type(list_list_cmplx)
+        function lib_math_list_list_cmplx_mul_list_list_cmplx(lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: lhs
+            type(list_list_cmplx), intent(in) :: rhs
+
+            type(list_list_cmplx) :: rv
+
+            ! auxiliary
+            integer :: n
+            integer :: m
+
+            call init_list(rv, lbound(rhs%item, 1), ubound(rhs%item, 1) - lbound(rhs%item, 1) + 1)
+
+            !$OMP PARALLEL DO PRIVATE(n, m)
+            do n=lbound(rhs%item, 1), ubound(rhs%item, 1)
+                do m=-n, n
+                    rv%item(n)%item(m) = lhs%item(n)%item(m) * rhs%item(n)%item(m)
+                end do
+            end do
+            !$OMP END PARALLEL DO
+
+        end function lib_math_list_list_cmplx_mul_list_list_cmplx
 
         ! Arguments
         ! ----
