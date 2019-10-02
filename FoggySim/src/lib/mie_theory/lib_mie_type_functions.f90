@@ -91,7 +91,7 @@ module lib_mie_type_functions
         !   e_field_0: double precision
         !       magnitude of the oscilating electrical field (peak value)
         !   k: type(cartesian_coordinate_real_type)
-        !       sets only the direction of the wave vector, the length of this vector is calculated as follows:
+        !       sets only the direction of the wave vector, the length of this vector is calculated internally as follows:
         !       |k| = 2 Pi / lambda
         !   d_0_i: type(cartesian_coordinate_real_type)
         !       position of the illumination coordinate system respect to the world coordinate system
@@ -147,7 +147,12 @@ module lib_mie_type_functions
             ! auxiliary
 
             contains
+                function test_() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
 
+                end function
         end function lib_mie_type_functions_test_functions
 
 end module lib_mie_type_functions

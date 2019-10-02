@@ -17,6 +17,7 @@ program main
     use lib_mie_ss_helper_functions
 
     use lib_mie_multi_sphere
+    use lib_mie_ms_solver
 
     use light_scattering
     implicit none
@@ -61,6 +62,7 @@ program main
     error_counter = error_counter + test_lib_math()
     error_counter = error_counter + lib_mie_ss_helper_functions_test_functions()
 !    error_counter = error_counter + lib_mie_single_sphere_test_functions()
+    error_counter = error_counter + lib_mie_ms_solver_test_functions()
     error_counter = error_counter + lib_mie_multi_sphere_test_functions()
     error_counter = error_counter + lib_sort_test_functions()
     error_counter = error_counter + lib_test_hash_function()
