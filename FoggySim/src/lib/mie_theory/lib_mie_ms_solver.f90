@@ -1,4 +1,4 @@
-module lib_mie_solver
+module lib_mie_ms_solver
     use libmath
     use lib_mie_vector_spherical_harmonics
     use lib_mie_type
@@ -7,10 +7,10 @@ module lib_mie_solver
 
     private
 
-    public :: lib_mie_solver_get_vector_b
-    public :: lib_mie_solver_get_vector_x
-    public :: lib_mie_solver_set_sphere_parameter_ab_nm
-    public :: lib_mie_solver_calculate_vector_b
+    public :: lib_mie_ms_solver_get_vector_b
+    public :: lib_mie_ms_solver_get_vector_x
+    public :: lib_mie_ms_solver_set_sphere_parameter_ab_nm
+    public :: lib_mie_ms_solver_calculate_vector_b
 
     contains
 
@@ -33,7 +33,7 @@ module lib_mie_solver
         !
         ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
         !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
-        subroutine lib_mie_solver_get_vector_b(simulation_parameter, vector_b)
+        subroutine lib_mie_ms_solver_get_vector_b(simulation_parameter, vector_b)
             implicit none
             ! dummy
             type(lib_mie_simulation_parameter_type), intent(in) :: simulation_parameter
@@ -112,7 +112,7 @@ module lib_mie_solver
             end do
             !$OMP END PARALLEL DO
 
-        end subroutine lib_mie_solver_get_vector_b
+        end subroutine lib_mie_ms_solver_get_vector_b
 
         ! Formats problem of  multi sphere scattering to be able to use a solver.
         !
@@ -134,7 +134,7 @@ module lib_mie_solver
         !
         ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
         !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
-        subroutine lib_mie_solver_get_vector_x(simulation_parameter, vector_x)
+        subroutine lib_mie_ms_solver_get_vector_x(simulation_parameter, vector_x)
             implicit none
             ! dummy
             type(lib_mie_simulation_parameter_type), intent(in) :: simulation_parameter
@@ -198,7 +198,7 @@ module lib_mie_solver
             end do
             !$OMP END PARALLEL DO
 
-        end subroutine lib_mie_solver_get_vector_x
+        end subroutine lib_mie_ms_solver_get_vector_x
 
         ! Formats problem of multi sphere scattering to be able to use a solver.
         !
@@ -219,7 +219,7 @@ module lib_mie_solver
         !
         ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
         !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
-        subroutine lib_mie_solver_set_sphere_parameter_ab_nm(vector_x, simulation_parameter)
+        subroutine lib_mie_ms_solver_set_sphere_parameter_ab_nm(vector_x, simulation_parameter)
             implicit none
             ! dummy
             double complex, dimension(:), intent(in) :: vector_x
@@ -274,7 +274,7 @@ module lib_mie_solver
             end do
             !$OMP END PARALLEL DO
 
-        end subroutine lib_mie_solver_set_sphere_parameter_ab_nm
+        end subroutine lib_mie_ms_solver_set_sphere_parameter_ab_nm
 
         ! Formats problem of  multi sphere scattering to be able to use a solver.
         !
@@ -296,7 +296,7 @@ module lib_mie_solver
         !
         ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
         !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
-        subroutine lib_mie_solver_calculate_vector_b(simulation_parameter, vector_x, vector_b, vector_b_t)
+        subroutine lib_mie_ms_solver_calculate_vector_b(simulation_parameter, vector_x, vector_b, vector_b_t)
             implicit none
             ! dummy
             type(lib_mie_simulation_parameter_type), intent(in) :: simulation_parameter
@@ -455,5 +455,5 @@ module lib_mie_solver
 !                end do
 !            end do
 
-        end subroutine lib_mie_solver_calculate_vector_b
-end module lib_mie_solver
+        end subroutine lib_mie_ms_solver_calculate_vector_b
+end module lib_mie_ms_solver

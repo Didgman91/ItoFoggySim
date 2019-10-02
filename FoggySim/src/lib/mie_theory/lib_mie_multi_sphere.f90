@@ -4,8 +4,8 @@ module lib_mie_multi_sphere
     use lib_mie_type
     use lib_mie_type_functions
     use lib_mie_ms_helper_functions
+    use lib_mie_ms_solver
     use lib_mie_single_sphere
-    use lib_mie_solver
     implicit none
 
     private
@@ -94,9 +94,9 @@ module lib_mie_multi_sphere
             ! ~~~ test ~~~
 
             ! convert dataset for solver
-            call lib_mie_solver_get_vector_b(simulation, vector_b)
+            call lib_mie_ms_solver_get_vector_b(simulation, vector_b)
 !            call lib_mie_type_func_solver_get_matrix_a(simulation, matrix_a)
-            call lib_mie_solver_set_sphere_parameter_ab_nm(vector_b, simulation)
+            call lib_mie_ms_solver_set_sphere_parameter_ab_nm(vector_b, simulation)
             ! test
             open(unit=99, file="temp/matrix_a.csv", status="unknown")
             test = write_csv(99, matrix_a)
@@ -111,13 +111,13 @@ module lib_mie_multi_sphere
             close(99)
             ! ~~~ test ~~~
 
-            call lib_mie_solver_get_vector_x(simulation, vector_x)
+            call lib_mie_ms_solver_get_vector_x(simulation, vector_x)
 
             ! solve Mx = b
             vector_x = lib_math_solver_conjugate_gradient_method(matrix_a, vector_x, vector_b)
 
             ! export x -> simulation%sphere_list
-            call lib_mie_solver_set_sphere_parameter_ab_nm(vector_x, simulation)
+            call lib_mie_ms_solver_set_sphere_parameter_ab_nm(vector_x, simulation)
 
         end subroutine lib_mie_ms_calculate_scattering_coefficients_ab_nm
 

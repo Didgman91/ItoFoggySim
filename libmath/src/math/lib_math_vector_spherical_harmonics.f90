@@ -2488,7 +2488,7 @@ module lib_math_vector_spherical_harmonics
                 else
                     print *, "test_lib_math_vector_spherical_harmonics_translation_coeff_r: ERROR"
                     print *, "  file does not exist"
-                    print *, "  file_name: ", file_name_N_mn
+                    print *, "  file_name: ", file_name
 
                     return
                 end if

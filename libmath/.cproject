@@ -67,7 +67,7 @@
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_generated_functions/Debug}&quot;"/>
                                     									
-                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmathexternal/Debug}&quot;"/>
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_external/Debug}&quot;"/>
                                     								
                                 </option>
                                 								
@@ -79,7 +79,7 @@
                                 								
                                 <option id="gnu.fortran.link.option.shared.807688544" name="Shared (-shared)" superClass="gnu.fortran.link.option.shared" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                                 								
-                                <option id="gnu.fortran.link.option.ldflags.1121947081" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-pg -fopenmp -Wl,-rpath=&quot;${workspace_loc:/libmath_generated_functions/Debug}&quot; -Wl,-rpath=&quot;${workspace_loc:/libtoolbox/Debug}&quot; -Wl,-rpath=&quot;${workspace_loc:/libmathexternal/Debug}&quot;" valueType="string"/>
+                                <option id="gnu.fortran.link.option.ldflags.1121947081" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-pg -fopenmp -Wl,-rpath=&quot;${workspace_loc:/libmath_generated_functions/Debug}&quot; -Wl,-rpath=&quot;${workspace_loc:/libtoolbox/Debug}&quot; -Wl,-rpath=&quot;${workspace_loc:/libmath_external/Debug}&quot;" valueType="string"/>
                                 								
                                 <option id="gnu.fortran.link.option.soname.1898426583" name="Shared object name (-Wl,-soname=)" superClass="gnu.fortran.link.option.soname" useByScannerDiscovery="false" value="" valueType="string"/>
                                 								
@@ -89,7 +89,7 @@
                                     									
                                     <listOptionValue builtIn="false" value="math_generated_functions"/>
                                     									
-                                    <listOptionValue builtIn="false" value="mathexternal"/>
+                                    <listOptionValue builtIn="false" value="math_external"/>
                                     									
                                     <listOptionValue builtIn="false" value="toolbox"/>
                                     									
@@ -103,7 +103,7 @@
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libtoolbox/Debug}&quot;"/>
                                     									
-                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmathexternal/Debug}&quot;"/>
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_external/Debug}&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc}/wigxjpf_1_10/lib/&quot;"/>
                                     								

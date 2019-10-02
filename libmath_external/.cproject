@@ -43,7 +43,7 @@
                             							
                             <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.1218178568" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug">
                                 								
-                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.c.compiler.option.include.paths.295519212" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.c.compiler.option.include.paths.295519212" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
                                     									
                                     <listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/8/include-fixed"/>
                                     									
@@ -57,7 +57,7 @@
                             							
                             <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1893287973" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug">
                                 								
-                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.compiler.option.include.paths.894291885" superClass="gnu.fortran.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.compiler.option.include.paths.894291885" name="Include paths (-I)" superClass="gnu.fortran.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
                                     									
                                     <listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/8/include-fixed"/>
                                     									
@@ -65,7 +65,7 @@
                                     								
                                 </option>
                                 								
-                                <option id="gnu.fortran.compiler.option.misc.other.1198467724" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-pg -c -cpp -fmessage-length=0 -fPIC -fcheck=all -frecursive" valueType="string"/>
+                                <option id="gnu.fortran.compiler.option.misc.other.1198467724" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-pg -c -cpp -fmessage-length=0 -fPIC -fcheck=all -frecursive" valueType="string"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.374054433" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                                 							
@@ -73,9 +73,9 @@
                             							
                             <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.1249374628" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.debug">
                                 								
-                                <option id="gnu.fortran.link.option.shared.570865359" superClass="gnu.fortran.link.option.shared" useByScannerDiscovery="false" value="true" valueType="boolean"/>
+                                <option id="gnu.fortran.link.option.shared.570865359" name="Shared (-shared)" superClass="gnu.fortran.link.option.shared" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                                 								
-                                <option id="gnu.fortran.link.option.ldflags.45499839" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-pg -fopenmp" valueType="string"/>
+                                <option id="gnu.fortran.link.option.ldflags.45499839" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-pg -fopenmp" valueType="string"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.linker.input.1980285995" superClass="photran.managedbuild.tool.gnu.fortran.linker.input">
                                     									
@@ -89,7 +89,7 @@
                             							
                             <tool id="photran.managedbuild.tool.gnu.assembler.exe.debug.605461763" name="GCC Assembler" superClass="photran.managedbuild.tool.gnu.assembler.exe.debug">
                                 								
-                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.both.asm.option.include.paths.2121138455" superClass="gnu.both.asm.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.both.asm.option.include.paths.2121138455" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
                                     									
                                     <listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/8/include"/>
                                     									
@@ -238,5 +238,7 @@
         </scannerConfigBuildInfo>
         	
     </storageModule>
+    	
+    <storageModule moduleId="refreshScope"/>
     
 </cproject>
