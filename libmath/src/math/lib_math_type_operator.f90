@@ -2307,10 +2307,12 @@ module lib_math_type_operator
         end function lib_math_get_list_list_cmplx_with_range
 
         ! removes zeros of a list
-        subroutine lib_math_list_list_cmplx_remove_zeros(list)
+        subroutine lib_math_list_list_cmplx_remove_zeros(list, threshold, set_zero)
             implicit none
             ! dummy
             type(list_list_cmplx), intent(inout) :: list
+            complex(kind=lib_math_type_kind), intent(in), optional :: threshold
+            logical, intent(in), optional :: set_zero
 
             ! dummy
             integer :: n
@@ -2319,15 +2321,29 @@ module lib_math_type_operator
             integer :: n_max
             type(list_list_cmplx) :: buffer_list
 
+            logical :: m_set_zero
+
+            m_set_zero = .false.
+            if (present(threshold)) then
+                if (present(set_zero)) m_set_zero = set_zero
+            end if
+
             n_min = -1
             n_max = -1
 
             ! get boundaries
             do n = lbound(list%item, 1), ubound(list%item, 1)
                 do m = -n, n
-                    if( list%item(n)%item(m) .ne. cmplx(0, 0, kind=lib_math_type_kind) ) then
-                         n_min = n
-                         exit
+                    if (present(threshold)) then
+                        if( abs(list%item(n)%item(m)) .gt. abs(threshold)) then
+                             n_min = n
+                             exit
+                        end if
+                    else
+                        if( list%item(n)%item(m) .ne. cmplx(0, 0, kind=lib_math_type_kind) ) then
+                             n_min = n
+                             exit
+                        end if
                     end if
                 end do
 
@@ -2338,9 +2354,16 @@ module lib_math_type_operator
 
             do n = ubound(list%item, 1), lbound(list%item, 1), -1
                 do m = -n, n
-                    if( list%item(n)%item(m) .ne. cmplx(0, 0, kind=lib_math_type_kind) ) then
-                         n_max = n
-                         exit
+                    if (present(threshold)) then
+                        if( abs(list%item(n)%item(m)) .gt. abs(threshold)) then
+                             n_max = n
+                             exit
+                        end if
+                    else
+                        if( list%item(n)%item(m) .ne. cmplx(0, 0, kind=lib_math_type_kind) ) then
+                             n_max = n
+                             exit
+                        end if
                     end if
                 end do
 
@@ -2369,35 +2392,67 @@ module lib_math_type_operator
                 call init_list(list, 1, 1, cmplx(0, 0, kind=lib_math_type_kind))
             end if
 
+            if (m_set_zero) then
+                do n = lbound(list%item, 1), lbound(list%item, 1)
+                    do m = -n, n
+                        if (abs(list%item(n)%item(m)) .le. abs(threshold)) then
+                            list%item(n)%item(m) = cmplx(0 ,0, kind=lib_math_type_kind)
+                        end if
+                    end do
+                end do
+            end if
+
         end subroutine lib_math_list_list_cmplx_remove_zeros
 
         ! removes zeros of a list
-        subroutine lib_math_list_cmplx_remove_zeros(list)
+        subroutine lib_math_list_cmplx_remove_zeros(list, threshold, set_zero)
             implicit none
             ! dummy
             type(list_cmplx), intent(inout) :: list
+            complex(kind=lib_math_type_kind), intent(in), optional :: threshold
+            logical, intent(in), optional :: set_zero
 
             ! dummy
             integer :: n
             integer :: n_min
             integer :: n_max
             type(list_cmplx) :: buffer_list
+            logical :: m_set_zero
+
+            m_set_zero = .false.
+            if (present(threshold)) then
+                if (present(set_zero)) m_set_zero = set_zero
+            end if
 
             n_min = -1
             n_max = -1
 
             ! get boundaries
             do n = lbound(list%item, 1), ubound(list%item, 1)
-                if( list%item(n) .ne. cmplx(0, 0, kind=lib_math_type_kind) ) then
-                     n_min = n
-                     exit
+                if (present(threshold)) then
+                    if( abs(list%item(n)) .gt. abs(threshold)) then
+                         n_min = n
+                         exit
+                    end if
+                else
+                    if( list%item(n) .ne. cmplx(0, 0, kind=lib_math_type_kind) ) then
+                         n_min = n
+                         exit
+                    end if
                 end if
             end do
 
             do n = ubound(list%item, 1), lbound(list%item, 1)
-                if( list%item(n) .ne. cmplx(0, 0, kind=lib_math_type_kind) ) then
-                     n_max = n
-                     exit
+                if (present(threshold)) then
+                    if( abs(list%item(n)) .gt. abs(threshold)) then
+                         n_max = n
+                         exit
+                    end if
+                else
+                    if( list%item(n) .ne. cmplx(0, 0, kind=lib_math_type_kind) ) then
+                         n_max = n
+                         exit
+                    end if
                 end if
             end do
 
@@ -2417,6 +2472,14 @@ module lib_math_type_operator
             else
                 ! list contains only zeros
                 call init_list(list, 1, 1, cmplx(0, 0, kind=lib_math_type_kind))
+            end if
+
+            if (m_set_zero) then
+                do n = lbound(list%item, 1), lbound(list%item, 1)
+                    if (abs(list%item(n)) .le. abs(threshold)) then
+                        list%item(n) = cmplx(0 ,0, kind=lib_math_type_kind)
+                    end if
+                end do
             end if
 
         end subroutine lib_math_list_cmplx_remove_zeros
