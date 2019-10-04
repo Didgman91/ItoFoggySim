@@ -19,6 +19,8 @@ module lib_math_type_operator
     public :: make_list
     public :: make_array
     public :: get_structure
+    public :: get_range
+    public :: remove_zeros
 
     public :: make_cartesian
     public :: make_spherical
@@ -118,6 +120,7 @@ module lib_math_type_operator
         module procedure lib_math_list_list_cmplx_mul_cmplx
         module procedure lib_math_cmplx_mul_list_list_cmplx
 
+        module procedure lib_math_list_cmplx_mul_list_list_cmplx
         module procedure lib_math_list_list_cmplx_mul_list_list_cmplx
     end interface
 
@@ -184,6 +187,7 @@ module lib_math_type_operator
         module procedure lib_math_list_4_real_init
         module procedure lib_math_list_list_cmplx_init
         module procedure lib_math_list_4_cmplx_init
+        module procedure lib_math_list_cmplx_init
         module procedure lib_math_list_spherical_coordinate_cmplx_type_init
     end interface
 
@@ -200,6 +204,15 @@ module lib_math_type_operator
     interface get_structure
         module procedure lib_math_get_list_list_structure_cmplx
         module procedure lib_math_get_list_of_list_list_structure_cmplx
+    end interface
+
+    interface get_range
+        module procedure lib_math_get_list_list_cmplx_with_range
+    end interface
+
+    interface remove_zeros
+        module procedure lib_math_list_cmplx_remove_zeros
+        module procedure lib_math_list_list_cmplx_remove_zeros
     end interface
 
     interface make_cartesian
@@ -231,14 +244,6 @@ module lib_math_type_operator
     end interface
 
     contains
-        subroutine lib_math_plus_plus(lhs)
-            implicit none
-            ! dummy
-            integer, intent(inout) :: lhs
-
-            lhs = lhs + 1
-
-        end subroutine
 
 ! ---- single spherical coordinate ----
         function lib_math_spherical_operator_add(lhs, rhs) result(rv)
@@ -1816,7 +1821,6 @@ module lib_math_type_operator
 
             ! auxiliary
             integer :: i
-            integer :: ii
 
             if( allocated(list%item) ) then
                 deallocate( list%item )
@@ -1829,13 +1833,45 @@ module lib_math_type_operator
 
             if (present(init_value)) then
                 do i=fnu, fnu+n-1
-                    do ii=-i, i
-                        list%item(i)%item(ii) = init_value
-                    end do
+                    list%item(i)%item = init_value
                 end do
             end if
 
         end subroutine lib_math_list_list_cmplx_init
+
+        ! Arguments
+        ! ----
+        !   list: type (list_real)
+        !       derived data type to initialize
+        !   fnu: integer
+        !       start index
+        !   n: integer
+        !       number of elements, n .GE. 1
+        !
+        subroutine lib_math_list_cmplx_init(list, fnu, n, init_value)
+            implicit none
+            ! dummy
+            type (list_cmplx), intent(inout) :: list
+            integer, intent(in) :: fnu
+            integer, intent(in) :: n
+            complex(kind=lib_math_type_kind), intent(in), optional :: init_value
+
+            ! auxiliary
+            integer :: i
+
+            if( allocated(list%item) ) then
+                deallocate( list%item )
+            end if
+
+            allocate( list%item(fnu:fnu+n-1) )
+
+            if (present(init_value)) then
+                do i=fnu, fnu+n-1
+                    list%item(i) = init_value
+                end do
+            end if
+
+        end subroutine lib_math_list_cmplx_init
 
         ! Arguments
         ! ----
@@ -1991,32 +2027,51 @@ module lib_math_type_operator
         !
         !   array | (1,-1) | (1,0) | (1,1) | (2,-2) | (2,-1) | (2,0) | ...
         !
-        subroutine lib_math_list_list_make_array_cmplx(list, array)
+        subroutine lib_math_list_list_make_array_cmplx(list, array, fnu, n)
             implicit none
             ! dummy
             type(list_list_cmplx), intent(in) :: list
+            integer, intent(in), optional :: fnu
+            integer, intent(in), optional :: n
 
             complex(kind=lib_math_type_kind), dimension(:), allocatable, intent(inout) :: array
 
             ! auxiliary
-            integer :: n
+            integer :: i
+            integer :: n_min
+            integer :: n_max
             integer :: first
             integer :: last
             integer, dimension(2) :: n_range
 
-            n_range(1) = lbound(list%item, 1)
-            n_range(2) = ubound(list%item, 1)
+            if (present(fnu) .and. present(n)) then
+                n_range(1) = fnu
+                n_range(2) = fnu + n - 1
+                n_min = max(n_range(1), lbound(list%item, 1))
+                n_max = min(n_range(2), ubound(list%item, 1))
+            else
+                n_range(1) = lbound(list%item, 1)
+                n_range(2) = ubound(list%item, 1)
+                n_min = n_range(1)
+                n_max = n_range(2)
+            end if
 
             if (allocated(array)) then
                 deallocate(array)
             end if
-            n = (1 + n_range(2))**2 - n_range(1)**2
-            allocate(array(n))
+            i = (1 + n_range(2))**2 - n_range(1)**2
+            allocate(array(i))
+            array = dcmplx(0,0)
 
-            first = 1
-            do n = n_range(1), n_range(2)
-                last = first + 2 * n ! +1 -1
-                array(first:last) = list%item(n)%item
+            if ( n_min .gt. n_range(1) ) then
+                ! (1 + (n_min-1))**2 - n_range(1)**2
+                first = n_min**2 - n_range(1)**2
+            else
+                first = 1
+            end if
+            do i = n_min, n_max
+                last = first + 2 * i ! +1 -1
+                array(first:last) = list%item(i)%item
                 first = last + 1
             end do
 
@@ -2223,6 +2278,148 @@ module lib_math_type_operator
             end do
 
         end subroutine lib_math_get_list_of_list_list_structure_cmplx
+
+        function lib_math_get_list_list_cmplx_with_range(list, fnu, n) result (rv)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: list
+            integer, intent(in) :: fnu
+            integer, intent(in) :: n
+
+            type(list_list_cmplx) :: rv
+
+            ! auxiliary
+            integer :: i
+            integer :: n_min
+            integer :: n_max
+
+            call init_list(rv, fnu, n, dcmplx(0,0))
+
+            n_min = max(fnu, lbound(list%item, 1))
+            n_max = min(fnu + n - 1, ubound(list%item, 1))
+
+            !$OMP PARALLEL DO PRIVATE(i)
+            do i = n_min, n_max
+                rv%item(i) = list%item(i)
+            end do
+            !$OMP END PARALLEL DO
+
+        end function lib_math_get_list_list_cmplx_with_range
+
+        ! removes zeros of a list
+        subroutine lib_math_list_list_cmplx_remove_zeros(list)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(inout) :: list
+
+            ! dummy
+            integer :: n
+            integer :: m
+            integer :: n_min
+            integer :: n_max
+            type(list_list_cmplx) :: buffer_list
+
+            n_min = -1
+            n_max = -1
+
+            ! get boundaries
+            do n = lbound(list%item, 1), ubound(list%item, 1)
+                do m = -n, n
+                    if( list%item(n)%item(m) .ne. cmplx(0, 0, kind=lib_math_type_kind) ) then
+                         n_min = n
+                         exit
+                    end if
+                end do
+
+                if (n_min .ne. -1) then
+                    exit
+                end if
+            end do
+
+            do n = ubound(list%item, 1), lbound(list%item, 1), -1
+                do m = -n, n
+                    if( list%item(n)%item(m) .ne. cmplx(0, 0, kind=lib_math_type_kind) ) then
+                         n_max = n
+                         exit
+                    end if
+                end do
+
+                if (n_max .ne. -1) then
+                    exit
+                end if
+            end do
+
+            ! create list with removed zeros
+            if (n_min .ne. -1 &
+                .and. n_max .ne. -1) then
+
+                if (n_min .gt. lbound(list%item, 1) &
+                    .or. n_max .lt. ubound(list%item, 1)) then
+
+                    call init_list(buffer_list, n_min, n_max - n_min + 1)
+
+                    do n = n_min, n_max
+                        buffer_list%item(n) = list%item(n)
+                    end do
+
+                    call move_alloc(buffer_list%item, list%item)
+                end if
+            else
+                ! list contains only zeros
+                call init_list(list, 1, 1, cmplx(0, 0, kind=lib_math_type_kind))
+            end if
+
+        end subroutine lib_math_list_list_cmplx_remove_zeros
+
+        ! removes zeros of a list
+        subroutine lib_math_list_cmplx_remove_zeros(list)
+            implicit none
+            ! dummy
+            type(list_cmplx), intent(inout) :: list
+
+            ! dummy
+            integer :: n
+            integer :: n_min
+            integer :: n_max
+            type(list_cmplx) :: buffer_list
+
+            n_min = -1
+            n_max = -1
+
+            ! get boundaries
+            do n = lbound(list%item, 1), ubound(list%item, 1)
+                if( list%item(n) .ne. cmplx(0, 0, kind=lib_math_type_kind) ) then
+                     n_min = n
+                     exit
+                end if
+            end do
+
+            do n = ubound(list%item, 1), lbound(list%item, 1)
+                if( list%item(n) .ne. cmplx(0, 0, kind=lib_math_type_kind) ) then
+                     n_max = n
+                     exit
+                end if
+            end do
+
+            ! create list with removed zeros
+            if (n_min .ne. -1 &
+                .and. n_max .ne. -1) then
+
+                if (n_min .gt. lbound(list%item, 1) &
+                    .or. n_max .lt. ubound(list%item, 1)) then
+
+                    call init_list(buffer_list, n_min, n_max - n_min + 1)
+
+                    do n = n_min, n_max
+                        buffer_list%item(n) = list%item(n)
+                    end do
+                end if
+            else
+                ! list contains only zeros
+                call init_list(list, 1, 1, cmplx(0, 0, kind=lib_math_type_kind))
+            end if
+
+        end subroutine lib_math_list_cmplx_remove_zeros
 
         ! Elementwise addition
         !
@@ -2528,11 +2725,16 @@ module lib_math_type_operator
             ! auxiliary
             integer :: n
             integer :: m
+            integer :: n_min
+            integer :: n_max
 
-            call init_list(rv, lbound(rhs%item, 1), ubound(rhs%item, 1) - lbound(rhs%item, 1) + 1)
+            n_min = max(lbound(lhs%item, 1), lbound(rhs%item, 1))
+            n_max = min(ubound(lhs%item, 1), ubound(rhs%item, 1))
+
+            call init_list(rv, n_min, n_max - n_min + 1)
 
             !$OMP PARALLEL DO PRIVATE(n, m)
-            do n=lbound(rhs%item, 1), ubound(rhs%item, 1)
+            do n=n_min, n_max
                 do m=-n, n
                     rv%item(n)%item(m) = lhs%item(n)%item(m) * rhs%item(n)%item(m)
                 end do
@@ -2540,6 +2742,47 @@ module lib_math_type_operator
             !$OMP END PARALLEL DO
 
         end function lib_math_list_list_cmplx_mul_list_list_cmplx
+
+        ! Elementwise multiplication
+        !
+        ! Arguments
+        ! ----
+        !   lhs: type(list_cmplx)
+        !   rhs: type(list_list_cmplx)
+        !
+        ! Retruns
+        ! ----
+        !   rv: type(list_list_cmplx)
+        function lib_math_list_cmplx_mul_list_list_cmplx(lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            type(list_cmplx), intent(in) :: lhs
+            type(list_list_cmplx), intent(in) :: rhs
+
+            type(list_list_cmplx) :: rv
+
+            ! auxiliary
+            integer :: n
+            integer :: m
+
+            integer :: n_min
+            integer :: n_max
+
+            n_min = max(lbound(lhs%item, 1), lbound(rhs%item, 1))
+            n_max = min(ubound(lhs%item, 1), ubound(rhs%item, 1))
+
+            call init_list(rv, n_min, n_max - n_min + 1)
+
+
+            !$OMP PARALLEL DO PRIVATE(n, m)
+            do n=n_min, n_max
+                do m=-n, n
+                    rv%item(n)%item(m) = lhs%item(n) * rhs%item(n)%item(m)
+                end do
+            end do
+            !$OMP END PARALLEL DO
+
+        end function lib_math_list_cmplx_mul_list_list_cmplx
 
         ! Arguments
         ! ----
