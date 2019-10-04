@@ -82,10 +82,14 @@ module lib_mie_type
     !   z_selector_scatterd_wave = 4
     !   z_selector_translation = 4
     !
+    ! n_range
+    !   Defines the minimum and maximum degree for the entire simulation.
+    !
     type lib_mie_vector_spherical_harmonics_type
         integer(kind=1) :: z_selector_incident_wave
         integer(kind=1) :: z_selector_scatterd_wave
         integer(kind=1) :: z_selector_translation
+        integer, dimension(2) :: n_range
     end type lib_mie_vector_spherical_harmonics_type
 
     ! simulation parameter
