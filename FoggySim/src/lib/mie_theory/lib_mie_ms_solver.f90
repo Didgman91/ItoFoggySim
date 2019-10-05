@@ -520,19 +520,19 @@ module lib_mie_ms_solver
                                 do m = -n, n
                                     do nu = n_range_l(1), n_range_l(2)
                                         do mu = -nu, nu
-                                            buffer_b_1_nm%item(nu)%item(mu) = buffer_b_1_nm%item(nu)%item(mu) &
-                                                + a_n%item(n) * a_nmnumu%item(n)%item(m)%item(nu)%item(mu) &
-                                                  * buffer_x_1_nm%item(n)%item(m)
-                                            buffer_b_1_nm%item(nu)%item(mu) = buffer_b_2_nm%item(nu)%item(mu) &
-                                                + a_n%item(n) * b_nmnumu%item(n)%item(m)%item(nu)%item(mu) &
-                                                  * buffer_x_2_nm%item(n)%item(m)
+                                            buffer_b_1_nm%item(n)%item(m) = buffer_b_1_nm%item(n)%item(m) &
+                                                + a_n%item(nu) * a_nmnumu%item(nu)%item(mu)%item(n)%item(m) &
+                                                  * buffer_x_1_nm%item(nu)%item(mu)
+                                            buffer_b_1_nm%item(n)%item(m) = buffer_b_1_nm%item(n)%item(m) &
+                                                + a_n%item(nu) * b_nmnumu%item(nu)%item(mu)%item(n)%item(m) &
+                                                  * buffer_x_2_nm%item(nu)%item(mu)
 
-                                            buffer_b_1_nm%item(nu)%item(mu) = buffer_b_1_nm%item(nu)%item(mu) &
-                                                + b_n%item(n) * b_nmnumu%item(n)%item(m)%item(nu)%item(mu) &
-                                                  * buffer_x_1_nm%item(n)%item(m)
-                                            buffer_b_2_nm%item(nu)%item(mu) = buffer_b_2_nm%item(nu)%item(mu) &
-                                                + b_n%item(n) * a_nmnumu%item(n)%item(m)%item(nu)%item(mu) &
-                                                  * buffer_x_2_nm%item(n)%item(m)
+                                            buffer_b_2_nm%item(n)%item(m) = buffer_b_2_nm%item(n)%item(m) &
+                                                + a_n%item(nu) * b_nmnumu%item(nu)%item(mu)%item(n)%item(m) &
+                                                  * buffer_x_1_nm%item(nu)%item(mu)
+                                            buffer_b_2_nm%item(n)%item(m) = buffer_b_2_nm%item(n)%item(m) &
+                                                + b_n%item(nu) * a_nmnumu%item(nu)%item(mu)%item(n)%item(m) &
+                                                  * buffer_x_2_nm%item(nu)%item(mu)
                                         end do
                                     end do
                                 end do
@@ -563,7 +563,7 @@ module lib_mie_ms_solver
             integer :: rv
 
             ! auxiliaray
-            double precision, parameter :: ground_truth_e = 10.0_8**(-6.0_8)
+            double precision, parameter :: ground_truth_e = 10.0_8**(-12.0_8)
 
             rv = 0
 
@@ -647,7 +647,7 @@ module lib_mie_ms_solver
 
                     r_particle = 2 * unit_mu
                     n_particle = 1.33
-                    n_range = (/ 1, 3 /)
+                    n_range = (/ 1, 5 /)
 
                     sphere_para = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
                                                                          r_particle, n_particle, n_range)
@@ -677,7 +677,7 @@ module lib_mie_ms_solver
                     simulation%spherical_harmonics%z_selector_incident_wave = 1
                     simulation%spherical_harmonics%z_selector_scatterd_wave = 3
                     simulation%spherical_harmonics%z_selector_translation = 1
-                    n_range = (/ 1, 2 /)
+                    n_range = (/ 1, 5 /)
                     simulation%spherical_harmonics%n_range = n_range
 
                     no_of_elements = 2 * ( (1+n_range(2))**2 - n_range(1)**2 )
@@ -745,13 +745,13 @@ module lib_mie_ms_solver
                         do m = -n, n
                             do nu = n_range(1), n_range(2)
                                 do mu = -nu, nu
-                                    buffer_vector_b_1%item(nu)%item(mu) = buffer_vector_b_1%item(nu)%item(mu) &
-                                        + a_n%item(n) * a_nmnumu%item(nu)%item(mu)%item(n)%item(m) &
-                                        + b_n%item(n) * b_nmnumu%item(nu)%item(mu)%item(n)%item(m)
+                                    buffer_vector_b_1%item(n)%item(m) = buffer_vector_b_1%item(n)%item(m) &
+                                        + a_n%item(nu) * a_nmnumu%item(nu)%item(mu)%item(n)%item(m) &
+                                        + b_n%item(nu) * b_nmnumu%item(nu)%item(mu)%item(n)%item(m)
 
-                                    buffer_vector_b_2%item(nu)%item(mu) = buffer_vector_b_2%item(nu)%item(mu) &
-                                        + a_n%item(n) * b_nmnumu%item(nu)%item(mu)%item(n)%item(m) &
-                                        + b_n%item(n) * a_nmnumu%item(nu)%item(mu)%item(n)%item(m)
+                                    buffer_vector_b_2%item(n)%item(m) = buffer_vector_b_2%item(n)%item(m) &
+                                        + a_n%item(nu) * b_nmnumu%item(nu)%item(mu)%item(n)%item(m) &
+                                        + b_n%item(nu) * a_nmnumu%item(nu)%item(mu)%item(n)%item(m)
 
                                 end do
                             end do
