@@ -4,7 +4,7 @@ module lib_mie_multi_sphere
     use lib_mie_type
     use lib_mie_type_functions
     use lib_mie_ms_helper_functions
-    use lib_mie_ms_solver
+    use lib_mie_ms_solver_gmres
     use lib_mie_single_sphere
     implicit none
 
@@ -14,62 +14,62 @@ module lib_mie_multi_sphere
 
     contains
 
-        ! Arguments
-        ! ----
-        !   k: type(spherical_coordinate_real_type)
-        !       ?
-        !   lambda: double precision
-        !       vacuum wave length
-        !   n_medium: double precision
-        !       refractive index of the medium
-        !   sphere: type(sphere_type), dimension(:)
-        !       list of spheres
-        !   sphere_parameter: type(sphere_parameter_type), dimension(:)
-        !       list of shared sphere parameters
-        !   z_selector: integer
-        !       parameter of the spherical harmonics
-        !       values:
-        !           1: spherical Bessel function first kind   j_n
-        !           2: spherical Bessel function second kind  y_n
-        !           3: spherical Hankel function first kind   h^(1)_n
-        !           4: spherical Hankel function second kind  h^(2)_n
-        !   a_old, b_old: type(list_list_cmplx), optional
-        !       coefficient of the previous calculation, if f < 1
-        !   f: double precision, optional (std: 1)
-        !       numerical factor (0, 1]
-        !       "In our actual calculations, some multi-
-        !        sphere systems do not converge if f 5 1, but they do
-        !        converge when the value of f is reduced to, say, 0.7."[1]
-        ! Returns
-        ! ----
-        !
-        !
-        !
-        !
-        ! Reference: [1] Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 30
-        subroutine lib_mie_ms_get_interactive_scattering_coefficients(k, lambda, n_medium, &
-                                                                   sphere, sphere_parameter, sphere_j, &
-                                                                   z_selector, &
-                                                                   a, b)
-            implicit none
-            ! dummy
-            type(spherical_coordinate_real_type), intent(in) :: k
-            double precision, intent(in) :: lambda
-            double precision, intent(in) :: n_medium
-            type(lib_mie_sphere_type), dimension(:), intent(in) :: sphere
-            type(lib_mie_sphere_parameter_type), dimension(:), intent(in) :: sphere_parameter
-            integer :: sphere_j
-            integer(kind=1) :: z_selector
-
-            type(list_list_cmplx), intent(inout) :: a
-            type(list_list_cmplx), intent(inout) :: b
-
-            ! auxiliary
-            integer :: mu
-            integer :: nu
-
-
-        end subroutine lib_mie_ms_get_interactive_scattering_coefficients
+!        ! Arguments
+!        ! ----
+!        !   k: type(spherical_coordinate_real_type)
+!        !       ?
+!        !   lambda: double precision
+!        !       vacuum wave length
+!        !   n_medium: double precision
+!        !       refractive index of the medium
+!        !   sphere: type(sphere_type), dimension(:)
+!        !       list of spheres
+!        !   sphere_parameter: type(sphere_parameter_type), dimension(:)
+!        !       list of shared sphere parameters
+!        !   z_selector: integer
+!        !       parameter of the spherical harmonics
+!        !       values:
+!        !           1: spherical Bessel function first kind   j_n
+!        !           2: spherical Bessel function second kind  y_n
+!        !           3: spherical Hankel function first kind   h^(1)_n
+!        !           4: spherical Hankel function second kind  h^(2)_n
+!        !   a_old, b_old: type(list_list_cmplx), optional
+!        !       coefficient of the previous calculation, if f < 1
+!        !   f: double precision, optional (std: 1)
+!        !       numerical factor (0, 1]
+!        !       "In our actual calculations, some multi-
+!        !        sphere systems do not converge if f 5 1, but they do
+!        !        converge when the value of f is reduced to, say, 0.7."[1]
+!        ! Returns
+!        ! ----
+!        !
+!        !
+!        !
+!        !
+!        ! Reference: [1] Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu, eq. 30
+!        subroutine lib_mie_ms_get_interactive_scattering_coefficients(k, lambda, n_medium, &
+!                                                                   sphere, sphere_parameter, sphere_j, &
+!                                                                   z_selector, &
+!                                                                   a, b)
+!            implicit none
+!            ! dummy
+!            type(spherical_coordinate_real_type), intent(in) :: k
+!            double precision, intent(in) :: lambda
+!            double precision, intent(in) :: n_medium
+!            type(lib_mie_sphere_type), dimension(:), intent(in) :: sphere
+!            type(lib_mie_sphere_parameter_type), dimension(:), intent(in) :: sphere_parameter
+!            integer :: sphere_j
+!            integer(kind=1) :: z_selector
+!
+!            type(list_list_cmplx), intent(inout) :: a
+!            type(list_list_cmplx), intent(inout) :: b
+!
+!            ! auxiliary
+!            integer :: mu
+!            integer :: nu
+!
+!
+!        end subroutine lib_mie_ms_get_interactive_scattering_coefficients
 
         subroutine lib_mie_ms_calculate_scattering_coefficients_ab_nm(simulation)
             use file_io
@@ -88,36 +88,12 @@ module lib_mie_multi_sphere
             ! initial values
             call lib_mie_ss_calculate_scattering_coefficients_ab_nm(simulation)
 
-            ! test
-            simulation%sphere_parameter_list(1)%n_range = (/ 1, 3 /)
-            simulation%sphere_parameter_list(2)%n_range = (/ 1, 3 /)
-            ! ~~~ test ~~~
+!            ! test
+!            simulation%sphere_parameter_list(1)%n_range = (/ 1, 3 /)
+!            simulation%sphere_parameter_list(2)%n_range = (/ 1, 3 /)
+!            ! ~~~ test ~~~
 
-            ! convert dataset for solver
-            call lib_mie_ms_solver_get_vector_b(simulation, vector_b)
-!            call lib_mie_type_func_solver_get_matrix_a(simulation, matrix_a)
-            call lib_mie_ms_solver_set_sphere_parameter_ab_nm(vector_b, simulation)
-            ! test
-            open(unit=99, file="temp/matrix_a.csv", status="unknown")
-            test = write_csv(99, matrix_a)
-            close(99)
-
-            open(unit=99, file="temp/a_n_1.csv", status="unknown")
-            test = write_csv(99, simulation%sphere_parameter_list(1)%a_n%item)
-            close(99)
-
-            open(unit=99, file="temp/a_n_2.csv", status="unknown")
-            test = write_csv(99, simulation%sphere_parameter_list(2)%a_n%item)
-            close(99)
-            ! ~~~ test ~~~
-
-            call lib_mie_ms_solver_get_vector_x(simulation, vector_x)
-
-            ! solve Mx = b
-            vector_x = lib_math_solver_conjugate_gradient_method(matrix_a, vector_x, vector_b)
-
-            ! export x -> simulation%sphere_list
-            call lib_mie_ms_solver_set_sphere_parameter_ab_nm(vector_x, simulation)
+            call lib_mie_ms_solver_gmres_run_without_ml_fmm(simulation)
 
         end subroutine lib_mie_ms_calculate_scattering_coefficients_ab_nm
 
@@ -317,7 +293,7 @@ module lib_mie_multi_sphere
                 ! set spheres
                 allocate(simulation%sphere_list(2))
                 simulation%sphere_list(1)%sphere_parameter_index = 1
-                simulation%sphere_list(2)%sphere_parameter_index = 2
+                simulation%sphere_list(2)%sphere_parameter_index = 1
 
                 sphere_d_0_j%x = -2 * unit_mu
                 sphere_d_0_j%y = 0
@@ -346,6 +322,8 @@ module lib_mie_multi_sphere
                     print *, "  rv(1): ", n_range(1)
                     print *, "  rv(2): ", n_range(2)
                 end if
+
+                simulation%spherical_harmonics%n_range = n_range
 
                 simulation%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
                                                                                           r_particle, n_particle, &

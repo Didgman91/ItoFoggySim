@@ -1,6 +1,5 @@
-module lib_mie_ms_solver
+module lib_mie_ms_solver_interface
     use libmath
-    use lib_mie_vector_spherical_harmonics
     use lib_mie_type
     use lib_mie_type_functions
     implicit none
@@ -12,7 +11,13 @@ module lib_mie_ms_solver
     public :: lib_mie_ms_solver_set_sphere_parameter_ab_nm
     public :: lib_mie_ms_solver_calculate_vector_b
 
-    public :: lib_mie_ms_solver_test_functions
+    public :: lib_mie_ms_solver_interface_test_functions
+
+    ! --- interface ---
+    interface lib_mie_ms_solver_calculate_vector_b
+        module procedure lib_mie_ms_solver_calculate_vector_b_with_transposed
+        module procedure lib_mie_ms_solver_calculate_vector_b_without_transposed
+    end interface
 
     contains
 
@@ -293,7 +298,207 @@ module lib_mie_ms_solver
         !
         ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
         !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
-        subroutine lib_mie_ms_solver_calculate_vector_b(simulation_parameter, vector_x, &
+        subroutine lib_mie_ms_solver_calculate_vector_b_without_transposed(simulation_parameter, vector_x, &
+                                                        vector_b)
+            implicit none
+            ! dummy
+            type(lib_mie_simulation_parameter_type), intent(in) :: simulation_parameter
+            double complex, dimension(:), intent(in) :: vector_x
+
+            double complex, dimension(:), allocatable, intent(inout) :: vector_b
+
+            ! auxiliary
+            integer :: j
+            integer :: l
+            integer :: n
+            integer :: m
+            integer :: nu
+            integer :: mu
+
+            integer :: first
+            integer :: last
+
+            integer :: first_sphere
+            integer :: last_sphere
+
+            integer :: sphere_parameter_no
+
+            integer :: counter
+            integer :: counter_sum
+
+            integer(kind=1) :: z_selector
+
+            type(cartesian_coordinate_real_type) :: d_0_j
+            type(cartesian_coordinate_real_type) :: d_0_l
+            type(cartesian_coordinate_real_type) :: d_j_l
+            integer(kind=4), dimension(2) :: n_range
+            integer(kind=4), dimension(2) :: n_range_j
+            integer(kind=4), dimension(2) :: n_range_l
+
+            type(list_cmplx) :: a_n
+            type(list_cmplx) :: b_n
+            type(list_4_cmplx) :: a_nmnumu
+            type(list_4_cmplx) :: b_nmnumu
+
+            type(list_list_cmplx) :: buffer_1_nm
+            type(list_list_cmplx) :: buffer_2_nm
+
+            type(list_list_cmplx) :: buffer_x_1_nm
+            type(list_list_cmplx) :: buffer_x_2_nm
+
+            type(list_list_cmplx) :: buffer_b_1_nm
+            type(list_list_cmplx) :: buffer_b_2_nm
+
+            double complex, dimension(:), allocatable :: buffer_array
+
+
+            first_sphere = lbound(simulation_parameter%sphere_list, 1)
+            last_sphere = ubound(simulation_parameter%sphere_list, 1)
+
+            z_selector = simulation_parameter%spherical_harmonics%z_selector_translation
+
+            n_range = simulation_parameter%spherical_harmonics%n_range
+
+            counter = (1 + n_range(2))**2 - n_range(1)**2
+            counter_sum = 2 * (last_sphere - first_sphere + 1) * counter
+
+            if (allocated(vector_b)) then
+                if (size(vector_b, 1) .ne. counter_sum) then
+                    deallocate(vector_b)
+                    allocate(vector_b(counter_sum))
+                end if
+            else
+                allocate(vector_b(counter_sum))
+            end if
+            vector_b = 0
+
+
+!            !$OMP PARALLEL DO PRIVATE(j, sphere_parameter_no, a_n, b_n)
+            do j = first_sphere, last_sphere
+                !
+                !
+                !     Sphere 1     Sphere 2             Sphere 2
+                !     v            v                    v
+                !  | 1 0  a^1_n*A_nmnumu(2,1)  a^1_n*B_nmnumu(2,1)  ... | | a^1_nm |   | a^1_n p^11_nm | < Sphere 1   <- first
+                !  | 0 1  b^1_n*B_nmnumu(2,1)  b^1_n*A_nmnumu(2,1)  ... | | b^1_nm |   | b^1_n p^11_nm | < Sphere 1   <- last
+                !  | ...           1                    0           ... |*|  ...   | = | a^2_n p^22_nm |
+                !  | ...           0                    1           ... | |  ...   |   | b^2_n p^22_nm |
+                !                         ^                                   ^            ^
+                !                         Matrix A                            vector_x     vector_b
+                !
+                !
+                !  first: first element of sphere j (of vector x and b: A is symmetrical)
+                !  last : last element of sphere j (of vector x and b: A is symmetrical)
+                !
+                !  buffer_x_1 = a^l_nm
+                !  buffer_x_2 = b^l_nm
+                !
+                !  buffer_b_1 = a^l_n p^ll_nm
+                !  buffer_b_2 = b^l_n p^ll_nm
+                !
+                sphere_parameter_no = simulation_parameter%sphere_list(j)%sphere_parameter_index
+
+                a_n = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%a_n
+                b_n = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%b_n
+
+!                !$OMP PARALLEL DO PRIVATE(l, first, last, d_0_j, d_0_l, d_j_l, sphere_parameter_no, n_range_l, n_range_j) &
+!                !$OMP  PRIVATE(a_nmnumu, b_nmnumu, buffer_1_nm, buffer_2_nm, buffer_x_1_nm, buffer_x_2_nm) &
+!                !$OMP  PRIVATE(buffer_b_1_nm, buffer_b_2_nm, n, m, buffer_array)
+                do l = first_sphere, last_sphere
+
+                    first = 2 * (j - first_sphere) * counter + 1
+                    if (j .eq. l) then
+                        last = first + 2*counter - 1
+                        vector_b(first:last) = vector_b(first:last) + vector_x(first:last)
+                    else
+                        d_0_j = simulation_parameter%sphere_list(j)%d_0_j
+                        sphere_parameter_no = simulation_parameter%sphere_list(j)%sphere_parameter_index
+                        n_range_j = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%n_range
+
+                        d_0_l = simulation_parameter%sphere_list(l)%d_0_j
+                        sphere_parameter_no = simulation_parameter%sphere_list(l)%sphere_parameter_index
+                        n_range_l = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%n_range
+
+                        n_range_j(1) = max(n_range_j(1), n_range(1))
+                        n_range_j(2) = min(n_range_j(2), n_range(2))
+
+                        n_range_l(1) = max(n_range_l(1), n_range(1))
+                        n_range_l(2) = min(n_range_l(2), n_range(2))
+
+                        d_j_l = d_0_l - d_0_j
+                        call lib_math_vector_spherical_harmonics_translation_coefficient(d_j_l, &
+                                n_range_j, n_range_l, z_selector, &
+                                a_nmnumu, b_nmnumu)
+
+                        call init_list(buffer_1_nm, n_range_l(1), n_range_l(2)-n_range_l(1)+1, dcmplx(0,0))
+                        call init_list(buffer_2_nm, n_range_l(1), n_range_l(2)-n_range_l(1)+1, dcmplx(0,0))
+
+                        call init_list(buffer_b_1_nm, n_range_l(1), n_range_l(2)-n_range_l(1)+1, dcmplx(0,0))
+                        call init_list(buffer_b_2_nm, n_range_l(1), n_range_l(2)-n_range_l(1)+1, dcmplx(0,0))
+
+                        ! calculate vector b
+                        call make_list(vector_x(first:first+counter-1), &
+                                       n_range(1), n_range(2)-n_range(1)+1, &
+                                       buffer_x_1_nm)
+                        call remove_zeros(buffer_x_1_nm)
+
+                        call make_list(vector_x(first+counter:first+2*counter-1), &
+                                       n_range(1), n_range(2)-n_range(1)+1, &
+                                       buffer_x_2_nm)
+                        call remove_zeros(buffer_x_2_nm)
+
+                        do n = n_range_j(1), n_range_j(2)
+                            do m = -n, n
+                                buffer_1_nm = a_n%item(n) * a_nmnumu%item(n)%item(m)
+                                buffer_2_nm = a_n%item(n) * b_nmnumu%item(n)%item(m)
+
+                                buffer_b_1_nm%item(n)%item(m) = sum(buffer_1_nm * buffer_x_1_nm &
+                                                                    + buffer_2_nm * buffer_x_2_nm)
+
+                                buffer_1_nm = b_n%item(n) * b_nmnumu%item(n)%item(m)
+                                buffer_2_nm = b_n%item(n) * a_nmnumu%item(n)%item(m)
+
+                                buffer_b_2_nm%item(n)%item(m) = sum(buffer_1_nm * buffer_x_1_nm &
+                                                                    + buffer_2_nm * buffer_x_2_nm)
+                            end do
+                        end do
+
+                        call make_array(buffer_b_1_nm, buffer_array, n_range(1) , n_range(2) - n_range(1) + 1)
+                        last = first + counter - 1
+                        vector_b(first:last) = vector_b(first:last) + buffer_array
+
+                        call make_array(buffer_b_2_nm, buffer_array, n_range(1) , n_range(2) - n_range(1) + 1)
+                        first = last + 1
+                        last = first + counter - 1
+                        vector_b(first:last) = vector_b(first:last) + buffer_array
+                    end if
+                end do
+!                !$OMP END PARALLEL DO
+            end do
+!            !$OMP END PARALLEL DO
+        end subroutine lib_mie_ms_solver_calculate_vector_b_without_transposed
+
+        ! Formats problem of  multi sphere scattering to be able to use a solver.
+        !
+        ! Formula: A x = b
+        !   x: scattering coefficients
+        !   b: illumination coefficients
+        !   A: mixture of Mie coefficients and vector spherical translation coefficients
+        !
+        !   -> apply eq. 23 [1] to eq. 30 [2]
+        !
+        ! Argument
+        ! ----
+        !   simulation_parameter: type(lib_mie_simulation_parameter_type)
+        !
+        ! Returns
+        ! ----
+        !   vector_b: double complex, dimension(:)
+        !       result of the matrix vector multiplication
+        !
+        ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
+        !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
+        subroutine lib_mie_ms_solver_calculate_vector_b_with_transposed(simulation_parameter, vector_x, &
                                                         vector_b, vector_b_t, &
                                                         calc_vector_b, calc_vector_b_t)
             implicit none
@@ -379,17 +584,25 @@ module lib_mie_ms_solver
 
             if (m_calc_vector_b) then
                 if (allocated(vector_b)) then
-                    deallocate(vector_b)
+                    if (size(vector_b, 1) .ne. counter_sum) then
+                        deallocate(vector_b)
+                        allocate(vector_b(counter_sum))
+                    end if
+                else
+                    allocate(vector_b(counter_sum))
                 end if
-                allocate(vector_b(counter_sum))
                 vector_b = 0
             end if
 
             if (m_calc_vector_b_t) then
                 if (allocated(vector_b_t)) then
+                if (size(vector_b_t, 1) .ne. counter_sum) then
                     deallocate(vector_b_t)
+                    allocate(vector_b_t(counter_sum))
                 end if
+            else
                 allocate(vector_b_t(counter_sum))
+            end if
                 vector_b_t = 0
             end if
 
@@ -554,10 +767,46 @@ module lib_mie_ms_solver
                 end do
             end do
 !            !$OMP END PARALLEL DO
+        end subroutine lib_mie_ms_solver_calculate_vector_b_with_transposed
 
-        end subroutine lib_mie_ms_solver_calculate_vector_b
+         ! todo: optimise for ML FMM
+         !
+!        ! Formats problem of  multi sphere scattering to be able to use a solver.
+!        !
+!        ! Formula: A x = b
+!        !   x: scattering coefficients
+!        !   b: illumination coefficients
+!        !   A: mixture of Mie coefficients and vector spherical translation coefficients
+!        !
+!        !   -> apply eq. 23 [1] to eq. 30 [2]
+!        !
+!        ! Argument
+!        ! ----
+!        !   simulation_parameter: type(lib_mie_simulation_parameter_type)
+!        !   vector_x:
+!        !
+!        ! Returns
+!        ! ----
+!        !   vector_b: double complex, dimension(:)
+!        !       result of the matrix vector multiplication
+!        !
+!        ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
+!        !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
+!        subroutine lib_mie_ms_solver_calculate_vector_b(simulation_parameter, vector_x, &
+!                                                        vector_b, vector_b_t, &
+!                                                        calc_vector_b, calc_vector_b_t)
+!            implicit none
+!            ! dummy
+!            type(lib_mie_simulation_parameter_type), intent(inout) :: simulation_parameter
+!
 
-        function lib_mie_ms_solver_test_functions() result(rv)
+!        subroutine lib_mie_ms_solver_calculate_vector_b_elements()
+!            implicit none
+!            ! dummy
+!
+!        end subroutine
+
+        function lib_mie_ms_solver_interface_test_functions() result(rv)
             implicit none
             ! dummy
             integer :: rv
@@ -797,5 +1046,5 @@ module lib_mie_ms_solver
                 end function test_lib_mie_ms_solver_calculate_vector_b
 
 
-        end function
-end module lib_mie_ms_solver
+        end function lib_mie_ms_solver_interface_test_functions
+end module lib_mie_ms_solver_interface
