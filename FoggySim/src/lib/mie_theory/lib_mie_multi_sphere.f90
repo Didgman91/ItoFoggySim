@@ -178,9 +178,8 @@ module lib_mie_multi_sphere
             call system_clock(test_count_start, test_count_rate)
             call cpu_time(test_start)
 
-            if (.not. test_lib_mie_ms_get_field()) then
-                rv = rv + 1
-            end if
+            if (.not. test_lib_mie_ms_get_field_parallel_sphere_assemply()) rv = rv + 1
+!            if (.not. test_lib_mie_ms_get_field_serial_sphere_assemply()) rv = rv + 1
 
             call cpu_time(test_finish)
             call system_clock(test_count_finish, test_count_rate)
@@ -200,7 +199,7 @@ module lib_mie_multi_sphere
 
             contains
 
-            function test_lib_mie_ms_get_field() result(rv)
+            function test_lib_mie_ms_get_field_parallel_sphere_assemply() result(rv)
                 implicit none
                 ! dummy
                 logical :: rv
@@ -290,14 +289,197 @@ module lib_mie_multi_sphere
                 simulation%sphere_list(1)%sphere_parameter_index = 1
                 simulation%sphere_list(2)%sphere_parameter_index = 1
 
-                sphere_d_0_j%x = -2 * unit_mu
+                sphere_d_0_j%x = -1.6 * unit_mu
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 0
                 simulation%sphere_list(1)%d_0_j = sphere_d_0_j
 
-                sphere_d_0_j%x = 2 * unit_mu
+                sphere_d_0_j%x = 1.6 * unit_mu
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 0
+                simulation%sphere_list(2)%d_0_j = sphere_d_0_j
+
+                ! set sphere parameter
+                allocate(simulation%sphere_parameter_list(2))
+
+                ! set 1
+                r_particle = 1.5 * unit_mu
+                n_particle = dcmplx(1.33_8, 0)
+
+                n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
+                if (n_range(1) .gt. 0) then
+                    n_range(2) = n_range(1)
+                    n_range(1) = 1
+                else
+                    print *, "test_lib_mie_ms_get_field: ERROR"
+                    print *, "  lib_mie_ss_test_convergence_plane_wave"
+                    print *, "  rv(1): ", n_range(1)
+                    print *, "  rv(2): ", n_range(2)
+                end if
+
+                simulation%spherical_harmonics%n_range = n_range
+
+                simulation%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
+                                                                                          r_particle, n_particle, &
+                                                                                          n_range)
+
+                ! set 2
+                r_particle = 0.5 * unit_mu
+                n_particle = dcmplx(1.33_8, 0)
+
+                n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
+                if (n_range(1) .gt. 0) then
+                    n_range(2) = n_range(1)
+                    n_range(1) = 1
+                else
+                    print *, "test_lib_mie_ms_get_field: ERROR"
+                    print *, "  lib_mie_ss_test_convergence_plane_wave"
+                    print *, "  rv(1): ", n_range(1)
+                    print *, "  rv(2): ", n_range(2)
+                end if
+
+                simulation%sphere_parameter_list(2) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
+                                                                                          r_particle, n_particle, &
+                                                                                          n_range)
+
+                call lib_mie_ss_constructor(simulation)
+
+
+                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(simulation)
+
+                ! evaluate and export
+                x_range = (/ -5.0_8 * unit_mu, 5.0_8 * unit_mu /)
+                z_range = (/ -5_8 * unit_mu, 10.0_8 * unit_mu /)
+                step_size = 0.05_8 * unit_mu
+
+                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
+
+                allocate(e_field_s(no_x_values, no_z_values))
+                allocate(h_field_s(no_x_values, no_z_values))
+
+                x = 0
+                y = 0
+                z = 0
+
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii=1, no_z_values
+                        z = z_range(1) + (ii-1) * step_size
+
+                        x_0%x = x
+                        x_0%y = y
+                        x_0%z = z
+
+                        field = lib_mie_ms_get_field(simulation, x_0)
+                        e_field_s(i,ii) = field(1)
+                        h_field_s(i,ii) = field(2)
+                    end do
+                 end do
+
+                rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
+
+
+            end function test_lib_mie_ms_get_field_parallel_sphere_assemply
+
+            function test_lib_mie_ms_get_field_serial_sphere_assemply() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! parameter
+                integer, parameter :: number_of_waves = 1
+                ! auxiliaray
+                type(lib_mie_simulation_parameter_type) :: simulation
+
+                ! illumination parameter
+                double precision :: lambda_0
+                double precision :: k_0
+                double precision :: e_field_0
+
+                double precision, dimension(number_of_waves) :: plane_wave_g
+                type(cartesian_coordinate_real_type), dimension(number_of_waves) :: plane_wave_k
+                type(cartesian_coordinate_real_type), dimension(number_of_waves) :: plane_wave_d_0_i
+
+                double precision :: n_medium
+
+                type(cartesian_coordinate_real_type) :: sphere_d_0_j
+                double precision :: r_particle
+                double complex :: n_particle
+                integer, dimension(2) :: n_range
+
+                type(cartesian_coordinate_real_type) :: buffer_car
+
+                type(cartesian_coordinate_cmplx_type), dimension(2) :: field
+
+                integer :: i
+                integer :: ii
+                double precision :: x
+                double precision :: y
+                double precision :: z
+                type(cartesian_coordinate_real_type) :: x_0
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field_s
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field_s
+                double precision, dimension(2) :: x_range
+                double precision, dimension(2) :: z_range
+                real(kind=8) :: step_size
+
+                integer :: no_x_values
+                integer :: no_z_values
+
+                simulation%spherical_harmonics%z_selector_incident_wave = 1
+                simulation%spherical_harmonics%z_selector_scatterd_wave = 3
+                simulation%spherical_harmonics%z_selector_translation = 1
+
+                ! set illumination parameter
+                e_field_0 = 1
+                lambda_0 = 1 * unit_mu
+
+                n_medium = 1
+
+                k_0 = 2 * PI / lambda_0
+
+                simulation%illumination%lambda_0 = lambda_0
+
+                plane_wave_g(:) = 1
+
+                buffer_car%x = 0
+                buffer_car%y = 0
+                buffer_car%z = 0
+                plane_wave_d_0_i(:) = buffer_car
+
+                buffer_car%x = 0
+                buffer_car%y = 0
+                buffer_car%z = 1
+                buffer_car = buffer_car / abs(buffer_car) / lambda_0
+                plane_wave_k(1) = buffer_car
+
+!                buffer_car%x = -1
+!                buffer_car%y = 0
+!                buffer_car%z = 1
+!                buffer_car = buffer_car / abs(buffer_car) / lambda
+!                plane_wave_k(2) = buffer_car
+
+                simulation%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, e_field_0, &
+                                                                                        plane_wave_g, &
+                                                                                        plane_wave_k, &
+                                                                                        plane_wave_d_0_i)
+
+                simulation%refractive_index_medium = n_medium
+
+                ! set spheres
+                allocate(simulation%sphere_list(2))
+                simulation%sphere_list(1)%sphere_parameter_index = 1
+                simulation%sphere_list(2)%sphere_parameter_index = 1
+
+                sphere_d_0_j%x = 0
+                sphere_d_0_j%y = 0
+                sphere_d_0_j%z = 0
+                simulation%sphere_list(1)%d_0_j = sphere_d_0_j
+
+                sphere_d_0_j%x = 0
+                sphere_d_0_j%y = 0
+                sphere_d_0_j%z = 3 * unit_mu
                 simulation%sphere_list(2)%d_0_j = sphere_d_0_j
 
                 ! set sphere parameter
@@ -381,6 +563,6 @@ module lib_mie_multi_sphere
                 rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
 
 
-            end function
+            end function test_lib_mie_ms_get_field_serial_sphere_assemply
         end function
 end module lib_mie_multi_sphere
