@@ -81,7 +81,7 @@ module lib_mie_ms_solver_GMRES
             ! -----------------------
 
             ! Tolerance
-            cntl(1) = 1.d-15
+            cntl(1) = 1.d-8
             ! Save the convergence history on standard output
             icntl(3) = 6
             ! Maximum number of iterations

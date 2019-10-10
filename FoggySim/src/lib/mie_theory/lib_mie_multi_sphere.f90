@@ -289,12 +289,12 @@ module lib_mie_multi_sphere
                 simulation%sphere_list(1)%sphere_parameter_index = 1
                 simulation%sphere_list(2)%sphere_parameter_index = 1
 
-                sphere_d_0_j%x = -1.6 * unit_mu
+                sphere_d_0_j%x = -2 * unit_mu
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 0
                 simulation%sphere_list(1)%d_0_j = sphere_d_0_j
 
-                sphere_d_0_j%x = 1.6 * unit_mu
+                sphere_d_0_j%x = 2 * unit_mu
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 0
                 simulation%sphere_list(2)%d_0_j = sphere_d_0_j
@@ -303,7 +303,7 @@ module lib_mie_multi_sphere
                 allocate(simulation%sphere_parameter_list(2))
 
                 ! set 1
-                r_particle = 1.5 * unit_mu
+                r_particle = 1 * unit_mu
                 n_particle = dcmplx(1.33_8, 0)
 
                 n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
@@ -319,12 +319,14 @@ module lib_mie_multi_sphere
 
                 simulation%spherical_harmonics%n_range = n_range
 
+                call lib_math_factorial_initialise_caching(n_range(2))
+
                 simulation%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
                                                                                           r_particle, n_particle, &
                                                                                           n_range)
 
                 ! set 2
-                r_particle = 0.5 * unit_mu
+                r_particle = 1 * unit_mu
                 n_particle = dcmplx(1.33_8, 0)
 
                 n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
@@ -344,6 +346,10 @@ module lib_mie_multi_sphere
 
                 call lib_mie_ss_constructor(simulation)
 
+
+                n_range = simulation%spherical_harmonics%n_range
+                call fwig_table_init(4 * n_range(2), 3)
+                call fwig_temp_init(4 * n_range(2))
 
                 call lib_mie_ms_calculate_scattering_coefficients_ab_nm(simulation)
 
@@ -379,6 +385,8 @@ module lib_mie_multi_sphere
 
                 rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
 
+                call fwig_temp_free()
+                call fwig_table_free()
 
             end function test_lib_mie_ms_get_field_parallel_sphere_assemply
 

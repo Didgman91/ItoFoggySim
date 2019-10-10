@@ -9,6 +9,9 @@ module lib_math_wigner
     public :: fwig_temp_init
     public :: fwig_thread_temp_init
 
+    public :: fwig_temp_free
+    public :: fwig_table_free
+
     ! functions
     public :: lib_math_wigner_3j
 

@@ -461,6 +461,7 @@ module lib_math_bessel
         if (order .ne. nm) then
             print *, "lib_math_bessel_spherical_first_kind_real: ERROR"
             print *, "  calculated highest order / requested: ", nm, " / ", order
+            print * , "  x = ", x
         end if
 
         rv = sj(fnu:order)
@@ -516,6 +517,7 @@ module lib_math_bessel
         if (order .ne. nm) then
             print *, "lib_math_bessel_spherical_first_kind_cmplx: ERROR"
             print *, "  calculated highest order / requested: ", nm, " / ", order
+            print *, "  z = ", z
         end if
 
         rv = sj(fnu:order)

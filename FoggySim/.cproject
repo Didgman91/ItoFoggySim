@@ -69,7 +69,7 @@
                             							
                             <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug">
                                 								
-                                <option id="gnu.fortran.compiler.option.misc.other.1881149699" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fcheck=all -cpp -mcmodel=large -frecursive -fopenmp" valueType="string"/>
+                                <option id="gnu.fortran.compiler.option.misc.other.1881149699" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fopenmp -fmessage-length=0 -fcheck=all -cpp -mcmodel=large -frecursive" valueType="string"/>
                                 								
                                 <option id="gnu.fortran.compiler.option.misc.verbose.1638748952" name="Verbose (-v)" superClass="gnu.fortran.compiler.option.misc.verbose" useByScannerDiscovery="false" value="false" valueType="boolean"/>
                                 								
@@ -87,7 +87,7 @@
                                 								
                                 <option id="gnu.fortran.compiler.option.debugging.gprof.367331119" name="Generate gprof information (-pg)" superClass="gnu.fortran.compiler.option.debugging.gprof" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                                 								
-                                <option id="gnu.fortran.compiler.option.debugging.prof.993278952" name="Generate prof information (-p)" superClass="gnu.fortran.compiler.option.debugging.prof" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                                <option id="gnu.fortran.compiler.option.debugging.prof.993278952" name="Generate prof information (-p)" superClass="gnu.fortran.compiler.option.debugging.prof" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.20276603" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                                 							
@@ -123,7 +123,7 @@
                                 								
                                 <option id="gnu.fortran.link.option.debugging.gprof.1460149492" name="Generate gprof information (-pg)" superClass="gnu.fortran.link.option.debugging.gprof" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                                 								
-                                <option id="gnu.fortran.link.option.debugging.prof.250816570" name="Generate prof information (-p)" superClass="gnu.fortran.link.option.debugging.prof" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                                <option id="gnu.fortran.link.option.debugging.prof.250816570" name="Generate prof information (-p)" superClass="gnu.fortran.link.option.debugging.prof" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.linker.input.972629953" superClass="photran.managedbuild.tool.gnu.fortran.linker.input">
                                     									
@@ -149,7 +149,7 @@
                         						
                         <tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140.683746887" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140">
                             							
-                            <option id="gnu.fortran.compiler.option.misc.other.1522306629" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fcheck=all -cpp -mcmodel=large -frecursive -fopenmp" valueType="string"/>
+                            <option id="gnu.fortran.compiler.option.misc.other.1522306629" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fopenmp -fmessage-length=0 -fcheck=all -cpp -mcmodel=large -frecursive" valueType="string"/>
                             							
                             <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.1514978016" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                             						
@@ -187,7 +187,7 @@
                         						
                         <tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140.81259464" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140">
                             							
-                            <option id="gnu.fortran.compiler.option.misc.other.1773607221" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fcheck=all -cpp -mcmodel=large -frecursive -fopenmp" valueType="string"/>
+                            <option id="gnu.fortran.compiler.option.misc.other.1773607221" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fopenmp -fmessage-length=0 -fcheck=all -cpp -mcmodel=large -frecursive" valueType="string"/>
                             							
                             <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.1389976946" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                             						
