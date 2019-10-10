@@ -7,6 +7,8 @@ program main
     use lib_hash_function
     use lib_sort
 
+    use lib_field
+
     use lib_ml_fmm
     use ml_fmm_math
     use lib_ml_fmm_type_operator
@@ -60,6 +62,7 @@ program main
 
     error_counter = 0
 !    error_counter = error_counter + test_lib_math()
+    error_counter = error_counter + lib_field_test_functions()
 !    error_counter = error_counter + lib_mie_ss_helper_functions_test_functions()
 !    error_counter = error_counter + lib_mie_single_sphere_test_functions()
 !    error_counter = error_counter + lib_mie_ms_solver_interface_test_functions()

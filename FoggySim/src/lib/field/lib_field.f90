@@ -3,6 +3,11 @@ module lib_field
     use file_io
     implicit none
 
+    private
+
+    public :: lib_field_export
+    public :: lib_field_test_functions
+
     contains
 
         function lib_field_export(e_field, h_field, path) result(rv)
@@ -167,5 +172,72 @@ module lib_field
             rv = write_ppm_p3(u, poynting_abs, logarithmic = .true.)
             close(u)
 
+        end function lib_field_export
+
+        function lib_field_test_functions() result(rv)
+            implicit none
+            ! dummy
+            integer :: rv
+
+            rv = 0
+
+            if ( .not. test_lib_field_export() ) rv = rv + 1
+
+            if (rv == 0) then
+                print *, "lib_field_test_functions tests: OK"
+            else
+                print *, rv,"lib_field_test_functions test(s) FAILED"
+            end if
+
+            contains
+
+            function test_lib_field_export() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! auxiliary
+                integer :: i
+                integer :: ii
+                type(spherical_coordinate_cmplx_type), dimension(:,:), allocatable :: e_field_spherical
+                type(spherical_coordinate_cmplx_type), dimension(:,:), allocatable :: h_field_spherical
+
+                type(cartesian_coordinate_cmplx_type), dimension(:,:), allocatable :: e_field
+                type(cartesian_coordinate_cmplx_type), dimension(:,:), allocatable :: h_field
+                character(len=20) :: path
+
+                type(cartesian_coordinate_real_type) :: d
+
+                path = "temp/test_field"
+
+                allocate(e_field_spherical(5,5))
+                allocate(h_field_spherical(5,5))
+
+                allocate(e_field(5,5))
+                allocate(h_field(5,5))
+
+                e_field_spherical(:,:)%rho = dcmplx(1, 0)
+                e_field_spherical(:,:)%theta = dcmplx(0, 0)
+                e_field_spherical(:,:)%phi = dcmplx(0, 0)
+
+                e_field_spherical(:,:)%rho = dcmplx(0, 0)
+                e_field_spherical(:,:)%theta = dcmplx(0.1, 0.05)
+                e_field_spherical(:,:)%phi = dcmplx(0, 0)
+
+                d%x = 0
+                d%y = 0
+                d%z = 1
+
+                do i = lbound(e_field_spherical, 1), ubound(e_field_spherical, 1)
+                    do ii = lbound(e_field_spherical, 2), ubound(e_field_spherical, 2)
+                        e_field(i, ii) = make_cartesian(e_field_spherical(i,ii), d)
+                        h_field(i, ii) = make_cartesian(h_field_spherical(i,ii), d)
+                    end do
+                end do
+
+                rv = lib_field_export(e_field, h_field, "temp/test_field/")
+
+
+            end function
         end function
 end module lib_field
