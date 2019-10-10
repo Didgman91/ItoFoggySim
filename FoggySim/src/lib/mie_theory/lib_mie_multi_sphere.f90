@@ -126,9 +126,6 @@ module lib_mie_multi_sphere
 
             type(spherical_coordinate_cmplx_type), dimension(:, :), allocatable :: buffer_field
 
-            logical :: inside_sphere
-
-            inside_sphere = .true.
 
             e_field_0 = simulation%illumination%e_field_0
             k_0 = 2 * PI / simulation%illumination%lambda_0
@@ -141,28 +138,26 @@ module lib_mie_multi_sphere
             field(:)%z = dcmplx(0,0)
 
             do sphere_no = lbound(simulation%sphere_list, 1), ubound(simulation%sphere_list, 1)
-                if (inside_sphere) then
-                    sphere = simulation%sphere_list(sphere_no)
-                    parameter_no = sphere%sphere_parameter_index
-                    sphere_parameter = simulation%sphere_parameter_list(parameter_no)
+                sphere = simulation%sphere_list(sphere_no)
+                parameter_no = sphere%sphere_parameter_index
+                sphere_parameter = simulation%sphere_parameter_list(parameter_no)
 
-                    x_j = sphere%d_0_j - x_0
+                x_j = x_0 - sphere%d_0_j
 
-                    if (abs(x_j) .gt. sphere_parameter%radius) then
-                        buffer_field(sphere_no, 1:2) = lib_mie_ss_get_field(x_0, &
-                                                                         e_field_0, k_0, n_medium, &
-                                                                         sphere, sphere_parameter)
+                if (abs(x_j) .gt. sphere_parameter%radius) then
+                    buffer_field(sphere_no, 1:2) = lib_mie_ss_get_field(x_0, &
+                                                                     e_field_0, k_0, n_medium, &
+                                                                     sphere, sphere_parameter)
 
-                    else
-                        inside_sphere = .false. ! OMP critical ?!
-                        exit
-                    end if
+                    field(1) = field(1) + make_cartesian(buffer_field(sphere_no, 1), x_j)
+                    field(2) = field(2) + make_cartesian(buffer_field(sphere_no, 2), x_j)
+
+                else
+                    field(:)%x = dcmplx(0,0)
+                    field(:)%y = dcmplx(0,0)
+                    field(:)%z = dcmplx(0,0)
+                    exit
                 end if
-            end do
-
-            do sphere_no = lbound(simulation%sphere_list, 1), ubound(simulation%sphere_list, 1)
-                field(1) = field(1) + make_cartesian(buffer_field(sphere_no, 1), x_j)
-                field(2) = field(2) + make_cartesian(buffer_field(sphere_no, 2), x_j)
             end do
         end function
 
@@ -302,7 +297,7 @@ module lib_mie_multi_sphere
 
                 sphere_d_0_j%x = 2 * unit_mu
                 sphere_d_0_j%y = 0
-                sphere_d_0_j%z = 1
+                sphere_d_0_j%z = 0
                 simulation%sphere_list(2)%d_0_j = sphere_d_0_j
 
                 ! set sphere parameter
