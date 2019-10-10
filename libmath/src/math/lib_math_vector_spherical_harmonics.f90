@@ -1471,7 +1471,19 @@ module lib_math_vector_spherical_harmonics
                             buffer_cmplx_b = cmplx(0,0)
                             do q=0, q_max
                                 p = n + nu - 2 * q
-                                call ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b)
+                                if (q .eq. 0 &
+                                    .and. q .le. q_max_a) then
+                                    call ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b, calc_b = .false.)
+                                else
+                                    if (q .le. q_max_a &
+                                        .and. q .le. q_max_b) then
+                                        call ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b)
+                                    else if (q .le. q_max_a) then
+                                        call ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b, calc_b = .false.)
+                                    else if (q .le. q_max_b) then
+                                        call ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b, calc_a = .false.)
+                                    end if
+                                end if
 
                                 if ((q .ge. 0) &
                                     .and. (q .le. q_max_a)) then
@@ -1674,7 +1686,7 @@ module lib_math_vector_spherical_harmonics
         !
         ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
         !            eq. 3, eq. 4
-        subroutine ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b)
+        subroutine ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b, calc_a, calc_b)
             implicit none
             ! dummy
             integer(kind=4), intent(in) :: m
@@ -1686,31 +1698,58 @@ module lib_math_vector_spherical_harmonics
             real(kind=8), intent(inout) :: a
             real(kind=8), intent(inout) :: b
 
+            logical, intent(in), optional :: calc_a
+            logical, intent(in), optional :: calc_b
+
             ! auxiliary
             integer(kind=4) :: mu_minus_m
 
             real(kind=8), dimension(3) :: buffer_factorial
             real(kind=8), dimension(2) :: buffer_wigner
 
+            logical :: m_calc_a
+            logical :: m_calc_b
+
+            m_calc_a = .true.
+            m_calc_b = .true.
+            if ( present(calc_a) ) then
+                m_calc_a = calc_a
+            end if
+
+            if ( present(calc_b) ) then
+                m_calc_a = calc_b
+            end if
+
             mu_minus_m = mu - m
 
             ! --- a: eq. 3 ---
             buffer_factorial(1) = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n, m)
             buffer_factorial(2) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(nu, mu)
-            buffer_factorial(3) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(p, m - mu)
 
-            buffer_wigner(1) = lib_math_wigner_3j(n, nu, p, -m, mu, m-mu)
             buffer_wigner(2) = lib_math_wigner_3j(n, nu, p, 0, 0, 0)
 
-            a = (2_4 * p + 1_4) * sqrt(buffer_factorial(1) * buffer_factorial(2) * buffer_factorial(3)) &
-                 * buffer_wigner(1) * buffer_wigner(2)
+            if ( m_calc_a ) then
+                buffer_factorial(3) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(p, m - mu)
+
+                buffer_wigner(1) = lib_math_wigner_3j(n, nu, p, -m, mu, m-mu)
+
+                a = (2_4 * p + 1_4) * sqrt(buffer_factorial(1) * buffer_factorial(2) * buffer_factorial(3)) &
+                     * buffer_wigner(1) * buffer_wigner(2)
+            else
+                a = 0
+            end if
 
             ! --- b: eq. 4 ---
-            buffer_factorial(3) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(p + 1_4, m - mu)
-            buffer_wigner(1) = lib_math_wigner_3j(n, nu, p+1_4, -m, mu, m-mu)
+            if (  m_calc_b ) then
+                buffer_factorial(3) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(p + 1_4, m - mu)
 
-            b = (2_4 * p + 3_4) * sqrt(buffer_factorial(1) * buffer_factorial(2) * buffer_factorial(3)) &
-                 * buffer_wigner(1) * buffer_wigner(2)
+                buffer_wigner(1) = lib_math_wigner_3j(n, nu, p+1_4, -m, mu, m-mu)
+
+                b = (2_4 * p + 3_4) * sqrt(buffer_factorial(1) * buffer_factorial(2) * buffer_factorial(3)) &
+                     * buffer_wigner(1) * buffer_wigner(2)
+            else
+                b = 0
+            end if
 
             if (mod(mu-m, 2) .ne. 0) then
                 a = -a
