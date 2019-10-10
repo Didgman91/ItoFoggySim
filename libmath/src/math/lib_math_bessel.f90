@@ -459,9 +459,13 @@ module lib_math_bessel
         call SPHJ( order, x, nm, sj, dj)
 
         if (order .ne. nm) then
-            print *, "lib_math_bessel_spherical_first_kind_real: ERROR"
+#ifdef _DEBUG_
+            print *, "lib_math_bessel_spherical_first_kind_real: WARNING"
             print *, "  calculated highest order / requested: ", nm, " / ", order
-            print * , "  x = ", x
+            print *, "  x = ", x
+            print *, "  sj(highest + 1:requested) = 0"
+#endif
+            sj(nm+1:order) = 0d0
         end if
 
         rv = sj(fnu:order)
@@ -515,9 +519,13 @@ module lib_math_bessel
         call CSPHJY( order, z, nm, sj, dj, sy, dy)
 
         if (order .ne. nm) then
-            print *, "lib_math_bessel_spherical_first_kind_cmplx: ERROR"
+#ifdef _DEBUG_
+            print *, "lib_math_bessel_spherical_first_kind_cmplx: WARNING"
             print *, "  calculated highest order / requested: ", nm, " / ", order
             print *, "  z = ", z
+            print *, "  sj(highest + 1:requested) = 0"
+#endif
+            sj(nm+1:order) = 0d0
         end if
 
         rv = sj(fnu:order)
@@ -565,8 +573,13 @@ module lib_math_bessel
         call SPHY( order, x, nm, sy, dy)
 
         if (order .ne. nm) then
-            print *, "lib_math_bessel_spherical_second_kind_real: ERROR"
+#ifdef _DEBUG_
+            print *, "lib_math_bessel_spherical_second_kind_real: WARNING"
             print *, "  calculated highest order / requested: ", nm, " / ", order
+            print *, "  x = ", x
+            print *, "  sy(highest + 1:requested) = 0"
+#endif
+            sy(nm+1:order) = 0d0
         end if
 
         rv = sy(fnu:order)
@@ -621,8 +634,13 @@ module lib_math_bessel
         call CSPHJY( order, z, nm, sj, dj, sy, dy)
 
         if (order .ne. nm) then
+#ifdef _DEBUG_
             print *, "lib_math_bessel_spherical_second_kind_cmplx: ERROR"
             print *, "  calculated highest order / requested: ", nm, " / ", order
+            print *, "  z = ", z
+            print *, "  sy(highest + 1:requested) = 0"
+#endif
+            sy(nm+1:order) = 0d0
         end if
 
         rv = sy(fnu:order)
