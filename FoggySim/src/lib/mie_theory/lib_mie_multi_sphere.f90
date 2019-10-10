@@ -285,19 +285,49 @@ module lib_mie_multi_sphere
                 simulation%refractive_index_medium = n_medium
 
                 ! set spheres
-                allocate(simulation%sphere_list(2))
+                allocate(simulation%sphere_list(7))
                 simulation%sphere_list(1)%sphere_parameter_index = 1
                 simulation%sphere_list(2)%sphere_parameter_index = 1
+                simulation%sphere_list(3)%sphere_parameter_index = 2
+                simulation%sphere_list(4)%sphere_parameter_index = 1
+                simulation%sphere_list(5)%sphere_parameter_index = 1
+                simulation%sphere_list(6)%sphere_parameter_index = 2
+                simulation%sphere_list(7)%sphere_parameter_index = 2
 
-                sphere_d_0_j%x = -2 * unit_mu
+                sphere_d_0_j%x = -1.05 * unit_mu
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 0
                 simulation%sphere_list(1)%d_0_j = sphere_d_0_j
 
-                sphere_d_0_j%x = 2 * unit_mu
+                sphere_d_0_j%x = 1.05 * unit_mu
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 0
                 simulation%sphere_list(2)%d_0_j = sphere_d_0_j
+
+                sphere_d_0_j%x = 0
+                sphere_d_0_j%y = 0
+                sphere_d_0_j%z = 3 * unit_mu
+                simulation%sphere_list(3)%d_0_j = sphere_d_0_j
+
+                sphere_d_0_j%x = -1.5 * unit_mu
+                sphere_d_0_j%y = 0
+                sphere_d_0_j%z = 3 * unit_mu
+                simulation%sphere_list(4)%d_0_j = sphere_d_0_j
+
+                sphere_d_0_j%x = 1.5 * unit_mu
+                sphere_d_0_j%y = 0
+                sphere_d_0_j%z = 3 * unit_mu
+                simulation%sphere_list(5)%d_0_j = sphere_d_0_j
+
+                sphere_d_0_j%x = -3 * unit_mu
+                sphere_d_0_j%y = 0
+                sphere_d_0_j%z = 5 * unit_mu
+                simulation%sphere_list(6)%d_0_j = sphere_d_0_j
+
+                sphere_d_0_j%x = 3 * unit_mu
+                sphere_d_0_j%y = 0
+                sphere_d_0_j%z = 5 * unit_mu
+                simulation%sphere_list(7)%d_0_j = sphere_d_0_j
 
                 ! set sphere parameter
                 allocate(simulation%sphere_parameter_list(2))
@@ -317,7 +347,7 @@ module lib_mie_multi_sphere
                     print *, "  rv(2): ", n_range(2)
                 end if
 
-                simulation%spherical_harmonics%n_range = n_range
+                simulation%spherical_harmonics%n_range = (/ 1, 20 /)! n_range
 
                 call lib_math_factorial_initialise_caching(n_range(2))
 
@@ -326,7 +356,7 @@ module lib_mie_multi_sphere
                                                                                           n_range)
 
                 ! set 2
-                r_particle = 1 * unit_mu
+                r_particle = 0.5 * unit_mu
                 n_particle = dcmplx(1.33_8, 0)
 
                 n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)

@@ -351,6 +351,8 @@ module lib_mie_ms_solver_interface
 
             double complex, dimension(:), allocatable :: buffer_array
 
+            !$  logical :: thread_first_run
+
 
             first_sphere = lbound(simulation_parameter%sphere_list, 1)
             last_sphere = ubound(simulation_parameter%sphere_list, 1)
@@ -373,7 +375,11 @@ module lib_mie_ms_solver_interface
             vector_b = 0
 
 
-!            !$OMP PARALLEL DO PRIVATE(j, sphere_parameter_no, a_n, b_n)
+            !$  thread_first_run = .true.
+            !$OMP PARALLEL DO PRIVATE(j, l, first, last, d_0_j, d_0_l, d_j_l, sphere_parameter_no, n_range_l, n_range_j) &
+            !$OMP  PRIVATE(a_n, b_n, a_nmnumu, b_nmnumu, buffer_1_nm, buffer_2_nm, buffer_x_1_nm, buffer_x_2_nm) &
+            !$OMP  PRIVATE(buffer_b_1_nm, buffer_b_2_nm, n, m, buffer_array) &
+            !$OMP  FIRSTPRIVATE(thread_first_run)
             do j = first_sphere, last_sphere
                 !
                 !
@@ -401,9 +407,7 @@ module lib_mie_ms_solver_interface
                 a_n = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%a_n
                 b_n = simulation_parameter%sphere_parameter_list(sphere_parameter_no)%b_n
 
-!                !$OMP PARALLEL DO PRIVATE(l, first, last, d_0_j, d_0_l, d_j_l, sphere_parameter_no, n_range_l, n_range_j) &
-!                !$OMP  PRIVATE(a_nmnumu, b_nmnumu, buffer_1_nm, buffer_2_nm, buffer_x_1_nm, buffer_x_2_nm) &
-!                !$OMP  PRIVATE(buffer_b_1_nm, buffer_b_2_nm, n, m, buffer_array)
+
                 do l = first_sphere, last_sphere
 
                     first = 2 * (j - first_sphere) * counter + 1
@@ -424,6 +428,11 @@ module lib_mie_ms_solver_interface
 
                         n_range_l(1) = max(n_range_l(1), n_range(1))
                         n_range_l(2) = min(n_range_l(2), n_range(2))
+
+                        !$  if (thread_first_run) then
+                        !$    call fwig_thread_temp_init(4 * max(n_range_l(2), n_range_l(2)))     ! multi threaded
+                        !$    thread_first_run = .false.
+                        !$  endif
 
                         d_j_l = d_0_l - d_0_j
                         call lib_math_vector_spherical_harmonics_translation_coefficient(d_j_l, &
@@ -447,6 +456,8 @@ module lib_mie_ms_solver_interface
                                        buffer_x_2_nm)
                         call remove_zeros(buffer_x_2_nm)
 
+                        !$OMP PARALLEL DO PRIVATE(n, m) &
+                        !$OMP  PRIVATE(buffer_1_nm, buffer_2_nm)
                         do n = n_range(1), n_range(2)
                             do m = -n, n
                                 if (n_range(2) .le. n_range_j(2) &
@@ -468,6 +479,7 @@ module lib_mie_ms_solver_interface
                                 end if
                             end do
                         end do
+                        !$OMP END PARALLEL DO
 
                         n_range = simulation_parameter%spherical_harmonics%n_range
 
@@ -481,9 +493,8 @@ module lib_mie_ms_solver_interface
                         vector_b(first:last) = vector_b(first:last) + buffer_array
                     end if
                 end do
-!                !$OMP END PARALLEL DO
             end do
-!            !$OMP END PARALLEL DO
+            !$OMP END PARALLEL DO
         end subroutine lib_mie_ms_solver_calculate_vector_b_without_transposed
 
         ! Formats problem of  multi sphere scattering to be able to use a solver.
