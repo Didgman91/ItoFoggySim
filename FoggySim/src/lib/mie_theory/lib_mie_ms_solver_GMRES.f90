@@ -4,15 +4,59 @@ module lib_mie_ms_solver_GMRES
     use lib_mie_type_functions
     use lib_mie_ms_solver_interface
     implicit none
+
+    ! parameter
+
+    integer, parameter :: GMRES_ORTHOGONALIZATION_SCHEME_MGS = 0
+    integer, parameter :: GMRES_ORTHOGONALIZATION_SCHEME_IMGS = 1
+    integer, parameter :: GMRES_ORTHOGONALIZATION_SCHEME_CGS = 2
+    integer, parameter :: GMRES_ORTHOGONALIZATION_SCHEME_ICGS = 3
+
+    type solver_gmres_parameter_type
+        integer :: max_iterations
+        integer :: restart
+        logical :: use_initial_guess
+        double precision :: convergence_tolerance
+        integer :: orthogonalization_scheme
+        logical :: use_recurence_formula_at_restart
+
+        double precision :: backward_error
+    end type solver_gmres_parameter_type
+
     contains
 
-        subroutine lib_mie_ms_solver_gmres_run_without_ml_fmm(simulation_parameter, max_iterations, restart)
+        ! Returns
+        ! ----
+        !   rv: type(solver_gmres_parameter_type)
+        !       default values of the GMRES solver
+        function lib_mie_ms_solver_gmres_get_parameter_std_values() result(rv)
             implicit none
             ! dummy
-            type(lib_mie_simulation_parameter_type), intent(inout) :: simulation_parameter
+            type(solver_gmres_parameter_type) :: rv
 
-            integer, intent(inout), optional :: max_iterations
-            integer, intent(inout), optional :: restart
+            rv%max_iterations = 1000
+            rv%restart = 10
+            rv%use_initial_guess = .false.
+            rv%convergence_tolerance = 1D-15
+            rv%orthogonalization_scheme = GMRES_ORTHOGONALIZATION_SCHEME_MGS
+            rv%use_recurence_formula_at_restart = .false.
+
+        end function lib_mie_ms_solver_gmres_get_parameter_std_values
+
+        ! Argument
+        ! ----
+        !   parameter: type(solver_gmres_parameter_type)
+        !       parameter of the GMRES solver
+        !   simulation_parameter: type(lib_mie_simulation_parameter_type)
+        !       dataset of the simulation
+        !   save_solution: logical, optional (std: .true.)
+        !       true: save solution x into simulation_parameter
+        subroutine lib_mie_ms_solver_gmres_run_without_ml_fmm(gmres_parameter, simulation_parameter, save_solution)
+            implicit none
+            ! dummy
+            type(solver_gmres_parameter_type), intent(inout) :: gmres_parameter
+            type(lib_mie_simulation_parameter_type), intent(inout) :: simulation_parameter
+            logical, intent(in), optional :: save_solution
 
             ! parameter
             integer, parameter :: matvec = 1
@@ -29,7 +73,6 @@ module lib_mie_ms_solver_GMRES
             integer :: lda
             integer :: lwork
             integer :: ldstrt
-            integer :: lditer
             integer revcom, colx, coly, colz, nbscal
             integer, dimension(5) :: irc
             integer, dimension(8) :: icntl
@@ -46,20 +89,22 @@ module lib_mie_ms_solver_GMRES
 
             double complex, dimension(:), allocatable :: vector
 
-            ! ----------------
-            !  set std values
-            ! ----------------
-            ldstrt = 10
-            if ( present(restart) ) then
-                ldstrt = restart
+            integer :: m_use_initial_guess
+            logical :: m_save_solution
+
+
+            ldstrt = gmres_parameter%restart
+
+            if (gmres_parameter%use_initial_guess) then
+                m_use_initial_guess = 1
+            else
+                m_use_initial_guess = 0
             end if
 
-            lditer = 1000
-            if ( present(max_iterations) ) then
-                lditer = max_iterations
-            end if
+            m_save_solution = .true.
+            if (present(save_solution)) m_save_solution = save_solution
 
-            nout = 1
+            nout = 6
 
             ! calculate size(x) = size(b)
             n_range = simulation_parameter%spherical_harmonics%n_range
@@ -85,14 +130,14 @@ module lib_mie_ms_solver_GMRES
             ! Save the convergence history on standard output
             icntl(3) = 6
             ! Maximum number of iterations
-            icntl(7) = lditer
+            icntl(7) = gmres_parameter%max_iterations
 
             ! preconditioner location
             icntl(4) = 0
             ! orthogonalization scheme
-            icntl(5)=0 ! MGS
+            icntl(5)=gmres_parameter%orthogonalization_scheme
             ! initial guess
-            icntl(6) = 1
+            icntl(6) = m_use_initial_guess
             ! residual calculation strategy at restart
             icntl(8) = 0
 
@@ -124,7 +169,7 @@ module lib_mie_ms_solver_GMRES
                     !        work(colz) <-- A * work(colx)
 !                    call zgemv('N',n,n,ONE,a,lda,work(colx),1, &
 !                               ZERO,work(colz),1)
-                    call lib_mie_ms_solver_calculate_vector_b(simulation_parameter, work(colx:colx+lda), vector)
+                    call lib_mie_ms_solver_calculate_vector_b(simulation_parameter, (/ 1, 2, 3 /), work(colx:colx+lda), vector)
                     work(colz:colz+lda-1) = vector
 
                     cycle
@@ -177,11 +222,15 @@ module lib_mie_ms_solver_GMRES
                 write(*,*)
                 write(*,*) '    '
 
+                gmres_parameter%backward_error = rinfo(2)
+
                 exit
 
             end do
 
-            call lib_mie_ms_solver_set_sphere_parameter_ab_nm(work(1:lda), simulation_parameter)
+            if (m_save_solution) then
+                call lib_mie_ms_solver_set_sphere_parameter_ab_nm(work(1:lda), (/ 1, 2, 3 /), simulation_parameter)
+            end if
 
         end subroutine lib_mie_ms_solver_gmres_run_without_ml_fmm
 
