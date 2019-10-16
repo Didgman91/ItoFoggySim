@@ -20,7 +20,6 @@ module lib_ml_fmm
 
     ! --- member ---
     type(lib_ml_fmm_procedure_handles) :: m_ml_fmm_handles
-    integer(kind=2) :: m_ml_fmm_p_truncation
 
     ! e.g. matrix vector product v = u*phi
     ! order restiction:
@@ -1400,16 +1399,13 @@ module lib_ml_fmm
 
             ! auxiliaray
             type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
-            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_v
 
             integer(kind=UINDEX_BYTES), parameter :: list_length = 10
             integer(kind=1), parameter :: element_type = 1
-            type(lib_ml_fmm_data) :: data_elements
 
             real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
             type(lib_ml_fmm_coefficient) :: coefficient
             integer(kind=UINDEX_BYTES) :: i
-            integer(kind=UINDEX_BYTES) :: list_index
 
             type(lib_tree_universal_index) :: uindex
             integer(kind=1) :: coefficient_type
@@ -1488,16 +1484,13 @@ module lib_ml_fmm
 
             ! auxiliary
             type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
-            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_v
 
             integer(kind=UINDEX_BYTES), parameter :: list_length = 10
             integer(kind=1), parameter :: element_type = 1
-            type(lib_ml_fmm_data) :: data_elements
 
             real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
             type(lib_ml_fmm_coefficient) :: coefficient
             integer(kind=UINDEX_BYTES) :: i
-            integer(kind=UINDEX_BYTES) :: list_index
 
             type(lib_tree_universal_index) :: uindex
             integer(kind=1) :: coefficient_type
@@ -1576,16 +1569,13 @@ module lib_ml_fmm
 
             ! auxiliary
             type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
-            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_v
 
             integer(kind=UINDEX_BYTES), parameter :: list_length = 10
             integer(kind=1), parameter :: element_type = 1
-            type(lib_ml_fmm_data) :: data_elements
 
             real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
             type(lib_ml_fmm_coefficient) :: coefficient
             integer(kind=UINDEX_BYTES) :: i
-            integer(kind=UINDEX_BYTES) :: list_index
 
             type(lib_tree_universal_index) :: uindex
             integer(kind=1) :: coefficient_type

@@ -344,7 +344,6 @@ module lib_ml_fmm_helper_functions
             type(lib_ml_fmm_hierarchy), dimension(:), allocatable, intent(inout) :: hierarchy
 
             ! auxiliary
-            integer(kind=1) :: buffer_l
             integer(kind=UINDEX_BYTES) :: i
             type(lib_tree_universal_index) :: buffer_uindex
             type(lib_tree_universal_index), dimension(:), allocatable :: uindex_list_X
@@ -353,7 +352,6 @@ module lib_ml_fmm_helper_functions
             integer(kind=1) :: l_th
             integer(kind=1) :: hierarchy_type
             integer(kind=UINDEX_BYTES), dimension(3) :: uindex_list_counter
-            integer(kind=UINDEX_BYTES) :: number_of_boxes_at_l_max
 
             integer(kind=CORRESPONDENCE_VECTOR_KIND) :: element_index
 
@@ -442,10 +440,7 @@ module lib_ml_fmm_helper_functions
             integer(kind=UINDEX_BYTES) :: number_of_entries_log_2
             integer(kind=UINDEX_BYTES) :: counter
             integer(kind=UINDEX_BYTES) :: i
-            integer(kind=2) :: ii
-            integer(kind=UINDEX_BYTES) :: hash
             integer(kind=UINDEX_BYTES) :: max_value
-            integer(kind=UINDEX_BYTES) :: n
             logical :: no_hash
 
             number_of_boxes = size(uindex_list_X) &

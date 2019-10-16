@@ -29,7 +29,7 @@ program main
     integer(kind=4) :: l
     integer(kind=4) :: m
     double precision :: x
-    double precision :: erg
+!    double precision :: erg
 
     ! CPU-time
     real :: test_start, test_finish

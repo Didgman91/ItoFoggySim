@@ -311,8 +311,6 @@ module lib_mie_ms_solver_interface
             integer :: first
             integer :: last
 
-            integer :: sphere_parameter_no
-
             integer :: counter
             integer :: counter_sum
 
@@ -839,7 +837,6 @@ module lib_mie_ms_solver_interface
             integer :: sphere_parameter_no
 
             integer :: counter
-            integer :: counter_sum
 
             integer(kind=1) :: z_selector
 
@@ -1417,7 +1414,6 @@ module lib_mie_ms_solver_interface
 
                     double complex, dimension(:), allocatable :: buffer_array
 
-                    double complex :: buffer_cmplx
                     double precision :: buffer
 
                     lambda_0 = 1 * unit_mu
@@ -1604,8 +1600,6 @@ module lib_mie_ms_solver_interface
 
                     integer :: n
                     integer :: m
-                    integer :: nu
-                    integer :: mu
 
                     integer :: first
                     integer :: last
@@ -1643,7 +1637,6 @@ module lib_mie_ms_solver_interface
 
                     double complex, dimension(:), allocatable :: buffer_array
 
-                    double complex :: buffer_cmplx
                     double precision :: buffer
 
                     lambda_0 = 1 * unit_mu
@@ -1668,11 +1661,12 @@ module lib_mie_ms_solver_interface
                                                                          r_particle, n_particle, n_range)
 
                     allocate(simulation%sphere_parameter_list(2))
-!                    do n = n_range(1), n_range(2)
-!                        sphere_para%a_n%item = n
-!                    end do
-!                    sphere_para%b_n%item = dcmplx(1,0)
+                    do n = n_range(1), n_range(2)
+                        sphere_para%a_n%item = n
+                    end do
+                    sphere_para%b_n%item = dcmplx(1,0)
                     simulation%sphere_parameter_list(2) = sphere_para
+
                     sphere_para%a_n%item = dcmplx(0,0)
                     sphere_para%b_n%item = dcmplx(0,0)
                     simulation%sphere_parameter_list(1) = sphere_para

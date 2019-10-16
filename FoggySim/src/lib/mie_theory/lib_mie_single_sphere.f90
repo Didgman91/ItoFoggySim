@@ -2343,7 +2343,6 @@ module lib_mie_single_sphere
                     double precision :: x
                     double precision :: y
                     double precision :: z
-                    integer :: u
 
                     double precision :: lambda
                     double precision :: k0

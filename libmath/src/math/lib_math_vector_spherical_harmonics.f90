@@ -15,6 +15,7 @@ module lib_math_vector_spherical_harmonics
     private
 
     ! --- public ---
+    public :: lib_math_vector_spherical_harmonic_constructor
     public :: lib_math_vector_spherical_harmonics_components
     public :: lib_math_vector_spherical_harmonics_translation_coefficient
 
@@ -45,7 +46,7 @@ module lib_math_vector_spherical_harmonics
         ! ----
         !   j_max: integer
         !
-        subroutine lib_math_vector_spherical_harmonic_contructor(j_max)
+        subroutine lib_math_vector_spherical_harmonic_constructor(j_max)
             implicit none
             ! dummy
             integer(kind=4), intent(in) :: j_max
@@ -58,7 +59,7 @@ module lib_math_vector_spherical_harmonics
             call fwig_temp_init(2 * j_max)      ! single threaded
             !$  end if
 
-        end subroutine lib_math_vector_spherical_harmonic_contructor
+        end subroutine lib_math_vector_spherical_harmonic_constructor
 
         ! calculation of the components of the vector spherical harmonic
         !
@@ -117,7 +118,6 @@ module lib_math_vector_spherical_harmonics
             integer :: n
             integer :: m
             integer :: i
-            integer :: ii
 
             double precision :: rho
 
@@ -139,9 +139,6 @@ module lib_math_vector_spherical_harmonics
             complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: z_n_cmplx
             double precision, dimension(n_range(2)-n_range(1)+1) :: z_d_real ! deriviative
             complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: z_d_cmplx ! deriviative
-
-            double precision, dimension(n_range(2)-n_range(1)+1) :: z_divided_by_rho_real
-            complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: z_divided_by_rho_cmplx
 
             ! Riccati-Bessel
             double precision, dimension(n_range(2)-n_range(1)+1) :: r_real
@@ -2141,12 +2138,6 @@ module lib_math_vector_spherical_harmonics
 
                 ! auxiliary
                 integer :: i
-                integer :: ii
-                integer :: n_value
-                integer :: m_value
-
-                double precision :: buffer
-                complex(kind=8) :: buffer_cmplx
 
                 double precision :: theta
                 double precision :: phi
@@ -2529,6 +2520,7 @@ module lib_math_vector_spherical_harmonics
                     print *, "  file does not exist"
                     print *, "  file_name: ", file_name
 
+                    rv = .false.
                     return
                 end if
 

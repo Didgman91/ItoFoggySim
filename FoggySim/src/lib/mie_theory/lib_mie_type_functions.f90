@@ -137,22 +137,4 @@ module lib_mie_type_functions
 
         end function lib_mie_type_func_get_plane_wave_illumination
 
-
-
-        function lib_mie_type_functions_test_functions() result(rv)
-            implicit none
-            ! dummy
-            integer :: rv
-
-            ! auxiliary
-
-            contains
-                function test_() result(rv)
-                    implicit none
-                    ! dummy
-                    logical :: rv
-
-                end function
-        end function lib_mie_type_functions_test_functions
-
 end module lib_mie_type_functions
