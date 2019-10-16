@@ -339,7 +339,8 @@ module lib_ml_fmm
             ignore_box = .false.
             x_c = lib_tree_get_centre_of_box(uindex)
             do i=1, size(data_element)
-                buffer_C_i = m_ml_fmm_u(element_number(i)) * m_ml_fmm_handles%get_B_i(x_c, data_element(i))
+!                buffer_C_i = m_ml_fmm_u(element_number(i)) * m_ml_fmm_handles%get_B_i(x_c, data_element(i))
+                buffer_C_i = m_ml_fmm_handles%get_u_B_i(x_c, data_element(i), element_number)
                 C_i = C_i + buffer_C_i
             end do
         else
@@ -457,7 +458,6 @@ module lib_ml_fmm
 
         call lib_ml_fmm_calculate_downward_pass_step_1()
         call lib_ml_fmm_calculate_downward_pass_step_2()
-
 
     end subroutine
 
@@ -814,7 +814,8 @@ module lib_ml_fmm
             if ((data_element_e1(i)%hierarchy .eq. HIERARCHY_Y) .or. &
                 (data_element_e1(i)%hierarchy .eq. HIERARCHY_XY)) then
                 v_counter = v_counter + 1
-                m_ml_fmm_v(v_counter) = lib_ml_fmm_calculate_v_y_j(data_element_e1(i), data_element_e2, D)
+                m_ml_fmm_v(v_counter) = lib_ml_fmm_calculate_v_y_j(data_element_e1(i), element_number_e1(i), &
+                                                                   data_element_e2, element_number_e2, D)
             end if
         end do
     end subroutine lib_ml_fmm_calculate_all_v_y_j_at_uindex
@@ -836,11 +837,13 @@ module lib_ml_fmm
     !          at the E2 domain of the evaluation element (Y-hierarchy)
     !
     ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(38)
-    function lib_ml_fmm_calculate_v_y_j(data_element_y_j, data_element_e2, D) result(rv)
+    function lib_ml_fmm_calculate_v_y_j(data_element_y_j, element_number_j, data_element_e2, element_number_e2, D) result(rv)
         implicit none
         ! dummy
         type(lib_tree_data_element), intent(inout) :: data_element_y_j
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: element_number_j
         type(lib_tree_data_element), dimension(:), allocatable, intent(inout) :: data_element_e2
+        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number_e2
         type(lib_ml_fmm_coefficient), intent(inout) :: D
         type(lib_ml_fmm_v) :: rv
 
@@ -855,7 +858,7 @@ module lib_ml_fmm
         rv = D .cor. (y_j - x_c)
 
         do i=1, size(data_element_e2)
-            rv = rv + m_ml_fmm_handles%get_phi_i_j(data_element_e2(i), y_j)
+            rv = rv + m_ml_fmm_handles%get_phi_i_j(data_element_e2(i), element_number_e2, y_j)
         end do
 
     end function lib_ml_fmm_calculate_v_y_j

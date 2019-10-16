@@ -20,8 +20,8 @@ module lib_ml_fmm_type_operator
     public :: lib_ml_fmm_type_operator_set_coefficient
     public :: lib_ml_fmm_type_operator_get_coefficient
 
-    public :: lib_ml_fmm_get_B_i
-    public :: lib_ml_fmm_phi_i_j
+    public :: lib_ml_fmm_get_u_B_i
+    public :: lib_ml_fmm_get_phi_i_j
     public :: lib_ml_fmm_translation_RR
     public :: lib_ml_fmm_translation_SR
     public :: lib_ml_fmm_translation_SS
@@ -216,13 +216,15 @@ module lib_ml_fmm_type_operator
 !        end function
 
         ! Basis function: B_i
-        function lib_ml_fmm_get_B_i(x, data_element) result(B_i)
+        function lib_ml_fmm_get_u_B_i(x, data_element, element_number) result(B_i)
             use lib_tree_public
             use ml_fmm_type
             implicit none
             ! dummy
             type(lib_tree_spatial_point), intent(in) :: x
-            type(lib_tree_data_element) :: data_element
+            type(lib_tree_data_element), intent(in) :: data_element
+            integer(kind=4), dimension(:), allocatable, intent(in) :: element_number
+
             type(lib_ml_fmm_coefficient) :: B_i
         end function
 
@@ -316,13 +318,14 @@ module lib_ml_fmm_type_operator
 !            integer :: phi_i_j                   ! todo: define type
 !        end function lib_ml_fmm_expansion_S
 
-        function lib_ml_fmm_phi_i_j(data_element_i, y_j) result(rv)
+        function lib_ml_fmm_get_phi_i_j(data_element_i, element_number, y_j) result(rv)
             use lib_tree_public
             use ml_fmm_type
             implicit none
             ! dummy
-            type(lib_tree_data_element), intent(inout) :: data_element_i
-            type(lib_tree_spatial_point), intent(inout) :: y_j
+            type(lib_tree_data_element), intent(in) :: data_element_i
+            integer(kind=4), dimension(:), allocatable, intent(in) :: element_number
+            type(lib_tree_spatial_point), intent(in) :: y_j
             type(lib_ml_fmm_v) :: rv
 
         end function
@@ -407,12 +410,12 @@ module lib_ml_fmm_type_operator
 
     type lib_ml_fmm_procedure_handles
 !        procedure(lib_ml_fmm_get_A_i), pointer, nopass :: get_A_i => null()
-        procedure(lib_ml_fmm_get_B_i), pointer, nopass :: get_B_i => null()
+        procedure(lib_ml_fmm_get_u_B_i), pointer, nopass :: get_u_B_i => null()
 !        procedure(lib_ml_fmm_get_S), pointer, nopass :: get_S => null()
 !        procedure(lib_ml_fmm_get_R), pointer, nopass :: get_R => null()
 !        procedure(lib_ml_fmm_expansion_R), pointer, nopass :: expansion_R => null()
 !        procedure(lib_ml_fmm_expansion_S), pointer, nopass :: expansion_S => null()
-        procedure(lib_ml_fmm_phi_i_j), pointer, nopass :: get_phi_i_j => null()
+        procedure(lib_ml_fmm_get_phi_i_j), pointer, nopass :: get_phi_i_j => null()
         procedure(lib_ml_fmm_translation_RR), pointer, nopass :: get_translation_RR => null()
         procedure(lib_ml_fmm_translation_SR), pointer, nopass :: get_translation_SR => null()
         procedure(lib_ml_fmm_translation_SS), pointer, nopass :: get_translation_SS => null()

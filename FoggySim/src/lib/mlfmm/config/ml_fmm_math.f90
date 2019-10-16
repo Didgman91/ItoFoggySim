@@ -37,8 +37,8 @@ module ml_fmm_math
         ! dummy
         type(lib_ml_fmm_procedure_handles) :: handle
 
-        handle%get_B_i => test_get_B_i
-        handle%get_phi_i_j => test_phi_i_j
+        handle%get_u_B_i => test_get_u_B_i
+        handle%get_phi_i_j => test_get_phi_i_j
         handle%get_translation_RR  => test_translation_RR
         handle%get_translation_SR  => test_translation_SR
         handle%get_translation_SS  => test_translation_SS
@@ -283,26 +283,29 @@ module ml_fmm_math
 !        rv%dummy = lhs%dummy - rhs%dummy
     end function
 
-    function test_get_B_i(x, data_element) result(B_i)
+    function test_get_u_B_i(x, data_element, element_number) result(B_i)
         use lib_tree_public
         use ml_fmm_type
         implicit none
         ! dummy
         type(lib_tree_spatial_point), intent(in) :: x
-        type(lib_tree_data_element) :: data_element
+        type(lib_tree_data_element), intent(in) :: data_element
+        integer(kind=4), dimension(:), allocatable, intent(in) :: element_number
+
         type(lib_ml_fmm_coefficient) :: B_i
 
 !        allocate(B_i%dummy, source = (/data_element%uindex%n + abs(x)/))
         allocate(B_i%dummy, source = (/real(data_element%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)/))
     end function
 
-    function test_phi_i_j(data_element_i, y_j) result(rv)
+    function test_get_phi_i_j(data_element_i, element_number, y_j) result(rv)
         use lib_tree_public
         use ml_fmm_type
         implicit none
         ! dummy
-        type(lib_tree_data_element), intent(inout) :: data_element_i
-        type(lib_tree_spatial_point), intent(inout) :: y_j
+        type(lib_tree_data_element), intent(in) :: data_element_i
+        integer(kind=4), dimension(:), allocatable, intent(in) :: element_number
+        type(lib_tree_spatial_point), intent(in) :: y_j
         type(lib_ml_fmm_v) :: rv
 
 !        allocate(rv%dummy, source = (/data_element_i%uindex%n + abs(y_j)/))
