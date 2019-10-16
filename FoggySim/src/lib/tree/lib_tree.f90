@@ -58,6 +58,7 @@ module lib_tree
 
     public :: lib_tree_get_number_of_boxes
     public :: lib_tree_get_centre_of_box
+    public :: lib_tree_get_unscaled_point
 
     public :: lib_tree_test_functions
     public :: lib_tree_benchmark
@@ -108,6 +109,8 @@ module lib_tree
     type(lib_tree_spatial_point) :: lib_tree_scaling_D
     type(lib_tree_spatial_point) :: lib_tree_scaling_x_min
     type(lib_tree_spatial_point) :: lib_tree_scaling_x_max
+
+    logical :: lib_tree_scaling_same_for_all_dimensions
 
     contains
 
@@ -290,11 +293,13 @@ module lib_tree
     ! BITS_MANTISSA
     !   number of bits of the Mantissa (floating point number)
     !
-    subroutine lib_tree_get_scaled_element_list(element_list)
+    subroutine lib_tree_get_scaled_element_list(element_list, use_same_scaling)
         implicit none
         ! dummy
         type(lib_tree_data_element), dimension(:), intent(inout) :: element_list
 !        type(lib_tree_data_element), dimension(size(element_list)) :: rv
+
+        logical, intent(in), optional :: use_same_scaling
 
         ! auxiliary
         type(lib_tree_spatial_point) :: D
@@ -303,6 +308,9 @@ module lib_tree
 
         integer(kind=COORDINATE_BINARY_BYTES) :: i
         integer(kind=1) :: ii
+
+        lib_tree_scaling_same_for_all_dimensions = .true.
+        if (present(use_same_scaling)) lib_tree_scaling_same_for_all_dimensions = use_same_scaling
 
         x_max%x(:) = 0
         x_min%x(:) = 1
@@ -319,7 +327,9 @@ module lib_tree
         end do
 
         ! use for all dimension the same scaling factor
-        D%x(:) = maxval(D%x)
+        if (lib_tree_scaling_same_for_all_dimensions) then
+            D%x(:) = maxval(D%x)
+        end if
 
         !$OMP PARALLEL DO PRIVATE(i, ii)
         do i=1, size(element_list)
@@ -338,6 +348,21 @@ module lib_tree
 !        rv(:)%element_type = element_list(:)%element_type
 
     end subroutine lib_tree_get_scaled_element_list
+
+    function lib_tree_get_unscaled_point(point) result(rv)
+        ! dummy
+        type(lib_tree_spatial_point), intent(in) :: point
+
+        type(lib_tree_spatial_point) :: rv
+
+        ! auxiliary
+        integer :: i
+
+        do i=1, TREE_DIMENSIONS
+            rv%x(i) = point%x(i) * lib_tree_scaling_D%x(i) + lib_tree_scaling_x_min%x(i)
+        end do
+
+    end function
 
     ! Arguments
     ! ----
