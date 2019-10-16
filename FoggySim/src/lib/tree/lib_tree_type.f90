@@ -1,5 +1,5 @@
 ! spatial dimension, value = [2,3]
-#define _FMM_DIMENSION_ 2
+#define _FMM_DIMENSION_ 3
 
 ! 1: true, 0: false (-> spatial point is real)
 #define _SPATIAL_POINT_IS_DOUBLE_ 1
