@@ -15,11 +15,11 @@ module lib_mie_ms_solver_interface
     public :: lib_mie_ms_solver_interface_test_functions
 
     ! --- interface ---
-    interface lib_mie_ms_solver_calculate_vector_b
-        module procedure lib_mie_ms_solver_calculate_vector_b_with_transposed
-        module procedure lib_mie_ms_solver_calculate_vector_b_without_transposed_all
-        module procedure lib_mie_ms_solver_calculate_vector_b_without_transposed_select
-    end interface
+!    interface lib_mie_ms_solver_calculate_vector_b
+!        module procedure lib_mie_ms_solver_calculate_vector_b_with_transposed
+!        module procedure lib_mie_ms_solver_calculate_vector_b_without_transposed_all
+!        module procedure lib_mie_ms_solver_calculate_vector_b_without_transposed_select
+!    end interface
 
     interface lib_mie_ms_solver_get_vector_b
         module procedure lib_mie_ms_solver_get_vector_b_all
@@ -592,6 +592,55 @@ module lib_mie_ms_solver_interface
         !
         ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
         !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
+        subroutine lib_mie_ms_solver_calculate_vector_b(simulation_parameter, vector_x, &
+                                                        vector_b, use_ml_fmm)
+            implicit none
+            ! dummy
+            type(lib_mie_simulation_parameter_type), intent(in) :: simulation_parameter
+            double complex, dimension(:), intent(in) :: vector_x
+
+            double complex, dimension(:), allocatable, intent(inout) :: vector_b
+
+            logical, intent(in), optional :: use_ml_fmm
+
+            ! auxiliary
+            logical :: m_use_ml_fmm
+
+            m_use_ml_fmm = .false.
+            if (present(use_ml_fmm)) m_use_ml_fmm = use_ml_fmm
+
+            if (m_use_ml_fmm) then
+                ! - ml_fmm_init <-- NOT HERE
+                ! - upward and downward pass
+                ! - final summation
+            else
+                call lib_mie_ms_solver_calculate_vector_b_without_transposed_all(simulation_parameter, vector_x, &
+                                                                                 vector_b)
+            end if
+
+        end subroutine
+
+
+        ! Formats problem of  multi sphere scattering to be able to use a solver.
+        !
+        ! Formula: A x = b
+        !   x: scattering coefficients
+        !   b: illumination coefficients
+        !   A: mixture of Mie coefficients and vector spherical translation coefficients
+        !
+        !   -> apply eq. 23 [1] to eq. 30 [2]
+        !
+        ! Argument
+        ! ----
+        !   simulation_parameter: type(lib_mie_simulation_parameter_type)
+        !
+        ! Returns
+        ! ----
+        !   vector_b: double complex, dimension(:)
+        !       result of the matrix vector multiplication
+        !
+        ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
+        !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
         subroutine lib_mie_ms_solver_calculate_vector_b_without_transposed_all(simulation_parameter, vector_x, &
                                                         vector_b)
             implicit none
@@ -874,8 +923,6 @@ module lib_mie_ms_solver_interface
             n_range = simulation_parameter%spherical_harmonics%n_range
 
             counter = (1 + n_range(2))**2 - n_range(1)**2
-
-            vector_b = 0
 
 
             !$  thread_first_run = .true.
@@ -1477,10 +1524,10 @@ module lib_mie_ms_solver_interface
                     call fwig_table_init(4 * n_range(2), 3)
                     call fwig_temp_init(4 * n_range(2))
 
-                    call lib_mie_ms_solver_calculate_vector_b(simulation, vector_x, &
-                                                              vector_b, vector_b_t, &
-                                                              calc_vector_b = .true., &
-                                                              calc_vector_b_t = .true.)
+                    call lib_mie_ms_solver_calculate_vector_b_with_transposed(simulation, vector_x, &
+                                                                              vector_b, vector_b_t, &
+                                                                              calc_vector_b = .true., &
+                                                                              calc_vector_b_t = .true.)
 
                     ! generate ground truth
                     ! > vector_b
@@ -1704,8 +1751,8 @@ module lib_mie_ms_solver_interface
 
                     vector_b = 0
 
-                    call lib_mie_ms_solver_calculate_vector_b(simulation, (/ 2, 1 /), &
-                                                              vector_x, vector_b)
+                    call lib_mie_ms_solver_calculate_vector_b_without_transposed_select(simulation, (/ 2, 1 /), &
+                                                                                        vector_x, vector_b)
 
                     ! generate ground truth
                     ! > vector_b

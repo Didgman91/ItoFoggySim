@@ -113,18 +113,10 @@ module lib_mie_multi_sphere
                     m_step_size = step_size
                     n = update_initial_guess_with_n_max
 
+                    m_dynamic_step_size = .false.
                     if (present(dynamic_step_size)) then
                         m_dynamic_step_size = dynamic_step_size
                     end if
-
-                    simulation%spherical_harmonics%n_range(2) = n
-                    if (m_use_ml_fmm) then
-                        call lib_mie_ms_solver_gmres_run_with_ml_fmm(gmres_parameter, simulation)
-                    else
-                        call lib_mie_ms_solver_gmres_run_without_ml_fmm(gmres_parameter, simulation)
-                    end if
-                    old_backward_error = gmres_parameter%backward_error
-
 
                     if (m_dynamic_step_size) then
                         call calc_with_dynmaic_step_size()
@@ -137,27 +129,19 @@ module lib_mie_multi_sphere
                     simulation%spherical_harmonics%n_range(2) = update_initial_guess_with_n_max
 
                     print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
-                    print *, "n = ", update_initial_guess_with_n_max
-                    print *, ""
+                    print *, "  n = ", simulation%spherical_harmonics%n_range(2)
+                    print *, "  "
 
                     gmres_parameter%max_iterations = 100
-                    if (m_use_ml_fmm) then
-                        call lib_mie_ms_solver_gmres_run_with_ml_fmm(gmres_parameter, simulation)
-                    else
-                        call lib_mie_ms_solver_gmres_run_without_ml_fmm(gmres_parameter, simulation)
-                    end if
+                    call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
 
+                    simulation%spherical_harmonics%n_range(2) = n_max
                     print *, ""
                     print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
-                    print *, "  n = ", n_max
+                    print *, "  n = ", simulation%spherical_harmonics%n_range(2)
                     print *, ""
-                    simulation%spherical_harmonics%n_range(2) = n_max
                     gmres_parameter%max_iterations = 1000
-                    if (m_use_ml_fmm) then
-                        call lib_mie_ms_solver_gmres_run_with_ml_fmm(gmres_parameter, simulation)
-                    else
-                        call lib_mie_ms_solver_gmres_run_without_ml_fmm(gmres_parameter, simulation)
-                    end if
+                    call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
 
                 end if
 
@@ -167,11 +151,7 @@ module lib_mie_multi_sphere
                 print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
                 print *, "  n = ", simulation%spherical_harmonics%n_range(2)
                 print *, ""
-                if (m_use_ml_fmm) then
-                    call lib_mie_ms_solver_gmres_run_with_ml_fmm(gmres_parameter, simulation)
-                else
-                    call lib_mie_ms_solver_gmres_run_without_ml_fmm(gmres_parameter, simulation)
-                end if
+                call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
             end if
 
             contains
@@ -179,32 +159,24 @@ module lib_mie_multi_sphere
                 subroutine calc_with_steps()
                     implicit none
 
-                    do n=update_initial_guess_with_n_max + m_step_size, n_max - m_step_size, step_size
-                        simulation%spherical_harmonics%n_range(2) = update_initial_guess_with_n_max
+                    do n=update_initial_guess_with_n_max, n_max - m_step_size, step_size
+                        simulation%spherical_harmonics%n_range(2) = n
 
                         print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
-                        print *, "n = ", update_initial_guess_with_n_max
+                        print *, "n = ", simulation%spherical_harmonics%n_range(2)
                         print *, ""
 
                         gmres_parameter%max_iterations = 100
-                        if (m_use_ml_fmm) then
-                            call lib_mie_ms_solver_gmres_run_with_ml_fmm(gmres_parameter, simulation)
-                        else
-                            call lib_mie_ms_solver_gmres_run_without_ml_fmm(gmres_parameter, simulation)
-                        end if
+                        call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
                     end do
 
+                    simulation%spherical_harmonics%n_range(2) = n_max
                     print *, ""
                     print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
-                    print *, "  n = ", n_max
+                    print *, "  n = ", simulation%spherical_harmonics%n_range(2)
                     print *, ""
-                    simulation%spherical_harmonics%n_range(2) = n_max
                     gmres_parameter%max_iterations = 1000
-                    if (m_use_ml_fmm) then
-                        call lib_mie_ms_solver_gmres_run_with_ml_fmm(gmres_parameter, simulation)
-                    else
-                        call lib_mie_ms_solver_gmres_run_without_ml_fmm(gmres_parameter, simulation)
-                    end if
+                    call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
                 end subroutine calc_with_steps
 
                 subroutine calc_with_dynmaic_step_size()
@@ -217,6 +189,15 @@ module lib_mie_multi_sphere
 
                     ! auxiliaray
                     integer :: state
+
+
+                    simulation%spherical_harmonics%n_range(2) = n
+                    print *, ""
+                    print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
+                    print *, "  n = ", simulation%spherical_harmonics%n_range(2)
+                    print *, ""
+
+                    call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
 
                     state = state_test_next_step
 
@@ -235,11 +216,7 @@ module lib_mie_multi_sphere
                                 print *, ""
 
                                 gmres_parameter%max_iterations = 1
-                                if (m_use_ml_fmm) then
-                                    call lib_mie_ms_solver_gmres_run_with_ml_fmm(gmres_parameter, simulation, .false.)
-                                else
-                                    call lib_mie_ms_solver_gmres_run_without_ml_fmm(gmres_parameter, simulation, .false.)
-                                end if
+                                call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
 
                                 if (gmres_parameter%backward_error .lt. 1D-3) then
                                     if (n + m_step_size .ge. n_max) then
@@ -274,11 +251,7 @@ module lib_mie_multi_sphere
                             print *, ""
 
                             gmres_parameter%max_iterations = 1000
-                            if (m_use_ml_fmm) then
-                                call lib_mie_ms_solver_gmres_run_with_ml_fmm(gmres_parameter, simulation)
-                            else
-                                call lib_mie_ms_solver_gmres_run_without_ml_fmm(gmres_parameter, simulation)
-                            end if
+                            call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
                             old_backward_error = gmres_parameter%backward_error
                             m_step_size = step_size
 
