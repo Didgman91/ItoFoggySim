@@ -618,7 +618,7 @@ module lib_mie_ms_solver_interface
                                                                                  vector_b)
             end if
 
-        end subroutine
+        end subroutine lib_mie_ms_solver_calculate_vector_b
 
 
         ! Formats problem of  multi sphere scattering to be able to use a solver.

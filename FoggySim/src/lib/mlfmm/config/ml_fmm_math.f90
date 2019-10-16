@@ -283,19 +283,19 @@ module ml_fmm_math
 !        rv%dummy = lhs%dummy - rhs%dummy
     end function
 
-    function test_get_u_B_i(x, data_element, element_number) result(B_i)
+    function test_get_u_B_i(x, data_element, element_number) result(u_B_i)
         use lib_tree_public
         use ml_fmm_type
         implicit none
         ! dummy
         type(lib_tree_spatial_point), intent(in) :: x
         type(lib_tree_data_element), intent(in) :: data_element
-        integer(kind=4), dimension(:), allocatable, intent(in) :: element_number
+        integer(kind=4), intent(in) :: element_number
 
-        type(lib_ml_fmm_coefficient) :: B_i
+        type(lib_ml_fmm_coefficient) :: u_B_i
 
 !        allocate(B_i%dummy, source = (/data_element%uindex%n + abs(x)/))
-        allocate(B_i%dummy, source = (/real(data_element%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)/))
+        allocate(u_B_i%dummy, source = (/real(data_element%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)/))
     end function
 
     function test_get_phi_i_j(data_element_i, element_number, y_j) result(rv)

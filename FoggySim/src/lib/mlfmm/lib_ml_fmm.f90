@@ -1,4 +1,4 @@
-#define _FMM_DIMENSION_ 2
+#define _FMM_DIMENSION_ 3
 
 ! LIB: Mulitlevel Fast Multipole Method
 !
@@ -14,6 +14,8 @@ module lib_ml_fmm
     private
 
     ! --- public functions ---
+    public :: lib_ml_fmm_constructor
+    public :: lib_ml_fmm_destructor
     public :: lib_ml_fmm_test_functions
 
     public :: lib_ml_fmm_hf_test_functions
@@ -340,7 +342,7 @@ module lib_ml_fmm
             x_c = lib_tree_get_centre_of_box(uindex)
             do i=1, size(data_element)
 !                buffer_C_i = m_ml_fmm_u(element_number(i)) * m_ml_fmm_handles%get_B_i(x_c, data_element(i))
-                buffer_C_i = m_ml_fmm_handles%get_u_B_i(x_c, data_element(i), element_number)
+                buffer_C_i = m_ml_fmm_handles%get_u_B_i(x_c, data_element(i), element_number(i))
                 C_i = C_i + buffer_C_i
             end do
         else

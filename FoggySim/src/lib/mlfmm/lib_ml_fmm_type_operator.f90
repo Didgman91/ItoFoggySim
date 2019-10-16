@@ -223,7 +223,7 @@ module lib_ml_fmm_type_operator
             ! dummy
             type(lib_tree_spatial_point), intent(in) :: x
             type(lib_tree_data_element), intent(in) :: data_element
-            integer(kind=4), dimension(:), allocatable, intent(in) :: element_number
+            integer(kind=4), intent(in) :: element_number
 
             type(lib_ml_fmm_coefficient) :: B_i
         end function
