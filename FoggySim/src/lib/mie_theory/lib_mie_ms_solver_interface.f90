@@ -1341,11 +1341,13 @@ module lib_mie_ms_solver_interface
 
             rv = 0
 
-            if (.not. test_lib_mie_ms_solver_calculate_vector_b()) rv = rv + 1
+            if (.not. test_lib_mie_ms_solver_calculate_vector_b_all()) rv = rv + 1
+            if (.not. test_lib_mie_ms_solver_calculate_vector_b_selection()) rv = rv + 1
+            if (.not. test_lib_mie_ms_solver_get_vector_b_selection()) rv = rv + 1
 
             contains
 
-                function test_lib_mie_ms_solver_calculate_vector_b() result(rv)
+                function test_lib_mie_ms_solver_calculate_vector_b_all() result(rv)
                     implicit none
                     ! dummy
                     logical :: rv
@@ -1463,6 +1465,9 @@ module lib_mie_ms_solver_interface
                         vector_x(first:last) = i
                     end do
 
+                    call fwig_table_init(4 * n_range(2), 3)
+                    call fwig_temp_init(4 * n_range(2))
+
                     call lib_mie_ms_solver_calculate_vector_b(simulation, vector_x, &
                                                               vector_b, vector_b_t, &
                                                               calc_vector_b = .true., &
@@ -1568,7 +1573,307 @@ module lib_mie_ms_solver_interface
                         end if
                     end do
 
-                end function test_lib_mie_ms_solver_calculate_vector_b
+                end function test_lib_mie_ms_solver_calculate_vector_b_all
+
+                function test_lib_mie_ms_solver_calculate_vector_b_selection() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer :: i
+                    type(lib_mie_simulation_parameter_type) :: simulation
+                    double complex, dimension(:), allocatable :: vector_x
+
+                    double complex, dimension(:), allocatable :: vector_b
+
+                    double complex, dimension(:), allocatable :: ground_truth_vector_b
+
+                    integer :: n
+                    integer :: m
+                    integer :: nu
+                    integer :: mu
+
+                    integer :: first
+                    integer :: last
+                    integer :: no_of_elements
+
+                    double precision :: n_medium
+
+                    ! illumination
+                    double precision :: lambda_0
+                    double precision :: e_field_0
+
+                    double precision, dimension(1) :: g
+                    type(cartesian_coordinate_real_type), dimension(1) :: k
+                    type(cartesian_coordinate_real_type), dimension(1) :: d_0_i
+
+                    ! sphere parameter
+                    type(lib_mie_sphere_parameter_type) :: sphere_para
+                    double precision :: r_particle
+                    double complex :: n_particle
+                    integer, dimension(2) :: n_range
+
+                    type(cartesian_coordinate_real_type) :: d_0_j
+                    type(cartesian_coordinate_real_type) :: d_0_l
+                    type(cartesian_coordinate_real_type) :: d_j_l
+
+                    type(list_cmplx) :: a_n
+                    type(list_cmplx) :: b_n
+                    type(list_list_cmplx) :: a_numu
+                    type(list_list_cmplx) :: b_numu
+                    type(list_4_cmplx) :: a_nmnumu
+                    type(list_4_cmplx) :: b_nmnumu
+
+                    type(list_list_cmplx) :: buffer_vector_b_1
+                    type(list_list_cmplx) :: buffer_vector_b_2
+
+                    double complex, dimension(:), allocatable :: buffer_array
+
+                    double complex :: buffer_cmplx
+                    double precision :: buffer
+
+                    lambda_0 = 1 * unit_mu
+                    e_field_0 = 1
+                    n_medium = 1
+
+                    g(:) = 1
+                    k(1) = make_cartesian(0d0,0d0,1d0)
+                    d_0_i(1) = make_cartesian(0d0,0d0,0d0) * unit_mu
+
+                    simulation%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, e_field_0, &
+                                                                                            g, k, &
+                                                                                            d_0_i)
+
+                    simulation%refractive_index_medium = n_medium
+
+                    r_particle = 2 * unit_mu
+                    n_particle = 1.33
+                    n_range = (/ 1, 5 /)
+
+                    sphere_para = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
+                                                                         r_particle, n_particle, n_range)
+
+                    allocate(simulation%sphere_parameter_list(2))
+                    sphere_para%a_n%item = dcmplx(0,0)
+                    sphere_para%b_n%item = dcmplx(0,0)
+                    simulation%sphere_parameter_list(1) = sphere_para
+                    sphere_para%a_n%item = dcmplx(1,0)
+                    sphere_para%b_n%item = dcmplx(1,0)
+                    simulation%sphere_parameter_list(2) = sphere_para
+
+
+                    allocate(simulation%sphere_list(2))
+                    simulation%sphere_list(:)%sphere_parameter_index = 1
+                    simulation%sphere_list(1)%sphere_parameter_index = 2
+
+                    d_0_j = make_cartesian(-2d0,0d0,1d0) * unit_mu
+                    simulation%sphere_list(1)%d_0_j = d_0_j
+
+                    d_0_j = make_cartesian(2d0,0d0,1d0) * unit_mu
+                    simulation%sphere_list(2)%d_0_j = d_0_j
+
+!                    d_0_j = make_cartesian(0d0,0d0,3d0) * unit_mu
+!                    simulation%sphere_list(3)%d_0_j = d_0_j
+
+                    simulation%spherical_harmonics%z_selector_incident_wave = 1
+                    simulation%spherical_harmonics%z_selector_scatterd_wave = 3
+                    simulation%spherical_harmonics%z_selector_translation = 1
+                    n_range = (/ 1, 5 /)
+                    simulation%spherical_harmonics%n_range = n_range
+
+                    no_of_elements = 2 * ( (1+n_range(2))**2 - n_range(1)**2 )
+                    allocate(vector_x(size(simulation%sphere_list) * no_of_elements))
+
+                    do i = 1, size(simulation%sphere_list)
+                        first = (i - 1) * no_of_elements + 1
+                        last = i * no_of_elements
+                        vector_x(first:last) = i
+                    end do
+
+                    call lib_mie_ms_solver_allocate_vector_x_b(simulation, vector_b)
+
+!                    call lib_mie_ms_solver_calculate_vector_b(simulation, &
+!                                                              vector_x, vector_b)
+
+                    vector_b = 0
+
+                    call lib_mie_ms_solver_calculate_vector_b(simulation, (/ 2, 1 /), &
+                                                              vector_x, vector_b)
+
+                    ! generate ground truth
+                    ! > vector_b
+                    allocate(ground_truth_vector_b(size(simulation%sphere_list) * no_of_elements))
+
+                    do i = 1, size(simulation%sphere_list)
+                        first = (i - 1) * no_of_elements + 1
+                        last = i * no_of_elements
+                        ground_truth_vector_b(first:last) = i
+                    end do
+
+                    d_0_j = simulation%sphere_list(1)%d_0_j
+                    d_0_l = simulation%sphere_list(2)%d_0_j
+                    d_j_l = d_0_l - d_0_j
+
+                    call lib_math_vector_spherical_harmonics_translation_coefficient(d_j_l, &
+                            n_range, n_range, simulation%spherical_harmonics%z_selector_translation, &
+                            a_nmnumu, b_nmnumu)
+                    i = simulation%sphere_list(1)%sphere_parameter_index
+                    a_n = simulation%sphere_parameter_list(i)%a_n
+                    b_n = simulation%sphere_parameter_list(i)%b_n
+
+                    call init_list(buffer_vector_b_1, n_range(1), n_range(2) - n_range(1) + 1)
+                    call init_list(buffer_vector_b_2, n_range(1), n_range(2) - n_range(1) + 1)
+
+                    do n = n_range(1), n_range(2)
+                        do m = -n, n
+                            a_numu = a_nmnumu%item(n)%item(m)
+                            b_numu = b_nmnumu%item(n)%item(m)
+                            buffer_vector_b_1%item(n)%item(m) = sum(a_n * a_numu + a_n * b_numu)
+                            buffer_vector_b_2%item(n)%item(m) = sum(b_n * b_numu + b_n * a_numu)
+                        end do
+                    end do
+
+                    call make_array(buffer_vector_b_1, buffer_array)
+                    ground_truth_vector_b(1:no_of_elements/2) = ground_truth_vector_b(1:no_of_elements/2) &
+                                                                + buffer_array
+
+                    call make_array(buffer_vector_b_2, buffer_array)
+                    ground_truth_vector_b(no_of_elements/2+1:no_of_elements) = &
+                            ground_truth_vector_b(no_of_elements/2+1:no_of_elements) + buffer_array
+
+                    rv = .true.
+                    print *, "test_lib_mie_ms_solver_calculate_vector_b_selection:"
+                    do i=lbound(vector_b, 1), ubound(vector_b, 1)
+                        buffer = abs(vector_b(i) - ground_truth_vector_b(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  vector_b: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  vector_b: ", i, ": OK"
+                        end if
+                    end do
+
+                end function test_lib_mie_ms_solver_calculate_vector_b_selection
+
+                function test_lib_mie_ms_solver_get_vector_b_selection() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer :: i
+                    type(lib_mie_simulation_parameter_type) :: simulation
+                    double complex, dimension(:), allocatable :: vector_x
+
+                    double complex, dimension(:), allocatable :: vector_b
+
+                    double complex, dimension(:), allocatable :: ground_truth_vector_b
+
+                    integer :: first
+                    integer :: last
+                    integer :: no_of_elements
+
+                    double precision :: n_medium
+
+                    ! illumination
+                    double precision :: lambda_0
+                    double precision :: e_field_0
+
+                    double precision, dimension(1) :: g
+                    type(cartesian_coordinate_real_type), dimension(1) :: k
+                    type(cartesian_coordinate_real_type), dimension(1) :: d_0_i
+
+                    ! sphere parameter
+                    type(lib_mie_sphere_parameter_type) :: sphere_para
+                    double precision :: r_particle
+                    double complex :: n_particle
+                    integer, dimension(2) :: n_range
+
+                    type(cartesian_coordinate_real_type) :: d_0_j
+
+                    double precision :: buffer
+
+                    lambda_0 = 1 * unit_mu
+                    e_field_0 = 1
+                    n_medium = 1
+
+                    g(:) = 1
+                    k(1) = make_cartesian(0d0,0d0,1d0)
+                    d_0_i(1) = make_cartesian(0d0,0d0,0d0) * unit_mu
+
+                    simulation%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, e_field_0, &
+                                                                                            g, k, &
+                                                                                            d_0_i)
+
+                    simulation%refractive_index_medium = n_medium
+
+                    r_particle = 2 * unit_mu
+                    n_particle = 1.33
+                    n_range = (/ 1, 5 /)
+
+                    sphere_para = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
+                                                                         r_particle, n_particle, n_range)
+
+                    allocate(simulation%sphere_parameter_list(2))
+                    sphere_para%a_n%item = dcmplx(0,0)
+                    sphere_para%b_n%item = dcmplx(0,0)
+                    simulation%sphere_parameter_list(1) = sphere_para
+                    sphere_para%a_n%item = dcmplx(1,0)
+                    sphere_para%b_n%item = dcmplx(1,0)
+                    simulation%sphere_parameter_list(2) = sphere_para
+
+
+                    allocate(simulation%sphere_list(2))
+                    simulation%sphere_list(:)%sphere_parameter_index = 1
+                    simulation%sphere_list(1)%sphere_parameter_index = 2
+
+                    d_0_j = make_cartesian(-2d0,0d0,1d0) * unit_mu
+                    simulation%sphere_list(1)%d_0_j = d_0_j
+
+                    d_0_j = make_cartesian(2d0,0d0,1d0) * unit_mu
+                    simulation%sphere_list(2)%d_0_j = d_0_j
+
+!                    d_0_j = make_cartesian(0d0,0d0,3d0) * unit_mu
+!                    simulation%sphere_list(3)%d_0_j = d_0_j
+
+                    simulation%spherical_harmonics%z_selector_incident_wave = 1
+                    simulation%spherical_harmonics%z_selector_scatterd_wave = 3
+                    simulation%spherical_harmonics%z_selector_translation = 1
+                    n_range = (/ 1, 5 /)
+                    simulation%spherical_harmonics%n_range = n_range
+
+                    no_of_elements = 2 * ( (1+n_range(2))**2 - n_range(1)**2 )
+                    allocate(vector_x(size(simulation%sphere_list) * no_of_elements))
+
+                    do i = 1, size(simulation%sphere_list)
+                        first = (i - 1) * no_of_elements + 1
+                        last = i * no_of_elements
+                        vector_x(first:last) = i
+                    end do
+
+                    call lib_mie_ms_solver_allocate_vector_x_b(simulation, vector_b)
+                    call lib_mie_ms_solver_allocate_vector_x_b(simulation, ground_truth_vector_b)
+
+                    call lib_mie_ms_solver_get_vector_b(simulation, (/ 2, 1 /),  vector_b)
+
+                    ! generate ground truth
+                    ! > vector_b
+                    call lib_mie_ms_solver_get_vector_b(simulation,  ground_truth_vector_b)
+
+                    rv = .true.
+                    print *, "test_lib_mie_ms_solver_get_vector_b_selection:"
+                    do i=lbound(vector_b, 1), ubound(vector_b, 1)
+                        buffer = abs(vector_b(i) - ground_truth_vector_b(i))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  vector_b: ", i , "difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  vector_b: ", i, ": OK"
+                        end if
+                    end do
+
+                end function test_lib_mie_ms_solver_get_vector_b_selection
 
 
         end function lib_mie_ms_solver_interface_test_functions

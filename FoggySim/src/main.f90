@@ -72,7 +72,7 @@ program main
     error_counter = error_counter + lib_field_test_functions()
 !    error_counter = error_counter + lib_mie_ss_helper_functions_test_functions()
 !    error_counter = error_counter + lib_mie_single_sphere_test_functions()
-!    error_counter = error_counter + lib_mie_ms_solver_interface_test_functions()
+    error_counter = error_counter + lib_mie_ms_solver_interface_test_functions()
     error_counter = error_counter + lib_mie_multi_sphere_test_functions()
 
     call cpu_time(test_finish)
