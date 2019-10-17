@@ -12,7 +12,6 @@ module lib_mie_single_sphere
     use libmath
     use lib_constants
     use lib_field
-    use lib_mie_vector_spherical_harmonics
     use lib_mie_type
     use lib_mie_type_functions
     use lib_mie_ss_helper_functions
@@ -33,17 +32,17 @@ module lib_mie_single_sphere
 
         ! Argument
         ! ----
-        !   simulation: type(lib_mie_simulation_parameter_type)
+        !   simulation: type(lib_mie_simulation_parameter_type) @ lib_mie_ms_data_container
         !       simulation data set
-        subroutine lib_mie_ss_constructor(simulation)
+        subroutine lib_mie_ss_constructor()
+            use lib_mie_ms_data_container
             implicit none
             ! dummy
-            type(lib_mie_simulation_parameter_type) :: simulation
 
             ! init helper functions (caching)
-            call lib_mie_ss_init_illumination(simulation%illumination)
+            call lib_mie_ss_init_illumination(simulation_data%illumination)
 
-            call lib_mie_ss_init_sphere(simulation%sphere_parameter_list, simulation%refractive_index_medium)
+            call lib_mie_ss_init_sphere(simulation_data%sphere_parameter_list, simulation_data%refractive_index_medium)
 
         end subroutine lib_mie_ss_constructor
 
@@ -1279,12 +1278,14 @@ module lib_mie_single_sphere
 
         end function get_field_scattered_xu_cmplx
 
-        !
-        !
-        subroutine lib_mie_ss_calculate_scattering_coefficients_ab_nm(simulation)
+        ! Argument
+        ! ----
+        !   simulation: type(lib_mie_simulation_parameter_type) @ lib_mie_ms_data_container
+        !       simulation data set
+        subroutine lib_mie_ss_calculate_scattering_coefficients_ab_nm()
+            use lib_mie_ms_data_container
             implicit none
             ! dummy
-            type(lib_mie_simulation_parameter_type), intent(inout) :: simulation
 
             ! auxiliary
             integer :: n
@@ -1305,13 +1306,13 @@ module lib_mie_single_sphere
 
             !$OMP PARALLEL DO PRIVATE(sphere_no, parameter_no, d_0_j, n_range, p_nm, q_nm) &
             !$OMP  PRIVATE(n, m, buffer_a_n, buffer_b_n, a_nm, b_nm)
-            do sphere_no = lbound(simulation%sphere_list, 1), ubound(simulation%sphere_list, 1)
-                parameter_no = simulation%sphere_list(sphere_no)%sphere_parameter_index
-                d_0_j = simulation%sphere_list(sphere_no)%d_0_j
+            do sphere_no = lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
+                parameter_no = simulation_data%sphere_list(sphere_no)%sphere_parameter_index
+                d_0_j = simulation_data%sphere_list(sphere_no)%d_0_j
 
-                n_range = simulation%sphere_parameter_list(parameter_no)%n_range
+                n_range = simulation_data%sphere_parameter_list(parameter_no)%n_range
 
-                call lib_mie_ss_hf_get_p_q_j_j(simulation%illumination, simulation%refractive_index_medium, &
+                call lib_mie_ss_hf_get_p_q_j_j(simulation_data%illumination, simulation_data%refractive_index_medium, &
                                                d_0_j, n_range, &
                                                p_nm, q_nm)
                 call init_list(a_nm, n_range(1), n_range(2) - n_range(1) + 1)
@@ -1319,8 +1320,8 @@ module lib_mie_single_sphere
 
                 !$OMP PARALLEL DO PRIVATE(n, m, buffer_a_n, buffer_b_n)
                 do n = n_range(1), n_range(2)
-                    buffer_a_n = simulation%sphere_parameter_list(parameter_no)%a_n%item(n)
-                    buffer_b_n = simulation%sphere_parameter_list(parameter_no)%b_n%item(n)
+                    buffer_a_n = simulation_data%sphere_parameter_list(parameter_no)%a_n%item(n)
+                    buffer_b_n = simulation_data%sphere_parameter_list(parameter_no)%b_n%item(n)
                     do m = -n, n
                         a_nm%item(n)%item(m) = buffer_a_n * p_nm%item(n)%item(m)
                         b_nm%item(n)%item(m) = buffer_b_n * q_nm%item(n)%item(m)
@@ -1328,8 +1329,8 @@ module lib_mie_single_sphere
                 end do
                 !$OMP END PARALLEL DO
 
-                simulation%sphere_list(sphere_no)%a_nm = a_nm
-                simulation%sphere_list(sphere_no)%b_nm = b_nm
+                simulation_data%sphere_list(sphere_no)%a_nm = a_nm
+                simulation_data%sphere_list(sphere_no)%b_nm = b_nm
             end do
             !$OMP END PARALLEL DO
         end subroutine lib_mie_ss_calculate_scattering_coefficients_ab_nm

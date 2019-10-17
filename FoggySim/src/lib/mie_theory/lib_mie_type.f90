@@ -75,7 +75,8 @@ module lib_mie_type
     ! case: exp(i (k x + omega t) // actual case
     !   z_selector_incident_wave = 1
     !   z_selector_scatterd_wave = 3
-    !   z_selector_translation = 3
+    !   z_selector_translation_le_r = 3
+    !   z_selector_translation_gt_r = 1
     !
     ! case: exp(-i (k x + omega t)
     !   z_selector_incident_wave = 2
@@ -88,7 +89,8 @@ module lib_mie_type
     type lib_mie_vector_spherical_harmonics_type
         integer(kind=1) :: z_selector_incident_wave
         integer(kind=1) :: z_selector_scatterd_wave
-        integer(kind=1) :: z_selector_translation
+        integer(kind=1) :: z_selector_translation_le_r
+        integer(kind=1) :: z_selector_translation_gt_r
         integer, dimension(2) :: n_range
     end type lib_mie_vector_spherical_harmonics_type
 

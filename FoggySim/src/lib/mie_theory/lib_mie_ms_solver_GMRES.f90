@@ -3,6 +3,8 @@ module lib_mie_ms_solver_GMRES
     use lib_mie_type
     use lib_mie_type_functions
     use lib_mie_ms_solver_interface
+
+    use lib_mie_ms_data_container
     implicit none
 
     ! parameter
@@ -49,15 +51,14 @@ module lib_mie_ms_solver_GMRES
         ! ----
         !   parameter: type(solver_gmres_parameter_type)
         !       parameter of the GMRES solver
-        !   simulation_parameter: type(lib_mie_simulation_parameter_type)
+        !   simulation_data: type(lib_mie_simulation_parameter_type) @ lib_mie_ms_data_container
         !       dataset of the simulation
         !   save_solution: logical, optional (std: .true.)
-        !       true: save solution x into simulation_parameter
-        subroutine lib_mie_ms_solver_gmres_run(gmres_parameter, simulation_parameter, use_ml_fmm, save_solution)
+        !       true: save solution x into simulation_data
+        subroutine lib_mie_ms_solver_gmres_run(gmres_parameter, use_ml_fmm, save_solution)
             implicit none
             ! dummy
             type(solver_gmres_parameter_type), intent(inout) :: gmres_parameter
-            type(lib_mie_simulation_parameter_type), intent(inout) :: simulation_parameter
             logical, intent(in), optional :: use_ml_fmm
             logical, intent(in), optional :: save_solution
 
@@ -121,8 +122,8 @@ module lib_mie_ms_solver_GMRES
             nout = 6
 
             ! calculate size(x) = size(b)
-            n_range = simulation_parameter%spherical_harmonics%n_range
-            no_of_spheres = size(simulation_parameter%sphere_list)
+            n_range = simulation_data%spherical_harmonics%n_range
+            no_of_spheres = size(simulation_data%sphere_list)
 
             lda = no_of_spheres * 2 * ( (1 + n_range(2))**2 - n_range(1) )
 
@@ -171,11 +172,11 @@ module lib_mie_ms_solver_GMRES
             icntl(8) = m_residual_calc
 
             ! set initial guess x_0
-            call lib_mie_ms_solver_get_vector_x(simulation_parameter, vector)
+            call lib_mie_ms_solver_get_vector_x(vector)
             work(1:lda) = vector
 
             ! Initialise the right hand side b
-            call lib_mie_ms_solver_get_vector_b(simulation_parameter, vector)
+            call lib_mie_ms_solver_get_vector_b(vector)
             work(lda+1:2*lda) = vector
 
             n = lda
@@ -198,7 +199,7 @@ module lib_mie_ms_solver_GMRES
                     !        work(colz) <-- A * work(colx)
 !                    call zgemv('N',n,n,ONE,a,lda,work(colx),1, &
 !                               ZERO,work(colz),1)
-                    call lib_mie_ms_solver_calculate_vector_b(simulation_parameter, work(colx:colx+lda-1), vector, m_use_ml_fmm)
+                    call lib_mie_ms_solver_calculate_vector_b(work(colx:colx+lda-1), vector, m_use_ml_fmm)
                     work(colz:colz+lda-1) = vector
 
                     cycle
@@ -258,7 +259,7 @@ module lib_mie_ms_solver_GMRES
             end do
 
             if (m_save_solution) then
-                call lib_mie_ms_solver_set_sphere_parameter_ab_nm(work(1:lda), simulation_parameter)
+                call lib_mie_ms_solver_set_sphere_parameter_ab_nm(work(1:lda))
             end if
 
         end subroutine lib_mie_ms_solver_gmres_run

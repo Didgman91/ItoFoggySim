@@ -1,11 +1,14 @@
 module lib_mie_multi_sphere
     use libmath
+
     use lib_field
+
     use lib_mie_type
     use lib_mie_type_functions
-    use lib_mie_ms_helper_functions
     use lib_mie_ms_solver_gmres
     use lib_mie_single_sphere
+
+    use lib_mie_ms_data_container
     implicit none
 
     private
@@ -71,13 +74,12 @@ module lib_mie_multi_sphere
 !
 !        end subroutine lib_mie_ms_get_interactive_scattering_coefficients
 
-        subroutine lib_mie_ms_calculate_scattering_coefficients_ab_nm(simulation, update_initial_guess_with_n_max, &
+        subroutine lib_mie_ms_calculate_scattering_coefficients_ab_nm(update_initial_guess_with_n_max, &
                                                                       step_size, dynamic_step_size, &
                                                                       use_ml_fmm)
             use file_io
             implicit none
             ! dummy
-            type(lib_mie_simulation_parameter_type), intent(inout) :: simulation
 
             integer, intent(in), optional :: update_initial_guess_with_n_max
             integer, intent(in), optional :: step_size
@@ -95,7 +97,7 @@ module lib_mie_multi_sphere
             logical :: m_use_ml_fmm
 
             ! initial values
-            call lib_mie_ss_calculate_scattering_coefficients_ab_nm(simulation)
+            call lib_mie_ss_calculate_scattering_coefficients_ab_nm()
 
             gmres_parameter = lib_mie_ms_solver_gmres_get_parameter_std_values()
             gmres_parameter%use_initial_guess = .true.
@@ -105,7 +107,7 @@ module lib_mie_multi_sphere
             if (present(use_ml_fmm)) m_use_ml_fmm = use_ml_fmm
 
             if ( present(update_initial_guess_with_n_max) ) then
-                n_max = simulation%spherical_harmonics%n_range(2)
+                n_max = simulation_data%spherical_harmonics%n_range(2)
 
 
                 if (present(step_size)) then
@@ -126,22 +128,22 @@ module lib_mie_multi_sphere
 
                 else
 
-                    simulation%spherical_harmonics%n_range(2) = update_initial_guess_with_n_max
+                    simulation_data%spherical_harmonics%n_range(2) = update_initial_guess_with_n_max
 
                     print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
-                    print *, "  n = ", simulation%spherical_harmonics%n_range(2)
+                    print *, "  n = ", simulation_data%spherical_harmonics%n_range(2)
                     print *, "  "
 
                     gmres_parameter%max_iterations = 100
-                    call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
+                    call lib_mie_ms_solver_gmres_run(gmres_parameter, m_use_ml_fmm)
 
-                    simulation%spherical_harmonics%n_range(2) = n_max
+                    simulation_data%spherical_harmonics%n_range(2) = n_max
                     print *, ""
                     print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
-                    print *, "  n = ", simulation%spherical_harmonics%n_range(2)
+                    print *, "  n = ", simulation_data%spherical_harmonics%n_range(2)
                     print *, ""
                     gmres_parameter%max_iterations = 1000
-                    call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
+                    call lib_mie_ms_solver_gmres_run(gmres_parameter, m_use_ml_fmm)
 
                 end if
 
@@ -149,9 +151,9 @@ module lib_mie_multi_sphere
             else
                 print *, ""
                 print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
-                print *, "  n = ", simulation%spherical_harmonics%n_range(2)
+                print *, "  n = ", simulation_data%spherical_harmonics%n_range(2)
                 print *, ""
-                call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
+                call lib_mie_ms_solver_gmres_run(gmres_parameter, m_use_ml_fmm)
             end if
 
             contains
@@ -160,23 +162,23 @@ module lib_mie_multi_sphere
                     implicit none
 
                     do n=update_initial_guess_with_n_max, n_max - m_step_size, step_size
-                        simulation%spherical_harmonics%n_range(2) = n
+                        simulation_data%spherical_harmonics%n_range(2) = n
 
                         print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
-                        print *, "n = ", simulation%spherical_harmonics%n_range(2)
+                        print *, "n = ", simulation_data%spherical_harmonics%n_range(2)
                         print *, ""
 
                         gmres_parameter%max_iterations = 100
-                        call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
+                        call lib_mie_ms_solver_gmres_run(gmres_parameter, m_use_ml_fmm)
                     end do
 
-                    simulation%spherical_harmonics%n_range(2) = n_max
+                    simulation_data%spherical_harmonics%n_range(2) = n_max
                     print *, ""
                     print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
-                    print *, "  n = ", simulation%spherical_harmonics%n_range(2)
+                    print *, "  n = ", simulation_data%spherical_harmonics%n_range(2)
                     print *, ""
                     gmres_parameter%max_iterations = 1000
-                    call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
+                    call lib_mie_ms_solver_gmres_run(gmres_parameter, m_use_ml_fmm)
                 end subroutine calc_with_steps
 
                 subroutine calc_with_dynmaic_step_size()
@@ -191,32 +193,32 @@ module lib_mie_multi_sphere
                     integer :: state
 
 
-                    simulation%spherical_harmonics%n_range(2) = n
+                    simulation_data%spherical_harmonics%n_range(2) = n
                     print *, ""
                     print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
-                    print *, "  n = ", simulation%spherical_harmonics%n_range(2)
+                    print *, "  n = ", simulation_data%spherical_harmonics%n_range(2)
                     print *, ""
 
-                    call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
+                    call lib_mie_ms_solver_gmres_run(gmres_parameter, m_use_ml_fmm)
 
                     state = state_test_next_step
 
                     do
                         if (state .eq. state_test_next_step) then
                             if (n + m_step_size .ge. n_max) then
-                                simulation%spherical_harmonics%n_range(2) = n_max
+                                simulation_data%spherical_harmonics%n_range(2) = n_max
                             else
-                                simulation%spherical_harmonics%n_range(2) = n + m_step_size
+                                simulation_data%spherical_harmonics%n_range(2) = n + m_step_size
                             end if
 
                             if (m_step_size .gt. 1) then
                                 print *, ""
                                 print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
-                                print *, "  n = ", simulation%spherical_harmonics%n_range(2)
+                                print *, "  n = ", simulation_data%spherical_harmonics%n_range(2)
                                 print *, ""
 
                                 gmres_parameter%max_iterations = 1
-                                call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
+                                call lib_mie_ms_solver_gmres_run(gmres_parameter, m_use_ml_fmm)
 
                                 if (gmres_parameter%backward_error .lt. 1D-3) then
                                     if (n + m_step_size .ge. n_max) then
@@ -243,15 +245,15 @@ module lib_mie_multi_sphere
                             end if
 
                         else if (state .eq. state_calculate) then
-                            simulation%spherical_harmonics%n_range(2) = n
+                            simulation_data%spherical_harmonics%n_range(2) = n
 
                             print *, ""
                             print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
-                            print *, "  n = ", simulation%spherical_harmonics%n_range(2)
+                            print *, "  n = ", simulation_data%spherical_harmonics%n_range(2)
                             print *, ""
 
                             gmres_parameter%max_iterations = 1000
-                            call lib_mie_ms_solver_gmres_run(gmres_parameter, simulation, m_use_ml_fmm)
+                            call lib_mie_ms_solver_gmres_run(gmres_parameter, m_use_ml_fmm)
                             old_backward_error = gmres_parameter%backward_error
                             m_step_size = step_size
 
@@ -284,10 +286,9 @@ module lib_mie_multi_sphere
         !       simulation data set
         !   x_0: cartesian_coordinate_real_type
         !
-        function lib_mie_ms_get_field(simulation, x_0) result(field)
+        function lib_mie_ms_get_field(x_0) result(field)
             implicit none
             ! dummy
-            type(lib_mie_simulation_parameter_type), intent(in) :: simulation
             type(cartesian_coordinate_real_type), intent(in) :: x_0
 
             type(cartesian_coordinate_cmplx_type), dimension(2) :: field
@@ -308,20 +309,20 @@ module lib_mie_multi_sphere
             type(spherical_coordinate_cmplx_type), dimension(:, :), allocatable :: buffer_field
 
 
-            e_field_0 = simulation%illumination%e_field_0
-            k_0 = 2 * PI / simulation%illumination%lambda_0
-            n_medium = simulation%refractive_index_medium
+            e_field_0 = simulation_data%illumination%e_field_0
+            k_0 = 2 * PI / simulation_data%illumination%lambda_0
+            n_medium = simulation_data%refractive_index_medium
 
-            allocate(buffer_field(lbound(simulation%sphere_list, 1):ubound(simulation%sphere_list, 1), 2))
+            allocate(buffer_field(lbound(simulation_data%sphere_list, 1):ubound(simulation_data%sphere_list, 1), 2))
 
             field(:)%x = dcmplx(0,0)
             field(:)%y = dcmplx(0,0)
             field(:)%z = dcmplx(0,0)
 
-            do sphere_no = lbound(simulation%sphere_list, 1), ubound(simulation%sphere_list, 1)
-                sphere = simulation%sphere_list(sphere_no)
+            do sphere_no = lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
+                sphere = simulation_data%sphere_list(sphere_no)
                 parameter_no = sphere%sphere_parameter_index
-                sphere_parameter = simulation%sphere_parameter_list(parameter_no)
+                sphere_parameter = simulation_data%sphere_parameter_list(parameter_no)
 
                 x_j = x_0 - sphere%d_0_j
 
@@ -388,7 +389,6 @@ module lib_mie_multi_sphere
                 ! parameter
                 integer, parameter :: number_of_waves = 1
                 ! auxiliaray
-                type(lib_mie_simulation_parameter_type) :: simulation
 
                 ! illumination parameter
                 double precision :: lambda_0
@@ -430,9 +430,10 @@ module lib_mie_multi_sphere
                 ! WALL-time
                 INTEGER :: test_count_start_sub, test_count_finish_sub, test_count_rate_sub
 
-                simulation%spherical_harmonics%z_selector_incident_wave = 1
-                simulation%spherical_harmonics%z_selector_scatterd_wave = 3
-                simulation%spherical_harmonics%z_selector_translation = 1
+                simulation_data%spherical_harmonics%z_selector_incident_wave = 1
+                simulation_data%spherical_harmonics%z_selector_scatterd_wave = 3
+                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 1
+                simulation_data%spherical_harmonics%z_selector_translation_le_r = 3
 
                 ! set illumination parameter
                 e_field_0 = 1
@@ -442,7 +443,7 @@ module lib_mie_multi_sphere
 
                 k_0 = 2 * PI / lambda_0
 
-                simulation%illumination%lambda_0 = lambda_0
+                simulation_data%illumination%lambda_0 = lambda_0
 
                 plane_wave_g(:) = 1
 
@@ -463,60 +464,60 @@ module lib_mie_multi_sphere
 !                buffer_car = buffer_car / abs(buffer_car) / lambda
 !                plane_wave_k(2) = buffer_car
 
-                simulation%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, e_field_0, &
+                simulation_data%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, e_field_0, &
                                                                                         plane_wave_g, &
                                                                                         plane_wave_k, &
                                                                                         plane_wave_d_0_i)
 
-                simulation%refractive_index_medium = n_medium
+                simulation_data%refractive_index_medium = n_medium
 
                 ! set spheres
-                allocate(simulation%sphere_list(7))
-                simulation%sphere_list(1)%sphere_parameter_index = 1
-                simulation%sphere_list(2)%sphere_parameter_index = 1
-                simulation%sphere_list(3)%sphere_parameter_index = 2
-                simulation%sphere_list(4)%sphere_parameter_index = 1
-                simulation%sphere_list(5)%sphere_parameter_index = 1
-                simulation%sphere_list(6)%sphere_parameter_index = 2
-                simulation%sphere_list(7)%sphere_parameter_index = 2
+                allocate(simulation_data%sphere_list(7))
+                simulation_data%sphere_list(1)%sphere_parameter_index = 1
+                simulation_data%sphere_list(2)%sphere_parameter_index = 1
+                simulation_data%sphere_list(3)%sphere_parameter_index = 2
+                simulation_data%sphere_list(4)%sphere_parameter_index = 1
+                simulation_data%sphere_list(5)%sphere_parameter_index = 1
+                simulation_data%sphere_list(6)%sphere_parameter_index = 2
+                simulation_data%sphere_list(7)%sphere_parameter_index = 2
 
                 sphere_d_0_j%x = -1.05 * unit_mu
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 0
-                simulation%sphere_list(1)%d_0_j = sphere_d_0_j
+                simulation_data%sphere_list(1)%d_0_j = sphere_d_0_j
 
                 sphere_d_0_j%x = 1.05 * unit_mu
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 0
-                simulation%sphere_list(2)%d_0_j = sphere_d_0_j
+                simulation_data%sphere_list(2)%d_0_j = sphere_d_0_j
 
                 sphere_d_0_j%x = 0
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 3 * unit_mu
-                simulation%sphere_list(3)%d_0_j = sphere_d_0_j
+                simulation_data%sphere_list(3)%d_0_j = sphere_d_0_j
 
                 sphere_d_0_j%x = -1.5 * unit_mu
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 3 * unit_mu
-                simulation%sphere_list(4)%d_0_j = sphere_d_0_j
+                simulation_data%sphere_list(4)%d_0_j = sphere_d_0_j
 
                 sphere_d_0_j%x = 1.5 * unit_mu
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 3 * unit_mu
-                simulation%sphere_list(5)%d_0_j = sphere_d_0_j
+                simulation_data%sphere_list(5)%d_0_j = sphere_d_0_j
 
                 sphere_d_0_j%x = -3 * unit_mu
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 5 * unit_mu
-                simulation%sphere_list(6)%d_0_j = sphere_d_0_j
+                simulation_data%sphere_list(6)%d_0_j = sphere_d_0_j
 
                 sphere_d_0_j%x = 3 * unit_mu
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 5 * unit_mu
-                simulation%sphere_list(7)%d_0_j = sphere_d_0_j
+                simulation_data%sphere_list(7)%d_0_j = sphere_d_0_j
 
                 ! set sphere parameter
-                allocate(simulation%sphere_parameter_list(2))
+                allocate(simulation_data%sphere_parameter_list(2))
 
                 ! set 1
                 r_particle = 1 * unit_mu
@@ -533,11 +534,11 @@ module lib_mie_multi_sphere
                     print *, "  rv(2): ", n_range(2)
                 end if
 
-                simulation%spherical_harmonics%n_range = n_range
+                simulation_data%spherical_harmonics%n_range = n_range
 
                 call lib_math_factorial_initialise_caching(n_range(2))
 
-                simulation%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
+                simulation_data%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
                                                                                           r_particle, n_particle, &
                                                                                           n_range)
 
@@ -556,25 +557,25 @@ module lib_mie_multi_sphere
                     print *, "  rv(2): ", n_range(2)
                 end if
 
-                simulation%sphere_parameter_list(2) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
+                simulation_data%sphere_parameter_list(2) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
                                                                                           r_particle, n_particle, &
                                                                                           n_range)
 
-                call lib_mie_ss_constructor(simulation)
+                call lib_mie_ss_constructor()
 
 
-                n_range = simulation%spherical_harmonics%n_range
+                n_range = simulation_data%spherical_harmonics%n_range
                 call fwig_table_init(4 * n_range(2), 3)
                 call fwig_temp_init(4 * n_range(2))
 
                 call system_clock(test_count_start_sub, test_count_rate_sub)
                 call cpu_time(test_start_sub)
 
-!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(simulation, int(5), 6)
-                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(simulation, int(n_range(2) / 2), 4, use_ml_fmm = .true.)
-!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(simulation, int(n_range(2) / 2), 2)
-!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(simulation, int(n_range(2) / 2))
-!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(simulation)
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(5), 6)
+                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(n_range(2) / 2), 4, use_ml_fmm = .true.)
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(, int(n_range(2) / 2), 2)
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(, int(n_range(2) / 2))
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
 
                 call cpu_time(test_finish_sub)
                 call system_clock(test_count_finish_sub, test_count_rate_sub)
@@ -610,7 +611,7 @@ module lib_mie_multi_sphere
                         x_0%y = y
                         x_0%z = z
 
-                        field = lib_mie_ms_get_field(simulation, x_0)
+                        field = lib_mie_ms_get_field(x_0)
                         e_field_s(i,ii) = field(1)
                         h_field_s(i,ii) = field(2)
                     end do
@@ -631,7 +632,6 @@ module lib_mie_multi_sphere
                 ! parameter
                 integer, parameter :: number_of_waves = 1
                 ! auxiliaray
-                type(lib_mie_simulation_parameter_type) :: simulation
 
                 ! illumination parameter
                 double precision :: lambda_0
@@ -668,9 +668,10 @@ module lib_mie_multi_sphere
                 integer :: no_x_values
                 integer :: no_z_values
 
-                simulation%spherical_harmonics%z_selector_incident_wave = 1
-                simulation%spherical_harmonics%z_selector_scatterd_wave = 3
-                simulation%spherical_harmonics%z_selector_translation = 1
+                simulation_data%spherical_harmonics%z_selector_incident_wave = 1
+                simulation_data%spherical_harmonics%z_selector_scatterd_wave = 3
+                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 1
+                simulation_data%spherical_harmonics%z_selector_translation_le_r = 3
 
                 ! set illumination parameter
                 e_field_0 = 1
@@ -680,7 +681,7 @@ module lib_mie_multi_sphere
 
                 k_0 = 2 * PI / lambda_0
 
-                simulation%illumination%lambda_0 = lambda_0
+                simulation_data%illumination%lambda_0 = lambda_0
 
                 plane_wave_g(:) = 1
 
@@ -701,30 +702,30 @@ module lib_mie_multi_sphere
 !                buffer_car = buffer_car / abs(buffer_car) / lambda
 !                plane_wave_k(2) = buffer_car
 
-                simulation%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, e_field_0, &
+                simulation_data%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, e_field_0, &
                                                                                         plane_wave_g, &
                                                                                         plane_wave_k, &
                                                                                         plane_wave_d_0_i)
 
-                simulation%refractive_index_medium = n_medium
+                simulation_data%refractive_index_medium = n_medium
 
                 ! set spheres
-                allocate(simulation%sphere_list(2))
-                simulation%sphere_list(1)%sphere_parameter_index = 1
-                simulation%sphere_list(2)%sphere_parameter_index = 1
+                allocate(simulation_data%sphere_list(2))
+                simulation_data%sphere_list(1)%sphere_parameter_index = 1
+                simulation_data%sphere_list(2)%sphere_parameter_index = 1
 
                 sphere_d_0_j%x = 0
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 0
-                simulation%sphere_list(1)%d_0_j = sphere_d_0_j
+                simulation_data%sphere_list(1)%d_0_j = sphere_d_0_j
 
                 sphere_d_0_j%x = 0
                 sphere_d_0_j%y = 0
                 sphere_d_0_j%z = 3 * unit_mu
-                simulation%sphere_list(2)%d_0_j = sphere_d_0_j
+                simulation_data%sphere_list(2)%d_0_j = sphere_d_0_j
 
                 ! set sphere parameter
-                allocate(simulation%sphere_parameter_list(2))
+                allocate(simulation_data%sphere_parameter_list(2))
 
                 ! set 1
                 r_particle = 1 * unit_mu
@@ -741,9 +742,9 @@ module lib_mie_multi_sphere
                     print *, "  rv(2): ", n_range(2)
                 end if
 
-                simulation%spherical_harmonics%n_range = n_range
+                simulation_data%spherical_harmonics%n_range = n_range
 
-                simulation%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
+                simulation_data%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
                                                                                           r_particle, n_particle, &
                                                                                           n_range)
 
@@ -762,14 +763,14 @@ module lib_mie_multi_sphere
                     print *, "  rv(2): ", n_range(2)
                 end if
 
-                simulation%sphere_parameter_list(2) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
+                simulation_data%sphere_parameter_list(2) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
                                                                                           r_particle, n_particle, &
                                                                                           n_range)
 
-                call lib_mie_ss_constructor(simulation)
+                call lib_mie_ss_constructor()
 
 
-                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(simulation)
+                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
 
                 ! evaluate and export
                 x_range = (/ -5.0_8 * unit_mu, 5.0_8 * unit_mu /)
@@ -795,7 +796,7 @@ module lib_mie_multi_sphere
                         x_0%y = y
                         x_0%z = z
 
-                        field = lib_mie_ms_get_field(simulation, x_0)
+                        field = lib_mie_ms_get_field(x_0)
                         e_field_s(i,ii) = field(1)
                         h_field_s(i,ii) = field(2)
                     end do

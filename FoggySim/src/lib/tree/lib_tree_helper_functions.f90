@@ -54,8 +54,8 @@
 
 module lib_tree_helper_functions
     !$  use omp_lib
-    use lib_tree_type
     use file_io
+    use lib_tree_type
     implicit none
 
     private

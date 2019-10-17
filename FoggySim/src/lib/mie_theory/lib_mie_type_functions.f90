@@ -2,7 +2,6 @@ module lib_mie_type_functions
     use libmath
     use lib_mie_type
     use lib_mie_ss_helper_functions
-    use lib_mie_vector_spherical_harmonics
     implicit none
 
     contains

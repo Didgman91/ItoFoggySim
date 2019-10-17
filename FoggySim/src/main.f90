@@ -13,8 +13,6 @@ program main
     use ml_fmm_math
     use lib_ml_fmm_type_operator
 
-    use lib_mie_vector_spherical_harmonics
-
     use lib_mie_single_sphere
     use lib_mie_ss_helper_functions
 
