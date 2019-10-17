@@ -622,6 +622,8 @@ module lib_mie_multi_sphere
                 call fwig_temp_free()
                 call fwig_table_free()
 
+                call lib_mie_ms_data_container_destructor()
+
             end function test_lib_mie_ms_get_field_parallel_sphere_assemply
 
             function test_lib_mie_ms_get_field_serial_sphere_assemply() result(rv)
@@ -804,6 +806,7 @@ module lib_mie_multi_sphere
 
                 rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
 
+                call lib_mie_ms_data_container_destructor()
 
             end function test_lib_mie_ms_get_field_serial_sphere_assemply
         end function

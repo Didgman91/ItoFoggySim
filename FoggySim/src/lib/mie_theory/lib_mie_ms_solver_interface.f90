@@ -1582,6 +1582,8 @@ module lib_mie_ms_solver_interface
                         end if
                     end do
 
+                    call lib_mie_ms_data_container_destructor()
+
                 end function test_lib_mie_ms_solver_calculate_vector_b_all
 
                 function test_lib_mie_ms_solver_calculate_vector_b_selection() result(rv)
@@ -1760,6 +1762,8 @@ module lib_mie_ms_solver_interface
                         end if
                     end do
 
+                    call lib_mie_ms_data_container_destructor()
+
                 end function test_lib_mie_ms_solver_calculate_vector_b_selection
 
                 function test_lib_mie_ms_solver_get_vector_b_selection() result(rv)
@@ -1878,6 +1882,8 @@ module lib_mie_ms_solver_interface
                             print *, "  vector_b: ", i, ": OK"
                         end if
                     end do
+
+                    call lib_mie_ms_data_container_destructor()
 
                 end function test_lib_mie_ms_solver_get_vector_b_selection
 
@@ -2024,6 +2030,8 @@ module lib_mie_ms_solver_interface
                             end do
                         end do
                     end do
+
+                    call lib_mie_ms_data_container_destructor()
 
                 end function test_lib_mie_ms_solver_set_sphere_parameter_ab_nm_selection
 
