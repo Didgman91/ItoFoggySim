@@ -2922,7 +2922,13 @@ module lib_math_type_operator
             r = sqrt(rhs%x * rhs%x + rhs%y * rhs%y + rhs%z * rhs%z)
 
             lhs%rho = r
-            lhs%theta = acos(rhs%z / r)
+
+            if (r .eq. 0) then
+                lhs%theta = 0
+            else
+                lhs%theta = acos(rhs%z / r)
+            end if
+
             lhs%phi = atan(rhs%y, rhs%x)
 
         end subroutine lib_math_cartesian_point_to_spherical_point
@@ -2967,15 +2973,6 @@ module lib_math_type_operator
             sin_theta = sin(theta)
             cos_phi = cos(phi)
             sin_phi = sin(phi)
-
-!            lhs%x = rhs%rho * (sin_theta * cos_phi) &
-!                    + rhs%theta * (sin_theta * sin_phi) &
-!                    + rhs%phi * cos_theta
-!            lhs%y = rhs%rho * (cos_theta * cos_phi) &
-!                      + rhs%theta * (cos_theta * sin_phi) &
-!                      - rhs%phi * sin_theta
-!            lhs%z = - rhs%rho * sin_phi &
-!                    + rhs%theta * cos_phi
 
             lhs%x = rhs%rho * (sin_theta * cos_phi) &
                     + rhs%theta * (cos_theta * cos_phi) &
@@ -3099,15 +3096,6 @@ module lib_math_type_operator
             sin_theta = sin(theta)
             cos_phi = cos(phi)
             sin_phi = sin(phi)
-
-!            lhs%rho = rhs%x * (sin_theta * cos_phi) &
-!                    + rhs%y * (cos_theta * cos_phi) &
-!                    - rhs%z * sin_phi
-!            lhs%theta = rhs%x * (sin_theta * sin_phi) &
-!                      + rhs%y * (cos_theta * sin_phi) &
-!                      + rhs%z * cos_phi
-!            lhs%phi = rhs%x * cos_theta &
-!                    - rhs%y * sin_theta
 
             lhs%rho = rhs%x * (sin_theta *cos_phi) &
                     + rhs%y * (sin_theta * sin_phi) &
