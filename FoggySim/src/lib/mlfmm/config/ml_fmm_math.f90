@@ -7,42 +7,99 @@ module ml_fmm_math
 
     ! --- public functions ---
     public :: ml_fmm_type_operator_get_procedures
-    public :: ml_fmm_get_procedures
 
+    public :: ml_fmm_get_test_procedures
     public :: lib_ml_fmm_type_operator_test_functions
 
     contains
 
-    function ml_fmm_type_operator_get_procedures() result (operator_procedures)
+    ! Argument
+    ! ----
+    !   m_procedure_type: integer, optional (std=0)
+    !       operators manipulating the vector v, u and the coefficients C, D
+    !       0: dummy
+    !       1: a_nm and b_nm: type(list_list_cmplx)
+    function ml_fmm_type_operator_get_procedures(procedure_type) result (operator_procedures)
         implicit none
         ! dummy
+        integer, intent(in), optional :: procedure_type
         type(ml_fmm_type_operator_procedures) :: operator_procedures
 
-        ! load test procedure functions
-        operator_procedures%coefficient_add => test_c_add
-        operator_procedures%coefficient_set_zero => test_set_coefficient_zero
-        operator_procedures%cor => test_cor
-        operator_procedures%u_dot_coefficient => test_u_dot_coefficient
-        operator_procedures%coefficient_eq => test_coefficient_eq
-        operator_procedures%coefficient_ne => test_coefficient_ne
-        operator_procedures%v_add => test_v_operator_add
-        operator_procedures%v_add_0D => test_v_operator_add_0D
-        operator_procedures%v_sub => test_v_operator_sub
-        operator_procedures%v_sub_0D => test_v_operator_sub_0D
+        ! auxiliary
+        integer :: m_procedure_type
+
+        m_procedure_type = 0
+        if (present(procedure_type)) m_procedure_type = procedure_type
+
+        if (m_procedure_type .eq. 0) then
+            ! load test procedure functions
+            operator_procedures%coefficient_add => test_c_add
+            operator_procedures%coefficient_set_zero => test_set_coefficient_zero
+!            operator_procedures%u_dot_coefficient => test_u_dot_coefficient
+!            operator_procedures%coefficient_eq => test_coefficient_eq
+!            operator_procedures%coefficient_ne => test_coefficient_ne
+!            operator_procedures%v_add => test_v_operator_add
+            operator_procedures%v_add_0D => test_v_operator_add_0D
+!            operator_procedures%v_sub => test_v_operator_sub
+!            operator_procedures%v_sub_0D => test_v_operator_sub_0D
+        else if (m_procedure_type .eq. 1) then
+            operator_procedures%coefficient_add => ml_fmm_coefficient_add_operator_list_2_cmplx
+            operator_procedures%v_add_0D => ml_fmm_type_operator_v_add_0d_list_2_cmplx
+            operator_procedures%coefficient_set_zero => lib_ml_fmm_type_operator_set_coefficient_zero_list_2_cmplx
+        end if
 
     end function ml_fmm_type_operator_get_procedures
 
-    function ml_fmm_get_procedures() result (handle)
+    function ml_fmm_get_test_procedures() result (handle)
         implicit none
         ! dummy
         type(lib_ml_fmm_procedure_handles) :: handle
 
         handle%get_u_B_i => test_get_u_B_i
-        handle%get_phi_i_j => test_get_phi_i_j
+        handle%get_u_phi_i_j => test_get_u_phi_i_j
         handle%get_translation_RR  => test_translation_RR
         handle%get_translation_SR  => test_translation_SR
         handle%get_translation_SS  => test_translation_SS
+        handle%dor => test_dor
     end function
+
+    function ml_fmm_coefficient_add_operator_list_2_cmplx(lhs,rhs) result (rv)
+        use libmath
+        use ml_fmm_type
+        implicit none
+        ! dummy
+        type (lib_ml_fmm_coefficient), intent(in) :: lhs, rhs
+        type (lib_ml_fmm_coefficient) :: rv
+
+        rv%a_nm = lhs%a_nm + rhs%a_nm
+        rv%b_nm = lhs%b_nm + rhs%b_nm
+
+    end function ml_fmm_coefficient_add_operator_list_2_cmplx
+
+    function ml_fmm_type_operator_v_add_0d_list_2_cmplx(lhs, rhs) result(rv)
+        use libmath
+        use ml_fmm_type
+        implicit none
+        ! dummy
+        type (lib_ml_fmm_v), intent(in) :: lhs
+        type (lib_ml_fmm_v), intent(in) :: rhs
+        type (lib_ml_fmm_v) :: rv
+
+        rv%a_nm = lhs%a_nm + rhs%a_nm
+        rv%b_nm = lhs%b_nm + rhs%b_nm
+
+    end function ml_fmm_type_operator_v_add_0d_list_2_cmplx
+
+    subroutine lib_ml_fmm_type_operator_set_coefficient_zero_list_2_cmplx(coefficient)
+        use ml_fmm_type
+        implicit none
+        ! dummy
+        type(lib_ml_fmm_coefficient), intent(inout) :: coefficient
+
+        call init_list(coefficient%a_nm, 1 ,1, dcmplx(0,0))
+        call init_list(coefficient%b_nm, 1 ,1, dcmplx(0,0))
+
+    end subroutine lib_ml_fmm_type_operator_set_coefficient_zero_list_2_cmplx
 
     ! ----- test functions ----
     function lib_ml_fmm_type_operator_test_functions() result (error_counter)
@@ -77,18 +134,18 @@ module ml_fmm_math
             type(lib_ml_fmm_coefficient) :: rhs_coeff
             type(lib_ml_fmm_coefficient) :: res_coeff
             type(lib_tree_spatial_point) :: rhs_R
-            type(lib_ml_fmm_v) :: res_v
+!            type(lib_ml_fmm_v) :: res_v
 
             type(ml_fmm_type_operator_procedures) :: ml_fmm_operator_procedures
 
             ml_fmm_operator_procedures%coefficient_add => test_c_add
             ml_fmm_operator_procedures%coefficient_set_zero => test_set_coefficient_zero
-            ml_fmm_operator_procedures%cor => test_cor
-            ml_fmm_operator_procedures%u_dot_coefficient => test_u_dot_coefficient
-            ml_fmm_operator_procedures%v_add => test_v_operator_add
+!            ml_fmm_operator_procedures%dor => test_dor
+!            ml_fmm_operator_procedures%u_dot_coefficient => test_u_dot_coefficient
+!            ml_fmm_operator_procedures%v_add => test_v_operator_add
             ml_fmm_operator_procedures%v_add_0D => test_v_operator_add_0D
-            ml_fmm_operator_procedures%v_sub => test_v_operator_sub
-            ml_fmm_operator_procedures%v_sub_0D => test_v_operator_sub_0D
+!            ml_fmm_operator_procedures%v_sub => test_v_operator_sub
+!            ml_fmm_operator_procedures%v_sub_0D => test_v_operator_sub_0D
 
             call lib_ml_fmm_type_operator_constructor(ml_fmm_operator_procedures)
 !            call lib_ml_fmm_type_operator_constructor(test_c_add, test_u_dot_coefficient, test_cor, &
@@ -110,10 +167,10 @@ module ml_fmm_math
 
             res_coeff = lhs_coeff + rhs_coeff
 
-            res_coeff = lhs_u * res_coeff
+!            res_coeff = lhs_u * res_coeff
 
             rhs_R%x(:2) = (/1.5, 7.0/)
-            res_v = lhs_coeff .cor. rhs_R
+!            res_v = lhs_coeff .dor. rhs_R
 
             ! todo: add condition
             rv = .true.
@@ -162,11 +219,13 @@ module ml_fmm_math
         end if
     end function test_u_dot_coefficient
 
-    function test_cor(lhs, rhs)  result (rv)
+    function test_dor(D, x_c, y_j, element_number_j)  result (rv)
         implicit none
         ! dummy
-        type(lib_ml_fmm_coefficient), intent(in) :: lhs
-        type(lib_tree_spatial_point), intent(in) :: rhs
+        type(lib_ml_fmm_coefficient), intent(in) :: D
+        type(lib_tree_spatial_point), intent(in) :: x_c
+        type(lib_tree_spatial_point), intent(in) :: y_j
+        integer(kind=4), intent(in) :: element_number_j
         type(lib_ml_fmm_v) :: rv
 
         ! auxiliary
@@ -176,12 +235,12 @@ module ml_fmm_math
         allocate (rv%dummy(1))
         rv%dummy(1) = 0
 
-        length = size(lhs%dummy)
+        length = size(D%dummy)
         do i=1, length
-            rv%dummy(1) = rv%dummy(1) + lhs%dummy(i) * rhs%x(1)
+            rv%dummy(1) = rv%dummy(1) + D%dummy(i) * (y_j%x(1) - x_c%x(1))
         end do
 
-    end function test_cor
+    end function test_dor
 
     function test_coefficient_eq(lhs, rhs) result (rv)
         implicit none
@@ -298,14 +357,15 @@ module ml_fmm_math
         allocate(u_B_i%dummy, source = (/real(data_element%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)/))
     end function
 
-    function test_get_phi_i_j(data_element_i, element_number, y_j) result(rv)
+    function test_get_u_phi_i_j(data_element_i, element_number_i, y_j, element_number_j) result(rv)
         use lib_tree_public
         use ml_fmm_type
         implicit none
         ! dummy
         type(lib_tree_data_element), intent(in) :: data_element_i
-        integer(kind=4), dimension(:), allocatable, intent(in) :: element_number
+        integer(kind=4), intent(in) :: element_number_i
         type(lib_tree_spatial_point), intent(in) :: y_j
+        integer(kind=4), intent(in) :: element_number_j
         type(lib_ml_fmm_v) :: rv
 
 !        allocate(rv%dummy, source = (/data_element_i%uindex%n + abs(y_j)/))

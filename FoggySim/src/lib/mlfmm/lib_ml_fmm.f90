@@ -9,6 +9,7 @@ module lib_ml_fmm
     use ml_fmm_math
     use lib_ml_fmm_type_operator
     use lib_ml_fmm_helper_functions
+    use lib_ml_fmm_data_container
     implicit none
 
     private
@@ -16,23 +17,14 @@ module lib_ml_fmm
     ! --- public functions ---
     public :: lib_ml_fmm_constructor
     public :: lib_ml_fmm_destructor
+    public :: lib_ml_fmm_run
+
     public :: lib_ml_fmm_test_functions
 
     public :: lib_ml_fmm_hf_test_functions
 
     ! --- member ---
     type(lib_ml_fmm_procedure_handles) :: m_ml_fmm_handles
-
-    ! e.g. matrix vector product v = u*phi
-    ! order restiction:
-    !   1. elements of the X-hierarchy
-    !   2. elements of the XY-hierarchy
-    type(lib_ml_fmm_v), dimension(:), allocatable :: m_ml_fmm_u
-    ! e.g. matrix vector product v = u*phi
-    ! order restiction:
-    !   1. elements of the Y-hierarchy
-    !   2. elements of the XY-hierarchy
-    type(lib_ml_fmm_v), dimension(:), allocatable :: m_ml_fmm_v
 
     type(lib_ml_fmm_hierarchy), dimension(:), allocatable :: m_ml_fmm_hierarchy
 
@@ -52,16 +44,17 @@ module lib_ml_fmm
     ! 2. create ml fmm data set
     !       - C per box and per level (l_max up to l_min)
     !       - D per box and per level (l_min down to l_max)
-    subroutine lib_ml_fmm_constructor(data_elements)
+    subroutine lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures)
         implicit none
         ! dummy
         type(lib_ml_fmm_data), intent(inout) :: data_elements
+        type(ml_fmm_type_operator_procedures), intent(in) :: operator_procedures
+        type(lib_ml_fmm_procedure_handles), intent(in) :: ml_fmm_procedures
 
         ! auxiliaray
         type(lib_tree_data_element), dimension(:), allocatable :: data_concatenated
         type(lib_tree_correspondece_vector_element), dimension(:), allocatable :: correspondence_vector
         integer(kind=UINDEX_BYTES), dimension(3) :: length
-        type(ml_fmm_type_operator_procedures) :: operator_procedures
 
         ! concatenate X-, Y- and XY-hierarchy data
         !   length(1) = size(data_elements%X)
@@ -76,11 +69,11 @@ module lib_ml_fmm
         data_concatenated = lib_tree_get_element_list()
 
         ! initiate the ml fmm type operators
-        operator_procedures = ml_fmm_type_operator_get_procedures()
+!        operator_procedures = ml_fmm_type_operator_get_procedures()
         call lib_ml_fmm_type_operator_constructor(operator_procedures)
 
         ! initiate the ml fmm procedures
-        m_ml_fmm_handles = ml_fmm_get_procedures()
+        m_ml_fmm_handles = ml_fmm_procedures
 
         ! adjust Tree parameters
         m_tree_neighbourhood_size_k = 1!lib_ml_fmm_hf_get_neighbourhood_size(R_c1, r_c2)
@@ -811,11 +804,10 @@ module lib_ml_fmm
                                                                   element_number_e2))
 
         D = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
-        v_counter = 0
         do i=1, size(data_element_e1)
             if ((data_element_e1(i)%hierarchy .eq. HIERARCHY_Y) .or. &
                 (data_element_e1(i)%hierarchy .eq. HIERARCHY_XY)) then
-                v_counter = v_counter + 1
+                v_counter = element_number_e1(i)
                 m_ml_fmm_v(v_counter) = lib_ml_fmm_calculate_v_y_j(data_element_e1(i), element_number_e1(i), &
                                                                    data_element_e2, element_number_e2, D)
             end if
@@ -857,10 +849,12 @@ module lib_ml_fmm
         x_c = lib_tree_get_centre_of_box(data_element_y_j%uindex)
         y_j = data_element_y_j%point_x
 
-        rv = D .cor. (y_j - x_c)
+!        rv = D .dor. (y_j - x_c)
+
+        rv = m_ml_fmm_handles%dor(D, x_c, y_j, element_number_j)
 
         do i=1, size(data_element_e2)
-            rv = rv + m_ml_fmm_handles%get_phi_i_j(data_element_e2(i), element_number_e2, y_j)
+            rv = rv + m_ml_fmm_handles%get_u_phi_i_j(data_element_e2(i), element_number_e2(i), y_j, element_number_j)
         end do
 
     end function lib_ml_fmm_calculate_v_y_j
@@ -983,6 +977,8 @@ module lib_ml_fmm
             integer(kind=UINDEX_BYTES), parameter :: list_length = 10
             integer(kind=1), parameter :: element_type = 1
 
+            type(ml_fmm_type_operator_procedures) :: operator_procedures
+            type(lib_ml_fmm_procedure_handles) :: ml_fmm_procedures
             type(lib_ml_fmm_data) :: data_elements
 
              ! --- generate test data ---
@@ -1002,7 +998,10 @@ module lib_ml_fmm
             data_elements%Y(4)%point_x%x(1) = 0.99900001287460327D0
             data_elements%Y(4)%point_x%x(2) = 0.00099998712539672852D0
 
-            call lib_ml_fmm_constructor(data_elements)
+
+            operator_procedures = ml_fmm_type_operator_get_procedures()
+            ml_fmm_procedures = ml_fmm_get_test_procedures()
+            call lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures)
 
         end subroutine setup_hierarchy_with_test_data_2D
 
