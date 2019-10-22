@@ -32,24 +32,35 @@ module lib_math_factorial
             integer(kind=4) :: m
             real(kind=8) :: buffer
 
-            caching_factorial_nm_n_max = n_max
+            logical :: calc
+
 
             if (allocated(caching_factorial_nm%item)) then
-                deallocate(caching_factorial_nm%item)
+
+                if (caching_factorial_nm_n_max .lt. n_max) then
+                    calc = .false.
+                else
+                    calc = .true.
+                    deallocate(caching_factorial_nm%item)
+                end if
+            else
+                calc = .true.
             end if
 
-            allocate(caching_factorial_nm%item(0:n_max))
-            do n=0, n_max
-                allocate(caching_factorial_nm%item(n)%item(-n:n))
-            end do
-
-            ! pre-calculate
-            do n=0, n_max
-                do m = -n, n
-                    buffer = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m_core(n,m)
-                    caching_factorial_nm%item(n)%item(m) = buffer
+            if (calc) then
+                allocate(caching_factorial_nm%item(0:n_max))
+                do n=0, n_max
+                    allocate(caching_factorial_nm%item(n)%item(-n:n))
                 end do
-            end do
+
+                ! pre-calculate
+                do n=0, n_max
+                    do m = -n, n
+                        buffer = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m_core(n,m)
+                        caching_factorial_nm%item(n)%item(m) = buffer
+                    end do
+                end do
+            end if
 
         end subroutine
 
