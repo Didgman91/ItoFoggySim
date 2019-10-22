@@ -2546,6 +2546,9 @@ module lib_math_type_operator
             integer :: n
             integer :: m
 
+            integer, dimension(2) :: n_range_mutual
+            integer, dimension(2) :: n_range_full
+
             if (lbound(lhs%item, 1) .eq. lbound(rhs%item, 1) .and. &
                 ubound(lhs%item, 1) .eq. ubound(rhs%item, 1) ) then
                 call init_list(rv, lbound(lhs%item, 1), ubound(lhs%item, 1) - lbound(lhs%item, 1) + 1)
@@ -2558,8 +2561,61 @@ module lib_math_type_operator
                 end do
                 !$OMP END PARALLEL DO
             else
-                print *, "lib_math_list_list_cmplx_add: ERROR"
-                print *, "  size of lhs and rhs are not equal"
+                n_range_mutual(1) = max( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+                n_range_mutual(2) = min( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+
+                n_range_full(1) = min( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+                n_range_full(2) = max( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+
+                call init_list(rv, n_range_full(1), n_range_full(2) - n_range_full(1) + 1)
+
+                !$OMP PARALLEL DO PRIVATE(n, m)
+                do n=n_range_mutual(1), n_range_mutual(2)
+                    do m=-n, n
+                        rv%item(n)%item(m) = lhs%item(n)%item(m) + rhs%item(n)%item(m)
+                    end do
+                end do
+                !$OMP END PARALLEL DO
+
+                if (lbound(lhs%item, 1) .lt. n_range_mutual(1)) then
+                    !$OMP PARALLEL DO PRIVATE(n, m)
+                    do n=lbound(lhs%item, 1), n_range_mutual(1)-1
+                        do m=-n, n
+                            rv%item(n)%item(m) = lhs%item(n)%item(m)
+                        end do
+                    end do
+                    !$OMP END PARALLEL DO
+                else if (lbound(rhs%item, 1) .lt. n_range_mutual(1)) then
+                    !$OMP PARALLEL DO PRIVATE(n, m)
+                    do n=lbound(rhs%item, 1), n_range_mutual(1)-1
+                        do m=-n, n
+                            rv%item(n)%item(m) = rhs%item(n)%item(m)
+                        end do
+                    end do
+                    !$OMP END PARALLEL DO
+                end if
+
+                if (ubound(lhs%item, 1) .gt. n_range_mutual(2)) then
+                    !$OMP PARALLEL DO PRIVATE(n, m)
+                    do n=n_range_mutual(2)+1, ubound(lhs%item, 1)
+                        do m=-n, n
+                            rv%item(n)%item(m) = lhs%item(n)%item(m)
+                        end do
+                    end do
+                    !$OMP END PARALLEL DO
+                else if (ubound(rhs%item, 1) .gt. n_range_mutual(1)) then
+                    !$OMP PARALLEL DO PRIVATE(n, m)
+                    do n=n_range_mutual(2)+1, ubound(rhs%item, 1)
+                        do m=-n, n
+                            rv%item(n)%item(m) = rhs%item(n)%item(m)
+                        end do
+                    end do
+                    !$OMP END PARALLEL DO
+                end if
+
+
+!                print *, "lib_math_list_list_cmplx_add: ERROR"
+!                print *, "  size of lhs and rhs are not equal"
             end if
 
         end function lib_math_list_list_cmplx_add

@@ -747,13 +747,31 @@ module lib_math_legendre
 
             if (x .eq. 1.0_8 .or.&
                 x .eq. -1.0_8) then
-                !$OMP PARALLEL DO PRIVATE(n, m)
-                do n=1, n_max
-                    do m=-n, n
-                        pi_nm%item(n)%item(m) = get_associated_legendre_polynomial_limit(n, m)
-                    end do
+!                !$OMP PARALLEL DO PRIVATE(n, m)
+!                do n=1, n_max
+!                    do m=-n, n
+!                        pi_nm%item(n)%item(m) = get_associated_legendre_polynomial_limit(n, m)
+!                    end do
+!                end do
+!                !$OMP END PARALLEL DO
+
+                !$OMP PARALLEL DO PRIVATE(n)
+                do n = 1, n_max
+                    pi_nm%item(n)%item(:) = 0
+                    pi_nm%item(n)%item(-1) = -0.5_8 !0.5_8
+
+                    pi_nm%item(n)%item(1) = -n * (n + 1) / 2 !n * (n + 1) / 2
                 end do
                 !$OMP END PARALLEL DO
+
+                if (x .eq. -1.0_8) then
+                    !$OMP PARALLEL DO PRIVATE(n)
+                    do n = 2, n_max, 2
+                        pi_nm%item(n)%item(-1) = - pi_nm%item(n)%item(-1)
+                        pi_nm%item(n)%item(1) = - pi_nm%item(n)%item(1)
+                    end do
+                    !$OMP END PARALLEL DO
+                end if
             else
                 !$OMP PARALLEL DO PRIVATE(n, m)
                 do n=1, n_max
@@ -766,13 +784,31 @@ module lib_math_legendre
 
             if (x .eq. 1.0_8 .or.&
                 x .eq. -1.0_8) then
-                !$OMP PARALLEL DO PRIVATE(n, m)
-                do n=1, n_max
-                    do m=-n, n
-                        tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative_limit(n, m)
-                    end do
+!                !$OMP PARALLEL DO PRIVATE(n, m)
+!                do n=1, n_max
+!                    do m=-n, n
+!                        tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative_limit(n, m)
+!                    end do
+!                end do
+!                !$OMP END PARALLEL DO
+
+                !$OMP PARALLEL DO PRIVATE(n)
+                do n = 1, n_max
+                    tau_nm%item(n)%item(:) = 0
+                    tau_nm%item(n)%item(-1) = 0.5_8 !-0.5_8
+
+                    tau_nm%item(n)%item(1) = -n * (n + 1) / 2 !n * (n + 1) / 2
                 end do
                 !$OMP END PARALLEL DO
+
+                if (x .eq. -1.0_8) then
+                    !$OMP PARALLEL DO PRIVATE(n)
+                    do n = 1, n_max, 2
+                        tau_nm%item(n)%item(-1) = - pi_nm%item(n)%item(-1)
+                        tau_nm%item(n)%item(1) = - pi_nm%item(n)%item(1)
+                    end do
+                    !$OMP END PARALLEL DO
+                end if
             else
                 !$OMP PARALLEL DO PRIVATE(n, m)
                 do n=1, n_max

@@ -57,7 +57,7 @@
                             							
                             <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1113350870" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug">
                                 								
-                                <option id="gnu.fortran.compiler.option.misc.other.1558243378" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-openmp -pg -c -cpp -fmessage-length=0 -fPIC -fcheck=all -frecursive" valueType="string"/>
+                                <option id="gnu.fortran.compiler.option.misc.other.1558243378" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fopenmp -fmessage-length=0 -fcheck=all -cpp -mcmodel=large -frecursive" valueType="string"/>
                                 								
                                 <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.compiler.option.include.paths.175700948" name="Include paths (-I)" superClass="gnu.fortran.compiler.option.include.paths" valueType="includePath">
                                     									
