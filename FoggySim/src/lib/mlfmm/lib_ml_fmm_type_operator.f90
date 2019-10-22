@@ -519,7 +519,7 @@ module lib_ml_fmm_type_operator
 !        m_get_coefficient => operator_procedures%get_coefficient
 
         !m_v_add => operator_procedures%v_add
-        !m_v_add_0D => operator_procedures%v_add_0D
+        m_v_add_0D => operator_procedures%v_add_0D
         !m_v_sub => operator_procedures%v_sub
         !m_v_sub_0D => operator_procedures%v_sub_0D
 !        m_deallocate_coefficient_list => operator_procedures%deallocate_coefficient_list

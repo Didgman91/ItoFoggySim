@@ -2,11 +2,12 @@ module lib_mie_ms_ml_fmm_interface
     use libmath
 
     use lib_tree_public
-    use lib_ml_fmm
     use ml_fmm_type
+    use lib_ml_fmm
 
     use lib_mie_type
     use lib_mie_type_functions
+    use lib_mie_ms_solver_interface_helper_functions
 
     implicit none
 
@@ -18,6 +19,8 @@ module lib_mie_ms_ml_fmm_interface
 
     contains
 
+        ! HINT: simulation_data @ lib_mie_ms_data_container has to be initialised
+        !       - sphere_list
         subroutine lib_mie_ms_ml_fmm_constructor()
             use lib_ml_fmm_type_operator
             use ml_fmm_math
@@ -70,53 +73,53 @@ module lib_mie_ms_ml_fmm_interface
 
             ! auxiliary
             integer :: i
+            integer :: j
 
-            integer :: first
-            integer :: last
+            integer :: counter
 
             integer :: first_sphere
             integer :: last_sphere
 
-            integer :: sphere_parameter_no
-
-            integer :: counter
-            integer :: counter_sum
-
             integer(kind=4), dimension(2) :: n_range
 
-!            first_sphere = lbound(simulation_data%sphere_list, 1)
-!            last_sphere = ubound(simulation_data%sphere_list, 1)
-!
-!            n_range = simulation_data%spherical_harmonics%n_range
-!
-!            counter = (1 + n_range(2))**2 - n_range(1)**2
-!            counter_sum = 2 * (last_sphere - first_sphere + 1) * counter
-!
-!            x = lib_mie_ml_fmm_run(b)
-!
-!
-!            if (allocated(vector_b)) then
-!                if (size(vector_b, 1) .ne. counter_sum) then
-!                    deallocate(vector_b)
-!                    allocate(vector_b(counter_sum))
-!                end if
-!            else
-!                allocate(vector_b(counter_sum))
-!            end if
-!            vector_b = 0
-!
-!
-!            n_range = simulation_data%spherical_harmonics%n_range
-!
-!            call make_array(buffer_b_1_nm, buffer_array, n_range(1) , n_range(2) - n_range(1) + 1)
-!            last = first + counter - 1
-!            vector_b(first:last) = vector_b(first:last) + buffer_array
-!
-!            call make_array(buffer_b_2_nm, buffer_array, n_range(1) , n_range(2) - n_range(1) + 1)
-!            first = last + 1
-!            last = first + counter - 1
-!            vector_b(first:last) = vector_b(first:last) + buffer_array
+            type(list_list_cmplx) :: a_nm
+            type(list_list_cmplx) :: b_nm
 
+            type(lib_ml_fmm_v), dimension(:), allocatable :: b
+            type(lib_ml_fmm_v), dimension(:), allocatable :: x
+
+            first_sphere = lbound(simulation_data%sphere_list, 1)
+            last_sphere = ubound(simulation_data%sphere_list, 1)
+
+            n_range = simulation_data%spherical_harmonics%n_range
+
+            allocate ( x(size(simulation_data%sphere_list)) )
+
+            !$OMP PARALLEL DO PRIVATE(j, i, a_nm, b_nm)
+            do j = first_sphere, last_sphere
+                i = j - first_sphere + 1
+
+                call lib_mie_ms_solver_hf_get_list_list_cmplx_from_array(vector_x, i, n_range, &
+                                                                         a_nm, b_nm)
+
+                call move_alloc(a_nm%item, x(i)%a_nm%item)
+                call move_alloc(b_nm%item, x(i)%b_nm%item)
+            end do
+            !$OMP END PARALLEL DO
+
+            call lib_ml_fmm_run(x, b)
+
+            counter = (1 + n_range(2))**2 - n_range(1)**2
+            if (allocated(vector_b)) deallocate(vector_b)
+            allocate(vector_b(2 * counter * size(simulation_data%sphere_list)))
+
+            !$OMP PARALLEL DO PRIVATE(i, a_nm, b_nm)
+            do i = 1, size(simulation_data%sphere_list)
+                a_nm = b(i)%a_nm
+                b_nm = b(i)%b_nm
+                call lib_mie_ms_solver_hf_insert_list_list_cmplx_into_array(a_nm, b_nm, i, n_range, vector_b)
+            end do
+            !$OMP END PARALLEL DO
 
         end subroutine lib_mie_ms_ml_fmm_calculate_vector_b
 
@@ -216,24 +219,30 @@ module lib_mie_ms_ml_fmm_interface
             buffer_x_1_nm = m_ml_fmm_u(i)%a_nm
             buffer_x_2_nm = m_ml_fmm_u(i)%b_nm
 
-            !$OMP PARALLEL DO PRIVATE(n, m) &
-            !$OMP  PRIVATE(buffer_1_nm, buffer_2_nm)
+            call init_list(buffer_1_nm, n_range(1), n_range(2) - n_range(1) + 1)
+            call init_list(buffer_2_nm, n_range(1), n_range(2) - n_range(1) + 1)
+
+            !$OMP PARALLEL DO PRIVATE(n, m)
             do n = n_range(1), n_range(2)
                 do m = -n, n
                     if (n_range(2) .le. n_range_j(2) &
                         .and. n_range(1) .ge. n_range_j(1)) then
-                        u_B_i%a_nm%item(n)%item(m) = sum(a_nmnumu%item(n)%item(m) * buffer_x_1_nm &
+                        buffer_1_nm%item(n)%item(m) = sum(a_nmnumu%item(n)%item(m) * buffer_x_1_nm &
                                                          + b_nmnumu%item(n)%item(m) * buffer_x_2_nm)
 
-                        u_B_i%b_nm%item(n)%item(m) = sum(b_nmnumu%item(n)%item(m) * buffer_x_1_nm &
+                        buffer_2_nm%item(n)%item(m) = sum(b_nmnumu%item(n)%item(m) * buffer_x_1_nm &
                                                          + a_nmnumu%item(n)%item(m) * buffer_x_2_nm)
                     else
-                        u_B_i%a_nm%item(n)%item(m) = dcmplx(0,0)
-                        u_B_i%b_nm%item(n)%item(m) = dcmplx(0,0)
+                        buffer_1_nm%item(n)%item(m) = dcmplx(0,0)
+                        buffer_2_nm%item(n)%item(m) = dcmplx(0,0)
                     end if
                 end do
             end do
             !$OMP END PARALLEL DO
+
+            call move_alloc(buffer_1_nm%item, u_B_i%a_nm%item)
+            call move_alloc(buffer_2_nm%item, u_B_i%b_nm%item)
+
 
         end function lib_mie_ms_ml_fmm_get_u_B_i
 
@@ -340,6 +349,9 @@ module lib_mie_ms_ml_fmm_interface
             call lib_math_vector_spherical_harmonics_translation_coefficient(d_j_l, &
                     n_range, n_range, z_selector, &
                     a_nmnumu, b_nmnumu)
+
+            call init_list(A_i_2%a_nm, n_range(1), n_range(2) - n_range(1) +1)
+            call init_list(A_i_2%b_nm, n_range(1), n_range(2) - n_range(1) +1)
 
             !$OMP PARALLEL DO PRIVATE(n, m)
             do n = n_range(1), n_range(2)
@@ -605,10 +617,15 @@ module lib_mie_ms_ml_fmm_interface
             no = simulation_data%sphere_list(j)%sphere_parameter_index
             n_range_j = simulation_data%sphere_parameter_list(no)%n_range
 
+            a_n = simulation_data%sphere_parameter_list(no)%a_n
+            b_n = simulation_data%sphere_parameter_list(no)%b_n
+
             n_range_l(1) = lbound(d%a_nm%item, 1)
             n_range_l(2) = ubound(d%a_nm%item, 1)
 
             n_range = simulation_data%spherical_harmonics%n_range
+
+            z_selector = simulation_data%spherical_harmonics%z_selector_translation_le_r
 
             n_range_j(1) = max(n_range_j(1), n_range(1))
             n_range_j(2) = min(n_range_j(2), n_range(2))

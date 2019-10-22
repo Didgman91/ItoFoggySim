@@ -34,12 +34,17 @@ module lib_mie_single_sphere
         ! ----
         !   simulation: type(lib_mie_simulation_parameter_type) @ lib_mie_ms_data_container
         !       simulation data set
-        subroutine lib_mie_ss_constructor()
+        subroutine lib_mie_ss_constructor(n_range)
             use lib_mie_ms_data_container
             implicit none
             ! dummy
+            integer, dimension(2) :: n_range
+
+            ! auxiliary
 
             ! init helper functions (caching)
+            call lib_math_factorial_initialise_caching(n_range(2))
+
             call lib_mie_ss_init_illumination(simulation_data%illumination)
 
             call lib_mie_ss_init_sphere(simulation_data%sphere_parameter_list, simulation_data%refractive_index_medium)
@@ -1662,9 +1667,9 @@ module lib_mie_single_sphere
 !            if (.not. test_get_field_initial_incident_xu_real()) then
 !                rv = rv + 1
 !            end if
-            if (.not. test_get_field_initial_incident_multi_wave_real()) then
-                rv = rv + 1
-            end if
+!            if (.not. test_get_field_initial_incident_multi_wave_real()) then
+!                rv = rv + 1
+!            end if
             if (.not. test_get_field_scattered_plane_section_real()) then
                 rv = rv + 1
             end if

@@ -5,9 +5,15 @@ module lib_mie_ms_solver_interface
     use lib_mie_type_functions
 
     use lib_mie_ms_data_container
+
+    use lib_mie_ms_solver_interface_helper_functions
+
+    use lib_mie_ms_ml_fmm_interface
     implicit none
 
     private
+
+    public :: lib_mie_ms_solver_constructor
 
     public :: lib_mie_ms_solver_get_vector_b
     public :: lib_mie_ms_solver_get_vector_x
@@ -39,7 +45,23 @@ module lib_mie_ms_solver_interface
         module procedure lib_mie_ms_solver_set_sphere_parameter_ab_nm_selection
     end interface
 
+    logical :: m_use_ml_fmm
+
     contains
+
+        subroutine lib_mie_ms_solver_constructor(use_ml_fmm)
+            implicit none
+            ! dummy
+            logical, intent(in), optional :: use_ml_fmm
+
+            m_use_ml_fmm = .false.
+            if (present(use_ml_fmm)) m_use_ml_fmm = use_ml_fmm
+
+            if (m_use_ml_fmm) then
+                call lib_mie_ms_ml_fmm_constructor()
+            end if
+
+        end subroutine
 
         ! Formats problem of  multi sphere scattering to be able to use a solver.
         !
@@ -605,6 +627,7 @@ module lib_mie_ms_solver_interface
                 ! - ml_fmm_init <-- NOT HERE
                 ! - upward and downward pass
                 ! - final summation
+                call lib_mie_ms_ml_fmm_calculate_vector_b(vector_x, vector_b)
 
             else
                 call lib_mie_ms_solver_calculate_vector_b_without_transposed_all(vector_x, &
@@ -1329,131 +1352,6 @@ module lib_mie_ms_solver_interface
             end do
 !            !$OMP END PARALLEL DO
         end subroutine lib_mie_ms_solver_calculate_vector_b_with_transposed
-
-        ! Argument
-        ! ----
-        !   a_nm: type(list_list_cmplx)
-        !       coefficient of the element
-        !   b_nm: type(list_list_cmplx)
-        !       coefficient of the element
-        !   element_no: integer
-        !       number of the element
-        !   n_range: integer, dimension(2)
-        !
-        ! Returns
-        ! ----
-        !   array: double complex, dimension(:)
-        !
-        subroutine lib_mie_ms_solver_insert_list_list_cmplx_into_array(a_nm, b_nm, element_no, n_range, array)
-            implicit none
-            ! dummy
-            type(list_list_cmplx), intent(in) :: a_nm
-            type(list_list_cmplx), intent(in) :: b_nm
-            integer, intent(in) :: element_no
-            integer, dimension(2), intent(in) :: n_range
-
-            double complex, dimension(:), intent(inout) :: array
-
-            ! auxiliary
-            integer :: counter
-            integer :: first
-            integer :: last
-
-            double complex, dimension(:), allocatable :: buffer_array
-
-            counter = (1 + n_range(2))**2 - n_range(1)**2
-
-            first = 2 * (element_no - 1) * counter + 1
-            call make_array(a_nm, buffer_array, n_range(1) , n_range(2) - n_range(1) + 1)
-            last = first + counter - 1
-            array(first:last) = buffer_array
-
-            call make_array(b_nm, buffer_array, n_range(1) , n_range(2) - n_range(1) + 1)
-            first = last + 1
-            last = first + counter - 1
-            array(first:last) = buffer_array
-
-        end subroutine lib_mie_ms_solver_insert_list_list_cmplx_into_array
-
-        ! Argument
-        ! ----
-        !   a_nm: type(list_list_cmplx)
-        !       coefficient of the element
-        !   b_nm: type(list_list_cmplx)
-        !       coefficient of the element
-        !   element_no: integer
-        !       number of the element
-        !   n_range: integer, dimension(2)
-        !
-        ! Returns
-        ! ----
-        !   array: double complex, dimension(:)
-        !
-        subroutine lib_mie_ms_solver_add_list_list_cmplx_at_array(a_nm, b_nm, element_no, n_range, array)
-            implicit none
-            ! dummy
-            type(list_list_cmplx), intent(in) :: a_nm
-            type(list_list_cmplx), intent(in) :: b_nm
-            integer, intent(in) :: element_no
-            integer, dimension(2), intent(in) :: n_range
-
-            double complex, dimension(:), intent(inout) :: array
-
-            ! auxiliary
-            integer :: counter
-            integer :: first
-            integer :: last
-
-            double complex, dimension(:), allocatable :: buffer_array
-
-            counter = (1 + n_range(2))**2 - n_range(1)**2
-
-            first = 2 * (element_no - 1) * counter + 1
-            call make_array(a_nm, buffer_array, n_range(1) , n_range(2) - n_range(1) + 1)
-            last = first + counter - 1
-            array(first:last) =array(first:last) + buffer_array
-
-            call make_array(b_nm, buffer_array, n_range(1) , n_range(2) - n_range(1) + 1)
-            first = last + 1
-            last = first + counter - 1
-            array(first:last) = array(first:last) + buffer_array
-
-        end subroutine lib_mie_ms_solver_add_list_list_cmplx_at_array
-
-        subroutine lib_mie_ms_solver_get_list_list_cmplx_from_array(array, element_no, n_range, a_nm, b_nm)
-            implicit none
-            ! dummy
-            double complex, dimension(:), intent(in) :: array
-            integer, intent(in) :: element_no
-            integer, dimension(2), intent(in) :: n_range
-
-            type(list_list_cmplx), intent(inout) :: a_nm
-            type(list_list_cmplx), intent(inout) :: b_nm
-
-            ! auxiliary
-            integer :: counter
-            integer :: first
-            integer :: last
-
-            double complex, dimension(:), allocatable :: buffer_array
-
-            counter = (1 + n_range(2))**2 - n_range(1)**2
-
-            first = 2 * (element_no - 1) * counter + 1
-            last = first + counter - 1
-            call make_list(array(first:last), &
-                           n_range(1), n_range(2)-n_range(1)+1, &
-                           a_nm)
-            call remove_zeros(a_nm)
-
-            first = last + 1
-            last = first + counter - 1
-            call make_list(array(first:last), &
-                           n_range(1), n_range(2)-n_range(1)+1, &
-                           b_nm)
-            call remove_zeros(b_nm)
-
-        end subroutine
 
         function lib_mie_ms_solver_interface_test_functions() result(rv)
             implicit none

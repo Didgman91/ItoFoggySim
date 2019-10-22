@@ -15,6 +15,8 @@ module lib_mie_multi_sphere
 
     public :: lib_mie_multi_sphere_test_functions
 
+    logical :: m_use_ml_fmm
+
     contains
 
 !        ! Arguments
@@ -74,9 +76,57 @@ module lib_mie_multi_sphere
 !
 !        end subroutine lib_mie_ms_get_interactive_scattering_coefficients
 
+        ! Argument
+        ! ----
+        !   use_ml_fmm: logical, optional (std: .false.)
+        !       enables the ML FMM
+        subroutine lib_mie_ms_constructor(n_range, use_ml_fmm, init_with_single_sphere)
+            implicit none
+            ! dummy
+            integer, dimension(2), intent(in) :: n_range
+            logical, intent(in), optional :: use_ml_fmm
+            logical, intent(in), optional :: init_with_single_sphere
+
+            ! auxiliary
+            logical :: m_init_with_single_sphere
+
+            m_use_ml_fmm = .false.
+            if (present(use_ml_fmm)) m_use_ml_fmm = use_ml_fmm
+
+            m_init_with_single_sphere = .false.
+            if (present(init_with_single_sphere)) m_init_with_single_sphere = init_with_single_sphere
+
+            call fwig_table_init(4 * n_range(2), 3)
+            call fwig_temp_init(4 * n_range(2))
+
+            call lib_math_factorial_initialise_caching(2 * n_range(2))
+
+            if (m_init_with_single_sphere) then
+                call lib_mie_ss_constructor(n_range)
+            end if
+
+            call lib_mie_ms_solver_constructor(m_use_ml_fmm)
+
+            ! todo: init caching
+            !        - Tree: theta, phi
+!            if (m_use_ml_fmm) then
+!
+!            end if
+
+        end subroutine
+
+        ! Argument
+        ! ----
+        !   update_initial_guess_with_n_max: integer, optional
+        !       calculates the initial guess with n_max = *update_initial_guess_with_n_max*
+        !   step_size: integer, optional
+        !       if update_initial_guess_with_n_max was set, further iterations start with
+        !           n_max = update_initial_guess_with_n_max + i * step_size, i = 1, ...
+        !   dynamic_step_size: logical, optional (std: .false.)
+        !       If the next step with *step_size* is too large, this is detected by a significant reduction in the loss,
+        !       the *step* for the current iteration is reduced.
         subroutine lib_mie_ms_calculate_scattering_coefficients_ab_nm(update_initial_guess_with_n_max, &
-                                                                      step_size, dynamic_step_size, &
-                                                                      use_ml_fmm)
+                                                                      step_size, dynamic_step_size)
             use file_io
             implicit none
             ! dummy
@@ -84,7 +134,6 @@ module lib_mie_multi_sphere
             integer, intent(in), optional :: update_initial_guess_with_n_max
             integer, intent(in), optional :: step_size
             logical, intent(in), optional :: dynamic_step_size
-            logical, intent(in), optional :: use_ml_fmm
 
             ! auxiliary
             integer :: n
@@ -94,7 +143,6 @@ module lib_mie_multi_sphere
 
             integer :: m_step_size
             logical :: m_dynamic_step_size
-            logical :: m_use_ml_fmm
 
             ! initial values
             call lib_mie_ss_calculate_scattering_coefficients_ab_nm()
@@ -102,9 +150,6 @@ module lib_mie_multi_sphere
             gmres_parameter = lib_mie_ms_solver_gmres_get_parameter_std_values()
             gmres_parameter%use_initial_guess = .true.
             gmres_parameter%convergence_tolerance = 1D-8
-
-            m_use_ml_fmm = .false.
-            if (present(use_ml_fmm)) m_use_ml_fmm = use_ml_fmm
 
             if ( present(update_initial_guess_with_n_max) ) then
                 n_max = simulation_data%spherical_harmonics%n_range(2)
@@ -432,8 +477,8 @@ module lib_mie_multi_sphere
 
                 simulation_data%spherical_harmonics%z_selector_incident_wave = 1
                 simulation_data%spherical_harmonics%z_selector_scatterd_wave = 3
-                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 1
-                simulation_data%spherical_harmonics%z_selector_translation_le_r = 3
+                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 3
+                simulation_data%spherical_harmonics%z_selector_translation_le_r = 1
 
                 ! set illumination parameter
                 e_field_0 = 1
@@ -536,8 +581,6 @@ module lib_mie_multi_sphere
 
                 simulation_data%spherical_harmonics%n_range = n_range
 
-                call lib_math_factorial_initialise_caching(n_range(2))
-
                 simulation_data%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
                                                                                           r_particle, n_particle, &
                                                                                           n_range)
@@ -561,18 +604,16 @@ module lib_mie_multi_sphere
                                                                                           r_particle, n_particle, &
                                                                                           n_range)
 
-                call lib_mie_ss_constructor()
-
-
                 n_range = simulation_data%spherical_harmonics%n_range
-                call fwig_table_init(4 * n_range(2), 3)
-                call fwig_temp_init(4 * n_range(2))
+
+                call lib_mie_ms_constructor(n_range, use_ml_fmm = .true., init_with_single_sphere = .true.)
+
 
                 call system_clock(test_count_start_sub, test_count_rate_sub)
                 call cpu_time(test_start_sub)
 
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(5), 6)
-                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(n_range(2) / 2), 4, use_ml_fmm = .true.)
+                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(n_range(2) / 2), 4)
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(, int(n_range(2) / 2), 2)
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(, int(n_range(2) / 2))
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
@@ -768,8 +809,8 @@ module lib_mie_multi_sphere
                 simulation_data%sphere_parameter_list(2) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
                                                                                           r_particle, n_particle, &
                                                                                           n_range)
-
-                call lib_mie_ss_constructor()
+                n_range = simulation_data%spherical_harmonics%n_range
+                call lib_mie_ms_constructor(n_range, use_ml_fmm=.false., init_with_single_sphere=.true.)
 
 
                 call lib_mie_ms_calculate_scattering_coefficients_ab_nm()

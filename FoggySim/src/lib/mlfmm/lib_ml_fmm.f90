@@ -145,16 +145,38 @@ module lib_ml_fmm
 
     end subroutine lib_ml_fmm_destructor
 
-    function lib_ml_fmm_run(vector_u) result(vector_v)
+    ! Argument
+    ! ----
+    !   vector_u: type(lib_ml_fmm_v), dimension(:)
+    !       vector u of the matrix vector product PHI * u = v
+    !   use_move_alloc_vector_u: logical, optional (std: .true.)
+    !
+    ! Returns
+    ! ----
+    !   vector_v: type(lib_ml_fmm_v), dimension(:)
+    !       vector v  of the matrix vector product PHI * u = v
+    subroutine lib_ml_fmm_run(vector_u, vector_v, use_move_alloc_vector_u)
         implicit none
         ! dummy
         type(lib_ml_fmm_v), dimension(:), allocatable, intent(inout) :: vector_u
-        type(lib_ml_fmm_v), dimension(:), allocatable :: vector_v
+        type(lib_ml_fmm_v), dimension(:), allocatable, intent(inout) :: vector_v
 
-        if (allocated(m_ml_fmm_u)) then
-            m_ml_fmm_u = vector_u
+        logical, intent(in), optional :: use_move_alloc_vector_u
+
+        ! auxiliary
+        logical :: m_use_move_alloc_vector_u
+
+        m_use_move_alloc_vector_u = .true.
+        if (present(use_move_alloc_vector_u)) m_use_move_alloc_vector_u = use_move_alloc_vector_u
+
+        if (m_use_move_alloc_vector_u) then
+            call move_alloc(vector_u, m_ml_fmm_u)
         else
-            allocate(m_ml_fmm_u, source=vector_u)
+            if (allocated(m_ml_fmm_u)) then
+                m_ml_fmm_u = vector_u
+            else
+                allocate(m_ml_fmm_u, source=vector_u)
+            end if
         end if
 
         call lib_ml_fmm_calculate_upward_pass()
@@ -162,8 +184,9 @@ module lib_ml_fmm
         call lib_ml_fmm_final_summation()
 
         allocate(vector_v, source=m_ml_fmm_v)
+!        call move_alloc(m_ml_fmm_v, vector_v)
 
-    end function
+    end subroutine lib_ml_fmm_run
 
     ! Concatenates the arrays at the data_elements to one array of the type lib_tree_data_element
     !
@@ -267,6 +290,8 @@ module lib_ml_fmm
 
         uindex%l = m_tree_l_max
         if (m_ml_fmm_hierarchy(m_tree_l_max)%is_hashed) then
+            !$OMP PARALLEL DO PRIVATE(i, hierarchy_type, C) &
+            !$OMP  FIRSTPRIVATE(uindex)
             do i=1, number_of_boxes
                 uindex%n = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
                 hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(i)
@@ -280,7 +305,10 @@ module lib_ml_fmm
                     end if
                 end if
             end do
+            !$OMP END PARALLEL DO
         else
+            !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type, C) &
+            !$OMP  FIRSTPRIVATE(uindex)
             do i=1, number_of_boxes
                 uindex%n = i - int(1, 1)
                 list_index = m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_list_index(i)
@@ -295,6 +323,7 @@ module lib_ml_fmm
                     end if
                 end if
             end do
+            !$OMP END PARALLEL DO
         end if
 
     end subroutine lib_ml_fmm_calculate_upward_pass_step_1
@@ -372,6 +401,8 @@ module lib_ml_fmm
             number_of_boxes = size(m_ml_fmm_hierarchy(l)%coefficient_list_index)
 
             if (m_ml_fmm_hierarchy(l)%is_hashed) then
+                !$OMP PARALLEL DO PRIVATE(i, hierarchy_type, C) &
+                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
                     if (uindex%n .ge. 0) then
@@ -384,7 +415,10 @@ module lib_ml_fmm
                         end if
                     end if
                 end do
+                !$OMP END PARALLEL DO
             else
+                !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type, C) &
+                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = i - int(1, 1)
                     list_index = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
@@ -398,6 +432,7 @@ module lib_ml_fmm
                         end if
                     end if
                 end do
+                !$OMP END PARALLEL DO
             end if
         end do
 
@@ -491,6 +526,8 @@ module lib_ml_fmm
             list_index_list(:) = -1
 
             if (m_ml_fmm_hierarchy(l)%is_hashed) then
+!                !$OMP PARALLEL DO PRIVATE(i, hierarchy_type, D_tilde) &
+!                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
                     if (uindex%n .ge. 0) then
@@ -503,7 +540,10 @@ module lib_ml_fmm
                         end if
                     end if
                 end do
+!                !$OMP END PARALLEL DO
             else
+                !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type, D_tilde) &
+                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = i - int(1, 1)
                     list_index = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
@@ -517,15 +557,23 @@ module lib_ml_fmm
                         end if
                     end if
                 end do
+                !$OMP END PARALLEL DO
             end if
 
             ! wirte to hierarchy
+!            where (list_index_list .gt. -1)
+!                m_ml_fmm_hierarchy(l)%coefficient_list(list_index_list) = coefficient_list
+!                m_ml_fmm_hierarchy(l)%coefficient_type(list_index_list) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
+!            end where
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=1, number_of_boxes
                 if (list_index_list(i) .gt. -1) then
                     m_ml_fmm_hierarchy(l)%coefficient_list(list_index_list(i)) = coefficient_list(i)
                     m_ml_fmm_hierarchy(l)%coefficient_type(list_index_list(i)) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
                 end if
             end do
+            !$OMP END PARALLEL DO
+
 
             ! clean up
             if (allocated(coefficient_list)) then
@@ -628,6 +676,8 @@ module lib_ml_fmm
             list_index_list(:) = -1
 
             if (m_ml_fmm_hierarchy(l)%is_hashed) then
+                !$OMP PARALLEL DO PRIVATE(i, hierarchy_type, D) &
+                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
                     if (uindex%n .ge. 0) then
@@ -640,7 +690,10 @@ module lib_ml_fmm
                         end if
                     end if
                 end do
+                !$OMP END PARALLEL DO
             else
+                !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type, D) &
+                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = i - int(1, 1)
                     list_index = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
@@ -654,15 +707,18 @@ module lib_ml_fmm
                         end if
                     end if
                 end do
+                !$OMP END PARALLEL DO
             end if
 
             ! wirte to hierarchy
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=1, number_of_boxes
                 if (list_index_list(i) .gt. -1) then
                     m_ml_fmm_hierarchy(l)%coefficient_list(list_index_list(i)) = coefficient_list(i)
                     m_ml_fmm_hierarchy(l)%coefficient_type(list_index_list(i)) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
                 end if
             end do
+            !$OMP END PARALLEL DO
 
             ! clean up
             if (allocated(coefficient_list)) then
@@ -739,6 +795,8 @@ module lib_ml_fmm
         number_of_boxes = size(m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index)
 
         if (m_ml_fmm_hierarchy(uindex%l)%is_hashed) then
+!            !$OMP PARALLEL DO PRIVATE(i, hierarchy_type) &
+!            !$OMP  FIRSTPRIVATE(uindex)
             do i=1, number_of_boxes
                 uindex%n = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
                 if (uindex%n .ge. 0) then
@@ -750,7 +808,10 @@ module lib_ml_fmm
                     end if
                 end if
             end do
+!            !$OMP END PARALLEL DO
         else
+!            !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type) &
+!            !$OMP  FIRSTPRIVATE(uindex)
             do i=1, number_of_boxes
                 uindex%n = i - int(1, 1)
                 list_index = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
@@ -763,6 +824,7 @@ module lib_ml_fmm
                     end if
                 end if
             end do
+!            !$OMP END PARALLEL DO
         end if
 
     end subroutine lib_ml_fmm_final_summation
@@ -1383,6 +1445,7 @@ module lib_ml_fmm
             end if
 #else
             print *, "test_lib_ml_fmm_constructor (3D): NOT DEFINED"
+            rv = .true.
 #endif
 
 !            allocate(vector_u(list_length+4_8))
@@ -1476,6 +1539,7 @@ module lib_ml_fmm
 
 #else
             print *, "test_lib_ml_fmm_calculate_upward_pass (3D): NOT DEFINED"
+            rv = .true.
 #endif
 
 
@@ -1563,6 +1627,7 @@ module lib_ml_fmm
 
 #else
             print *, "test_lib_ml_fmm_calculate_downward_pass_1 (3D): NOT DEFINED"
+            rv = .true.
 #endif
         end function test_lib_ml_fmm_calculate_downward_pass_1
 
@@ -1649,6 +1714,7 @@ module lib_ml_fmm
 
 #else
             print *, "test_lib_ml_fmm_calculate_downward_pass_2 (3D): NOT DEFINED"
+            rv = .true.
 #endif
         end function test_lib_ml_fmm_calculate_downward_pass_2
 
