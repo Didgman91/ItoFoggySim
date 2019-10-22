@@ -301,7 +301,8 @@ contains
             do ii=1, TREE_DIMENSIONS  ! get column entries
                 ob_buffer_DIM(ii) = cb_buffer(i + (ii-1)*COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND)
             end do
-            ib_buffer = lib_tree_hf_interleave_bits_use_lut(ob_buffer_DIM)
+!            ib_buffer = lib_tree_hf_interleave_bits_use_lut(ob_buffer_DIM)
+            ib_buffer = lib_tree_hf_interleave_bits(ob_buffer_DIM)
 
             ! e.g.    12                4       (4..1)        3
             ! ii = total length - (total columns - i + 1) * length(ib_buffer) + 1
@@ -1762,7 +1763,8 @@ contains
             do ii=1, TREE_DIMENSIONS  ! get column entries
                 ob_buffer_DIM(ii) = cb_buffer(i + (ii-1)*UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND)
             end do
-            ib_buffer = lib_tree_hf_interleave_bits_use_lut(ob_buffer_DIM)
+!            ib_buffer = lib_tree_hf_interleave_bits_use_lut(ob_buffer_DIM)
+            ib_buffer = lib_tree_hf_interleave_bits(ob_buffer_DIM)
 
             ! e.g.    12                4       (4..1)        3
             ! ii = total length - (total columns - i + 1) * length(ib_buffer) + 1
@@ -2117,36 +2119,36 @@ contains
         if (.not. test_lib_tree_hf_interleave_bits_2()) then
             error_counter = error_counter + 1
         end if
-        if (.not. test_lib_tree_hf_interleave_bits_use_lut()) then
-            error_counter = error_counter + 1
-        end if
-        if (.not. test_lib_tree_hf_interleave_bits_use_lut_2()) then
-            error_counter = error_counter + 1
-        end if
+!        if (.not. test_lib_tree_hf_interleave_bits_use_lut()) then
+!            error_counter = error_counter + 1
+!        end if
+!        if (.not. test_lib_tree_hf_interleave_bits_use_lut_2()) then
+!            error_counter = error_counter + 1
+!        end if
         if (.not. test_lib_tree_hf_deinterleave_bits()) then
             error_counter = error_counter + 1
         end if
         if (.not. test_lib_tree_hf_deinterleave_bits_2()) then
             error_counter = error_counter + 1
         end if
-        if (.not. test_lib_tree_hf_deinterleave_bits_use_lut()) then
-            error_counter = error_counter + 1
-        end if
-        if (.not. test_lib_tree_hf_deinterleave_bits_use_lut_2()) then
-            error_counter = error_counter + 1
-        end if
+!        if (.not. test_lib_tree_hf_deinterleave_bits_use_lut()) then
+!            error_counter = error_counter + 1
+!        end if
+!        if (.not. test_lib_tree_hf_deinterleave_bits_use_lut_2()) then
+!            error_counter = error_counter + 1
+!        end if
         if (.not. test_lib_tree_hf_interleave_bits_treeD_to_1D()) then
             error_counter = error_counter + 1
         end if
-        if (.not. test_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut()) then
-            error_counter = error_counter + 1
-        end if
+!        if (.not. test_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut()) then
+!            error_counter = error_counter + 1
+!        end if
         if (.not. test_lib_tree_hf_deinterleave_bits_1D_to_treeD()) then
             error_counter = error_counter + 1
         end if
-        if (.not. test_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut()) then
-            error_counter = error_counter + 1
-        end if
+!        if (.not. test_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut()) then
+!            error_counter = error_counter + 1
+!        end if
 
 
         print *, "-------------lib_tree_hf_test_functions-------------"

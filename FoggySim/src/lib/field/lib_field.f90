@@ -216,17 +216,21 @@ module lib_field
                 allocate(e_field(5,5))
                 allocate(h_field(5,5))
 
-                e_field_spherical(:,:)%rho = dcmplx(1, 0)
+                e_field_spherical(:,:)%rho = dcmplx(0, 0)
                 e_field_spherical(:,:)%theta = dcmplx(0, 0)
                 e_field_spherical(:,:)%phi = dcmplx(0, 0)
 
-                e_field_spherical(:,:)%rho = dcmplx(0, 0)
-                e_field_spherical(:,:)%theta = dcmplx(0.1, 0.05)
-                e_field_spherical(:,:)%phi = dcmplx(0, 0)
+                h_field_spherical(:,:)%rho = dcmplx(0, 0)
+                h_field_spherical(:,:)%theta = dcmplx(0, 0)
+                h_field_spherical(:,:)%phi = dcmplx(0, 0)
+
+                e_field_spherical(2,3)%rho = dcmplx(1, 0)
+                e_field_spherical(2,3)%theta = dcmplx(0, 0)
+                e_field_spherical(2,3)%phi = dcmplx(0, 0)
 
                 d%x = 0
                 d%y = 0
-                d%z = 1
+                d%z = -3 * unit_mu
 
                 do i = lbound(e_field_spherical, 1), ubound(e_field_spherical, 1)
                     do ii = lbound(e_field_spherical, 2), ubound(e_field_spherical, 2)

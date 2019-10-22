@@ -486,13 +486,13 @@ module lib_tree
         integer(kind=UINDEX_BYTES) :: index_start
         integer(kind=UINDEX_BYTES) :: index_end
 
-        ! ---- OMP ----
-        ! simple implementation of a semaphore
-        ! multiple read, single write
-        !$  logical :: semaphore_write_number_of_data_elements
-        ! read and write is initially possilble
-        !$  semaphore_write_number_of_data_elements = .true.
-        ! ~~~~ OMP ~~~~
+!        ! ---- OMP ----
+!        ! simple implementation of a semaphore
+!        ! multiple read, single write
+!        !$  logical :: semaphore_write_number_of_data_elements
+!        ! read and write is initially possilble
+!        !$  semaphore_write_number_of_data_elements = .true.
+!        ! ~~~~ OMP ~~~~
 
         if (uindex%n .ne. TREE_BOX_IGNORE_ENTRY) then
             l_diff = lib_tree_l_th - uindex%l
@@ -518,22 +518,22 @@ module lib_tree
             ! get all elements
             number_of_data_elements = 0
 !            allocate(element_number_buffer_list(size(buffer_1_uindex)))
-            !$OMP PARALLEL DO PRIVATE(buffer_data_element, buffer_element_number, i)
+!            !$OMP PARALLEL DO PRIVATE(buffer_data_element, buffer_element_number, i)
             do i=1, size(buffer_1_uindex)
                 buffer_data_element = lib_tree_get_element_from_correspondence_vector(buffer_1_uindex(i), &
                                                                                buffer_element_number)
-                ! ---- OMP semaphore ----
-                !$  if (semaphore_write_number_of_data_elements .eqv. .false.) then
-                !$      ! wait until write process is finished
-                !$      do
-                !$          if (semaphore_write_number_of_data_elements .eqv. .true.) then
-                !$              exit
-                !$          end if
-                !$      end do
-                !$  end if
-                ! ~~~~ OMP semaphore ~~~~
+!                ! ---- OMP semaphore ----
+!                !$  if (semaphore_write_number_of_data_elements .eqv. .false.) then
+!                !$      ! wait until write process is finished
+!                !$      do
+!                !$          if (semaphore_write_number_of_data_elements .eqv. .true.) then
+!                !$              exit
+!                !$          end if
+!                !$      end do
+!                !$  end if
+!                ! ~~~~ OMP semaphore ~~~~
 
-                !$  semaphore_write_number_of_data_elements = .false.
+!                !$  semaphore_write_number_of_data_elements = .false.
                 do ii=1, size(buffer_data_element)
                     if (buffer_data_element(ii)%element_type .ne. LIB_TREE_ELEMENT_TYPE_EMPTY) then
                         call concatenate(buffer_rv, buffer_data_element(ii))                            ! todo: optimize
@@ -541,7 +541,7 @@ module lib_tree
                         number_of_data_elements = number_of_data_elements + 1
                     end if
                 end do
-                !$  semaphore_write_number_of_data_elements = .true.
+!                !$  semaphore_write_number_of_data_elements = .true.
 
                 ! clean up
                 if (allocated(buffer_element_number)) then
@@ -551,7 +551,7 @@ module lib_tree
                     deallocate(buffer_data_element)
                 end if
             end do
-            !$OMP END PARALLEL DO
+!            !$OMP END PARALLEL DO
 
             deallocate (buffer_1_uindex)
 
@@ -1375,14 +1375,14 @@ module lib_tree
         integer(kind=4) :: hash_overflow_counter
         logical :: element_saved
 
-        ! ---- OMP ----
-        ! simple implementation of a semaphore
-        ! multiple read, single write
-        !$  logical :: semaphore_write_correspondence_vector
-
-        ! read and write is initially possilble
-        !$  semaphore_write_correspondence_vector = .true.
-        ! ~~~~ OMP ~~~~
+!        ! ---- OMP ----
+!        ! simple implementation of a semaphore
+!        ! multiple read, single write
+!        !$  logical :: semaphore_write_correspondence_vector
+!
+!        ! read and write is initially possilble
+!        !$  semaphore_write_correspondence_vector = .true.
+!        ! ~~~~ OMP ~~~~
 
 
         ! copy element list to the module global *lib_tree_data_element_list* list.
@@ -1423,7 +1423,7 @@ module lib_tree
             ! iterate element_list
             lib_tree_max_number_of_hash_runs = 0
             hash_overflow_counter = 0
-            !$OMP PARALLEL DO PRIVATE(uindex, hashed_uindex, element_saved, i, ii)
+!            !$OMP PARALLEL DO PRIVATE(uindex, hashed_uindex, element_saved, i, ii)
             do i=1, size(lib_tree_data_element_list)
                 uindex = lib_tree_hf_get_universal_index(lib_tree_data_element_list(i)%point_x, threshold_level)
                 lib_tree_data_element_list(i)%uindex = uindex
@@ -1432,16 +1432,16 @@ module lib_tree
 
                 element_saved = .false.
                 do ii=1, LIB_TREE_MAX_HASH_RUNS !huge(lib_tree_correspondence_vector(1)%number_of_hash_runs)-1
-                    ! ---- OMP semaphore ----
-                    !$  if (semaphore_write_correspondence_vector .eqv. .false.) then
-                    !$      ! wait until write process is finished
-                    !$      do
-                    !$          if (semaphore_write_correspondence_vector .eqv. .true.) then
-                    !$              exit
-                    !$          end if
-                    !$      end do
-                    !$  end if
-                    ! ~~~~ OMP semaphore ~~~~
+!                    ! ---- OMP semaphore ----
+!                    !$  if (semaphore_write_correspondence_vector .eqv. .false.) then
+!                    !$      ! wait until write process is finished
+!                    !$      do
+!                    !$          if (semaphore_write_correspondence_vector .eqv. .true.) then
+!                    !$              exit
+!                    !$          end if
+!                    !$      end do
+!                    !$  end if
+!                    ! ~~~~ OMP semaphore ~~~~
                     ! save
                     element_with_uindex_exists = .false.
                     if ( allocated(lib_tree_correspondence_vector(hashed_uindex)%data_element_number) ) then
@@ -1452,7 +1452,7 @@ module lib_tree
                     end if
                     if ((lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs .eq. 0) .or. &
                         element_with_uindex_exists) then
-                        !$  semaphore_write_correspondence_vector = .false.
+!                        !$  semaphore_write_correspondence_vector = .false.
                         if ((hashed_uindex .gt. 0) .and. (hashed_uindex .le. lib_tree_hash_max)) then
                             call concatenate(lib_tree_correspondence_vector(hashed_uindex)%data_element_number, &
                                                                             i)
@@ -1463,14 +1463,14 @@ module lib_tree
                                 lib_tree_max_number_of_hash_runs = ii
                             end if
                             ! unique hash found -> terminate the inner do loop immediatly
-                            !$  semaphore_write_correspondence_vector = .true.
+!                            !$  semaphore_write_correspondence_vector = .true.
                             element_saved = .true.
                             exit
                         else
                             print *, "lib_tree_create_correspondence_vector ..ERROR"
                             print *, "  hashed_uindex out of range"
                         end if
-                        !$  semaphore_write_correspondence_vector = .true.
+!                        !$  semaphore_write_correspondence_vector = .true.
                     end if
 
 #ifdef _DEBUG_
@@ -1490,7 +1490,7 @@ module lib_tree
                     hash_overflow_counter = hash_overflow_counter + 1
                 end if
             end do
-            !$OMP END PARALLEL DO
+!            !$OMP END PARALLEL DO
             if (hash_overflow_counter .ne. 0) then
                 print *, "lib_tree_create_correspondence_vector  ..ERROR"
                 print *, "    number of hash overflows : ", hash_overflow_counter
@@ -1545,13 +1545,8 @@ module lib_tree
             hashed_uindex = hash_fnv1a(uindex%n, lib_tree_hash_max)
 
             element_found = .false.
-!            !$  opm_end_do_loop = .false.
-!            !  $   OMP PARALLEL DO PRIVATE(i, hash_idum)
             do i=1, lib_tree_max_number_of_hash_runs
-!                !$  if (.not. opm_end_do_loop) then
                 if (lib_tree_correspondence_vector(hashed_uindex)%number_of_hash_runs .eq. i) then
-!                    !$  opm_end_do_loop = .true.
-!                    print *, "element found"
 
                     element_number = lib_tree_correspondence_vector(hashed_uindex)%data_element_number
                     if (lib_tree_data_element_list(element_number(1))%uindex%n .eq. uindex%n) then
@@ -1571,10 +1566,8 @@ module lib_tree
                         hashed_uindex =  IEOR(hashed_uindex, int(i, CORRESPONDENCE_VECTOR_KIND))
                         hashed_uindex = hash_fnv1a(hashed_uindex, lib_tree_hash_max)
                 end if
-!                !$  end if
 
             end do
-!            !   $   OMP END PARALLEL DO
             if (.not. element_found) then
                 if (.not. allocated(rv)) then
                     allocate(rv(1))
@@ -1735,9 +1728,9 @@ module lib_tree
             error_counter = error_counter + 1
         end if
         call lib_tree_destructor()
-        if (.not. test_lib_tree_constructor()) then
-            error_counter = error_counter + 1
-        end if
+!        if (.not. test_lib_tree_constructor()) then
+!            error_counter = error_counter + 1
+!        end if
 
         print *, "-------------lib_tree_test_functions----------------"
         if (error_counter == 0) then
@@ -2412,6 +2405,7 @@ module lib_tree
             type(lib_tree_universal_index), dimension(:), allocatable :: uindex_i4
             type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_i4
 
+#if (_FMM_DIMENSION_ == 2)
             ! ---------------------------------
             ! |  5    |  7    | 13    | 15    |
             ! |    *  |    *  |    *  |    *  |
@@ -2447,6 +2441,10 @@ module lib_tree
                 rv = .false.
                 print *, "test_lib_tree_get_domain_i4: FAILED"
             end if
+#elif (_FMM_DIMENSION_ == 3)
+            print *, "test_lib_tree_get_domain_i4 (3D): NOT DEFINED"
+            rv = .true.
+#endif
 
         end function test_lib_tree_get_domain_i4
 
