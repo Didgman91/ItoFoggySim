@@ -1383,8 +1383,8 @@ module lib_math_vector_spherical_harmonics
             !   b(p=p+1)
             !   => j_max = 2 * n_max_range(2) + 1
 
-!            !$  j_max = 2 * n_max_range(2) + 1
-!            !$  call fwig_thread_temp_init(2 * j_max)     ! multi threaded
+            !$  j_max = 2 * n_max_range(2) + 1
+            !$  call fwig_thread_temp_init(2 * j_max)     ! multi threaded
 
             allocate (buffer_pm(2, 0:2*n_max_range(2)+1+1))
             allocate (buffer_pd(2, 0:2*n_max_range(2)+1+1))
@@ -1445,16 +1445,16 @@ module lib_math_vector_spherical_harmonics
             end do
 
             ! --- calculate A and B
-!            !$  thread_first_run = .true.
-!            !$OMP PARALLEL DO PRIVATE(n, m, nu, mu, q_max_a, q_max_b, q_max, q, p, &
-!            !$OMP  factorial, buffer_cmplx_a, buffer_cmplx_b, buffer_cmplx, &
-!            !$OMP  buffer_real, buffer_cmplx_e_m_mu_phi, a, b) &
-!            !$OMP  FIRSTPRIVATE(thread_first_run)
+            !$  thread_first_run = .true.
+            !$OMP PARALLEL DO PRIVATE(n, m, nu, mu, q_max_a, q_max_b, q_max, q, p, &
+            !$OMP  factorial, buffer_cmplx_a, buffer_cmplx_b, buffer_cmplx, &
+            !$OMP  buffer_real, buffer_cmplx_e_m_mu_phi, a, b, calc_a, calc_b) &
+            !$OMP  FIRSTPRIVATE(thread_first_run)
             do n=n_range(1), n_range(2)
-!                !$  if (thread_first_run) then
-!                !$    call fwig_thread_temp_init(2 * j_max)     ! multi threaded
-!                !$    thread_first_run = .false.
-!                !$  endif
+                !$  if (thread_first_run) then
+                !$    call fwig_thread_temp_init(2 * j_max)     ! multi threaded
+                !$    thread_first_run = .false.
+                !$  endif
                 do m=-n, n
                     do nu=nu_range(1), nu_range(2)
                         do mu=-nu, nu
@@ -1536,7 +1536,7 @@ module lib_math_vector_spherical_harmonics
                     end do
                 end do
             end do
-!            !$OMP END PARALLEL DO
+            !$OMP END PARALLEL DO
 
         end subroutine lib_math_vector_spherical_harmonics_translation_coeff_r
 
