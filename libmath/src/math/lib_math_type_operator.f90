@@ -2560,7 +2560,7 @@ module lib_math_type_operator
                     end do
                 end do
                 !$OMP END PARALLEL DO
-            else
+            else if(allocated(lhs%item) .and. (allocated(rhs%item))) then
                 n_range_mutual(1) = max( lbound(lhs%item, 1), lbound(rhs%item, 1) )
                 n_range_mutual(2) = min( ubound(lhs%item, 1), ubound(rhs%item, 1) )
 
@@ -2612,8 +2612,10 @@ module lib_math_type_operator
                     end do
                     !$OMP END PARALLEL DO
                 end if
-
-
+            else if (allocated(lhs%item)) then
+                rv = lhs
+            else if (allocated(rhs%item)) then
+                rv = rhs
 !                print *, "lib_math_list_list_cmplx_add: ERROR"
 !                print *, "  size of lhs and rhs are not equal"
             end if
