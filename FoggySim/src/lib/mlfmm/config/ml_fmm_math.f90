@@ -36,7 +36,7 @@ module ml_fmm_math
             operator_procedures%coefficient_add => test_c_add
             operator_procedures%coefficient_set_zero => test_set_coefficient_zero
 !            operator_procedures%u_dot_coefficient => test_u_dot_coefficient
-!            operator_procedures%coefficient_eq => test_coefficient_eq
+            operator_procedures%coefficient_eq => test_coefficient_eq
 !            operator_procedures%coefficient_ne => test_coefficient_ne
 !            operator_procedures%v_add => test_v_operator_add
             operator_procedures%v_add_0D => test_v_operator_add_0D
@@ -100,6 +100,41 @@ module ml_fmm_math
         call init_list(coefficient%b_nm, 1 ,1, dcmplx(0,0))
 
     end subroutine lib_ml_fmm_type_operator_set_coefficient_zero_list_2_cmplx
+
+!    function lib_ml_fmm_type_operator_coefficient_eq_list_2_cmplx(lhs, rhs) result (rv)
+!        implicit none
+!        ! dummy
+!        type(lib_ml_fmm_coefficient), intent(in) :: lhs
+!        type(lib_ml_fmm_coefficient), intent(in) :: rhs
+!        logical :: rv
+!
+!        ! auxiliary
+!        integer :: n
+!        integer :: m
+!
+!        rv = .true.
+!        if ( (lbound(lhs%a_nm%item, 1) .eq. lbound(rhs%a_nm%item)) &
+!             .and. (ubound(lhs%a_nm%item, 1) .eq. ubound(rhs%a_nm%item)) ) then
+!
+!            do n = lbound(lhs%a_nm%item, 1), ubound(lhs%a_nm%item, 1)
+!                do m = -n, n
+!                    if (lhs%a_nm%item(n)%item(m) .ne. rhs%a_nm%item(n)%item(m)) then
+!                        rv = .false.
+!                        return
+!                    end if
+!
+!                    if (lhs%b_nm%item(n)%item(m) .ne. rhs%b_nm%item(n)%item(m)) then
+!                        rv = .false.
+!                        return
+!                    end if
+!                end do
+!            end do
+!
+!        else
+!            rv = .false.
+!        end if
+!
+!    end function lib_ml_fmm_type_operator_coefficient_eq_list_2_cmplx
 
     ! ----- test functions ----
     function lib_ml_fmm_type_operator_test_functions() result (error_counter)
@@ -237,7 +272,7 @@ module ml_fmm_math
 
         length = size(D%dummy)
         do i=1, length
-            rv%dummy(1) = rv%dummy(1) + D%dummy(i) * (y_j%x(1) - x_c%x(1))
+            rv%dummy(1) = rv%dummy(1) + D%dummy(i) * 2!(y_j%x(1) - x_c%x(1))
         end do
 
     end function test_dor
@@ -309,8 +344,8 @@ module ml_fmm_math
         type (lib_ml_fmm_v), intent(in) :: rhs
         type (lib_ml_fmm_v) :: rv
 
-        allocate(rv%dummy, source = lhs%dummy + rhs%dummy)
-!        rv%dummy = lhs%dummy + rhs%dummy
+        allocate(rv%dummy(1))
+        rv%dummy(1) = lhs%dummy(1) + rhs%dummy(1)
     end function
 
     function test_v_operator_sub(lhs, rhs) result(rv)
@@ -369,7 +404,8 @@ module ml_fmm_math
         type(lib_ml_fmm_v) :: rv
 
 !        allocate(rv%dummy, source = (/data_element_i%uindex%n + abs(y_j)/))
-        allocate(rv%dummy, source = (/real(data_element_i%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)/))
+        allocate(rv%dummy(1))
+        rv%dummy(1) = real(data_element_i%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)
 
     end function
 

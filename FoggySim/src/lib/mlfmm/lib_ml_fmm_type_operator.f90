@@ -10,7 +10,7 @@ module lib_ml_fmm_type_operator
     public :: operator (+)
 !    public :: operator (-)
 !
-!    public :: operator (.eq.)
+    public :: operator (.eq.)
 !    public :: operator (.ne.)
 
     public :: lib_ml_fmm_type_operator_set_coefficient_zero
@@ -46,9 +46,9 @@ module lib_ml_fmm_type_operator
 !        module procedure lib_ml_fmm_u_dot_coefficient_operator
 !    end interface
 
-!    interface operator (.eq.)
-!        module procedure lib_ml_fmm_coefficient_eq
-!    end interface
+    interface operator (.eq.)
+        module procedure lib_ml_fmm_coefficient_eq
+    end interface
 
 !    interface operator (.ne.)
 !        module procedure lib_ml_fmm_coefficient_ne
@@ -63,6 +63,15 @@ module lib_ml_fmm_type_operator
 
     ! ----- interfaces -----
     interface
+        ! Argument
+        ! ----
+        !   lhs: type (lib_ml_fmm_coefficient)
+        !   rhs: type (lib_ml_fmm_coefficient)
+        !
+        ! Returns
+        ! ----
+        !   rv: type (lib_ml_fmm_coefficient)
+        !       summation of both coefficients
         function ml_fmm_coefficient_add_operator(lhs,rhs) result (rv)
             use ml_fmm_type
             implicit none
@@ -80,6 +89,31 @@ module lib_ml_fmm_type_operator
 !            type (lib_ml_fmm_coefficient) :: rv
 !        end function ml_fmm_u_dot_coefficient_operator
 
+        ! Argument
+        ! ----
+        !   D: type(lib_ml_fmm_coefficient)
+        !       D coefficient of the box (n, l_max)
+        !   x_c: type(lib_tree_spatial_point)
+        !       centre of the box (n, l_max)
+        !       HINT: unscale with lib_tree_get_unscaled_point
+        !   y_j: type(lib_tree_spatial_point)
+        !       scaled point of the j-th element
+        !   element_number_j: integer
+        !       number of the j-th element at the concatenated element data list.
+        !       CONVENTION:
+        !           Internal representation of the element data list
+        !           from the 1-st to the N-th element.
+        !           ------------------------------------
+        !           |1    X    |     Y    |     XY    N|
+        !           ------------------------------------
+        !           X-, Y-, XY- hierarchy
+        !
+        ! Returns
+        ! ----
+        !   rv: type(lib_ml_fmm_v)
+        !       R expansion around y_j
+        !
+        ! Reference:  Data_Structures_Optimal_Choice_of_Parameters_and_C, eq. 38
         function lib_ml_fmm_dor_operator(D, x_c, y_j, element_number_j) result(rv)
             use ml_fmm_type
             implicit none
@@ -91,14 +125,14 @@ module lib_ml_fmm_type_operator
             type(lib_ml_fmm_v) :: rv
         end function lib_ml_fmm_dor_operator
 
-!        function ml_fmm_coefficient_eq(lhs, rhs) result(rv)
-!            use ml_fmm_type
-!            implicit none
-!            type(lib_ml_fmm_coefficient), intent(in) :: lhs
-!            type(lib_ml_fmm_coefficient), intent(in) :: rhs
-!            logical :: rv
-!        end function
-!
+        function ml_fmm_coefficient_eq(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            type(lib_ml_fmm_coefficient), intent(in) :: lhs
+            type(lib_ml_fmm_coefficient), intent(in) :: rhs
+            logical :: rv
+        end function
+
 !        function ml_fmm_coefficient_ne(lhs, rhs) result(rv)
 !            use ml_fmm_type
 !            implicit none
@@ -216,7 +250,29 @@ module lib_ml_fmm_type_operator
 !            type(lib_ml_fmm_B) :: B
 !        end function
 
-        ! Basis function: B_i
+        ! Argument
+        ! ----
+        !   x: type(lib_tree_spatial_point)
+        !       centre of the box (n, l_max)
+        !       HINT: unscale with lib_tree_get_unscaled_point
+        !   data_element: type(lib_tree_data_element)
+        !       data element
+        !   element_number: integer
+        !       number of the data element at the concatenated element data list.
+        !       CONVENTION:
+        !           Internal representation of the element data list
+        !           from the 1-st to the N-th element.
+        !           ------------------------------------
+        !           |1    X    |     Y    |     XY    N|
+        !           ------------------------------------
+        !           X-, Y-, XY- hierarchy
+        !
+        ! Returns
+        ! ----
+        !   B_i: type(lib_ml_fmm_coefficient)
+        !       S expansion around x of the data element
+        !
+        ! Reference:  Data_Structures_Optimal_Choice_of_Parameters_and_C, eq. 32
         function lib_ml_fmm_get_u_B_i(x, data_element, element_number) result(B_i)
             use lib_tree_public
             use ml_fmm_type
@@ -319,6 +375,38 @@ module lib_ml_fmm_type_operator
 !            integer :: phi_i_j                   ! todo: define type
 !        end function lib_ml_fmm_expansion_S
 
+        ! Argument
+        ! ----
+        !   data_element_i: type(lib_tree_data_element)
+        !       i-th data element
+        !   element_number_i: integer
+        !       number of the i-th data element at the concatenated element data list.
+        !       CONVENTION:
+        !           Internal representation of the element data list
+        !           from the 1-st to the N-th element.
+        !           ------------------------------------
+        !           |1    X    |     Y    |     XY    N|
+        !           ------------------------------------
+        !           X-, Y-, XY- hierarchy
+        !   y_j: type(lib_tree_spatial_point)
+        !       scaled point of the j-th data element
+        !       HINT: unscale with lib_tree_get_unscaled_point
+        !   element_number_j: integer
+        !       number of the j-th data element at the concatenated element data list.
+        !       CONVENTION:
+        !           Internal representation of the element data list
+        !           from the 1-st to the N-th element.
+        !           ------------------------------------
+        !           |1    X    |     Y    |     XY    N|
+        !           ------------------------------------
+        !           X-, Y-, XY- hierarchy
+        !
+        ! Returns
+        ! ----
+        !   rv: type(lib_ml_fmm_v)
+        !       the result of calculation of u_i * phi_i(y_j)
+        !
+        ! Reference:  Data_Structures_Optimal_Choice_of_Parameters_and_C, eq. 38
         function lib_ml_fmm_get_u_phi_i_j(data_element_i, element_number_i, y_j, element_number_j) result(rv)
             use lib_tree_public
             use ml_fmm_type
@@ -438,7 +526,7 @@ module lib_ml_fmm_type_operator
 !        procedure(ml_fmm_v_sub_0D_operator), pointer, nopass :: v_sub_0D => null()
 
 !        procedure(ml_fmm_deallocate_coefficient_list), pointer, nopass :: deallocate_coefficient_list => null()
-!        procedure(ml_fmm_coefficient_eq), pointer, nopass :: coefficient_eq => null()
+        procedure(ml_fmm_coefficient_eq), pointer, nopass :: coefficient_eq => null()
 !        procedure(ml_fmm_coefficient_eq), pointer, nopass :: coefficient_ne => null()
     end type
 
@@ -458,7 +546,7 @@ module lib_ml_fmm_type_operator
 !    procedure(ml_fmm_v_sub_0D_operator), pointer :: m_v_sub_0D => null()
 	
 	!    procedure(ml_fmm_deallocate_coefficient_list), pointer :: m_deallocate_coefficient_list => null()
-!    procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_eq => null()
+    procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_eq => null()
 !    procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_ne => null()
 #else
     procedure(ml_fmm_coefficient_add_operator), pointer :: m_coefficient_add
@@ -475,7 +563,7 @@ module lib_ml_fmm_type_operator
 !    procedure(ml_fmm_v_sub_0D_operator), pointer :: m_v_sub_0D
 	
 	!    procedure(ml_fmm_deallocate_coefficient_list), pointer :: m_deallocate_coefficient_list => null()
-!    procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_eq
+    procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_eq
 !    procedure(ml_fmm_coefficient_eq), pointer :: m_coefficient_ne
 #endif
 
@@ -524,7 +612,7 @@ module lib_ml_fmm_type_operator
         !m_v_sub_0D => operator_procedures%v_sub_0D
 !        m_deallocate_coefficient_list => operator_procedures%deallocate_coefficient_list
 
-!        m_coefficient_eq => operator_procedures%coefficient_eq
+        m_coefficient_eq => operator_procedures%coefficient_eq
 !        m_coefficient_ne => operator_procedures%coefficient_ne
 
     end subroutine lib_ml_fmm_type_operator_constructor
@@ -705,16 +793,16 @@ module lib_ml_fmm_type_operator
 !
 !        end function lib_ml_fmm_u_dot_coefficient_operator
         
-!        function lib_ml_fmm_coefficient_eq(lhs, rhs) result(rv)
-!            use ml_fmm_type
-!            implicit none
-!            type(lib_ml_fmm_coefficient), intent(in) :: lhs
-!            type(lib_ml_fmm_coefficient), intent(in) :: rhs
-!            logical :: rv
-!
-!            rv = m_coefficient_eq(lhs, rhs)
-!
-!        end function lib_ml_fmm_coefficient_eq
+        function lib_ml_fmm_coefficient_eq(lhs, rhs) result(rv)
+            use ml_fmm_type
+            implicit none
+            type(lib_ml_fmm_coefficient), intent(in) :: lhs
+            type(lib_ml_fmm_coefficient), intent(in) :: rhs
+            logical :: rv
+
+            rv = m_coefficient_eq(lhs, rhs)
+
+        end function lib_ml_fmm_coefficient_eq
         
 !        function lib_ml_fmm_coefficient_ne(lhs, rhs) result(rv)
 !            use ml_fmm_type

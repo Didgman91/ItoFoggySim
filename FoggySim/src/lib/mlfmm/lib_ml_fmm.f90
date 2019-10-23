@@ -1,4 +1,4 @@
-#define _FMM_DIMENSION_ 3
+#define _FMM_DIMENSION_ 2
 
 ! LIB: Mulitlevel Fast Multipole Method
 !
@@ -44,12 +44,14 @@ module lib_ml_fmm
     ! 2. create ml fmm data set
     !       - C per box and per level (l_max up to l_min)
     !       - D per box and per level (l_min down to l_max)
-    subroutine lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures)
+    subroutine lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures, tree_s_opt)
         implicit none
         ! dummy
         type(lib_ml_fmm_data), intent(inout) :: data_elements
         type(ml_fmm_type_operator_procedures), intent(in) :: operator_procedures
         type(lib_ml_fmm_procedure_handles), intent(in) :: ml_fmm_procedures
+        integer(kind=4), intent(in), optional :: tree_s_opt
+
 
         ! auxiliaray
         type(lib_tree_data_element), dimension(:), allocatable :: data_concatenated
@@ -62,7 +64,9 @@ module lib_ml_fmm
         !   length(3) = size(data_elements%XY)
         allocate(data_concatenated, source=lib_ml_fmm_concatenate_data_array(data_elements, length))
 
-        m_tree_s_opt = 1 ! todo: calculate s
+
+        m_tree_s_opt = 1
+        if (present(tree_s_opt)) m_tree_s_opt = tree_s_opt
 
         ! initiate the Tree
         call lib_tree_constructor(data_concatenated, m_tree_s_opt)
@@ -93,8 +97,8 @@ module lib_ml_fmm
             deallocate(m_ml_fmm_v)
         end if
 
-        allocate (m_ml_fmm_u(length(HIERARCHY_X) + length(HIERARCHY_XY)))
-        allocate (m_ml_fmm_v(length(HIERARCHY_Y) + length(HIERARCHY_XY)))
+        allocate (m_ml_fmm_u(sum(length)))
+        allocate (m_ml_fmm_v(sum(length)))
     end subroutine lib_ml_fmm_constructor
 
     ! clean up
@@ -149,12 +153,28 @@ module lib_ml_fmm
     ! ----
     !   vector_u: type(lib_ml_fmm_v), dimension(:)
     !       vector u of the matrix vector product PHI * u = v
+    !       HINT: length(vector_u) = no of all data elements (X-, Y- and XY-, hierarchy)
+    !       CONVENTION:
+    !           Internal representation of the element data list
+    !           from the 1-st to the N-th element.
+    !           ------------------------------------
+    !           |1    X    |     Y    |     XY    N|
+    !           ------------------------------------
+    !           X-, Y-, XY- hierarchy
     !   use_move_alloc_vector_u: logical, optional (std: .true.)
     !
     ! Returns
     ! ----
     !   vector_v: type(lib_ml_fmm_v), dimension(:)
     !       vector v  of the matrix vector product PHI * u = v
+    !       HINT: length(vector_u) = no of all data elements (X-, Y- and XY-, hierarchy)
+    !       CONVENTION:
+    !           Internal representation of the element data list
+    !           from the 1-st to the N-th element.
+    !           ------------------------------------
+    !           |1    X    |     Y    |     XY    N|
+    !           ------------------------------------
+    !           X-, Y-, XY- hierarchy
     subroutine lib_ml_fmm_run(vector_u, vector_v, use_move_alloc_vector_u)
         implicit none
         ! dummy
@@ -915,8 +935,13 @@ module lib_ml_fmm
 
         rv = m_ml_fmm_handles%dor(D, x_c, y_j, element_number_j)
 
+!        i=1
+!        rv = m_ml_fmm_handles%get_u_phi_i_j(data_element_e2(i), element_number_e2(i), y_j, element_number_j)
         do i=1, size(data_element_e2)
-            rv = rv + m_ml_fmm_handles%get_u_phi_i_j(data_element_e2(i), element_number_e2(i), y_j, element_number_j)
+            if (data_element_e2(i)%hierarchy .eq. HIERARCHY_X &
+                .or. data_element_e2(i)%hierarchy .eq. HIERARCHY_XY) then
+                rv = rv + m_ml_fmm_handles%get_u_phi_i_j(data_element_e2(i), element_number_e2(i), y_j, element_number_j)
+            end if
         end do
 
     end function lib_ml_fmm_calculate_v_y_j
@@ -929,21 +954,19 @@ module lib_ml_fmm
 
         error_counter = 0
 
-        if (.not. test_lib_ml_fmm_constructor()) then
-            error_counter = error_counter + 1
-        end if
+        if (.not. test_lib_ml_fmm_constructor()) error_counter = error_counter + 1
         call lib_ml_fmm_destructor()
-        if (.not. test_lib_ml_fmm_calculate_upward_pass()) then
-            error_counter = error_counter + 1
-        end if
+
+        if (.not. test_lib_ml_fmm_calculate_upward_pass()) error_counter = error_counter + 1
         call lib_ml_fmm_destructor()
-        if (.not. test_lib_ml_fmm_calculate_downward_pass_1()) then
-            error_counter = error_counter + 1
-        end if
+
+        if (.not. test_lib_ml_fmm_calculate_downward_pass_1()) error_counter = error_counter + 1
         call lib_ml_fmm_destructor()
-        if (.not. test_lib_ml_fmm_calculate_downward_pass_2()) then
-            error_counter = error_counter + 1
-        end if
+
+        if (.not. test_lib_ml_fmm_calculate_downward_pass_2()) error_counter = error_counter + 1
+        call lib_ml_fmm_destructor()
+
+        if (.not. test_lib_ml_fmm_final_summation()) error_counter = error_counter + 1
         call lib_ml_fmm_destructor()
 
         print *, "-------------lib_ml_fmm_test_functions----------------"
@@ -1003,6 +1026,13 @@ module lib_ml_fmm
         !  level 3:
         !         D~: -   - 6+28  -  7+28 -   -   28  0   -   -   -    -   -
         !          D: -   - 275+34- 275+35-   -282+28 310 -   -   -    -   -
+        !          n: 0   1   2   6   10  13  15  34  42  48  49  54   61  63
+        !       type: X   X   Y   X   Y   <-X ->  <-Y -> <--     X        -->
+        !
+        !  Final Summation:
+        !        2*D: -   -  618  -  620  -   -  620  620 -   -   -    -   -
+        !sum(phi_e2): -   -   1   -   0   -   -   0   0   -   -   -    -   -
+        !      final: -   -  619  -  620  -   -  620  620 -   -   -    -   -
         !          n: 0   1   2   6   10  13  15  34  42  48  49  54   61  63
         !       type: X   X   Y   X   Y   <-X ->  <-Y -> <--     X        -->
         !
@@ -1302,6 +1332,27 @@ module lib_ml_fmm
             ground_truth_uindex_list_l_2(4)%n = 10
 
         end subroutine setup_ground_truth_D_coefficient_list_2D
+
+        subroutine setup_ground_truth_final_summation_2D(vector_v)
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_v), dimension(:), allocatable, intent(inout) :: vector_v
+
+            ! auxiliary
+            integer :: i
+
+            allocate(vector_v(14))
+            do i=11, 14
+                allocate(vector_v(i)%dummy(1))
+            end do
+
+            vector_v(11)%dummy(1) = 619
+            vector_v(12)%dummy(1) = 620
+            vector_v(13)%dummy(1) = 620
+            vector_v(14)%dummy(1) = 620
+
+
+        end subroutine setup_ground_truth_final_summation_2D
 
         function test_lib_ml_fmm_constructor() result(rv)
             implicit none
@@ -1717,6 +1768,75 @@ module lib_ml_fmm
             rv = .true.
 #endif
         end function test_lib_ml_fmm_calculate_downward_pass_2
+
+        function test_lib_ml_fmm_final_summation() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
+
+            integer(kind=UINDEX_BYTES), parameter :: list_length = 10
+            integer(kind=1), parameter :: element_type = 1
+
+            real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
+            integer(kind=UINDEX_BYTES) :: i
+
+            type(lib_ml_fmm_v), dimension(:), allocatable :: ground_truth_vector_v
+            double precision :: diff
+
+#if (_FMM_DIMENSION_ == 2)
+            ! --- generate test data & setup the heriarchy ---
+            call setup_hierarchy_with_test_data_2D()
+
+            allocate(vector_u(list_length+4_8))
+            allocate(dummy(1))
+            dummy(1) = 1.0
+            do i=1, size(vector_u)
+                vector_u(i)%dummy = dummy
+            end do
+
+            if (allocated(m_ml_fmm_u)) then
+                m_ml_fmm_u = vector_u
+            else
+                allocate(m_ml_fmm_u, source=vector_u)
+            end if
+
+            call lib_ml_fmm_calculate_upward_pass()
+            call lib_ml_fmm_calculate_downward_pass_step_1()
+            call lib_ml_fmm_calculate_downward_pass_step_2()
+
+            ! --- setup ground truth data ---
+            call setup_ground_truth_final_summation_2D(ground_truth_vector_v)
+
+            ! --- function to test ---
+            call lib_ml_fmm_final_summation()
+
+
+            ! --- test ---
+            rv = .true.
+
+            print *, "test_lib_ml_fmm_final_summation"
+            do i=1, size(ground_truth_vector_v)
+                if (allocated(m_ml_fmm_v(i)%dummy)) then
+                    diff = m_ml_fmm_v(i)%dummy(1) - ground_truth_vector_v(i)%dummy(1)
+                    if ( diff .lt. 1D-14 ) then
+                        print *, "  m_ml_fmm_v(i=", i, "):  OK"
+                    else
+                        rv = .false.
+                        print *, "  m_ml_fmm_v(i=", i, "):  FAILED"
+                        print *, "    m_ml_fmm_v: ", m_ml_fmm_v(i)%dummy(1)
+                        print *, "    GT        : ", ground_truth_vector_v(i)%dummy(1)
+                    end if
+                end if
+            end do
+
+#else
+            print *, "test_lib_ml_fmm_final_summation (3D): NOT DEFINED"
+            rv = .true.
+#endif
+        end function
 
     end function lib_ml_fmm_test_functions
 

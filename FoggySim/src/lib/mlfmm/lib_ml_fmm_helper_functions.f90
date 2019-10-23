@@ -328,16 +328,19 @@ module lib_ml_fmm_helper_functions
         ! ----
         !   data: array<lib_tree_data_element>
         !       list of data points
+        !   correspondence_vector: type(lib_tree_correspondece_vector_element)
+        !
         !
         ! Result
         ! ----
         !   hierarchy
         !       hierarchy of the X- and Y-hierarchy (sources and targets)
-        subroutine lib_ml_fmm_hf_create_hierarchy(data_elements, correspondence_vector, length, l_min, l_max, hierarchy)
+        subroutine lib_ml_fmm_hf_create_hierarchy(data_elements, correspondence_vector, length, l_min, l_max, &
+                                                  hierarchy)
             implicit none
             ! dummy
             type(lib_tree_data_element), dimension(:), intent(inout) :: data_elements
-            type(lib_tree_correspondece_vector_element), dimension(:), allocatable, intent(inout) :: correspondence_vector
+            type(lib_tree_correspondece_vector_element), dimension(:), allocatable, intent(in) :: correspondence_vector
             integer(kind=UINDEX_BYTES), dimension(3), intent(in) :: length
             integer(kind=1), intent(in) :: l_max
             integer(kind=1), intent(in) :: l_min
@@ -351,7 +354,7 @@ module lib_ml_fmm_helper_functions
             type(lib_tree_universal_index), dimension(:), allocatable :: uindex_list_XY
             integer(kind=1) :: l_th
             integer(kind=1) :: hierarchy_type
-            integer(kind=UINDEX_BYTES), dimension(3) :: uindex_list_counter
+            integer, dimension(3) :: uindex_list_counter
 
             integer(kind=CORRESPONDENCE_VECTOR_KIND) :: element_index
 
@@ -412,8 +415,13 @@ module lib_ml_fmm_helper_functions
 
                     call lib_ml_fmm_hf_add_uindex_to_hierarchy(hierarchy, int(i, 1), uindex_list_X, uindex_list_Y, uindex_list_XY)
                 end do
+            else
+                print *, "lib_ml_fmm_hf_create_hierarchy: ERROR"
+                print *, "  l_max .le. l_min"
+                print *, "  l_max = ", l_max
+                print *, "  l_min = ", l_min
             end if
-        end subroutine
+        end subroutine lib_ml_fmm_hf_create_hierarchy
 
         ! Adds lists of universal indices of different hierachical type to the hierarchy.
         !
