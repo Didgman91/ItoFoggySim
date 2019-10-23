@@ -174,8 +174,8 @@ module lib_tree
         cpu_time_delta(2) = finish - start
         call cpu_time(finish)
         note_string(2) = "lib_tree_create_correspondence_vector"
-#endif
         length = 2
+#endif
 
         ! optimise threshold level
         if (present(s)) then
@@ -190,8 +190,8 @@ module lib_tree
 #endif
 #ifdef _DEBUG_
             call cpu_time(start)
-#endif
             length = 3
+#endif
             l_max = lib_tree_get_level_max(s)
             if ( l_max .lt. threshold_level ) then
 #ifdef _DEBUG_
@@ -225,10 +225,10 @@ module lib_tree
                 call cpu_time(finish)
                 cpu_time_delta(6) = finish - start
                 note_string(6) = "lib_tree_create_correspondece_vector_sorted_data_elements"
+                length = 6
 #endif
                 ! todo: optimise correspondence vector (if size(elements) ~~ size(correspondence vector), then without hash  algorithm)
                 ! ~~~ end: optimization ~~~
-                length = 6
             else
                 print *, "lib_tree_constructor: NOTE"
                 print *, "  number of elements per box could NOT be set with *s*"
