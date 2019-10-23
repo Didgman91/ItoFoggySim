@@ -52,7 +52,7 @@ module lib_mie_ms_ml_fmm_interface
             operator_procedures = ml_fmm_type_operator_get_procedures(1)
             ml_fmm_procedures = lib_mie_ms_ml_fmm_get_procedures()
 
-            call lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures)
+            call lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures, tree_s_opt = 1)
 
         end subroutine lib_mie_ms_ml_fmm_constructor
 
@@ -216,8 +216,8 @@ module lib_mie_ms_ml_fmm_interface
 !            buffer_x_2_nm = simulation_data%sphere_list(i)%b_nm
 
             ! vector u aka vector x (solver_ Mx = b)
-            buffer_x_1_nm = m_ml_fmm_u(i)%a_nm
-            buffer_x_2_nm = m_ml_fmm_u(i)%b_nm
+            buffer_x_1_nm = m_ml_fmm_u(element_number)%a_nm
+            buffer_x_2_nm = m_ml_fmm_u(element_number)%b_nm
 
             call init_list(buffer_1_nm, n_range(1), n_range(2) - n_range(1) + 1)
             call init_list(buffer_2_nm, n_range(1), n_range(2) - n_range(1) + 1)
@@ -272,7 +272,7 @@ module lib_mie_ms_ml_fmm_interface
             type(list_4_cmplx) :: a_nmnumu
             type(list_4_cmplx) :: b_nmnumu
 
-            z_selector = simulation_data%spherical_harmonics%z_selector_translation_le_r
+            z_selector = simulation_data%spherical_harmonics%z_selector_translation_gt_r
             n_range = simulation_data%spherical_harmonics%n_range
 
 
@@ -393,7 +393,7 @@ module lib_mie_ms_ml_fmm_interface
             type(list_4_cmplx) :: a_nmnumu
             type(list_4_cmplx) :: b_nmnumu
 
-            z_selector = simulation_data%spherical_harmonics%z_selector_translation_le_r
+            z_selector = simulation_data%spherical_harmonics%z_selector_translation_gt_r
             n_range = simulation_data%spherical_harmonics%n_range
 
 
@@ -493,18 +493,8 @@ module lib_mie_ms_ml_fmm_interface
             type(list_4_cmplx) :: b_nmnumu
 
             j = element_number_j - lbound(simulation_data%sphere_list, 1) + 1
-            d_0_j = simulation_data%sphere_list(j)%d_0_j
-            no = simulation_data%sphere_list(j)%sphere_parameter_index
-            n_range_j = simulation_data%sphere_parameter_list(no)%n_range
-
-            a_n = simulation_data%sphere_parameter_list(no)%a_n
-            b_n = simulation_data%sphere_parameter_list(no)%b_n
-
-            n_range = simulation_data%spherical_harmonics%n_range
-            z_selector = simulation_data%spherical_harmonics%z_selector_translation_gt_r
-
-            buffer_x_1_nm = m_ml_fmm_u(j)%a_nm
-            buffer_x_2_nm = m_ml_fmm_u(j)%b_nm
+            buffer_x_1_nm = m_ml_fmm_u(element_number_j)%a_nm
+            buffer_x_2_nm = m_ml_fmm_u(element_number_j)%b_nm
 
             l = element_number_i - lbound(simulation_data%sphere_list, 1) + 1
 
@@ -512,6 +502,17 @@ module lib_mie_ms_ml_fmm_interface
                 buffer_b_1_nm = buffer_x_1_nm
                 buffer_b_2_nm = buffer_x_2_nm
             else
+                d_0_j = simulation_data%sphere_list(j)%d_0_j
+                no = simulation_data%sphere_list(j)%sphere_parameter_index
+                n_range_j = simulation_data%sphere_parameter_list(no)%n_range
+
+                a_n = simulation_data%sphere_parameter_list(no)%a_n
+                b_n = simulation_data%sphere_parameter_list(no)%b_n
+
+                n_range = simulation_data%spherical_harmonics%n_range
+                z_selector = simulation_data%spherical_harmonics%z_selector_translation_gt_r
+
+
                 d_0_l = simulation_data%sphere_list(l)%d_0_j
                 no = simulation_data%sphere_list(l)%sphere_parameter_index
                 n_range_l = simulation_data%sphere_parameter_list(no)%n_range
@@ -541,16 +542,13 @@ module lib_mie_ms_ml_fmm_interface
                     do m = -n, n
                         if (n_range(2) .le. n_range_j(2) &
                             .and. n_range(1) .ge. n_range_j(1)) then
-                            buffer_1_nm = a_n%item(n) * a_nmnumu%item(n)%item(m)
-                            buffer_2_nm = a_n%item(n) * b_nmnumu%item(n)%item(m)
+                            buffer_1_nm = a_nmnumu%item(n)%item(m)
+                            buffer_2_nm = b_nmnumu%item(n)%item(m)
 
-                            buffer_b_1_nm%item(n)%item(m) = sum(buffer_1_nm * buffer_x_1_nm &
+                            buffer_b_1_nm%item(n)%item(m) = a_n%item(n) * sum(buffer_1_nm * buffer_x_1_nm &
                                                                 + buffer_2_nm * buffer_x_2_nm)
 
-                            buffer_1_nm = b_n%item(n) * b_nmnumu%item(n)%item(m)
-                            buffer_2_nm = b_n%item(n) * a_nmnumu%item(n)%item(m)
-
-                            buffer_b_2_nm%item(n)%item(m) = sum(buffer_1_nm * buffer_x_1_nm &
+                            buffer_b_2_nm%item(n)%item(m) = b_n%item(n) * sum(buffer_1_nm * buffer_x_1_nm &
                                                                 + buffer_2_nm * buffer_x_2_nm)
                         else
                             buffer_b_1_nm%item(n)%item(m) = dcmplx(0,0)
@@ -625,7 +623,7 @@ module lib_mie_ms_ml_fmm_interface
 
             n_range = simulation_data%spherical_harmonics%n_range
 
-            z_selector = simulation_data%spherical_harmonics%z_selector_translation_le_r
+            z_selector = simulation_data%spherical_harmonics%z_selector_translation_gt_r
 
             n_range_j(1) = max(n_range_j(1), n_range(1))
             n_range_j(2) = min(n_range_j(2), n_range(2))
@@ -655,15 +653,14 @@ module lib_mie_ms_ml_fmm_interface
                     do m = -n, n
                         if (n_range(2) .le. n_range_j(2) &
                             .and. n_range(1) .ge. n_range_j(1)) then
-                            buffer_1_nm = a_n%item(n) * a_nmnumu%item(n)%item(m)
-                            buffer_2_nm = a_n%item(n) * b_nmnumu%item(n)%item(m)
+                            buffer_1_nm = a_nmnumu%item(n)%item(m)
+                            buffer_2_nm = b_nmnumu%item(n)%item(m)
 
-                            buffer_b_1_nm%item(n)%item(m) = sum(buffer_1_nm + buffer_2_nm)
+                            buffer_b_1_nm%item(n)%item(m) = a_n%item(n) * sum(buffer_1_nm * D%a_nm&
+                                                                              + buffer_2_nm * D%b_nm)
 
-                            buffer_1_nm = b_n%item(n) * b_nmnumu%item(n)%item(m)
-                            buffer_2_nm = b_n%item(n) * a_nmnumu%item(n)%item(m)
-
-                            buffer_b_2_nm%item(n)%item(m) = sum(buffer_1_nm + buffer_2_nm)
+                            buffer_b_2_nm%item(n)%item(m) = b_n%item(n) * sum(buffer_1_nm * D%b_nm&
+                                                                              + buffer_2_nm * D%a_nm)
                         else
                             buffer_b_1_nm%item(n)%item(m) = dcmplx(0,0)
                             buffer_b_2_nm%item(n)%item(m) = dcmplx(0,0)

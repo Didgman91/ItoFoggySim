@@ -818,16 +818,13 @@ module lib_mie_ms_solver_interface
                             do m = -n, n
                                 if (n_range(2) .le. n_range_j(2) &
                                     .and. n_range(1) .ge. n_range_j(1)) then
-                                    buffer_1_nm = a_n%item(n) * a_nmnumu%item(n)%item(m)
-                                    buffer_2_nm = a_n%item(n) * b_nmnumu%item(n)%item(m)
+                                    buffer_1_nm = a_nmnumu%item(n)%item(m)
+                                    buffer_2_nm = b_nmnumu%item(n)%item(m)
 
-                                    buffer_b_1_nm%item(n)%item(m) = sum(buffer_1_nm * buffer_x_1_nm &
+                                    buffer_b_1_nm%item(n)%item(m) = a_n%item(n) * sum(buffer_1_nm * buffer_x_1_nm &
                                                                         + buffer_2_nm * buffer_x_2_nm)
 
-                                    buffer_1_nm = b_n%item(n) * b_nmnumu%item(n)%item(m)
-                                    buffer_2_nm = b_n%item(n) * a_nmnumu%item(n)%item(m)
-
-                                    buffer_b_2_nm%item(n)%item(m) = sum(buffer_1_nm * buffer_x_1_nm &
+                                    buffer_b_2_nm%item(n)%item(m) = b_n%item(n) * sum(buffer_1_nm * buffer_x_1_nm &
                                                                         + buffer_2_nm * buffer_x_2_nm)
                                 else
                                     buffer_b_1_nm%item(n)%item(m) = dcmplx(0,0)

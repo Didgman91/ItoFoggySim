@@ -1,4 +1,4 @@
-#define _FMM_DIMENSION_ 2
+#define _FMM_DIMENSION_ 3
 
 ! LIB: Mulitlevel Fast Multipole Method
 !
@@ -84,11 +84,17 @@ module lib_ml_fmm
         m_tree_l_min = lib_tree_get_level_min(m_tree_neighbourhood_size_k)
         m_tree_l_max = lib_tree_get_level_max(m_tree_s_opt)
 
+        if (m_tree_l_max .lt. m_tree_l_min) m_tree_l_min = m_tree_l_max
+
         ! initiate the X- and Y-hierarchy
         correspondence_vector = lib_tree_get_correspondence_vector()
         call lib_ml_fmm_hf_create_hierarchy(data_concatenated, correspondence_vector, &
                                             length, m_tree_l_min, m_tree_l_max,&
                                             m_ml_fmm_hierarchy)
+        print *, "lib_ml_fmm_constructor: INFO"
+        print *, "  m_tree_l_min: ", m_tree_l_min
+        print *, "  m_tree_l_max: ", m_tree_l_max
+        print *, "  m_tree_s_opt: ", m_tree_s_opt
 
         if (allocated(m_ml_fmm_u)) then
             deallocate(m_ml_fmm_u)
