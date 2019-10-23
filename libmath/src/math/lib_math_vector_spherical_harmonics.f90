@@ -1313,11 +1313,11 @@ module lib_math_vector_spherical_harmonics
         !   B_mnkl: type(list_4_cmplx)
         !       4 dimensional matrix
         !
-        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
+        ! Reference: Efficient Evaluation of Vector Translation Coefficients in Multiparticle Light-Scattering Theories, Yu-lin Xu
         subroutine lib_math_vector_spherical_harmonics_translation_coeff_r(x, theta, phi, &
-                                                                                    n_range, nu_range, &
-                                                                                    z_selector, &
-                                                                                    A_mnkl, B_mnkl)
+                                                                           n_range, nu_range, &
+                                                                           z_selector, &
+                                                                           A_mnkl, B_mnkl)
             implicit none
             ! dummy
             double precision, intent(in) :: x
@@ -1364,6 +1364,9 @@ module lib_math_vector_spherical_harmonics
 
             integer, dimension(2) :: n_max_range
 
+            logical :: calc_a
+            logical :: calc_b
+
             !$  integer(kind=4) :: j_max
             !$  logical :: thread_first_run
 
@@ -1371,7 +1374,7 @@ module lib_math_vector_spherical_harmonics
             n_max_range(1) = min(n_range(1), nu_range(1))
             n_max_range(2) = max(n_range(2), nu_range(2))
 
-            ! eq. 5
+            ! eq. 28
             ! p = n + nu - 2 * q
             ! worst case:
             !   q = 0
@@ -1380,13 +1383,13 @@ module lib_math_vector_spherical_harmonics
             !   b(p=p+1)
             !   => j_max = 2 * n_max_range(2) + 1
 
-            !$  j_max = 2 * n_max_range(2) + 1
-            !$  call fwig_thread_temp_init(2 * j_max)     ! multi threaded
+!            !$  j_max = 2 * n_max_range(2) + 1
+!            !$  call fwig_thread_temp_init(2 * j_max)     ! multi threaded
 
-            allocate (buffer_pm(2, 1:2*n_max_range(2)+1))
-            allocate (buffer_pd(2, 1:2*n_max_range(2)+1))
+            allocate (buffer_pm(2, 0:2*n_max_range(2)+1+1))
+            allocate (buffer_pd(2, 0:2*n_max_range(2)+1+1))
 
-            call init_list(p_k_minus_m_p, n_max_range(1)-1, 2*n_max_range(2)-n_max_range(1)+1+1)
+            call init_list(p_k_minus_m_p, 0, 2*n_max_range(2)+1+1)
 
             call init_list(A_mnkl, n_range(1), n_range(2)-n_range(1)+1, &
                                    nu_range(1), nu_range(2)-nu_range(1)+1)
@@ -1399,20 +1402,20 @@ module lib_math_vector_spherical_harmonics
             select case (z_selector)
                 case(1)
                     ! spherical Bessel function first kind j_n
-                    allocate(z_n_real(0:2*n_max_range(2)))
-                    z_n_real = lib_math_bessel_spherical_first_kind(x, 0, 2*n_max_range(2)+1)
+                    allocate(z_n_real(0:2*n_max_range(2)+1))
+                    z_n_real = lib_math_bessel_spherical_first_kind(x, 0, 2*n_max_range(2)+1+1)
                 case(2)
                     ! spherical Bessel function second kind y_n
-                    allocate(z_n_real(0:2*n_max_range(2)))
-                    z_n_real = lib_math_bessel_spherical_second_kind(x, 0, 2*n_max_range(2)+1)
+                    allocate(z_n_real(0:2*n_max_range(2)+1))
+                    z_n_real = lib_math_bessel_spherical_second_kind(x, 0, 2*n_max_range(2)+1+1)
                 case(3)
                     ! spherical Hankel function first kind   h^(1)_n
-                    allocate(z_n_cmplx(0:2*n_max_range(2)))
-                    z_n_cmplx = lib_math_hankel_spherical_1(x, 0, 2*n_max_range(2)+1)
+                    allocate(z_n_cmplx(0:2*n_max_range(2)+1))
+                    z_n_cmplx = lib_math_hankel_spherical_1(x, 0, 2*n_max_range(2)+1+1)
                 case(4)
                     ! spherical Hankel function second kind   h^(2)_n
-                    allocate(z_n_cmplx(0:2*n_max_range(2)))
-                    z_n_cmplx = lib_math_hankel_spherical_2(x, 0, 2*n_max_range(2)+1)
+                    allocate(z_n_cmplx(0:2*n_max_range(2)+1))
+                    z_n_cmplx = lib_math_hankel_spherical_2(x, 0, 2*n_max_range(2)+1+1)
                 case default
                     z_n_real = 0
                     z_n_cmplx = cmplx(0,0)
@@ -1425,38 +1428,38 @@ module lib_math_vector_spherical_harmonics
             ! Legendre Polynomial
             cos_theta = cos(theta)
             call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, 0, &
-                                                                         0, 2*n_max_range(2)+1, &
+                                                                         0, 2*n_max_range(2)+1+1, &
                                                                          buffer_pm, buffer_pd)
-            do n=0, 2*n_max_range(2)
-                p_k_minus_m_p%item(n)%item(0) = buffer_pm(1,n+1)
+            do n=0, 2*n_max_range(2)+1
+                p_k_minus_m_p%item(n)%item(0) = buffer_pm(1,n)
             end do
 
-            do m=1, 2*n_max_range(2)
+            do m=1, 2*n_max_range(2)+1
                 call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, m, &
-                                                                             m, 2*n_max_range(2)-m+1, &
+                                                                             m, 2*n_max_range(2)-m+1+1, &
                                                                              buffer_pm, buffer_pd)
-                do n=m, 2*n_max_range(2)
-                        p_k_minus_m_p%item(n)%item(-m) = buffer_pm(1,n-m+1)
-                        p_k_minus_m_p%item(n)%item(m) = buffer_pm(2,n-m+1)
+                do n=m, 2*n_max_range(2)+1
+                        p_k_minus_m_p%item(n)%item(-m) = buffer_pm(1,n-m)
+                        p_k_minus_m_p%item(n)%item(m) = buffer_pm(2,n-m)
                 end do
             end do
 
             ! --- calculate A and B
-            !$  thread_first_run = .true.
-            !$OMP PARALLEL DO PRIVATE(n, m, nu, mu, q_max_a, q_max_b, q_max, q, p, &
-            !$OMP  factorial, buffer_cmplx_a, buffer_cmplx_b, buffer_cmplx, &
-            !$OMP  buffer_real, buffer_cmplx_e_m_mu_phi, a, b) &
-            !$OMP  FIRSTPRIVATE(thread_first_run)
+!            !$  thread_first_run = .true.
+!            !$OMP PARALLEL DO PRIVATE(n, m, nu, mu, q_max_a, q_max_b, q_max, q, p, &
+!            !$OMP  factorial, buffer_cmplx_a, buffer_cmplx_b, buffer_cmplx, &
+!            !$OMP  buffer_real, buffer_cmplx_e_m_mu_phi, a, b) &
+!            !$OMP  FIRSTPRIVATE(thread_first_run)
             do n=n_range(1), n_range(2)
-                !$  if (thread_first_run) then
-                !$    call fwig_thread_temp_init(2 * j_max)     ! multi threaded
-                !$    thread_first_run = .false.
-                !$  endif
+!                !$  if (thread_first_run) then
+!                !$    call fwig_thread_temp_init(2 * j_max)     ! multi threaded
+!                !$    thread_first_run = .false.
+!                !$  endif
                 do m=-n, n
                     do nu=nu_range(1), nu_range(2)
                         do mu=-nu, nu
-                            q_max_a = get_q_max_a(m, n, mu, nu)
-                            q_max_b = get_q_max_b(m, n, mu, nu)
+                            q_max_a = get_q_max_a(-m, n, mu, nu)
+                            q_max_b = get_q_max_b(-m, n, mu, nu)
                             q_max = max(q_max_a, q_max_b)
 
                             factorial = (2 * nu + 1)
@@ -1468,22 +1471,25 @@ module lib_math_vector_spherical_harmonics
                             buffer_cmplx_b = cmplx(0,0)
                             do q=0, q_max
                                 p = n + nu - 2 * q
-                                if (q .eq. 0 &
+
+                                if (q .ge. 0 &
                                     .and. q .le. q_max_a) then
-                                    call ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b, calc_b = .false.)
+                                    calc_a = .true.
                                 else
-                                    if (q .le. q_max_a &
-                                        .and. q .le. q_max_b) then
-                                        call ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b)
-                                    else if (q .le. q_max_a) then
-                                        call ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b, calc_b = .false.)
-                                    else if (q .le. q_max_b) then
-                                        call ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b, calc_a = .false.)
-                                    end if
+                                    calc_a = .false.
                                 end if
 
-                                if ((q .ge. 0) &
-                                    .and. (q .le. q_max_a)) then
+                                if (q .ge. 1 &
+                                    .and. q .le. q_max_b) then
+                                    calc_b = .true.
+                                else
+                                    calc_b = .false.
+                                end if
+
+                                call ab_xu_cruzan_eq34(-m, n, mu, nu, p, a, b, &
+                                                       calc_a = calc_a, calc_b = calc_b)
+
+                                if (calc_a) then
 
                                     buffer_real = (n*(n+1) + nu*(nu+1) - p*(p+1)) &
                                                   * a * p_k_minus_m_p%item(p)%item(mu-m)
@@ -1499,8 +1505,8 @@ module lib_math_vector_spherical_harmonics
                                     end select
                                 end if
 
-                                if ((q .ge. 1) &
-                                    .and. (q .le. q_max_b)) then
+
+                                if (calc_b) then
 
                                     buffer_real = sqrt( ( real(p+1, kind=8)**2 - real(n-nu, kind=8)**2 ) &
                                                             * ( real(n+nu+1, kind=8)**2 - real(p+1, kind=8)**2 ) ) &
@@ -1521,18 +1527,16 @@ module lib_math_vector_spherical_harmonics
                             buffer_real = (mu-m) * phi
                             buffer_cmplx_e_m_mu_phi = cmplx(cos(buffer_real), sin(buffer_real), kind=8)
 
-                            buffer_cmplx = (-1)**m * factorial * buffer_cmplx_e_m_mu_phi &
-                                           * buffer_cmplx_a
-                            A_mnkl%item(n)%item(m)%item(nu)%item(mu) = buffer_cmplx
+                            buffer_cmplx = factorial * buffer_cmplx_e_m_mu_phi
 
-                            buffer_cmplx = (-1)**(m+1) * factorial * buffer_cmplx_e_m_mu_phi &
-                                           * buffer_cmplx_b
-                            B_mnkl%item(n)%item(m)%item(nu)%item(mu) = buffer_cmplx
+                            A_mnkl%item(n)%item(m)%item(nu)%item(mu) = (-1)**(-m) * buffer_cmplx * buffer_cmplx_a
+
+                            B_mnkl%item(n)%item(m)%item(nu)%item(mu) = (-1)**(-m+1) * buffer_cmplx * buffer_cmplx_b
                         end do
                     end do
                 end do
             end do
-            !$OMP END PARALLEL DO
+!            !$OMP END PARALLEL DO
 
         end subroutine lib_math_vector_spherical_harmonics_translation_coeff_r
 
@@ -1635,7 +1639,7 @@ module lib_math_vector_spherical_harmonics
 
         end subroutine lib_math_vector_spherical_harmonics_translation_coeff_carte_r
 
-        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
+        ! Reference: Efficient Evaluation of Vector Translation Coefficients in Multiparticle Light-Scattering Theories, Yu-lin Xu
         !            eq. 25
         function get_q_max_a(m, n, k, l) result (rv)
             implicit none
@@ -1647,10 +1651,10 @@ module lib_math_vector_spherical_harmonics
 
             integer(kind=4) :: rv
 
-            rv = min(n, l, int(floor( (n + l - abs(m - k))/2.0 )))
+            rv = min(n, l, int(floor( real(n + l - abs(m + k))/2.0 )))
         end function
 
-        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
+        ! Reference: Efficient Evaluation of Vector Translation Coefficients in Multiparticle Light-Scattering Theories, Yu-lin Xu
         !            eq. 60
         function get_q_max_b(m, n, k, l) result (rv)
             implicit none
@@ -1662,11 +1666,13 @@ module lib_math_vector_spherical_harmonics
 
             integer(kind=4) :: rv
 
-            rv = min(n, l, int(floor( (n + l + 1 - abs(m - k))/2.0 )))
+            rv = min(n, l, int(floor( real(n + l + 1 - abs(m + k))/2.0 )))
         end function
 
-        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
-        !            eq. 5
+        ! Reference: [1] Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
+        !                eq. 5
+        !            [2] Efficient Evaluation of Vector Translation Coefficients in Multiparticle Light-Scattering Theories, Yu-lin Xu
+        !                eq. 28
         function get_p(n, l, q) result (rv)
             implicit none
             ! dummy
@@ -1681,8 +1687,8 @@ module lib_math_vector_spherical_harmonics
 
         ! todo: optimize for a(p=p) and b(p=p+1)
         !
-        ! Reference: Experimental and theoretical results of light scattering by aggregates of spheres, Yu-lin Xu and Bo Å. S. Gustafson
-        !            eq. 3, eq. 4
+        ! Reference: Efficient Evaluation of Vector Translation Coefficients in Multiparticle Light-Scattering Theories, Yu-lin Xu
+        !            eq. 5, eq. 61
         subroutine ab_xu_cruzan_eq34(m, n, mu, nu, p, a, b, calc_a, calc_b)
             implicit none
             ! dummy
@@ -1699,10 +1705,9 @@ module lib_math_vector_spherical_harmonics
             logical, intent(in), optional :: calc_b
 
             ! auxiliary
-            integer(kind=4) :: mu_minus_m
-
             real(kind=8), dimension(3) :: buffer_factorial
             real(kind=8), dimension(2) :: buffer_wigner
+            real(kind=8) :: minus_1_m_mu
 
             logical :: m_calc_a
             logical :: m_calc_b
@@ -1714,43 +1719,40 @@ module lib_math_vector_spherical_harmonics
             end if
 
             if ( present(calc_b) ) then
-                m_calc_a = calc_b
+                m_calc_b = calc_b
             end if
 
-            mu_minus_m = mu - m
+            minus_1_m_mu = (-1d0)**(m + mu)
 
-            ! --- a: eq. 3 ---
-            buffer_factorial(1) = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n, m)
+            ! --- a: eq. 5 ---
+            buffer_factorial(1) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(n, m)
             buffer_factorial(2) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(nu, mu)
 
             buffer_wigner(2) = lib_math_wigner_3j(n, nu, p, 0, 0, 0)
 
             if ( m_calc_a ) then
-                buffer_factorial(3) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(p, m - mu)
+                buffer_factorial(3) = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(p, m + mu)
 
-                buffer_wigner(1) = lib_math_wigner_3j(n, nu, p, -m, mu, m-mu)
+                buffer_wigner(1) = lib_math_wigner_3j(n, nu, p, m, mu, -m-mu)
 
                 a = (2_4 * p + 1_4) * sqrt(buffer_factorial(1) * buffer_factorial(2) * buffer_factorial(3)) &
                      * buffer_wigner(1) * buffer_wigner(2)
+                a = minus_1_m_mu * a
             else
                 a = 0
             end if
 
-            ! --- b: eq. 4 ---
+            ! --- b: eq. 61 ---
             if (  m_calc_b ) then
-                buffer_factorial(3) = lib_math_factorial_get_n_plus_m_divided_by_n_minus_m(p + 1_4, m - mu)
+                buffer_factorial(3) = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(p + 1_4, m + mu)
 
-                buffer_wigner(1) = lib_math_wigner_3j(n, nu, p+1_4, -m, mu, m-mu)
+                buffer_wigner(1) = lib_math_wigner_3j(n, nu, p+1_4, m, mu, -m-mu)
 
                 b = (2_4 * p + 3_4) * sqrt(buffer_factorial(1) * buffer_factorial(2) * buffer_factorial(3)) &
                      * buffer_wigner(1) * buffer_wigner(2)
+                b = minus_1_m_mu * b
             else
                 b = 0
-            end if
-
-            if (mod(mu-m, 2) .ne. 0) then
-                a = -a
-                b = -b
             end if
 
         end subroutine ab_xu_cruzan_eq34
@@ -2225,7 +2227,7 @@ module lib_math_vector_spherical_harmonics
 
                 real(kind=8) :: buffer
 
-                m = -15
+                m = 15!-15
                 n = 16
                 mu = -15
                 nu = 20
