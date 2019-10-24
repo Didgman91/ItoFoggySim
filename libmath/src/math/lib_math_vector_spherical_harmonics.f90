@@ -1786,6 +1786,9 @@ module lib_math_vector_spherical_harmonics
             if (.not. test_lib_math_vector_spherical_harmonics_translation_coeff_r()) then
                 rv = rv + 1
             end if
+            if (.not. test_lib_math_vector_spherical_harmonics_translation_coeff_r_v2()) then
+                rv = rv + 1
+            end if
             if (.not. test_lib_math_vector_spherical_harmonics_components_real_xu_2()) then
                 rv = rv + 1
             end if
@@ -2527,6 +2530,255 @@ module lib_math_vector_spherical_harmonics
                 end if
 
             end function test_lib_math_vector_spherical_harmonics_translation_coeff_r
+
+            function test_lib_math_vector_spherical_harmonics_translation_coeff_r_v2() result(rv)
+                use file_io
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! parameter
+                integer, parameter :: d = 4
+                character(len=*), parameter :: file_name = &
+                        "ground_truth/lib_math_vector_spherical_harmonics/ground_truth_AB_mnmunu_minus_phi.csv"
+                character(len=*), parameter :: format = '(10(X)A, ES19.9)'
+                ! auxiliary
+                integer :: i
+                double precision :: buffer
+                double complex :: buffer_cmplx
+                double precision :: x
+                double precision :: theta
+                double precision :: phi
+                integer(kind=4), dimension(2) :: n_range
+                integer(kind=4), dimension(2) :: nu_range
+                integer(kind=1) :: z_selector
+
+                type(list_4_cmplx) :: A_mnkl
+                type(list_4_cmplx) :: B_mnkl
+
+
+                integer :: m
+                integer :: n
+                integer :: mu
+                integer :: nu
+                type(list_4_cmplx) :: ground_truth_A
+                type(list_4_cmplx) :: ground_truth_B
+
+                double precision :: erg
+                double precision :: ground_truth_erg
+                integer :: erg_exponent
+                double precision :: erg_mantissa
+
+                double precision, dimension(:,:), allocatable :: csv_data
+                integer :: csv_columns
+
+                z_selector = 3
+                x = 2.0
+                theta = 0.5
+                phi = 2 * PI - 0.5
+
+                n_range  = (/ 1, 11 /)
+                nu_range = (/ 1, 12 /)
+
+                call init_list(ground_truth_A, n_range(1), n_range(2)-n_range(1)+1, &
+                                               nu_range(1), nu_range(2)-nu_range(1)+1)
+                call init_list(ground_truth_B, n_range(1), n_range(2)-n_range(1)+1, &
+                                               nu_range(1), nu_range(2)-nu_range(1)+1)
+                n_range  = (/ 1, 5 /)
+                nu_range = (/ 1, 5 /)
+                ! load ground truth
+                if (file_exists(file_name)) then
+                    csv_columns = 8
+                    call read_csv(file_name, csv_columns, csv_data)
+
+                    do i=lbound(csv_data, 1), ubound(csv_data, 1)
+                        m = int(csv_data(i, 1))
+                        n = int(csv_data(i, 2))
+                        mu = int(csv_data(i, 3))
+                        nu = int(csv_data(i, 4))
+
+                        buffer_cmplx = cmplx(csv_data(i, 5), csv_data(i, 6), kind=8)
+                        ground_truth_A%item(n)%item(m)%item(nu)%item(mu) = buffer_cmplx
+
+                        buffer_cmplx = cmplx(csv_data(i, 7), csv_data(i, 8), kind=8)
+                        ground_truth_B%item(n)%item(m)%item(nu)%item(mu) = buffer_cmplx
+                    end do
+!                m =  (/ -2,  8,  0, -2 /)
+!                n =  (/ 11, 10, 10,  6 /)
+!                mu = (/ 3 , -9,  0, -2 /)
+!                nu = (/ 9 , 12, 10, 10 /)
+!                m = (/ -2, 8 /)
+!                n = (/ 11, 10 /)
+!                mu = (/ 3, -9 /)
+!                nu = (/ 9, 12 /)
+!                ground_truth_A(1) = cmplx(.7726121583d+12, .103425m5820d+13, kind=8)
+!                ground_truth_B(1) = cmplx(.1222239141d+11, -0.9130398908d+10, kind=8)
+!
+!                ground_truth_A(2) = cmplx(.3663964990d+35, -.2762412192d+35, kind=8)
+!                ground_truth_B(2) = cmplx(-.8370892023d+32, -.1110285257d+33, kind=8)
+!
+!                ground_truth_A(3) = cmplx(.2969682019d+00, -.1928601440d+18, kind=8)
+!                ground_truth_B(3) = cmplx(0.0, 0.0, kind=8)
+!
+!                ground_truth_A(4) = cmplx(.1377011649d-01, .2385575934d+13, kind=8)
+!                ground_truth_B(4) = cmplx(-.3282035237d+12, .1587043209d-02, kind=8)
+!
+!                n_range = (/ 1, maxval(n) /)
+!                nu_range = (/ 1, maxval(nu) /)
+                call lib_math_vector_spherical_harmonics_translation_coeff_r(x, theta, phi, &
+                                                                             n_range, nu_range, z_selector, &
+                                                                             A_mnkl, B_mnkl)
+
+                rv = .true.
+                print *, "test_lib_math_vector_spherical_harmonics_translation_coeff_r:"
+                print *, "  A:"
+                do n=n_range(1), n_range(2)
+                do m=-n, n
+                do nu=nu_range(1), nu_range(2)
+                do mu=-nu, nu
+                    print *, "  n=", n, "m=", m, "nu=", nu, "mu=", mu
+                    erg = real(A_mnkl%item(n)%item(m)%item(nu)%item(mu))
+                    ground_truth_erg = real(ground_truth_A%item(n)%item(m)%item(nu)%item(mu))
+
+                    erg_exponent = int(log(abs(erg))/log(10D0))
+                    erg_mantissa = erg / 10d0**erg_exponent
+                    buffer = ground_truth_erg / 10d0**erg_exponent - erg_mantissa
+                    if (abs(buffer) .gt. ground_truth_e) then
+                        print *, "    (Re) difference: ", buffer, " : FAILED"
+                        print format, " A = ", real(A_mnkl%item(n)%item(m)%item(nu)%item(mu))
+                        print format, "GT = ", real(ground_truth_A%item(n)%item(m)%item(nu)%item(mu))
+                        rv = .false.
+                    else
+                        print *, "    (Re) OK"
+                    end if
+
+                    erg = aimag(A_mnkl%item(n)%item(m)%item(nu)%item(mu))
+                    ground_truth_erg = aimag(ground_truth_A%item(n)%item(m)%item(nu)%item(mu))
+
+                    erg_exponent = int(log(abs(erg))/log(10D0))
+                    erg_mantissa = erg / 10d0**erg_exponent
+                    buffer = ground_truth_erg / 10d0**erg_exponent - erg_mantissa
+                    if (abs(buffer) .gt. ground_truth_e) then
+                        print *, "    (Im) difference: ", buffer, " : FAILED"
+                        print format, " A = ", aimag(A_mnkl%item(n)%item(m)%item(nu)%item(mu))
+                        print format, "GT = ", aimag(ground_truth_A%item(n)%item(m)%item(nu)%item(mu))
+                        rv = .false.
+                    else
+                        print *, "    (Im) OK"
+                    end if
+                    print *, ""
+                end do
+                end do
+                end do
+                end do
+
+                print *, "  B:"
+                do n=n_range(1), n_range(2)
+                do m=-n, n
+                do nu=nu_range(1), nu_range(2)
+                do mu=-nu, nu
+                    print *, "  n=", n, "m=", m, "nu=", nu, "mu=", mu
+                    erg = real(B_mnkl%item(n)%item(m)%item(nu)%item(mu))
+                    ground_truth_erg = real(ground_truth_B%item(n)%item(m)%item(nu)%item(mu))
+
+                    erg_exponent = int(log(abs(erg+1))/log(10D0))
+                    erg_mantissa = erg / 10d0**erg_exponent
+                    buffer = ground_truth_erg / 10d0**erg_exponent - erg_mantissa
+                    if (abs(buffer) .gt. ground_truth_e) then
+                        print *, "    (Re) difference: ", buffer, " : FAILED"
+                        print format, " B = ", real(B_mnkl%item(n)%item(m)%item(nu)%item(mu))
+                        print format, "GT = ", real(ground_truth_B%item(n)%item(m)%item(nu)%item(mu))
+                        rv = .false.
+                    else
+                        print *, "    (Re) OK"
+                    end if
+
+                    erg = aimag(B_mnkl%item(n)%item(m)%item(nu)%item(mu))
+                    ground_truth_erg = aimag(ground_truth_B%item(n)%item(m)%item(nu)%item(mu))
+
+                    erg_exponent = int(log(abs(erg+1))/log(10D0))
+                    erg_mantissa = erg / 10d0**erg_exponent
+                    buffer = ground_truth_erg / 10d0**erg_exponent - erg_mantissa
+                    if (abs(buffer) .gt. ground_truth_e) then
+                        print *, "    (Im) difference: ", buffer, " : FAILED"
+                        print format, " B = ", aimag(B_mnkl%item(n)%item(m)%item(nu)%item(mu))
+                        print format, "GT = ", aimag(ground_truth_B%item(n)%item(m)%item(nu)%item(mu))
+                        rv = .false.
+                    else
+                        print *, "    (Im) OK"
+                    end if
+                    print *, ""
+                end do
+                end do
+                end do
+                end do
+!                rv = .true.
+!                print *, "test_lib_math_vector_spherical_harmonics_translation_coeff_r:"
+!                print *, "  A:"
+!                do i=1, d
+!                    erg = real(A_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i)))
+!                    erg_exponent = int(log(abs(erg))/log(10D0))
+!                    erg_mantissa = erg / 10d0**erg_exponent
+!                    buffer = real(ground_truth_A(i)) / 10d0**erg_exponent - erg_mantissa
+!                    if (abs(buffer) .gt. ground_truth_e) then
+!                        print *, "    ", i, " (Re) difference: ", buffer, " : FAILED"
+!                        print *, "    ", A_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i))
+!                        rv = .false.
+!                    else
+!                        print *, "    ", i , ": (Re) OK"
+!                    end if
+!
+!                    erg = aimag(A_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i)))
+!                    erg_exponent = int(log(abs(erg))/log(10D0))
+!                    erg_mantissa = erg / 10d0**erg_exponent
+!                    buffer = aimag(ground_truth_A(i)) / 10d0**erg_exponent - erg_mantissa
+!                    if (abs(buffer) .gt. ground_truth_e) then
+!                        print *, "    ", i, " (Im) difference: ", buffer, " : FAILED"
+!                        print *, "    ", A_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i))
+!                        rv = .false.
+!                    else
+!                        print *, "    ", i , ": (Im) OK"
+!                    end if
+!                    print *, ""
+!                end do
+!
+!                print *, "  B:"
+!                do i=1, d
+!                    erg = real(B_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i)))
+!                    erg_exponent = int(log(abs(erg+1))/log(10D0))
+!                    erg_mantissa = erg / 10d0**erg_exponent
+!                    buffer = real(ground_truth_B(i)) / 10d0**erg_exponent - erg_mantissa
+!                    if (abs(buffer) .gt. ground_truth_e) then
+!                        print *, "    ", i, " (Re) difference: ", buffer, " : FAILED"
+!                        print *, "    ", B_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i))
+!                        rv = .false.
+!                    else
+!                        print *, "    ", i , ": (Re) OK"
+!                    end if
+!
+!                    erg = aimag(B_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i)))
+!                    erg_exponent = int(log(abs(erg+1))/log(10D0))
+!                    erg_mantissa = erg / 10d0**erg_exponent
+!                    buffer = aimag(ground_truth_B(i)) / 10d0**erg_exponent - erg_mantissa
+!                    if (abs(buffer) .gt. ground_truth_e) then
+!                        print *, "    ", i, " (Im) difference: ", buffer, " : FAILED"
+!                        print *, "    ", B_mnkl%item(n(i))%item(m(i))%item(nu(i))%item(mu(i))
+!                        rv = .false.
+!                    else
+!                        print *, "    ", i , ": (Im) OK"
+!                    end if
+!                    print *, ""
+!                end do
+                else
+                    print *, "test_lib_math_vector_spherical_harmonics_translation_coeff_r: ERROR"
+                    print *, "  file does not exist"
+                    print *, "  file_name: ", file_name
+
+                    rv = .false.
+                    return
+                end if
+
+            end function test_lib_math_vector_spherical_harmonics_translation_coeff_r_v2
 
         end function lib_math_vector_spherical_harmonics_test_functions
 
