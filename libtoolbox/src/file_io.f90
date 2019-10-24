@@ -10,6 +10,8 @@ module file_io
     public :: write_ppm_p2
     public :: write_ppm_p3
 
+    public :: write_csv_cmplx_array_1d
+
     public :: test_file_io
 
     ! interface
@@ -391,8 +393,8 @@ module file_io
         implicit none
         ! dummy
         integer, intent(in) :: u
-        double complex, dimension(:) :: c
-        character(len=*), dimension(:), optional :: header
+        double complex, dimension(:), intent(in) :: c
+        character(len=*), dimension(:), intent(in), optional :: header
 
         logical :: rv
 

@@ -1,3 +1,5 @@
+!#define _DEBUG_
+
 module lib_mie_ms_solver_interface
     use libmath
 
@@ -609,6 +611,9 @@ module lib_mie_ms_solver_interface
         !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
         subroutine lib_mie_ms_solver_calculate_vector_b(vector_x, &
                                                         vector_b, use_ml_fmm)
+#ifdef _DEBUG_
+            use file_io
+#endif
             implicit none
             ! dummy
             double complex, dimension(:), intent(in) :: vector_x
@@ -619,6 +624,10 @@ module lib_mie_ms_solver_interface
 
             ! auxiliary
             logical :: m_use_ml_fmm
+#ifdef _DEBUG_
+            integer :: u
+            logical :: rv
+#endif
 
             m_use_ml_fmm = .false.
             if (present(use_ml_fmm)) m_use_ml_fmm = use_ml_fmm
@@ -633,6 +642,21 @@ module lib_mie_ms_solver_interface
                 call lib_mie_ms_solver_calculate_vector_b_without_transposed_all(vector_x, &
                                                                                  vector_b)
             end if
+
+#ifdef _DEBUG_
+            u = 99
+            open(unit=u, file="temp/GMRES_vector_x.csv", status='unknown')
+            rv = write_csv_cmplx_array_1d(u, vector_x)
+            close(u)
+
+
+            if (allocated(vector_b)) then
+                u = 99
+                open(unit=u, file="temp/GMRES_vector_b.csv", status='unknown')
+                rv = write_csv_cmplx_array_1d(u, vector_b)
+                close(u)
+            end if
+#endif
 
         end subroutine lib_mie_ms_solver_calculate_vector_b
 
