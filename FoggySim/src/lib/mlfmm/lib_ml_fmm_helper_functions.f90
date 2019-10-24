@@ -949,7 +949,7 @@ module lib_ml_fmm_helper_functions
                                 hash_list(hash)%value = uindex_list_XY(i)%n
                                 hash_list(hash)%hash_runs = ii
                                 counter_XY = counter_XY + 1
-                                hash_type(hash) = HIERARCHY_Y
+                                hash_type(hash) = HIERARCHY_XY
                                 exit
                             else if (hash_list(hash)%value .ne. uindex_list_XY(i)%n) then
                                 ! hash colision -> re-hash
@@ -957,7 +957,7 @@ module lib_ml_fmm_helper_functions
                                 hash = hash_fnv1a(hash, max_value)
                             else if (hash_list(hash)%value .eq. uindex_list_XY(i)%n) then
                                 ! entry exists -> set a more general type (HIERARCHY_XY)
-                                if (hash_type(hash) .eq. HIERARCHY_X) then
+                                if (hash_type(hash) .eq. HIERARCHY_XY) then
                                     ! duplicate found
                                     exit
                                 else if (hash_type(hash) .eq. HIERARCHY_X) then
