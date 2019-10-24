@@ -338,10 +338,12 @@ module lib_ml_fmm
             do i=1, number_of_boxes
                 uindex%n = i - int(1, 1)
                 list_index = m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_list_index(i)
-                hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(i)
                 if ((list_index .gt. 0) .and. &
                     ((hierarchy_type .eq. HIERARCHY_X) .or. &
                      (hierarchy_type .eq. HIERARCHY_XY))) then
+
+                    hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(list_index)
+
                     C = lib_ml_fmm_get_C_i_from_elements_at_box(uindex, ignore_box)
                     if (.not. ignore_box) then
                         m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_list(list_index) = C
@@ -728,8 +730,8 @@ module lib_ml_fmm
                         if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
                              (hierarchy_type .eq. HIERARCHY_XY))) then
                             D = lib_ml_fmm_get_D_of_box(uindex)
-                            m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
-                            m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+                            m_ml_fmm_hierarchy(l)%coefficient_list(list_index) = D
+                            m_ml_fmm_hierarchy(l)%coefficient_type(list_index) = LIB_ML_FMM_COEFFICIENT_TYPE_D
                         end if
                     end if
                 end do
