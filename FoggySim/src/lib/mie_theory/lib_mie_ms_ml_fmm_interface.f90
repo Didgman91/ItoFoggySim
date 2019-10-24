@@ -291,6 +291,9 @@ module lib_mie_ms_ml_fmm_interface
                     n_range, n_range, z_selector, &
                     a_nmnumu, b_nmnumu)
 
+            call init_list(B_i_2%a_nm, n_range(1), n_range(2) - n_range(1) + 1)
+            call init_list(B_i_2%b_nm, n_range(1), n_range(2) - n_range(1) + 1)
+
             !$OMP PARALLEL DO PRIVATE(n, m)
             do n = n_range(1), n_range(2)
                 do m = -n, n
@@ -411,6 +414,9 @@ module lib_mie_ms_ml_fmm_interface
             call lib_math_vector_spherical_harmonics_translation_coefficient(d_j_l, &
                     n_range, n_range, z_selector, &
                     a_nmnumu, b_nmnumu)
+
+            call init_list(A_i_2%a_nm, n_range(1), n_range(2) - n_range(1) + 1)
+            call init_list(A_i_2%b_nm, n_range(1), n_range(2) - n_range(1) + 1)
 
             !$OMP PARALLEL DO PRIVATE(n, m)
             do n = n_range(1), n_range(2)

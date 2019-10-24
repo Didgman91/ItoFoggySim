@@ -369,11 +369,11 @@ module lib_ml_fmm_helper_functions
             uindex_list_counter(:) = 0
 
             ! iterate over all correspondence vector elements (l = l_th)
-            do i=1, size(correspondence_vector)
-                if (correspondence_vector(i)%number_of_hash_runs .gt. 0) then
-                    element_index = correspondence_vector(i)%data_element_number(1)
-                    hierarchy_type = data_elements(element_index)%hierarchy
-                    buffer_uindex = data_elements(element_index)%uindex
+            do i=1, size(data_elements)
+!                if (correspondence_vector(i)%number_of_hash_runs .gt. 0) then
+!                    element_index = correspondence_vector(i)%data_element_number(1)
+                    hierarchy_type = data_elements(i)%hierarchy
+                    buffer_uindex = data_elements(i)%uindex
                     if (hierarchy_type .eq. HIERARCHY_X) then
                         uindex_list_counter(HIERARCHY_X) = uindex_list_counter(HIERARCHY_X) + 1
                         uindex_list_X(uindex_list_counter(HIERARCHY_X)) = buffer_uindex
@@ -387,7 +387,7 @@ module lib_ml_fmm_helper_functions
                         print *, "lib_ml_fmm_hf_create_hierarchy: ERROR"
                         print *, "  hierarchy not defined"
                     end if
-                end if
+!                end if
             end do
 
             l_th = buffer_uindex%l

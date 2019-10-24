@@ -1,4 +1,4 @@
-#define _FMM_DIMENSION_ 2
+#define _FMM_DIMENSION_ 3
 
 ! LIB: Mulitlevel Fast Multipole Method
 !
