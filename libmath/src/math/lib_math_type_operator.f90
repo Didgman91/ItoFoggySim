@@ -2681,25 +2681,27 @@ module lib_math_type_operator
             type(list_list_cmplx) :: rv
 
             ! auxiliary
-            integer :: n
-            integer :: m
+!            integer :: n
+!            integer :: m
 
-            if (lbound(lhs%item, 1) .eq. lbound(rhs%item, 1) .and. &
-                ubound(lhs%item, 1) .eq. ubound(rhs%item, 1) ) then
+            rv = lib_math_list_list_cmplx_add(lhs, lib_math_list_list_cmplx_mul_real(real(-1, kind=lib_math_type_kind), rhs))
 
-                call init_list(rv, lbound(lhs%item, 1), ubound(lhs%item, 1) - lbound(lhs%item, 1) + 1)
-
-                !$OMP PARALLEL DO PRIVATE(n, m)
-                do n=lbound(lhs%item, 1), ubound(lhs%item, 1)
-                    do m=-n, n
-                        rv%item(n)%item(m) = lhs%item(n)%item(m) - rhs%item(n)%item(m)
-                    end do
-                end do
-                !$OMP END PARALLEL DO
-            else
-                print *, "lib_math_list_list_cmplx_sub: ERROR"
-                print *, "  size of lhs and rhs are not equal"
-            end if
+!            if (lbound(lhs%item, 1) .eq. lbound(rhs%item, 1) .and. &
+!                ubound(lhs%item, 1) .eq. ubound(rhs%item, 1) ) then
+!
+!                call init_list(rv, lbound(lhs%item, 1), ubound(lhs%item, 1) - lbound(lhs%item, 1) + 1)
+!
+!                !$OMP PARALLEL DO PRIVATE(n, m)
+!                do n=lbound(lhs%item, 1), ubound(lhs%item, 1)
+!                    do m=-n, n
+!                        rv%item(n)%item(m) = lhs%item(n)%item(m) - rhs%item(n)%item(m)
+!                    end do
+!                end do
+!                !$OMP END PARALLEL DO
+!            else
+!                print *, "lib_math_list_list_cmplx_sub: ERROR"
+!                print *, "  size of lhs and rhs are not equal"
+!            end if
         end function lib_math_list_list_cmplx_sub
 
         ! Elementwise multiplication
