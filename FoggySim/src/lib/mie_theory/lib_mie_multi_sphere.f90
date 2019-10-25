@@ -1384,6 +1384,19 @@ module lib_mie_multi_sphere
 
                 character(len=15) :: path
 
+                ! plot
+                double precision :: x
+                double precision :: y
+                double precision :: z
+                type(cartesian_coordinate_real_type) :: x_0
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field_s
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field_s
+                double precision, dimension(2) :: x_range
+                double precision, dimension(2) :: z_range
+                real(kind=8) :: step_size
+                integer :: no_x_values
+                integer :: no_z_values
+
                 ! CPU-time
                 real :: test_start_sub, test_finish_sub
                 ! WALL-time
@@ -1440,7 +1453,7 @@ module lib_mie_multi_sphere
                 allocate (a_nm_ml_fmm(no_spheres_x * no_spheres_z))
                 allocate (b_nm_ml_fmm(no_spheres_x * no_spheres_z))
 
-                distance_sphere = 4 * unit_mu
+                distance_sphere = 0.4 * unit_mu
                 allocate(simulation_data%sphere_list(no_spheres_x * no_spheres_z))
 
                 sphere_d_0_j%y = 0
@@ -1468,7 +1481,7 @@ module lib_mie_multi_sphere
                 allocate(simulation_data%sphere_parameter_list(2))
 
                 ! set 1
-                r_particle = 1 * unit_mu
+                r_particle = 0.1 * unit_mu
                 n_particle = dcmplx(1.33_8, 0)
 
                 n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
@@ -1489,7 +1502,7 @@ module lib_mie_multi_sphere
                                                                                           n_range)
 
                 ! set 2
-                r_particle = 0.5 * unit_mu
+                r_particle = 0.05 * unit_mu
                 n_particle = dcmplx(1.33_8, 0)
 
                 n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
@@ -1508,15 +1521,15 @@ module lib_mie_multi_sphere
                                                                                           n_range)
 
                 n_range = simulation_data%spherical_harmonics%n_range
-!                n_range(2) = int(floor(real(n_range(2)) * 1.5))
-!                simulation_data%spherical_harmonics%n_range = n_range
+                n_range(2) = int(ceiling(real(n_range(2)) * 1.2))
+                simulation_data%spherical_harmonics%n_range = n_range
 
                 call lib_mie_ms_constructor(n_range, use_ml_fmm = .false., init_with_single_sphere = .true.)
 
                 call system_clock(test_count_start_sub, test_count_rate_sub)
                 call cpu_time(test_start_sub)
 
-                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(n_range(2) / 2, 3)
+                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(ceiling(n_range(2) * 0.75)), 2)
                 a_nm_t_matrix(:) = simulation_data%sphere_list(:)%a_nm
                 b_nm_t_matrix(:) = simulation_data%sphere_list(:)%b_nm
 
@@ -1533,7 +1546,7 @@ module lib_mie_multi_sphere
 
                 call lib_mie_ms_constructor(n_range, use_ml_fmm = .true., init_with_single_sphere = .true.)
 
-                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(n_range(2) / 2, 3)
+                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(ceiling(n_range(2) * 0.75)), 2)
                 a_nm_ml_fmm(:) = simulation_data%sphere_list(:)%a_nm
                 b_nm_ml_fmm(:) = simulation_data%sphere_list(:)%b_nm
 
@@ -1548,6 +1561,37 @@ module lib_mie_multi_sphere
                                                                / real(test_count_rate_sub)
                 print *, ""
 
+                ! evaluate and export
+                x_range = (/ 0_8 * unit_mu, (no_spheres_x+1) * distance_sphere /)
+                z_range = (/ 0_8 * unit_mu, (no_spheres_z+1) * distance_sphere /)
+                step_size = (x_range(2) - x_range(1)) / 150
+
+                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
+
+                allocate(e_field_s(no_x_values, no_z_values))
+                allocate(h_field_s(no_x_values, no_z_values))
+
+                x = 0
+                y = 0
+                z = 0
+
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii=1, no_z_values
+                        z = z_range(1) + (ii-1) * step_size
+
+                        x_0%x = -x
+                        x_0%y = y
+                        x_0%z = z
+
+                        field = lib_mie_ms_get_field(x_0)
+                        e_field_s(i,ii) = field(1)
+                        h_field_s(i,ii) = field(2)
+                    end do
+                 end do
+
+                rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
 
                 rv = .true.
 !                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1:"
