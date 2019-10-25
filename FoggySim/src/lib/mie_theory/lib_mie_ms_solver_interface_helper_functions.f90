@@ -8,6 +8,8 @@ module lib_mie_ms_solver_interface_helper_functions
     public :: lib_mie_ms_solver_hf_add_list_list_cmplx_at_array
     public :: lib_mie_ms_solver_hf_get_list_list_cmplx_from_array
 
+    public :: lib_mie_ms_solver_interface_hf_helper_functions
+
     contains
 
         ! Argument
@@ -142,4 +144,91 @@ module lib_mie_ms_solver_interface_helper_functions
             call remove_zeros(b_nm)
 
         end subroutine lib_mie_ms_solver_hf_get_list_list_cmplx_from_array
+
+        function lib_mie_ms_solver_interface_hf_helper_functions() result(error)
+            implicit none
+            ! dummy
+            integer :: error
+
+            error = 0
+
+            if (.not. test_mie_ms_solver_hf()) error = error + 1
+
+
+            contains
+
+            function test_mie_ms_solver_hf() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! auxiliary
+                integer :: i
+                integer :: n
+                integer :: m
+
+                integer :: no
+                integer :: counter
+
+                type(list_list_cmplx), dimension(:), allocatable :: a_nm
+                type(list_list_cmplx), dimension(:), allocatable :: b_nm
+
+                double complex, dimension(:), allocatable :: array
+
+                integer, dimension(2) :: n_range
+
+                n_range = (/ 1, 3 /)
+
+                counter = ( 1 + n_range(2))**2 - n_range(1)**2
+                no = 3
+
+                allocate(array(2*counter * no))
+                allocate(a_nm(no))
+                allocate(b_nm(no))
+
+                do i=1, no
+                    call init_list(a_nm(i), n_range(1), n_range(2) - n_range(1) + 1, dcmplx(i,0))
+                    call init_list(b_nm(i), n_range(1), n_range(2) - n_range(1) + 1, dcmplx(i,0))
+
+                    call lib_mie_ms_solver_hf_insert_list_list_cmplx_into_array(a_nm(i), b_nm(i), i, n_range, array)
+                    call lib_mie_ms_solver_hf_add_list_list_cmplx_at_array(a_nm(i), b_nm(i), i, n_range, array)
+
+                    call lib_mie_ms_solver_hf_get_list_list_cmplx_from_array(array, i, n_range, a_nm(i), b_nm(i))
+                end do
+
+
+                rv = .true.
+                print *, "test_mie_ms_solver_hf"
+                do i = 1, no
+                    print *, "  i = ", i
+                    print *, "  a_nm"
+                    do n = n_range(1) , n_range(2)
+                        print *, "    n = ", n
+                        do m = -n, n
+                            if (a_nm(i)%item(n)%item(m) .eq. dcmplx(2 * i, 0)) then
+                                print *, "    m = ", m, ": OK"
+                            else
+                                print *, "    m = ", m, ": FAILED"
+                                rv = .false.
+                            end if
+                        end do
+                    end do
+
+                    print *, "  b_nm"
+                    do n = n_range(1) , n_range(2)
+                        print *, "    n = ", n
+                        do m = -n, n
+                            if (b_nm(i)%item(n)%item(m) .eq. dcmplx(2 * i, 0)) then
+                                print *, "    m = ", m, ": OK"
+                            else
+                                print *, "    m = ", m, ": FAILED"
+                                rv = .false.
+                            end if
+                        end do
+                    end do
+                end do
+
+            end function test_mie_ms_solver_hf
+
+        end function
 end module lib_mie_ms_solver_interface_helper_functions

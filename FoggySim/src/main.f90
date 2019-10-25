@@ -16,6 +16,7 @@ program main
     use lib_mie_single_sphere
     use lib_mie_ss_helper_functions
 
+    use lib_mie_ms_solver_interface_helper_functions
     use lib_mie_multi_sphere
     use lib_mie_ms_solver_interface
 
@@ -70,6 +71,7 @@ program main
 !    error_counter = error_counter + lib_field_test_functions()
 !    error_counter = error_counter + lib_mie_ss_helper_functions_test_functions()
 !    error_counter = error_counter + lib_mie_single_sphere_test_functions()
+    error_counter = error_counter + lib_mie_ms_solver_interface_hf_helper_functions()
 !    error_counter = error_counter + lib_mie_ms_solver_interface_test_functions()
     error_counter = error_counter + lib_mie_multi_sphere_test_functions()
 

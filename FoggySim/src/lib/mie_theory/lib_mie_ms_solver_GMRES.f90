@@ -172,8 +172,12 @@ module lib_mie_ms_solver_GMRES
             icntl(8) = m_residual_calc
 
             ! set initial guess x_0
-            call lib_mie_ms_solver_get_vector_x(vector)
-            work(1:lda) = vector
+            if (gmres_parameter%use_initial_guess) then
+                call lib_mie_ms_solver_get_vector_x(vector)
+                work(1:lda) = vector
+            else
+                work(1:lda) = dcmplx(0,0)
+            end if
 
             ! Initialise the right hand side b
             call lib_mie_ms_solver_get_vector_b(vector)
