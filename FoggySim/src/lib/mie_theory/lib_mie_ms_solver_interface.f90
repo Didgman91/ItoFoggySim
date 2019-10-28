@@ -113,8 +113,6 @@ module lib_mie_ms_solver_interface
             type(list_list_cmplx), dimension(:), allocatable :: p_nm
             type(list_list_cmplx), dimension(:), allocatable :: q_nm
 
-            double complex, dimension(:), allocatable :: buffer_array
-
 
             first_sphere = lbound(simulation_data%sphere_list, 1)
             last_sphere = ubound(simulation_data%sphere_list, 1)
@@ -149,7 +147,7 @@ module lib_mie_ms_solver_interface
                 allocate(vector_b(counter_sum))
             end if
 
-            !$OMP PARALLEL DO PRIVATE(i, first, last, buffer_array, a_n, b_n)
+            !$OMP PARALLEL DO PRIVATE(i, first, last, a_n, b_n)
             do i = first_sphere, last_sphere
                 sphere_parameter_no = simulation_data%sphere_list(i)%sphere_parameter_index
                 a_n = simulation_data%sphere_parameter_list(sphere_parameter_no)%a_n
@@ -462,40 +460,28 @@ module lib_mie_ms_solver_interface
             ! auxiliary
             integer :: i
 
-            integer :: first
-            integer :: last
-
             integer :: first_sphere
             integer :: last_sphere
 
             integer, dimension(2) :: n_range
-            integer :: counter
 
-            type(list_list_cmplx) :: buffer_list
+            type(list_list_cmplx) :: buffer_list_a
+            type(list_list_cmplx) :: buffer_list_b
 
             first_sphere = lbound(simulation_data%sphere_list, 1)
             last_sphere = ubound(simulation_data%sphere_list, 1)
 
             n_range = simulation_data%spherical_harmonics%n_range
-            counter = (1 + n_range(2))**2 - n_range(1)**2
 
-            !$OMP PARALLEL DO PRIVATE(i, first, last, buffer_list)
+            !$OMP PARALLEL DO PRIVATE(i, buffer_list_a, buffer_list_b)
             do i = first_sphere, last_sphere
-                first = 2 * (i - first_sphere) * counter + 1
-                last = first + counter - 1
-                call make_list(vector_x(first:last), &
-                               n_range(1), n_range(2) - n_range(1) + 1, &
-                               buffer_list)
-                call remove_zeros(buffer_list)
-                call move_alloc(buffer_list%item, simulation_data%sphere_list(i)%a_nm%item)
 
-                first = last + 1
-                last = first + counter - 1
-                call make_list(vector_x(first:last), &
-                               n_range(1), n_range(2) - n_range(1) + 1, &
-                               buffer_list)
-                call remove_zeros(buffer_list)
-                call move_alloc(buffer_list%item, simulation_data%sphere_list(i)%b_nm%item)
+                call lib_mie_ms_solver_hf_get_list_list_cmplx_from_array(vector_x, i-first_sphere+1, &
+                                                                         n_range, &
+                                                                         buffer_list_a, buffer_list_b)
+
+                call move_alloc(buffer_list_a%item, simulation_data%sphere_list(i)%a_nm%item)
+                call move_alloc(buffer_list_b%item, simulation_data%sphere_list(i)%b_nm%item)
             end do
             !$OMP END PARALLEL DO
 
@@ -841,7 +827,7 @@ module lib_mie_ms_solver_interface
 
                         n_range = simulation_data%spherical_harmonics%n_range
 
-                        call lib_mie_ms_solver_hf_add_list_list_cmplx_at_array(buffer_b_1_nm, buffer_b_1_nm, &
+                        call lib_mie_ms_solver_hf_add_list_list_cmplx_at_array(buffer_b_1_nm, buffer_b_2_nm, &
                                                                                j - first_sphere + 1, n_range, &
                                                                                vector_b)
                     end if
