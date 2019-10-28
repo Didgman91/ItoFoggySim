@@ -815,8 +815,8 @@ module lib_mie_ms_solver_interface
                                     buffer_b_1_nm%item(n)%item(m) = a_n%item(n) * sum(buffer_1_nm * buffer_x_1_nm &
                                                                         + buffer_2_nm * buffer_x_2_nm)
 
-                                    buffer_b_2_nm%item(n)%item(m) = b_n%item(n) * sum(buffer_1_nm * buffer_x_1_nm &
-                                                                        + buffer_2_nm * buffer_x_2_nm)
+                                    buffer_b_2_nm%item(n)%item(m) = b_n%item(n) * sum(buffer_2_nm * buffer_x_1_nm &
+                                                                        + buffer_1_nm * buffer_x_2_nm)
                                 else
                                     buffer_b_1_nm%item(n)%item(m) = dcmplx(0,0)
                                     buffer_b_2_nm%item(n)%item(m) = dcmplx(0,0)

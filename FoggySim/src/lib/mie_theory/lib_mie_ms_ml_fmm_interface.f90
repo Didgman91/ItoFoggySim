@@ -499,10 +499,10 @@ module lib_mie_ms_ml_fmm_interface
             type(list_4_cmplx) :: b_nmnumu
 
             j = element_number_j - lbound(simulation_data%sphere_list, 1) + 1
-            buffer_x_1_nm = m_ml_fmm_u(element_number_j)%a_nm
-            buffer_x_2_nm = m_ml_fmm_u(element_number_j)%b_nm
 
             l = element_number_i - lbound(simulation_data%sphere_list, 1) + 1
+            buffer_x_1_nm = m_ml_fmm_u(element_number_i)%a_nm
+            buffer_x_2_nm = m_ml_fmm_u(element_number_i)%b_nm
 
             if (j .eq. l) then
                 buffer_b_1_nm = buffer_x_1_nm
@@ -554,8 +554,8 @@ module lib_mie_ms_ml_fmm_interface
                             buffer_b_1_nm%item(n)%item(m) = a_n%item(n) * sum(buffer_1_nm * buffer_x_1_nm &
                                                                 + buffer_2_nm * buffer_x_2_nm)
 
-                            buffer_b_2_nm%item(n)%item(m) = b_n%item(n) * sum(buffer_1_nm * buffer_x_1_nm &
-                                                                + buffer_2_nm * buffer_x_2_nm)
+                            buffer_b_2_nm%item(n)%item(m) = b_n%item(n) * sum(buffer_2_nm * buffer_x_1_nm &
+                                                                + buffer_1_nm * buffer_x_2_nm)
                         else
                             buffer_b_1_nm%item(n)%item(m) = dcmplx(0,0)
                             buffer_b_2_nm%item(n)%item(m) = dcmplx(0,0)
@@ -665,8 +665,8 @@ module lib_mie_ms_ml_fmm_interface
                             buffer_b_1_nm%item(n)%item(m) = a_n%item(n) * sum(buffer_1_nm * D%a_nm&
                                                                               + buffer_2_nm * D%b_nm)
 
-                            buffer_b_2_nm%item(n)%item(m) = b_n%item(n) * sum(buffer_1_nm * D%b_nm&
-                                                                              + buffer_2_nm * D%a_nm)
+                            buffer_b_2_nm%item(n)%item(m) = b_n%item(n) * sum(buffer_2_nm * D%a_nm&
+                                                                              + buffer_1_nm * D%b_nm)
                         else
                             buffer_b_1_nm%item(n)%item(m) = dcmplx(0,0)
                             buffer_b_2_nm%item(n)%item(m) = dcmplx(0,0)
