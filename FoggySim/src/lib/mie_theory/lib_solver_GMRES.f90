@@ -1,18 +1,20 @@
-module lib_mie_ms_solver_GMRES
-    use libmath
-    use lib_mie_type
-    use lib_mie_type_functions
-    use lib_mie_ms_solver_interface
-
-    use lib_mie_ms_data_container
+module lib_solver_GMRES
+!    use libmath
     implicit none
 
-    ! parameter
+    private
 
-    integer, parameter :: GMRES_ORTHOGONALIZATION_SCHEME_MGS = 0
-    integer, parameter :: GMRES_ORTHOGONALIZATION_SCHEME_IMGS = 1
-    integer, parameter :: GMRES_ORTHOGONALIZATION_SCHEME_CGS = 2
-    integer, parameter :: GMRES_ORTHOGONALIZATION_SCHEME_ICGS = 3
+    public :: lib_mie_ms_solver_gmres_get_parameter_std_values
+    public :: lib_mie_ms_solver_gmres_run
+
+    public :: solver_gmres_parameter_type
+    public :: solver_gmres_callback_type
+
+    ! parameter
+    integer, parameter, public :: GMRES_ORTHOGONALIZATION_SCHEME_MGS = 0
+    integer, parameter, public :: GMRES_ORTHOGONALIZATION_SCHEME_IMGS = 1
+    integer, parameter, public :: GMRES_ORTHOGONALIZATION_SCHEME_CGS = 2
+    integer, parameter, public :: GMRES_ORTHOGONALIZATION_SCHEME_ICGS = 3
 
     type solver_gmres_parameter_type
         integer :: max_iterations
@@ -22,9 +24,45 @@ module lib_mie_ms_solver_GMRES
         integer :: orthogonalization_scheme
         logical :: use_recurence_formula_at_restart
         logical :: residual_calc_explicitly
+        integer :: no_of_elements_vector_x
 
         double precision :: backward_error
     end type solver_gmres_parameter_type
+
+    type solver_gmres_callback_type
+        procedure(lib_solver_gmres_get_vector_x_init), pointer, nopass :: get_vector_x_init => null()
+        procedure(lib_solver_gmres_get_vector_b), pointer, nopass :: get_vector_b => null()
+        procedure(lib_solver_gmres_calculate_vector_b), pointer, nopass :: calc_vector_b => null()
+        procedure(lib_solver_gmres_save_vector_x), pointer, nopass :: save_vector_x => null()
+    end type solver_gmres_callback_type
+
+    interface
+        subroutine lib_solver_gmres_get_vector_x_init(vector)
+            implicit none
+            ! dummy
+            double complex, dimension(:), allocatable, intent(inout) :: vector
+        end subroutine lib_solver_gmres_get_vector_x_init
+
+        subroutine lib_solver_gmres_get_vector_b(vector)
+            implicit none
+            ! dummy
+            double complex, dimension(:), allocatable, intent(inout) :: vector
+        end subroutine lib_solver_gmres_get_vector_b
+
+        subroutine lib_solver_gmres_calculate_vector_b(vector_x, vector_b)
+            implicit none
+            ! dummy
+            double complex, dimension(:), intent(in) :: vector_x
+            double complex, dimension(:), allocatable, intent(inout) :: vector_b
+        end subroutine lib_solver_gmres_calculate_vector_b
+
+        subroutine lib_solver_gmres_save_vector_x(vector)
+            implicit none
+            ! dummy
+            double complex, dimension(:), allocatable, intent(in) :: vector
+        end subroutine lib_solver_gmres_save_vector_x
+
+    end interface
 
     contains
 
@@ -55,11 +93,11 @@ module lib_mie_ms_solver_GMRES
         !       dataset of the simulation
         !   save_solution: logical, optional (std: .true.)
         !       true: save solution x into simulation_data
-        subroutine lib_mie_ms_solver_gmres_run(gmres_parameter, use_ml_fmm, save_solution)
+        subroutine lib_mie_ms_solver_gmres_run(gmres_parameter, gmres_callback, save_solution)
             implicit none
             ! dummy
             type(solver_gmres_parameter_type), intent(inout) :: gmres_parameter
-            logical, intent(in), optional :: use_ml_fmm
+            type(solver_gmres_callback_type), intent(in) :: gmres_callback
             logical, intent(in), optional :: save_solution
 
             ! parameter
@@ -91,13 +129,9 @@ module lib_mie_ms_solver_GMRES
             integer :: m_residual_calc
 
             ! auxiliary
-            integer, dimension(2) :: n_range
-            integer :: no_of_spheres
+            logical :: m_save_solution
 
             double complex, dimension(:), allocatable :: vector
-
-            logical :: m_use_ml_fmm
-            logical :: m_save_solution
 
             ldstrt = gmres_parameter%restart
 
@@ -113,19 +147,12 @@ module lib_mie_ms_solver_GMRES
                 m_residual_calc = 0
             end if
 
-            m_use_ml_fmm = .false.
-            if (present(use_ml_fmm)) m_use_ml_fmm = use_ml_fmm
-
             m_save_solution = .true.
             if (present(save_solution)) m_save_solution = save_solution
 
             nout = 6
 
-            ! calculate size(x) = size(b)
-            n_range = simulation_data%spherical_harmonics%n_range
-            no_of_spheres = size(simulation_data%sphere_list)
-
-            lda = no_of_spheres * 2 * ( (1 + n_range(2))**2 - n_range(1) )
+            lda = gmres_parameter%no_of_elements_vector_x
 
             ! Reference: A Set of GMRES Routines for Real and Complex Arithmetics on High Performance Computers,
             !            Valerie Frayss LucGiraud Serge Gratton Julien Langou, p. 9
@@ -173,16 +200,15 @@ module lib_mie_ms_solver_GMRES
 
             ! set initial guess x_0
             if (gmres_parameter%use_initial_guess) then
-                call lib_mie_ms_solver_get_vector_x(vector)
+                call gmres_callback%get_vector_x_init(vector)
                 work(1:lda) = vector
             else
                 work(1:lda) = dcmplx(0,0)
             end if
 
             ! Initialise the right hand side b
-            call lib_mie_ms_solver_get_vector_b(vector)
+            call gmres_callback%get_vector_b(vector)
             work(lda+1:2*lda) = vector
-
             n = lda
             m = ldstrt
 
@@ -203,7 +229,7 @@ module lib_mie_ms_solver_GMRES
                     !        work(colz) <-- A * work(colx)
 !                    call zgemv('N',n,n,ONE,a,lda,work(colx),1, &
 !                               ZERO,work(colz),1)
-                    call lib_mie_ms_solver_calculate_vector_b(work(colx:colx+lda-1), vector, m_use_ml_fmm)
+                    call gmres_callback%calc_vector_b(work(colx:colx+lda-1), vector)
                     work(colz:colz+lda-1) = vector
 
                     cycle
@@ -263,7 +289,8 @@ module lib_mie_ms_solver_GMRES
             end do
 
             if (m_save_solution) then
-                call lib_mie_ms_solver_set_sphere_parameter_ab_nm(work(1:lda))
+                vector = work(1:lda)
+                call gmres_callback%save_vector_x(vector)
             end if
 
         end subroutine lib_mie_ms_solver_gmres_run
@@ -454,4 +481,4 @@ module lib_mie_ms_solver_GMRES
             end do
     end subroutine
 
-end module lib_mie_ms_solver_GMRES
+end module lib_solver_GMRES

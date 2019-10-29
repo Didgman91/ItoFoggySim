@@ -52,7 +52,7 @@ module lib_mie_ms_ml_fmm_interface
             operator_procedures = ml_fmm_type_operator_get_procedures(1)
             ml_fmm_procedures = lib_mie_ms_ml_fmm_get_procedures()
 
-            call lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures, tree_s_opt = 1)
+            call lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures, tree_s_opt = 10)
 
         end subroutine lib_mie_ms_ml_fmm_constructor
 

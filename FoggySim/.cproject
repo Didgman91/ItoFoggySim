@@ -71,7 +71,7 @@
                                 								
                                 <option id="gnu.fortran.compiler.option.misc.other.1881149699" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fopenmp -fmessage-length=0 -fcheck=all -cpp -mcmodel=large -frecursive" valueType="string"/>
                                 								
-                                <option id="gnu.fortran.compiler.option.misc.verbose.1638748952" name="Verbose (-v)" superClass="gnu.fortran.compiler.option.misc.verbose" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                                <option id="gnu.fortran.compiler.option.misc.verbose.1638748952" name="Verbose (-v)" superClass="gnu.fortran.compiler.option.misc.verbose" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                                 								
                                 <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.compiler.option.include.paths.982631948" name="Include paths (-I)" superClass="gnu.fortran.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
                                     									
@@ -187,7 +187,7 @@
                         						
                         <tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140.818130949" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1530911140">
                             							
-                            <option id="gnu.fortran.compiler.option.misc.verbose.782777296" name="Verbose (-v)" superClass="gnu.fortran.compiler.option.misc.verbose" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                            <option id="gnu.fortran.compiler.option.misc.verbose.782777296" name="Verbose (-v)" superClass="gnu.fortran.compiler.option.misc.verbose" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                             							
                             <option id="gnu.fortran.compiler.option.misc.other.330876609" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fopenmp -fmessage-length=0 -fcheck=all -cpp -mcmodel=large -frecursive" valueType="string"/>
                             							
