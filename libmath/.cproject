@@ -195,7 +195,7 @@
                             							
                             <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="photran.managedbuild.target.gnu.platform.fortran.exe.release.443531197" name="Release Platform" osList="solaris,linux,hpux,aix,qnx" superClass="photran.managedbuild.target.gnu.platform.fortran.exe.release"/>
                             							
-                            <builder buildPath="${workspace_loc:/libmath}/Release" id="photran.managedbuild.target.gnu.builder.exe.release.1740623887" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="photran.managedbuild.target.gnu.builder.exe.release"/>
+                            <builder buildPath="${workspace_loc:/libmath}/Release" id="photran.managedbuild.target.gnu.builder.exe.release.1740623887" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="photran.managedbuild.target.gnu.builder.exe.release"/>
                             							
                             <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.release.1791518767" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.release">
                                 								
@@ -313,7 +313,7 @@
                             							
                             <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="photran.managedbuild.target.gnu.platform.exe.debug.918693219" name="Debug Platform" osList="solaris,linux,hpux,aix,qnx" superClass="photran.managedbuild.target.gnu.platform.exe.debug"/>
                             							
-                            <builder buildPath="${workspace_loc:/libmath}/Debug" id="photran.managedbuild.target.gnu.builder.exe.debug.357780413" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
+                            <builder buildPath="${workspace_loc:/libmath}/Debug" id="photran.managedbuild.target.gnu.builder.exe.debug.357780413" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
                             							
                             <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.925045754" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug">
                                 								
@@ -374,6 +374,464 @@
             <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
             		
         </cconfiguration>
+        		
+        <cconfiguration id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438">
+            			
+            <storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438" moduleId="org.eclipse.cdt.core.settings" name="release_static">
+                				
+                <externalSettings/>
+                				
+                <extensions>
+                    					
+                    <extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.photran.core.GFortranErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    				
+                </extensions>
+                			
+            </storageModule>
+            			
+            <storageModule moduleId="cdtBuildSystem" version="4.0.0">
+                				
+                <configuration artifactExtension="a" artifactName="${ProjName}" buildProperties="" cleanCommand="rm -rf" description="" errorParsers="org.eclipse.photran.core.GFortranErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser" id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438" name="release_static" parent="photran.managedbuild.config.gnu.fortran.exe.release">
+                    					
+                    <folderInfo id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438." name="/" resourcePath="">
+                        						
+                        <toolChain id="photran.managedbuild.toolchain.gnu.fortran.exe.release.1693323288" name="GCC Fortran" superClass="photran.managedbuild.toolchain.gnu.fortran.exe.release" unusedChildren="photran.managedbuild.tool.gnu.assembler.exe.release;photran.managedbuild.tool.gnu.fortran.linker.exe.release">
+                            							
+                            <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="photran.managedbuild.target.gnu.platform.fortran.exe.release.1818620280" name="Release Platform" osList="solaris,linux,hpux,aix,qnx" superClass="photran.managedbuild.target.gnu.platform.fortran.exe.release"/>
+                            							
+                            <builder buildPath="${workspace_loc:/libmath}/Release" id="photran.managedbuild.target.gnu.builder.exe.release.485713612" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="photran.managedbuild.target.gnu.builder.exe.release"/>
+                            							
+                            <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.compiler.exe.release.432884365" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.release">
+                                								
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.compiler.option.include.paths.1524580653" name="Include paths (-I)" superClass="gnu.fortran.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc}/wigxjpf_1_10/mod/&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_external/release_static}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libtoolbox/release_static}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_generated_functions/release_static}&quot;"/>
+                                    								
+                                </option>
+                                								
+                                <option id="gnu.fortran.compiler.option.misc.other.340439481" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -cpp -frecursive -openmp" valueType="string"/>
+                                								
+                                <option id="gnu.fortran.compiler.option.misc.verbose.132455608" name="Verbose (-v)" superClass="gnu.fortran.compiler.option.misc.verbose" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                                								
+                                <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.1406065139" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
+                                							
+                            </tool>
+                            							
+                            <tool commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" id="photran.managedbuild.tool.intel.fortran.archiver.1528821092" name="Archiver" superClass="photran.managedbuild.tool.intel.fortran.archiver">
+                                								
+                                <option id="intel.fortran.archiver.category.cmdline.options.1117813706" name="Archiver Options" superClass="intel.fortran.archiver.category.cmdline.options" useByScannerDiscovery="false" value="-r" valueType="string"/>
+                                								
+                                <outputType id="intel.fortran.archiver.output.2033444334" outputPrefix="" superClass="intel.fortran.archiver.output"/>
+                                							
+                            </tool>
+                            							
+                            <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.release.1688776854" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.release">
+                                								
+                                <inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.806265216" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+                                							
+                            </tool>
+                            						
+                        </toolChain>
+                        					
+                    </folderInfo>
+                    					
+                    <sourceEntries>
+                        						
+                        <entry excluding="src/external/frenner|frenner|lapack" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        					
+                    </sourceEntries>
+                    				
+                </configuration>
+                			
+            </storageModule>
+            			
+            <storageModule moduleId="org.eclipse.cdt.core.externalSettings">
+                				
+                <externalSettings containerId="libmath_external;photran.managedbuild.config.gnu.fortran.exe.release.218253274.1203277215.1094671890" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+                				
+                <externalSettings containerId="libmath_generated_functions;photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+                				
+                <externalSettings containerId="libtoolbox;photran.managedbuild.config.gnu.fortran.exe.release.505104685.880830683" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+                			
+            </storageModule>
+            		
+        </cconfiguration>
+        		
+        <cconfiguration id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503">
+            			
+            <storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503" moduleId="org.eclipse.cdt.core.settings" name="release_shared">
+                				
+                <externalSettings/>
+                				
+                <extensions>
+                    					
+                    <extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.photran.core.GFortranErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    				
+                </extensions>
+                			
+            </storageModule>
+            			
+            <storageModule moduleId="cdtBuildSystem" version="4.0.0">
+                				
+                <configuration artifactExtension="so" artifactName="${ProjName}" buildProperties="" cleanCommand="rm -rf" description="" errorParsers="org.eclipse.photran.core.GFortranErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser" id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503" name="release_shared" parent="photran.managedbuild.config.gnu.fortran.exe.release">
+                    					
+                    <folderInfo id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503." name="/" resourcePath="">
+                        						
+                        <toolChain id="photran.managedbuild.toolchain.gnu.fortran.exe.release.199196579" name="GCC Fortran" superClass="photran.managedbuild.toolchain.gnu.fortran.exe.release">
+                            							
+                            <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="photran.managedbuild.target.gnu.platform.fortran.exe.release.55840692" name="Release Platform" osList="solaris,linux,hpux,aix,qnx" superClass="photran.managedbuild.target.gnu.platform.fortran.exe.release"/>
+                            							
+                            <builder buildPath="${workspace_loc:/libmath}/Release" id="photran.managedbuild.target.gnu.builder.exe.release.1736943943" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="photran.managedbuild.target.gnu.builder.exe.release"/>
+                            							
+                            <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.release.1818112015" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.release">
+                                								
+                                <inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.928666239" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+                                							
+                            </tool>
+                            							
+                            <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.compiler.exe.release.1928892912" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.release">
+                                								
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.compiler.option.include.paths.959438295" name="Include paths (-I)" superClass="gnu.fortran.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_external/release_shared}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_generated_functions/release_shared}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libtoolbox/release_shared}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc}/wigxjpf_1_10/mod/&quot;"/>
+                                    								
+                                </option>
+                                								
+                                <option id="gnu.fortran.compiler.option.misc.other.95410532" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fPIC -cpp -frecursive" valueType="string"/>
+                                								
+                                <option id="gnu.fortran.compiler.option.misc.verbose.1742905688" name="Verbose (-v)" superClass="gnu.fortran.compiler.option.misc.verbose" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                                								
+                                <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.1787690534" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
+                                							
+                            </tool>
+                            							
+                            <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.linker.exe.release.828173835" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.release">
+                                								
+                                <option id="gnu.fortran.link.option.ldflags.1956643493" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-fopenmp -Wl,-rpath=&quot;${workspace_loc:/libmath_generated_functions/Release}&quot;" valueType="string"/>
+                                								
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.link.option.libs.1099672018" name="Libraries (-l)" superClass="gnu.fortran.link.option.libs" useByScannerDiscovery="false" valueType="libs">
+                                    									
+                                    <listOptionValue builtIn="false" value="wigxjpf"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="math_generated_functions"/>
+                                    								
+                                </option>
+                                								
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.link.option.paths.501736567" name="Library search path (-L)" superClass="gnu.fortran.link.option.paths" useByScannerDiscovery="false" valueType="stringList">
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_generated_functions/Release}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc}/wigxjpf_1_10/lib/&quot;"/>
+                                    								
+                                </option>
+                                								
+                                <option id="gnu.fortran.link.option.shared.624726845" name="Shared (-shared)" superClass="gnu.fortran.link.option.shared" useByScannerDiscovery="false" value="true" valueType="boolean"/>
+                                								
+                                <inputType id="photran.managedbuild.tool.gnu.fortran.linker.input.1474876666" superClass="photran.managedbuild.tool.gnu.fortran.linker.input">
+                                    									
+                                    <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+                                    									
+                                    <additionalInput kind="additionalinput" paths="$(LIBS)"/>
+                                    								
+                                </inputType>
+                                							
+                            </tool>
+                            							
+                            <tool id="photran.managedbuild.tool.gnu.assembler.exe.release.332070654" name="GCC Assembler" superClass="photran.managedbuild.tool.gnu.assembler.exe.release">
+                                								
+                                <inputType id="cdt.managedbuild.tool.gnu.assembler.input.1111036322" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+                                							
+                            </tool>
+                            						
+                        </toolChain>
+                        					
+                    </folderInfo>
+                    					
+                    <sourceEntries>
+                        						
+                        <entry excluding="src/external/frenner|frenner|lapack" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        					
+                    </sourceEntries>
+                    				
+                </configuration>
+                			
+            </storageModule>
+            			
+            <storageModule moduleId="org.eclipse.cdt.core.externalSettings">
+                				
+                <externalSettings containerId="libmath_external;photran.managedbuild.config.gnu.fortran.exe.release.218253274.1203277215" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+                				
+                <externalSettings containerId="libmath_generated_functions;photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887.646443576" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+                				
+                <externalSettings containerId="libtoolbox;photran.managedbuild.config.gnu.fortran.exe.release.505104685.880830683.1306068959" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+                			
+            </storageModule>
+            		
+        </cconfiguration>
+        		
+        <cconfiguration id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438.1770452292">
+            			
+            <storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438.1770452292" moduleId="org.eclipse.cdt.core.settings" name="release_static_herkules2">
+                				
+                <externalSettings/>
+                				
+                <extensions>
+                    					
+                    <extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.photran.core.GFortranErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    				
+                </extensions>
+                			
+            </storageModule>
+            			
+            <storageModule moduleId="cdtBuildSystem" version="4.0.0">
+                				
+                <configuration artifactExtension="a" artifactName="${ProjName}" buildProperties="" cleanCommand="rm -rf" description="" errorParsers="org.eclipse.photran.core.GFortranErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser" id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438.1770452292" name="release_static_herkules2" parent="photran.managedbuild.config.gnu.fortran.exe.release">
+                    					
+                    <folderInfo id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438.1770452292." name="/" resourcePath="">
+                        						
+                        <toolChain id="photran.managedbuild.toolchain.gnu.fortran.exe.release.539584789" name="GCC Fortran" superClass="photran.managedbuild.toolchain.gnu.fortran.exe.release" unusedChildren="photran.managedbuild.tool.gnu.assembler.exe.release;photran.managedbuild.tool.gnu.fortran.linker.exe.release">
+                            							
+                            <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="photran.managedbuild.target.gnu.platform.fortran.exe.release.1823908800" name="Release Platform" osList="solaris,linux,hpux,aix,qnx" superClass="photran.managedbuild.target.gnu.platform.fortran.exe.release"/>
+                            							
+                            <builder buildPath="${workspace_loc:/libmath}/Release" id="photran.managedbuild.target.gnu.builder.exe.release.1096738056" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="photran.managedbuild.target.gnu.builder.exe.release"/>
+                            							
+                            <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.compiler.exe.release.87850558" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.release">
+                                								
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.compiler.option.include.paths.1060923335" name="Include paths (-I)" superClass="gnu.fortran.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc}/wigxjpf_1_10/mod/&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_external/release_static}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libtoolbox/release_static}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_generated_functions/release_static}&quot;"/>
+                                    								
+                                </option>
+                                								
+                                <option id="gnu.fortran.compiler.option.misc.other.1201869097" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -cpp -frecursive -openmp  -march='ivybridge'" valueType="string"/>
+                                								
+                                <option id="gnu.fortran.compiler.option.misc.verbose.724545595" name="Verbose (-v)" superClass="gnu.fortran.compiler.option.misc.verbose" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                                								
+                                <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.272585717" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
+                                							
+                            </tool>
+                            							
+                            <tool id="photran.managedbuild.tool.intel.fortran.archiver.117265290" name="Archiver" superClass="photran.managedbuild.tool.intel.fortran.archiver">
+                                								
+                                <outputType id="intel.fortran.archiver.output.638996428" outputPrefix="" superClass="intel.fortran.archiver.output"/>
+                                							
+                            </tool>
+                            							
+                            <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.release.1537386222" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.release">
+                                								
+                                <inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1068231461" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+                                							
+                            </tool>
+                            						
+                        </toolChain>
+                        					
+                    </folderInfo>
+                    					
+                    <sourceEntries>
+                        						
+                        <entry excluding="src/external/frenner|frenner|lapack" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        					
+                    </sourceEntries>
+                    				
+                </configuration>
+                			
+            </storageModule>
+            			
+            <storageModule moduleId="org.eclipse.cdt.core.externalSettings">
+                				
+                <externalSettings containerId="libmath_external;photran.managedbuild.config.gnu.fortran.exe.release.218253274.1203277215.1094671890.1293284052" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+                				
+                <externalSettings containerId="libmath_generated_functions;photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887.1891767060" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+                				
+                <externalSettings containerId="libtoolbox;photran.managedbuild.config.gnu.fortran.exe.release.505104685.880830683.1983099675" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+                			
+            </storageModule>
+            		
+        </cconfiguration>
+        		
+        <cconfiguration id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503.1633090057">
+            			
+            <storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503.1633090057" moduleId="org.eclipse.cdt.core.settings" name="release_shared_herkules2">
+                				
+                <externalSettings/>
+                				
+                <extensions>
+                    					
+                    <extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.photran.core.GFortranErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    				
+                </extensions>
+                			
+            </storageModule>
+            			
+            <storageModule moduleId="cdtBuildSystem" version="4.0.0">
+                				
+                <configuration artifactExtension="so" artifactName="${ProjName}" buildProperties="" cleanCommand="rm -rf" description="" errorParsers="org.eclipse.photran.core.GFortranErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser" id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503.1633090057" name="release_shared_herkules2" parent="photran.managedbuild.config.gnu.fortran.exe.release">
+                    					
+                    <folderInfo id="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503.1633090057." name="/" resourcePath="">
+                        						
+                        <toolChain id="photran.managedbuild.toolchain.gnu.fortran.exe.release.1353490426" name="GCC Fortran" superClass="photran.managedbuild.toolchain.gnu.fortran.exe.release">
+                            							
+                            <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="photran.managedbuild.target.gnu.platform.fortran.exe.release.1451838389" name="Release Platform" osList="solaris,linux,hpux,aix,qnx" superClass="photran.managedbuild.target.gnu.platform.fortran.exe.release"/>
+                            							
+                            <builder buildPath="${workspace_loc:/libmath}/Release" id="photran.managedbuild.target.gnu.builder.exe.release.1830145797" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="photran.managedbuild.target.gnu.builder.exe.release"/>
+                            							
+                            <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.release.1905757332" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.release">
+                                								
+                                <inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.2052611075" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+                                							
+                            </tool>
+                            							
+                            <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.compiler.exe.release.44621963" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.release">
+                                								
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.compiler.option.include.paths.1226701938" name="Include paths (-I)" superClass="gnu.fortran.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_external/release_shared}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_generated_functions/release_shared}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libtoolbox/release_shared}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc}/wigxjpf_1_10/mod/&quot;"/>
+                                    								
+                                </option>
+                                								
+                                <option id="gnu.fortran.compiler.option.misc.other.365414941" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fPIC -cpp -frecursive -openmp  -march='ivybridge'" valueType="string"/>
+                                								
+                                <option id="gnu.fortran.compiler.option.misc.verbose.1967901541" name="Verbose (-v)" superClass="gnu.fortran.compiler.option.misc.verbose" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+                                								
+                                <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.1048191951" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
+                                							
+                            </tool>
+                            							
+                            <tool command="gfortran-8" id="photran.managedbuild.tool.gnu.fortran.linker.exe.release.128905974" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.release">
+                                								
+                                <option id="gnu.fortran.link.option.ldflags.1994216155" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-fopenmp -Wl,-rpath=&quot;${workspace_loc:/libmath_generated_functions/Release}&quot;" valueType="string"/>
+                                								
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.link.option.libs.1460558753" name="Libraries (-l)" superClass="gnu.fortran.link.option.libs" useByScannerDiscovery="false" valueType="libs">
+                                    									
+                                    <listOptionValue builtIn="false" value="wigxjpf"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="math_generated_functions"/>
+                                    								
+                                </option>
+                                								
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.link.option.paths.620827490" name="Library search path (-L)" superClass="gnu.fortran.link.option.paths" useByScannerDiscovery="false" valueType="stringList">
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_generated_functions/Release}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc}/wigxjpf_1_10/lib/&quot;"/>
+                                    								
+                                </option>
+                                								
+                                <option id="gnu.fortran.link.option.shared.703626000" name="Shared (-shared)" superClass="gnu.fortran.link.option.shared" useByScannerDiscovery="false" value="true" valueType="boolean"/>
+                                								
+                                <inputType id="photran.managedbuild.tool.gnu.fortran.linker.input.571995252" superClass="photran.managedbuild.tool.gnu.fortran.linker.input">
+                                    									
+                                    <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+                                    									
+                                    <additionalInput kind="additionalinput" paths="$(LIBS)"/>
+                                    								
+                                </inputType>
+                                							
+                            </tool>
+                            							
+                            <tool id="photran.managedbuild.tool.gnu.assembler.exe.release.881919741" name="GCC Assembler" superClass="photran.managedbuild.tool.gnu.assembler.exe.release">
+                                								
+                                <inputType id="cdt.managedbuild.tool.gnu.assembler.input.1569839952" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+                                							
+                            </tool>
+                            						
+                        </toolChain>
+                        					
+                    </folderInfo>
+                    					
+                    <sourceEntries>
+                        						
+                        <entry excluding="src/external/frenner|frenner|lapack" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        					
+                    </sourceEntries>
+                    				
+                </configuration>
+                			
+            </storageModule>
+            			
+            <storageModule moduleId="org.eclipse.cdt.core.externalSettings">
+                				
+                <externalSettings containerId="libmath_external;photran.managedbuild.config.gnu.fortran.exe.release.218253274.1203277215.1129725095" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+                				
+                <externalSettings containerId="libmath_generated_functions;photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887.646443576.1365020064" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+                				
+                <externalSettings containerId="libtoolbox;photran.managedbuild.config.gnu.fortran.exe.release.505104685.880830683.1306068959.2099948321" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+                			
+            </storageModule>
+            		
+        </cconfiguration>
         	
     </storageModule>
     	
@@ -387,7 +845,31 @@
     	
     <storageModule moduleId="refreshScope" versionNumber="2">
         		
+        <configuration configurationName="release_static">
+            			
+            <resource resourceType="PROJECT" workspacePath="/libmath"/>
+            		
+        </configuration>
+        		
+        <configuration configurationName="release_shared_herkules2">
+            			
+            <resource resourceType="PROJECT" workspacePath="/libmath"/>
+            		
+        </configuration>
+        		
+        <configuration configurationName="release_shared">
+            			
+            <resource resourceType="PROJECT" workspacePath="/libmath"/>
+            		
+        </configuration>
+        		
         <configuration configurationName="Debug_WIN"/>
+        		
+        <configuration configurationName="release_static_herkules2">
+            			
+            <resource resourceType="PROJECT" workspacePath="/libmath"/>
+            		
+        </configuration>
         		
         <configuration configurationName="Debug">
             			
@@ -405,6 +887,8 @@
     	
     <storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
     	
+    <storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+    	
     <storageModule moduleId="scannerConfiguration">
         		
         <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
@@ -415,7 +899,55 @@
             		
         </scannerConfigBuildInfo>
         		
+        <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503.1633090057;photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503.1633090057.">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile"/>
+            		
+        </scannerConfigBuildInfo>
+        		
+        <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438.1770452292;photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438.1770452292.">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile"/>
+            		
+        </scannerConfigBuildInfo>
+        		
+        <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438.1770452292;photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438.1770452292.;photran.managedbuild.tool.gnu.c.compiler.exe.release.1537386222;cdt.managedbuild.tool.gnu.c.compiler.input.1068231461">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
+            		
+        </scannerConfigBuildInfo>
+        		
+        <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503.1633090057;photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503.1633090057.;photran.managedbuild.tool.gnu.c.compiler.exe.release.1905757332;cdt.managedbuild.tool.gnu.c.compiler.input.2052611075">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
+            		
+        </scannerConfigBuildInfo>
+        		
         <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.debug.158129180;photran.managedbuild.config.gnu.fortran.exe.debug.158129180.;photran.managedbuild.tool.gnu.c.compiler.exe.debug.2135571687;cdt.managedbuild.tool.gnu.c.compiler.input.92434992">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
+            		
+        </scannerConfigBuildInfo>
+        		
+        <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503;photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503.">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile"/>
+            		
+        </scannerConfigBuildInfo>
+        		
+        <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438;photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438.">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile"/>
+            		
+        </scannerConfigBuildInfo>
+        		
+        <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438;photran.managedbuild.config.gnu.fortran.exe.release.2110490600.1016395438.;photran.managedbuild.tool.gnu.c.compiler.exe.release.1688776854;cdt.managedbuild.tool.gnu.c.compiler.input.806265216">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
+            		
+        </scannerConfigBuildInfo>
+        		
+        <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503;photran.managedbuild.config.gnu.fortran.exe.release.2110490600.470384503.;photran.managedbuild.tool.gnu.c.compiler.exe.release.1818112015;cdt.managedbuild.tool.gnu.c.compiler.input.928666239">
             			
             <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
             		
@@ -434,7 +966,5 @@
         </scannerConfigBuildInfo>
         	
     </storageModule>
-    	
-    <storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
     
 </cproject>
