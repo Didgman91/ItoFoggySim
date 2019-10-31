@@ -141,8 +141,8 @@ module lib_mie_multi_sphere
             logical, intent(in), optional :: dynamic_step_size
 
             ! auxiliary
-            integer :: n
-            integer :: n_max
+            integer, dimension(2) :: n_range
+            integer, dimension(2) :: n_range_org
             double precision :: old_backward_error
 
             integer :: m_step_size
@@ -152,13 +152,14 @@ module lib_mie_multi_sphere
             call lib_mie_ss_calculate_scattering_coefficients_ab_nm()
 
             if ( present(update_initial_guess_with_n_max) ) then
-                n_max = simulation_data%spherical_harmonics%n_range(2)
+                n_range_org = simulation_data%spherical_harmonics%n_range
+                n_range = n_range_org
 
+                n_range(2) = update_initial_guess_with_n_max
 
                 if (present(step_size)) then
 
                     m_step_size = step_size
-                    n = update_initial_guess_with_n_max
 
                     m_dynamic_step_size = .false.
                     if (present(dynamic_step_size)) then
@@ -173,7 +174,7 @@ module lib_mie_multi_sphere
 
                 else
 
-                    simulation_data%spherical_harmonics%n_range(2) = update_initial_guess_with_n_max
+                    call lib_mie_ms_solver_set_n_range(n_range)
 
                     print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
                     print *, "  n = ", simulation_data%spherical_harmonics%n_range(2)
@@ -182,7 +183,9 @@ module lib_mie_multi_sphere
                     call lib_mie_ms_solver_set_max_iterations(100)
                     call lib_mie_ms_solver_run()
 
-                    simulation_data%spherical_harmonics%n_range(2) = n_max
+                    n_range(2) = n_max
+                    call lib_mie_ms_solver_set_n_range(n_range)
+
                     print *, ""
                     print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
                     print *, "  n = ", simulation_data%spherical_harmonics%n_range(2)
@@ -192,7 +195,6 @@ module lib_mie_multi_sphere
                     call lib_mie_ms_solver_run()
 
                 end if
-
 
             else
                 print *, ""
@@ -207,9 +209,12 @@ module lib_mie_multi_sphere
 
                 subroutine calc_with_steps()
                     implicit none
+                    ! auxiliary
+                    integer :: n
 
-                    do n=update_initial_guess_with_n_max, n_max - m_step_size, step_size
-                        simulation_data%spherical_harmonics%n_range(2) = n
+                    do n=update_initial_guess_with_n_max, n_range_org(2) - m_step_size, step_size
+                        n_range(2) = n
+                        call lib_mie_ms_solver_set_n_range(n_range)
 
                         print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
                         print *, "n = ", simulation_data%spherical_harmonics%n_range(2)
@@ -220,7 +225,9 @@ module lib_mie_multi_sphere
                         call lib_mie_ms_solver_run()
                     end do
 
-                    simulation_data%spherical_harmonics%n_range(2) = n_max
+                    n_range(2) = n_max
+                    call lib_mie_ms_solver_set_n_range(n_range)
+
                     print *, ""
                     print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
                     print *, "  n = ", simulation_data%spherical_harmonics%n_range(2)
@@ -241,8 +248,8 @@ module lib_mie_multi_sphere
                     ! auxiliaray
                     integer :: state
 
+                    call lib_mie_ms_solver_set_n_range(n_range)
 
-                    simulation_data%spherical_harmonics%n_range(2) = n
                     print *, ""
                     print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
                     print *, "  n = ", simulation_data%spherical_harmonics%n_range(2)
@@ -255,10 +262,12 @@ module lib_mie_multi_sphere
 
                     do
                         if (state .eq. state_test_next_step) then
-                            if (n + m_step_size .ge. n_max) then
-                                simulation_data%spherical_harmonics%n_range(2) = n_max
+                            if (n_range(2) + m_step_size .ge. n_range_org(2)) then
+                                n_range = n_range_org
+                                call lib_mie_ms_solver_set_n_range(n_range)
                             else
-                                simulation_data%spherical_harmonics%n_range(2) = n + m_step_size
+                                n_range(2) = n_range(2) + m_step_size
+                                call lib_mie_ms_solver_set_n_range(n_range)
                             end if
 
                             if (m_step_size .gt. 1) then
@@ -272,10 +281,10 @@ module lib_mie_multi_sphere
                                 call lib_mie_ms_solver_run()
 
                                 if (lib_mie_ms_solver_get_backward_error() .lt. 1D-3) then
-                                    if (n + m_step_size .ge. n_max) then
-                                        n = n_max
+                                    if (n_range(2) + m_step_size .ge. n_max) then
+                                        n_range(2) = n_max
                                     else
-                                        n = n + m_step_size
+                                        n_range(2) = n_range(2) + m_step_size
                                     end if
                                     state = state_calculate
                                 else
@@ -287,16 +296,16 @@ module lib_mie_multi_sphere
                                 end if
 
                             else
-                                if (n + m_step_size .ge. n_max) then
-                                    n = n_max
+                                if (n_range(2) + m_step_size .ge. n_max) then
+                                    n_range(2) = n_max
                                 else
-                                    n = n + m_step_size
+                                    n_range(2) = n_range(2) + m_step_size
                                 end if
                                 state = state_calculate
                             end if
 
                         else if (state .eq. state_calculate) then
-                            simulation_data%spherical_harmonics%n_range(2) = n
+                            call lib_mie_ms_solver_set_n_range(n_range)
 
                             print *, ""
                             print *, "lib_mie_ms_calculate_scattering_coefficients_ab_nm: NOTE"
@@ -309,7 +318,7 @@ module lib_mie_multi_sphere
                             old_backward_error = lib_mie_ms_solver_get_backward_error()
                             m_step_size = step_size
 
-                            if (n .eq. n_max) then
+                            if (n_range(2) .eq. n_range_org(2)) then
                                 state = state_finish
                             else
                                 state = state_test_next_step

@@ -17,6 +17,7 @@ module lib_mie_ms_solver_interface
     public :: lib_mie_ms_solver_constructor
     public :: lib_mie_ms_solver_run
     public :: lib_mie_ms_solver_use_ml_fmm
+    public :: lib_mie_ms_solver_set_n_range
     public :: lib_mie_ms_solver_set_max_iterations
     public :: lib_mie_ms_solver_get_backward_error
 
@@ -139,6 +140,23 @@ module lib_mie_ms_solver_interface
             end if
 
         end subroutine lib_mie_ms_solver_use_ml_fmm
+
+        subroutine lib_mie_ms_solver_set_n_range(n_range)
+            use lib_mie_ms_data_container
+            implicit none
+            ! dummy
+            integer, dimension(2), intent(in) :: n_range
+
+            ! auxiliary
+            integer :: i
+
+            simulation_data%spherical_harmonics%n_range = n_range
+
+            i = (1 + n_range(2))**2 - n_range(1)**2
+            i = i * size(simulation_data%sphere_list) * 2
+
+            m_gmres_parameter%no_of_elements_vector_x = i
+        end subroutine lib_mie_ms_solver_set_n_range
 
         ! Argument
         ! ----
