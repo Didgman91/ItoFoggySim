@@ -183,7 +183,7 @@ module lib_mie_multi_sphere
                     call lib_mie_ms_solver_set_max_iterations(100)
                     call lib_mie_ms_solver_run()
 
-                    n_range(2) = n_max
+                    n_range = n_range_org
                     call lib_mie_ms_solver_set_n_range(n_range)
 
                     print *, ""
@@ -225,7 +225,7 @@ module lib_mie_multi_sphere
                         call lib_mie_ms_solver_run()
                     end do
 
-                    n_range(2) = n_max
+                    n_range = n_range_org
                     call lib_mie_ms_solver_set_n_range(n_range)
 
                     print *, ""
@@ -281,8 +281,8 @@ module lib_mie_multi_sphere
                                 call lib_mie_ms_solver_run()
 
                                 if (lib_mie_ms_solver_get_backward_error() .lt. 1D-3) then
-                                    if (n_range(2) + m_step_size .ge. n_max) then
-                                        n_range(2) = n_max
+                                    if (n_range(2) + m_step_size .ge. n_range_org(2)) then
+                                        n_range = n_range_org
                                     else
                                         n_range(2) = n_range(2) + m_step_size
                                     end if
@@ -296,8 +296,8 @@ module lib_mie_multi_sphere
                                 end if
 
                             else
-                                if (n_range(2) + m_step_size .ge. n_max) then
-                                    n_range(2) = n_max
+                                if (n_range(2) + m_step_size .ge. n_range_org(2)) then
+                                    n_range = n_range_org
                                 else
                                     n_range(2) = n_range(2) + m_step_size
                                 end if
@@ -422,7 +422,7 @@ module lib_mie_multi_sphere
             call cpu_time(test_start)
 
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1()) rv = rv + 1
-            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2()) rv = rv + 1
+            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_parallel_sphere_assemply()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_sphere_grid_assemply()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_serial_sphere_assemply()) rv = rv + 1
@@ -1711,8 +1711,6 @@ module lib_mie_multi_sphere
                 type(list_list_cmplx) :: list_list_diff
                 double precision :: buffer
 
-                character(len=15) :: path
-
                 ! plot
                 double precision :: x
                 double precision :: y
@@ -1773,8 +1771,8 @@ module lib_mie_multi_sphere
                 simulation_data%refractive_index_medium = n_medium
 
                 ! set spheres
-                no_spheres_x = 7
-                no_spheres_z = 5
+                no_spheres_x = 4
+                no_spheres_z = 2
 
                 allocate (a_nm_t_matrix(no_spheres_x * no_spheres_z))
                 allocate (b_nm_t_matrix(no_spheres_x * no_spheres_z))
@@ -1858,8 +1856,8 @@ module lib_mie_multi_sphere
                 call system_clock(test_count_start_sub, test_count_rate_sub)
                 call cpu_time(test_start_sub)
 
-                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(ceiling(n_range(2) * 0.75)), 2)
-!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(ceiling(n_range(2) * 0.75)), 2)
+                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
                 a_nm_t_matrix(:) = simulation_data%sphere_list(:)%a_nm
                 b_nm_t_matrix(:) = simulation_data%sphere_list(:)%b_nm
 
@@ -1876,8 +1874,8 @@ module lib_mie_multi_sphere
 
                 call lib_mie_ms_constructor(n_range, use_ml_fmm = .true., init_with_single_sphere = .true.)
 
-                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(ceiling(n_range(2) * 0.75)), 2)
-!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(ceiling(n_range(2) * 0.75)), 2)
+                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
                 a_nm_ml_fmm(:) = simulation_data%sphere_list(:)%a_nm
                 b_nm_ml_fmm(:) = simulation_data%sphere_list(:)%b_nm
 

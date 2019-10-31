@@ -55,6 +55,7 @@ module lib_tree
 
     public :: lib_tree_get_level_min
     public :: lib_tree_get_level_max
+    public :: lib_tree_get_level_threshold
 
     public :: lib_tree_get_number_of_boxes
     public :: lib_tree_get_centre_of_box
@@ -735,9 +736,9 @@ module lib_tree
 
         if (allocated(element_number_e2)) then
             ii = size(element_number_e2)
-            allocate (element_number(ii))
-
-            call move_alloc(element_number_e2, element_number)
+!            allocate (element_number(ii))
+!
+!            call move_alloc(element_number_e2, element_number)
 
             ! clean up
             deallocate (buffer_e2)
@@ -746,20 +747,22 @@ module lib_tree
         end if
 
         if (ii .gt. 0) then
-            ! create a data element list without elements listed in *element_number*
+            ! create a data element list without elements listed in *element_number_e2*
             allocate(data_element_list_regard(size(lib_tree_data_element_list)))
             data_element_list_regard(:) = .true.
-            do i=1, size(element_number)
-                ii = element_number(i)
+            do i=1, size(element_number_e2)
+                ii = element_number_e2(i)
                 data_element_list_regard(ii) = .false.
             end do
 
-            i = size(lib_tree_data_element_list) - size(element_number)
+            i = size(lib_tree_data_element_list) - size(element_number_e2)
             allocate (rv(i))
+            allocate (element_number(i))
             ii = 1
             do i=1, size(lib_tree_data_element_list)
                 if (data_element_list_regard(i)) then
                     rv(ii) = lib_tree_data_element_list(i)
+                    element_number(ii) = int(i, CORRESPONDENCE_VECTOR_KIND)
                     ii = ii + 1
                 end if
             end do
@@ -810,7 +813,8 @@ module lib_tree
         integer(kind=UINDEX_BYTES) :: i
         integer(kind=UINDEX_BYTES) :: ii
 
-        allocate(buffer_e2_parent, source=lib_tree_get_domain_e2(k, lib_tree_get_parent(uindex), element_number_list_e2_parent))
+!        allocate(buffer_e2_parent, source=lib_tree_get_domain_e2(k, lib_tree_get_parent(uindex), element_number_list_e2_parent))
+        buffer_e2_parent = lib_tree_get_domain_e2(k, lib_tree_get_parent(uindex), element_number_list_e2_parent)
         buffer_e2 = lib_tree_get_domain_e2(k, uindex, element_number_list_e2)
 
         if (allocated(buffer_e2_parent)) then
@@ -852,10 +856,12 @@ module lib_tree
         ! create a data element list
         i = number_of_elements_parent - number_of_elements
         allocate (rv(i))
+        allocate (element_number(i))
         ii = 1
         do i=1, size(lib_tree_data_element_list)
             if (data_element_list_regard(i)) then
                 rv(ii) = lib_tree_data_element_list(i)
+                element_number(ii) = int(i, CORRESPONDENCE_VECTOR_KIND)
                 ii = ii + 1
             end if
         end do
@@ -991,8 +997,10 @@ module lib_tree
 
         uindex_parent = lib_tree_get_parent(uindex)
 
-        allocate(uindex_i2, source=lib_tree_get_domain_i2(uindex, k))
-        allocate(uindex_parent_i2, source=lib_tree_get_domain_i2(uindex_parent, k))
+!        allocate(uindex_i2, source=lib_tree_get_domain_i2(uindex, k))
+        uindex_i2 = lib_tree_get_domain_i2(uindex, k)
+!        allocate(uindex_parent_i2, source=lib_tree_get_domain_i2(uindex_parent, k))
+        uindex_parent_i2 = lib_tree_get_domain_i2(uindex_parent, k)
         allocate(uindex_parent_i2_children(size(uindex_parent_i2), 2**TREE_DIMENSIONS))
 
 
@@ -1526,8 +1534,6 @@ module lib_tree
         integer(kind=2) :: i
         integer(kind=UINDEX_BYTES) :: ii
         logical :: element_found
-
-        !$  logical :: opm_end_do_loop
 
         if (uindex%l .ne. lib_tree_l_th) then
             print *, "lib_tree_get_element_from_correspondence_vector:"
@@ -2370,7 +2376,8 @@ module lib_tree
             ! ---------------------------------/ *: ground_truth_uindex_i2
             uindex%n = 0
             uindex%l = 2
-            allocate(uindex_i2, source=lib_tree_get_domain_i2(uindex, k))
+!            allocate(uindex_i2, source=lib_tree_get_domain_i2(uindex, k))
+            uindex_i2 = lib_tree_get_domain_i2(uindex, k)
 
             allocate(ground_truth_uindex_i2(8))
             ground_truth_uindex_i2(:)%l = uindex%l
@@ -2400,12 +2407,12 @@ module lib_tree
             logical :: rv
 
             ! auxiliary
+#if (_FMM_DIMENSION_ == 2)
             type(lib_tree_universal_index) :: uindex
             integer(kind=UINDEX_BYTES) :: k
             type(lib_tree_universal_index), dimension(:), allocatable :: uindex_i4
             type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_i4
 
-#if (_FMM_DIMENSION_ == 2)
             ! ---------------------------------
             ! |  5    |  7    | 13    | 15    |
             ! |    *  |    *  |    *  |    *  |

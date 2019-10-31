@@ -125,8 +125,6 @@ module lib_mie_ms_solver_interface_helper_functions
             integer :: first
             integer :: last
 
-            double complex, dimension(:), allocatable :: buffer_array
-
             counter = (1 + n_range(2))**2 - n_range(1)**2
 
             first = 2 * (element_no - 1) * counter + 1

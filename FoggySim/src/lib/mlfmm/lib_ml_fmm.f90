@@ -88,7 +88,7 @@ module lib_ml_fmm
 
         ! initiate the X- and Y-hierarchy
         correspondence_vector = lib_tree_get_correspondence_vector()
-        call lib_ml_fmm_hf_create_hierarchy(data_concatenated, correspondence_vector, &
+        call lib_ml_fmm_hf_create_hierarchy(data_concatenated, &
                                             length, m_tree_l_min, m_tree_l_max,&
                                             m_ml_fmm_hierarchy)
         print *, "lib_ml_fmm_constructor: INFO"

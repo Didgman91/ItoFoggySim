@@ -46,15 +46,22 @@ module lib_field
             allocate(poynting(lbound(e_field, 1):ubound(e_field, 1), &
                               lbound(e_field, 2):ubound(e_field, 2)))
 
-            allocate(e_field_real_y, mold=e_field_real_x)
-            allocate(e_field_real_z, mold=e_field_real_x)
-            allocate(h_field_real_x, mold=e_field_real_x)
-            allocate(h_field_real_y, mold=e_field_real_x)
-            allocate(h_field_real_z, mold=e_field_real_x)
+            allocate(e_field_real_y(lbound(e_field, 1):ubound(e_field, 1), &
+                                    lbound(e_field, 2):ubound(e_field, 2)))
+            allocate(e_field_real_z(lbound(e_field, 1):ubound(e_field, 1), &
+                                    lbound(e_field, 2):ubound(e_field, 2)))
+            allocate(h_field_real_x(lbound(e_field, 1):ubound(e_field, 1), &
+                                    lbound(e_field, 2):ubound(e_field, 2)))
+            allocate(h_field_real_y(lbound(e_field, 1):ubound(e_field, 1), &
+                                    lbound(e_field, 2):ubound(e_field, 2)))
+            allocate(h_field_real_z(lbound(e_field, 1):ubound(e_field, 1), &
+                                    lbound(e_field, 2):ubound(e_field, 2)))
 
-            allocate(poynting_abs, mold=e_field_real_x)
+            allocate(poynting_abs(lbound(e_field, 1):ubound(e_field, 1), &
+                                  lbound(e_field, 2):ubound(e_field, 2)))
 
-            allocate(h_field_conjg, mold=h_field)
+            allocate(h_field_conjg(lbound(e_field, 1):ubound(e_field, 1), &
+                                   lbound(e_field, 2):ubound(e_field, 2)))
 
             do i = lbound(e_field, 1), ubound(e_field, 1)
                 do ii = lbound(e_field, 2), ubound(e_field, 2)

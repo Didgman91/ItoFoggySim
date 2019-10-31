@@ -813,7 +813,7 @@ module lib_mie_ss_helper_functions
             ! eq. (4.20)
             m_n_mx = max(lib_mie_ss_hf_get_n_c(abs(x)), int(abs(m_mx))) + 15
 
-            m_buffer = cmplx(0.0, 0.0, kind=8)
+            m_buffer = 0
             do i=m_n_mx, fnu+1, -1
                 m_buffer = get_An_minus_1_real(i, m_mx, m_buffer)
 

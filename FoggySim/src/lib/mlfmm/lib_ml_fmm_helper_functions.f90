@@ -12,6 +12,14 @@ module lib_ml_fmm_helper_functions
 
     ! --- public functions ---
     public :: lib_ml_fmm_hf_get_neighbourhood_size
+    public :: lib_ml_fmm_hf_get_neighbourhood_size_S
+    public :: lib_ml_fmm_hf_get_neighbourhood_size_R
+
+    public :: lib_ml_fmm_hf_check_validity_expansion_S
+    public :: lib_ml_fmm_hf_check_validity_expansion_R
+    public :: lib_ml_fmm_hf_check_validity_translation_SS
+    public :: lib_ml_fmm_hf_check_validity_translation_SR
+    public :: lib_ml_fmm_hf_check_validity_translation_RR
 
     public :: lib_ml_fmm_hf_create_hierarchy
 
@@ -335,12 +343,11 @@ module lib_ml_fmm_helper_functions
         ! ----
         !   hierarchy
         !       hierarchy of the X- and Y-hierarchy (sources and targets)
-        subroutine lib_ml_fmm_hf_create_hierarchy(data_elements, correspondence_vector, length, l_min, l_max, &
+        subroutine lib_ml_fmm_hf_create_hierarchy(data_elements, length, l_min, l_max, &
                                                   hierarchy)
             implicit none
             ! dummy
             type(lib_tree_data_element), dimension(:), intent(inout) :: data_elements
-            type(lib_tree_correspondece_vector_element), dimension(:), allocatable, intent(in) :: correspondence_vector
             integer(kind=UINDEX_BYTES), dimension(3), intent(in) :: length
             integer(kind=1), intent(in) :: l_max
             integer(kind=1), intent(in) :: l_min
@@ -356,8 +363,6 @@ module lib_ml_fmm_helper_functions
             integer(kind=1) :: hierarchy_type
             integer, dimension(3) :: uindex_list_counter
 
-            integer(kind=CORRESPONDENCE_VECTOR_KIND) :: element_index
-
             if (allocated(hierarchy)) then
                 deallocate(hierarchy)
             end if
@@ -368,26 +373,23 @@ module lib_ml_fmm_helper_functions
             allocate( uindex_list_XY(length(HIERARCHY_XY)) )
             uindex_list_counter(:) = 0
 
-            ! iterate over all correspondence vector elements (l = l_th)
+            ! iterate over all data elements (l = l_th)
             do i=1, size(data_elements)
-!                if (correspondence_vector(i)%number_of_hash_runs .gt. 0) then
-!                    element_index = correspondence_vector(i)%data_element_number(1)
-                    hierarchy_type = data_elements(i)%hierarchy
-                    buffer_uindex = data_elements(i)%uindex
-                    if (hierarchy_type .eq. HIERARCHY_X) then
-                        uindex_list_counter(HIERARCHY_X) = uindex_list_counter(HIERARCHY_X) + 1
-                        uindex_list_X(uindex_list_counter(HIERARCHY_X)) = buffer_uindex
-                    else if (hierarchy_type .eq. HIERARCHY_Y) then
-                        uindex_list_counter(HIERARCHY_Y) = uindex_list_counter(HIERARCHY_Y) + 1
-                        uindex_list_Y(uindex_list_counter(HIERARCHY_Y)) = buffer_uindex
-                    else if (hierarchy_type .eq. HIERARCHY_XY) then
-                        uindex_list_counter(HIERARCHY_XY) = uindex_list_counter(HIERARCHY_XY) + 1
-                        uindex_list_XY(uindex_list_counter(HIERARCHY_XY)) = buffer_uindex
-                    else
-                        print *, "lib_ml_fmm_hf_create_hierarchy: ERROR"
-                        print *, "  hierarchy not defined"
-                    end if
-!                end if
+                hierarchy_type = data_elements(i)%hierarchy
+                buffer_uindex = data_elements(i)%uindex
+                if (hierarchy_type .eq. HIERARCHY_X) then
+                    uindex_list_counter(HIERARCHY_X) = uindex_list_counter(HIERARCHY_X) + 1
+                    uindex_list_X(uindex_list_counter(HIERARCHY_X)) = buffer_uindex
+                else if (hierarchy_type .eq. HIERARCHY_Y) then
+                    uindex_list_counter(HIERARCHY_Y) = uindex_list_counter(HIERARCHY_Y) + 1
+                    uindex_list_Y(uindex_list_counter(HIERARCHY_Y)) = buffer_uindex
+                else if (hierarchy_type .eq. HIERARCHY_XY) then
+                    uindex_list_counter(HIERARCHY_XY) = uindex_list_counter(HIERARCHY_XY) + 1
+                    uindex_list_XY(uindex_list_counter(HIERARCHY_XY)) = buffer_uindex
+                else
+                    print *, "lib_ml_fmm_hf_create_hierarchy: ERROR"
+                    print *, "  hierarchy not defined"
+                end if
             end do
 
             l_th = buffer_uindex%l
@@ -1052,25 +1054,25 @@ module lib_ml_fmm_helper_functions
 
             contains
 
-                function test_lib_ml_fmm_hf_create_hierarchy() result(rv)
-                    implicit none
-                    ! dummy
-                    logical :: rv
-
-                    ! auxiliary
-                    integer(kind=UINDEX_BYTES), parameter :: list_length = 10
-                    integer(kind=1), parameter :: element_type = 1
-                    type(lib_tree_data_element), dimension(list_length) :: element_list
-!                    type(lib_ml_fmm_data) :: data_elements
+!                function test_lib_ml_fmm_hf_create_hierarchy() result(rv)
+!                    implicit none
+!                    ! dummy
+!                    logical :: rv
 !
-!                    allocate(data_elements%X, source=lib_tree_get_diagonal_test_dataset(list_length, element_type, HIERARCHY_X))
-!                    allocate(data_elements%Y, source=lib_tree_get_diagonal_test_dataset(4_8, element_type, HIERARCHY_Y, .true.))
-
-
-
-!                    call lib_ml_fmm_hf_create_hierarchy()
-
-                end function test_lib_ml_fmm_hf_create_hierarchy
+!                    ! auxiliary
+!                    integer(kind=UINDEX_BYTES), parameter :: list_length = 10
+!                    integer(kind=1), parameter :: element_type = 1
+!                    type(lib_tree_data_element), dimension(list_length) :: element_list
+!!                    type(lib_ml_fmm_data) :: data_elements
+!!
+!!                    allocate(data_elements%X, source=lib_tree_get_diagonal_test_dataset(list_length, element_type, HIERARCHY_X))
+!!                    allocate(data_elements%Y, source=lib_tree_get_diagonal_test_dataset(4_8, element_type, HIERARCHY_Y, .true.))
+!
+!
+!
+!!                    call lib_ml_fmm_hf_create_hierarchy()
+!
+!                end function test_lib_ml_fmm_hf_create_hierarchy
 
                 function test_lib_ml_fmm_hf_get_parent_uindex_lists() result(rv)
                     implicit none
@@ -1108,7 +1110,8 @@ module lib_ml_fmm_helper_functions
                         ground_truth_uindex_parent(i) = lib_tree_get_parent(uindex_list(i), step)
                     end do
 
-                    allocate(uindex_parent, source=uindex_list)
+!                    allocate(uindex_parent, source=uindex_list)
+                    uindex_parent = uindex_list
                     call lib_ml_fmm_hf_get_parent_uindex_lists(uindex_parent, step)
 
                     rv = .true.
