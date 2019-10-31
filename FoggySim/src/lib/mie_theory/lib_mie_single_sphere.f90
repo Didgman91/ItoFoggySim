@@ -1451,7 +1451,7 @@ module lib_mie_single_sphere
             x_j = x_0 - sphere%d_0_j
             x_j_spherical = x_j
 
-            if ( x_j_spherical%rho .ge. sphere_parameter%radius) then
+            if ( x_j_spherical%rho .gt. sphere_parameter%radius) then
                 ! outside the sphere
                 call lib_math_vector_spherical_harmonics_components(x_j_spherical%theta, x_j_spherical%phi, x_j_spherical%rho, &
                                                                    k_0 * n_medium, &
@@ -1505,6 +1505,7 @@ module lib_mie_single_sphere
                     do m=-n, n
                         if (calc_order_m%item(n)%item(m)) then
                             buffer_cmplx = cmplx(0, 1, kind=8) * e_field_nm%item(n)%item(m)
+
                             buffer_e_field_n_s = buffer_cmplx * ( sphere%a_nm%item(n)%item(m)*N_nm(n)%coordinate(m) &
                                                                  +sphere%b_nm%item(n)%item(m)*M_nm(n)%coordinate(m) )
 
