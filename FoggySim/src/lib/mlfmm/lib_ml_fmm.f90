@@ -1,3 +1,5 @@
+#define _TRACE_
+
 #define _FMM_DIMENSION_ 3
 
 ! LIB: Mulitlevel Fast Multipole Method
@@ -282,7 +284,14 @@ module lib_ml_fmm
         implicit none
 
         call lib_ml_fmm_calculate_upward_pass_step_1()
+#ifdef _TRACE_
+        print *, "TRACE: lib_ml_fmm_calculate_upward_pass_step_1 ..done"
+#endif
+
         call lib_ml_fmm_calculate_upward_pass_step_2()
+#ifdef _TRACE_
+        print *, "TRACE: lib_ml_fmm_calculate_upward_pass_step_2 ..done"
+#endif
     end subroutine
 
     ! Upward pass - step 1
@@ -491,12 +500,16 @@ module lib_ml_fmm
         integer(kind=UINDEX_BYTES) :: list_index
         integer(kind=1) :: hierarchy_type
 
+        type(lib_ml_fmm_coefficient), dimension(:), allocatable :: buffer_C
+
         x_c = lib_tree_get_centre_of_box(uindex)
 
         ! get child boxes
         uindex_children = lib_tree_get_children(uindex)
 
-        call lib_ml_fmm_type_operator_set_coefficient_zero(C)
+        allocate(buffer_C(size(uindex_children)))
+
+        !$OMP PARALLEL DO PRIVATE(i, x_c_child, list_index, hierarchy_type)
         do i=1, size(uindex_children)
             x_c_child = lib_tree_get_centre_of_box(uindex_children(i))
             list_index = lib_ml_fmm_hf_get_hierarchy_index(m_ml_fmm_hierarchy, uindex_children(i))
@@ -505,17 +518,32 @@ module lib_ml_fmm
                 if (((hierarchy_type .eq. HIERARCHY_X) .or. &
                      (hierarchy_type .eq. HIERARCHY_XY))) then
                     C_child = m_ml_fmm_hierarchy(uindex_children(i)%l)%coefficient_list(list_index)
-                    C = C + m_ml_fmm_handles%get_translation_SS(C_child, x_c_child, x_c)
+                    buffer_C(i) = m_ml_fmm_handles%get_translation_SS(C_child, x_c_child, x_c)
                 end if
             end if
         end do
+        !$OMP END PARALLEL DO
+
+        call lib_ml_fmm_type_operator_set_coefficient_zero(C)
+
+        do i=1, size(uindex_children)
+            C = C + buffer_C(i)
+        end do
+
     end function lib_ml_fmm_get_C_of_box
 
     subroutine lib_ml_fmm_calculate_downward_pass
         implicit none
 
         call lib_ml_fmm_calculate_downward_pass_step_1()
+#ifdef _TRACE_
+        print *, "TRACE: lib_ml_fmm_calculate_downward_pass_step_1 ..done"
+#endif
+
         call lib_ml_fmm_calculate_downward_pass_step_2()
+#ifdef _TRACE_
+        print *, "TRACE: lib_ml_fmm_calculate_downward_pass_step_2 ..done"
+#endif
 
     end subroutine
 
@@ -554,8 +582,8 @@ module lib_ml_fmm
             list_index_list(:) = -1
 
             if (m_ml_fmm_hierarchy(l)%is_hashed) then
-!                !$OMP PARALLEL DO PRIVATE(i, hierarchy_type, D_tilde) &
-!                !$OMP  FIRSTPRIVATE(uindex)
+                !$OMP PARALLEL DO PRIVATE(i, hierarchy_type, D_tilde) &
+                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
                     if (uindex%n .ge. 0) then
@@ -568,7 +596,7 @@ module lib_ml_fmm
                         end if
                     end if
                 end do
-!                !$OMP END PARALLEL DO
+                !$OMP END PARALLEL DO
             else
                 !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type, D_tilde) &
                 !$OMP  FIRSTPRIVATE(uindex)
@@ -644,12 +672,16 @@ module lib_ml_fmm
         integer(kind=UINDEX_BYTES) :: list_index
         integer(kind=1) :: hierarchy_type
 
+        type(lib_ml_fmm_coefficient), dimension(:), allocatable :: buffer_D_tilde
+
         allocate(boxes_i4, source=lib_tree_get_domain_i4(uindex, m_tree_neighbourhood_size_k))
 
-        call lib_ml_fmm_type_operator_set_coefficient_zero(D_tilde)
 
         x_c = lib_tree_get_centre_of_box(uindex)
 
+        allocate(buffer_D_tilde(size(boxes_i4)))
+
+        !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type, C, x_c_neighbour)
         do i=1, size(boxes_i4)
             list_index = lib_ml_fmm_hf_get_hierarchy_index(m_ml_fmm_hierarchy, boxes_i4(i))
             if (list_index .gt. 0) then
@@ -659,9 +691,16 @@ module lib_ml_fmm
                     C = m_ml_fmm_hierarchy(uindex%l)%coefficient_list(list_index)
                     x_c_neighbour = lib_tree_get_centre_of_box(boxes_i4(i))
 
-                    D_tilde = D_tilde + m_ml_fmm_handles%get_translation_SR(C, x_c, x_c_neighbour)
+                    buffer_D_tilde(i) = m_ml_fmm_handles%get_translation_SR(C, x_c, x_c_neighbour)
                 end if
             end if
+        end do
+        !$OMP END PARALLEL DO
+
+        call lib_ml_fmm_type_operator_set_coefficient_zero(D_tilde)
+
+        do i=1, size(boxes_i4)
+            D_tilde = D_tilde + buffer_D_tilde(i)
         end do
 
     end function
@@ -823,8 +862,8 @@ module lib_ml_fmm
         number_of_boxes = size(m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index)
 
         if (m_ml_fmm_hierarchy(uindex%l)%is_hashed) then
-!            !$OMP PARALLEL DO PRIVATE(i, hierarchy_type) &
-!            !$OMP  FIRSTPRIVATE(uindex)
+            !$OMP PARALLEL DO PRIVATE(i, hierarchy_type) &
+            !$OMP  FIRSTPRIVATE(uindex)
             do i=1, number_of_boxes
                 uindex%n = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
                 if (uindex%n .ge. 0) then
@@ -836,10 +875,10 @@ module lib_ml_fmm
                     end if
                 end if
             end do
-!            !$OMP END PARALLEL DO
+            !$OMP END PARALLEL DO
         else
-!            !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type) &
-!            !$OMP  FIRSTPRIVATE(uindex)
+            !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type) &
+            !$OMP  FIRSTPRIVATE(uindex)
             do i=1, number_of_boxes
                 uindex%n = i - int(1, 1)
                 list_index = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
@@ -852,8 +891,11 @@ module lib_ml_fmm
                     end if
                 end if
             end do
-!            !$OMP END PARALLEL DO
+            !$OMP END PARALLEL DO
         end if
+#ifdef _TRACE_
+        print *, "TRACE: lib_ml_fmm_final_summation ..done"
+#endif
 
     end subroutine lib_ml_fmm_final_summation
 
@@ -894,6 +936,7 @@ module lib_ml_fmm
                                                                   element_number_e2))
 
         D = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
+        !$OMP PARALLEL DO PRIVATE(i, v_counter)
         do i=1, size(data_element_e1)
             if ((data_element_e1(i)%hierarchy .eq. HIERARCHY_Y) .or. &
                 (data_element_e1(i)%hierarchy .eq. HIERARCHY_XY)) then
@@ -902,6 +945,7 @@ module lib_ml_fmm
                                                                    data_element_e2, element_number_e2, D)
             end if
         end do
+        !$OMP END PARALLEL DO
     end subroutine lib_ml_fmm_calculate_all_v_y_j_at_uindex
 
     ! Argument

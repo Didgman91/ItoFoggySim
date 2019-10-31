@@ -1,4 +1,4 @@
-!#define _DEBUG_
+#define _DEBUG_
 
 module lib_mie_ms_solver_interface
     use libmath

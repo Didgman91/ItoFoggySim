@@ -197,8 +197,8 @@ module lib_mie_ms_ml_fmm_interface
             if (abs(d_j_l) .eq. 0d0) then
 !                u_B_i%a_nm = simulation_data%sphere_list(i)%a_nm
 !                u_B_i%b_nm = simulation_data%sphere_list(i)%b_nm
-                u_B_i%a_nm = m_ml_fmm_u(i)%a_nm
-                u_B_i%b_nm = m_ml_fmm_u(i)%b_nm
+                u_B_i%a_nm = m_ml_fmm_u(element_number)%a_nm
+                u_B_i%b_nm = m_ml_fmm_u(element_number)%b_nm
 
                 return
 

@@ -1614,7 +1614,7 @@ module lib_mie_multi_sphere
                 rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
 
                 rv = .true.
-!                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1:"
+!                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2:"
                     do i=lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
                         print *, "  i = ", i
 
@@ -1884,7 +1884,7 @@ module lib_mie_multi_sphere
 
 
                 print *, ""
-                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2 (ML-FMM): "
+                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3 (ML-FMM): "
                 print '("  CPU-Time = ",f10.3," seconds.")', test_finish_sub-test_start_sub
                 print '("  WALL-Time = ",f10.3," seconds.")', (test_count_finish_sub-test_count_start_sub) &
                                                                / real(test_count_rate_sub)
@@ -1923,7 +1923,7 @@ module lib_mie_multi_sphere
                 rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
 
                 rv = .true.
-!                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1:"
+!                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3:"
                     do i=lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
                         print *, "  i = ", i
 
