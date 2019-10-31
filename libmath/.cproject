@@ -463,15 +463,7 @@
                 			
             </storageModule>
             			
-            <storageModule moduleId="org.eclipse.cdt.core.externalSettings">
-                				
-                <externalSettings containerId="libmath_external;photran.managedbuild.config.gnu.fortran.exe.release.218253274.1203277215.1094671890" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
-                				
-                <externalSettings containerId="libmath_generated_functions;photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
-                				
-                <externalSettings containerId="libtoolbox;photran.managedbuild.config.gnu.fortran.exe.release.505104685.880830683" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
-                			
-            </storageModule>
+            <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
             		
         </cconfiguration>
         		
@@ -593,15 +585,7 @@
                 			
             </storageModule>
             			
-            <storageModule moduleId="org.eclipse.cdt.core.externalSettings">
-                				
-                <externalSettings containerId="libmath_external;photran.managedbuild.config.gnu.fortran.exe.release.218253274.1203277215" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
-                				
-                <externalSettings containerId="libmath_generated_functions;photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887.646443576" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
-                				
-                <externalSettings containerId="libtoolbox;photran.managedbuild.config.gnu.fortran.exe.release.505104685.880830683.1306068959" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
-                			
-            </storageModule>
+            <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
             		
         </cconfiguration>
         		
@@ -691,15 +675,7 @@
                 			
             </storageModule>
             			
-            <storageModule moduleId="org.eclipse.cdt.core.externalSettings">
-                				
-                <externalSettings containerId="libmath_external;photran.managedbuild.config.gnu.fortran.exe.release.218253274.1203277215.1094671890.1293284052" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
-                				
-                <externalSettings containerId="libmath_generated_functions;photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887.1891767060" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
-                				
-                <externalSettings containerId="libtoolbox;photran.managedbuild.config.gnu.fortran.exe.release.505104685.880830683.1983099675" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
-                			
-            </storageModule>
+            <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
             		
         </cconfiguration>
         		
@@ -821,15 +797,7 @@
                 			
             </storageModule>
             			
-            <storageModule moduleId="org.eclipse.cdt.core.externalSettings">
-                				
-                <externalSettings containerId="libmath_external;photran.managedbuild.config.gnu.fortran.exe.release.218253274.1203277215.1129725095" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
-                				
-                <externalSettings containerId="libmath_generated_functions;photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887.646443576.1365020064" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
-                				
-                <externalSettings containerId="libtoolbox;photran.managedbuild.config.gnu.fortran.exe.release.505104685.880830683.1306068959.2099948321" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
-                			
-            </storageModule>
+            <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
             		
         </cconfiguration>
         	

@@ -347,13 +347,7 @@
                                 								
                                 <option id="gnu.fortran.compiler.option.misc.other.504282317" name="Other flags" superClass="gnu.fortran.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -frecursive -march='ivybridge'" valueType="string"/>
                                 								
-                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.fortran.compiler.option.include.paths.1895500328" name="Include paths (-I)" superClass="gnu.fortran.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
-                                    									
-                                    <listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/8/include-fixed"/>
-                                    									
-                                    <listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/8/include"/>
-                                    								
-                                </option>
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="true" id="gnu.fortran.compiler.option.include.paths.1895500328" name="Include paths (-I)" superClass="gnu.fortran.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.1729166471" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                                 							
@@ -367,13 +361,7 @@
                             							
                             <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.release.499540887" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.release">
                                 								
-                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.c.compiler.option.include.paths.680147982" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
-                                    									
-                                    <listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/8/include-fixed"/>
-                                    									
-                                    <listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/8/include"/>
-                                    								
-                                </option>
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="true" id="gnu.c.compiler.option.include.paths.680147982" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath"/>
                                 								
                                 <inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.321551878" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
                                 							
@@ -547,6 +535,12 @@
             		
         </scannerConfigBuildInfo>
         		
+        <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887.1891767060;photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887.1891767060.;photran.managedbuild.tool.gnu.c.compiler.exe.release.499540887;cdt.managedbuild.tool.gnu.c.compiler.input.321551878">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
+            		
+        </scannerConfigBuildInfo>
+        		
         <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887;photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887.;photran.managedbuild.tool.gnu.c.compiler.exe.release.1354909051;cdt.managedbuild.tool.gnu.c.compiler.input.1115624090">
             			
             <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
@@ -554,6 +548,12 @@
         </scannerConfigBuildInfo>
         		
         <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887;photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887.">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile"/>
+            		
+        </scannerConfigBuildInfo>
+        		
+        <scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887.1891767060;photran.managedbuild.config.gnu.fortran.exe.release.1885486730.834143887.1891767060.">
             			
             <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile"/>
             		
