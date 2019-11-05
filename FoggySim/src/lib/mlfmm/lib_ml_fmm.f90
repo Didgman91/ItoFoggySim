@@ -347,16 +347,18 @@ module lib_ml_fmm
             do i=1, number_of_boxes
                 uindex%n = i - int(1, 1)
                 list_index = m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_list_index(i)
-                if ((list_index .gt. 0) .and. &
-                    ((hierarchy_type .eq. HIERARCHY_X) .or. &
-                     (hierarchy_type .eq. HIERARCHY_XY))) then
-
+                if (list_index .gt. 0) then
                     hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(list_index)
 
-                    C = lib_ml_fmm_get_C_i_from_elements_at_box(uindex, ignore_box)
-                    if (.not. ignore_box) then
-                        m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_list(list_index) = C
-                        m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_type(list_index) = LIB_ML_FMM_COEFFICIENT_TYPE_C
+                    if ((hierarchy_type .eq. HIERARCHY_X) .or. &
+                        (hierarchy_type .eq. HIERARCHY_XY)) then
+
+
+                        C = lib_ml_fmm_get_C_i_from_elements_at_box(uindex, ignore_box)
+                        if (.not. ignore_box) then
+                            m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_list(list_index) = C
+                            m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_type(list_index) = LIB_ML_FMM_COEFFICIENT_TYPE_C
+                        end if
                     end if
                 end if
             end do
@@ -527,7 +529,14 @@ module lib_ml_fmm
         call lib_ml_fmm_type_operator_set_coefficient_zero(C)
 
         do i=1, size(uindex_children)
-            C = C + buffer_C(i)
+            list_index = lib_ml_fmm_hf_get_hierarchy_index(m_ml_fmm_hierarchy, uindex_children(i))
+            if (list_index .gt. 0) then
+                hierarchy_type = m_ml_fmm_hierarchy(uindex_children(i)%l)%hierarchy_type(list_index)
+                if (((hierarchy_type .eq. HIERARCHY_X) .or. &
+                     (hierarchy_type .eq. HIERARCHY_XY))) then
+                    C = C + buffer_C(i)
+                end if
+            end if
         end do
 
     end function lib_ml_fmm_get_C_of_box
@@ -700,10 +709,17 @@ module lib_ml_fmm
         call lib_ml_fmm_type_operator_set_coefficient_zero(D_tilde)
 
         do i=1, size(boxes_i4)
-            D_tilde = D_tilde + buffer_D_tilde(i)
+            list_index = lib_ml_fmm_hf_get_hierarchy_index(m_ml_fmm_hierarchy, boxes_i4(i))
+            if (list_index .gt. 0) then
+                hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(list_index)
+                if (((hierarchy_type .eq. HIERARCHY_X) .or. &
+                     (hierarchy_type .eq. HIERARCHY_XY))) then
+                    D_tilde = D_tilde + buffer_D_tilde(i)
+                end if
+            end if
         end do
 
-    end function
+    end function lib_ml_fmm_get_D_tilde_of_box
 
     ! Downward pass - step 2
     !
@@ -728,8 +744,8 @@ module lib_ml_fmm
         integer(kind=UINDEX_BYTES) :: list_index
         integer(kind=1) :: hierarchy_type
 
-        type(lib_ml_fmm_coefficient), dimension(:), allocatable :: coefficient_list
-        integer(kind=UINDEX_BYTES), dimension(:), allocatable :: list_index_list
+!        type(lib_ml_fmm_coefficient), dimension(:), allocatable :: coefficient_list
+!        integer(kind=UINDEX_BYTES), dimension(:), allocatable :: list_index_list
 
         m_ml_fmm_hierarchy(m_tree_l_min)%coefficient_type(:) = LIB_ML_FMM_COEFFICIENT_TYPE_D
 
@@ -738,9 +754,9 @@ module lib_ml_fmm
             number_of_boxes = size(m_ml_fmm_hierarchy(l)%coefficient_list_index)
 
             ! create coefficient buffer
-            allocate(coefficient_list(number_of_boxes))
-            allocate(list_index_list(number_of_boxes))
-            list_index_list(:) = -1
+!            allocate(coefficient_list(number_of_boxes))
+!            allocate(list_index_list(number_of_boxes))
+!            list_index_list(:) = -1
 
             if (m_ml_fmm_hierarchy(l)%is_hashed) then
                 !$OMP PARALLEL DO PRIVATE(i, hierarchy_type, D) &
@@ -778,22 +794,22 @@ module lib_ml_fmm
             end if
 
             ! wirte to hierarchy
-            !$OMP PARALLEL DO PRIVATE(i)
-            do i=1, number_of_boxes
-                if (list_index_list(i) .gt. -1) then
-                    m_ml_fmm_hierarchy(l)%coefficient_list(list_index_list(i)) = coefficient_list(i)
-                    m_ml_fmm_hierarchy(l)%coefficient_type(list_index_list(i)) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
-                end if
-            end do
-            !$OMP END PARALLEL DO
+!            !$OMP PARALLEL DO PRIVATE(i)
+!            do i=1, number_of_boxes
+!                if (list_index_list(i) .gt. -1) then
+!                    m_ml_fmm_hierarchy(l)%coefficient_list(list_index_list(i)) = coefficient_list(i)
+!                    m_ml_fmm_hierarchy(l)%coefficient_type(list_index_list(i)) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
+!                end if
+!            end do
+!            !$OMP END PARALLEL DO
 
             ! clean up
-            if (allocated(coefficient_list)) then
-                deallocate(coefficient_list)
-            end if
-            if (allocated(list_index_list)) then
-                deallocate(list_index_list)
-            end if
+!            if (allocated(coefficient_list)) then
+!                deallocate(coefficient_list)
+!            end if
+!            if (allocated(list_index_list)) then
+!                deallocate(list_index_list)
+!            end if
         end do
 
     end subroutine lib_ml_fmm_calculate_downward_pass_step_2
