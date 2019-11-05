@@ -463,6 +463,8 @@ module lib_mie_ms_solver_interface
                 allocate(vector_x(counter_sum))
             end if
 
+            vector_x(:) = dcmplx(0,0)
+
             !$OMP PARALLEL DO PRIVATE(i)
             do i = first_sphere, last_sphere
 
