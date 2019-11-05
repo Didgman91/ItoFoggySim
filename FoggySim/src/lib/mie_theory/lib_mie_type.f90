@@ -53,7 +53,7 @@ module lib_mie_type
     !   o: j-th sphere
     !
     type lib_mie_sphere_type
-        type(cartesian_coordinate_real_type) :: d_0_j
+        type(cartesian_coordinate_real_type) :: d_0_j ! [m]
         integer :: sphere_parameter_index
         type(list_list_cmplx) :: a_nm
         type(list_list_cmplx) :: b_nm
@@ -62,7 +62,7 @@ module lib_mie_type
     ! sphere parameter
     type lib_mie_sphere_parameter_type
         double complex :: refractive_index
-        double precision :: radius
+        double precision :: radius  ! [m]
         double precision :: size_parameter ! = k * x = 2 Pi * n_medium / lambda * x
         integer, dimension(2) :: n_range
         type(list_cmplx) :: a_n

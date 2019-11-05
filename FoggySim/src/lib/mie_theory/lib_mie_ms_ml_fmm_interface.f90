@@ -165,6 +165,7 @@ module lib_mie_ms_ml_fmm_interface
             type(cartesian_coordinate_real_type) :: d_0_j
             type(cartesian_coordinate_real_type) :: d_0_l
             type(cartesian_coordinate_real_type) :: d_j_l
+            type(cartesian_coordinate_real_type) :: k_d_j_l
             integer(kind=4), dimension(2) :: n_range
             integer(kind=4), dimension(2) :: n_range_j
 
@@ -193,6 +194,9 @@ module lib_mie_ms_ml_fmm_interface
                                    x_unscaled%x(3))
 
             d_j_l = d_0_l - d_0_j
+            k_d_j_l = 2 * PI * simulation_data%refractive_index_medium &
+                       / simulation_data%illumination%lambda_0 &
+                       * d_j_l
 
             if (abs(d_j_l) .eq. 0d0) then
 !                u_B_i%a_nm = simulation_data%sphere_list(i)%a_nm
@@ -208,7 +212,7 @@ module lib_mie_ms_ml_fmm_interface
                 z_selector = simulation_data%spherical_harmonics%z_selector_translation_le_r
             end if
 
-            call lib_math_vector_spherical_harmonics_translation_coefficient(d_j_l, &
+            call lib_math_vector_spherical_harmonics_translation_coefficient(k_d_j_l, &
                     n_range, n_range_j, z_selector, &
                     a_nmnumu, b_nmnumu)
 
@@ -243,6 +247,11 @@ module lib_mie_ms_ml_fmm_interface
             call move_alloc(buffer_1_nm%item, u_B_i%a_nm%item)
             call move_alloc(buffer_2_nm%item, u_B_i%b_nm%item)
 
+            if (allocated(buffer_x_1_nm%item)) deallocate(buffer_x_1_nm%item)
+            if (allocated(buffer_x_2_nm%item)) deallocate(buffer_x_2_nm%item)
+
+            if (allocated(a_nmnumu%item)) deallocate(a_nmnumu%item)
+            if (allocated(b_nmnumu%item)) deallocate(b_nmnumu%item)
 
         end function lib_mie_ms_ml_fmm_get_u_B_i
 
@@ -265,6 +274,7 @@ module lib_mie_ms_ml_fmm_interface
             type(cartesian_coordinate_real_type) :: d_0_j
             type(cartesian_coordinate_real_type) :: d_0_l
             type(cartesian_coordinate_real_type) :: d_j_l
+            type(cartesian_coordinate_real_type) :: k_d_j_l
 
             integer, dimension(2) :: n_range
             integer(kind=1) :: z_selector
@@ -287,7 +297,10 @@ module lib_mie_ms_ml_fmm_interface
                                    x_unscaled%x(3))
 
             d_j_l = d_0_l - d_0_j
-            call lib_math_vector_spherical_harmonics_translation_coefficient(d_j_l, &
+            k_d_j_l = 2 * PI * simulation_data%refractive_index_medium &
+                       / simulation_data%illumination%lambda_0 &
+                       * d_j_l
+            call lib_math_vector_spherical_harmonics_translation_coefficient(k_d_j_l, &
                     n_range, n_range, z_selector, &
                     a_nmnumu, b_nmnumu)
 
@@ -305,6 +318,9 @@ module lib_mie_ms_ml_fmm_interface
                 end do
             end do
             !$OMP END PARALLEL DO
+
+            if (allocated(a_nmnumu%item)) deallocate(a_nmnumu%item)
+            if (allocated(b_nmnumu%item)) deallocate(b_nmnumu%item)
 
         end function lib_mie_ms_ml_fmm_translation_SS
 
@@ -327,6 +343,7 @@ module lib_mie_ms_ml_fmm_interface
             type(cartesian_coordinate_real_type) :: d_0_j
             type(cartesian_coordinate_real_type) :: d_0_l
             type(cartesian_coordinate_real_type) :: d_j_l
+            type(cartesian_coordinate_real_type) :: k_d_j_l
 
             integer, dimension(2) :: n_range
             integer(kind=1) :: z_selector
@@ -349,7 +366,10 @@ module lib_mie_ms_ml_fmm_interface
                                    x_unscaled%x(3))
 
             d_j_l = d_0_l - d_0_j
-            call lib_math_vector_spherical_harmonics_translation_coefficient(d_j_l, &
+            k_d_j_l = 2 * PI * simulation_data%refractive_index_medium &
+                       / simulation_data%illumination%lambda_0 &
+                       * d_j_l
+            call lib_math_vector_spherical_harmonics_translation_coefficient(k_d_j_l, &
                     n_range, n_range, z_selector, &
                     a_nmnumu, b_nmnumu)
 
@@ -367,6 +387,9 @@ module lib_mie_ms_ml_fmm_interface
                 end do
             end do
             !$OMP END PARALLEL DO
+
+            if (allocated(a_nmnumu%item)) deallocate(a_nmnumu%item)
+            if (allocated(b_nmnumu%item)) deallocate(b_nmnumu%item)
 
         end function lib_mie_ms_ml_fmm_translation_SR
 
@@ -389,6 +412,7 @@ module lib_mie_ms_ml_fmm_interface
             type(cartesian_coordinate_real_type) :: d_0_j
             type(cartesian_coordinate_real_type) :: d_0_l
             type(cartesian_coordinate_real_type) :: d_j_l
+            type(cartesian_coordinate_real_type) :: k_d_j_l
 
             integer, dimension(2) :: n_range
             integer(kind=1) :: z_selector
@@ -411,7 +435,10 @@ module lib_mie_ms_ml_fmm_interface
                                    x_unscaled%x(3))
 
             d_j_l = d_0_l - d_0_j
-            call lib_math_vector_spherical_harmonics_translation_coefficient(d_j_l, &
+            k_d_j_l = 2 * PI * simulation_data%refractive_index_medium &
+                       / simulation_data%illumination%lambda_0 &
+                       * d_j_l
+            call lib_math_vector_spherical_harmonics_translation_coefficient(k_d_j_l, &
                     n_range, n_range, z_selector, &
                     a_nmnumu, b_nmnumu)
 
@@ -429,6 +456,9 @@ module lib_mie_ms_ml_fmm_interface
                 end do
             end do
             !$OMP END PARALLEL DO
+
+            if (allocated(a_nmnumu%item)) deallocate(a_nmnumu%item)
+            if (allocated(b_nmnumu%item)) deallocate(b_nmnumu%item)
 
         end function lib_mie_ms_ml_fmm_translation_RR
 
@@ -477,6 +507,7 @@ module lib_mie_ms_ml_fmm_interface
             type(cartesian_coordinate_real_type) :: d_0_j
             type(cartesian_coordinate_real_type) :: d_0_l
             type(cartesian_coordinate_real_type) :: d_j_l
+            type(cartesian_coordinate_real_type) :: k_d_j_l
 
             integer, dimension(2) :: n_range
             integer(kind=4), dimension(2) :: n_range_j
@@ -530,7 +561,10 @@ module lib_mie_ms_ml_fmm_interface
                 n_range_l(2) = min(n_range_l(2), n_range(2))
 
                 d_j_l = d_0_l - d_0_j
-                call lib_math_vector_spherical_harmonics_translation_coefficient(d_j_l, &
+                k_d_j_l = 2 * PI * simulation_data%refractive_index_medium &
+                       / simulation_data%illumination%lambda_0 &
+                       * d_j_l
+                call lib_math_vector_spherical_harmonics_translation_coefficient(k_d_j_l, &
                         n_range_j, n_range_l, z_selector, &
                         a_nmnumu, b_nmnumu)
 
@@ -565,8 +599,17 @@ module lib_mie_ms_ml_fmm_interface
                 !$OMP END PARALLEL DO
             end if
 
-            rv%a_nm = buffer_b_1_nm
-            rv%b_nm = buffer_b_2_nm
+            call move_alloc(buffer_b_1_nm%item, rv%a_nm%item)
+            call move_alloc(buffer_b_2_nm%item, rv%b_nm%item)
+
+            if (allocated(buffer_1_nm%item)) deallocate(buffer_1_nm%item)
+            if (allocated(buffer_2_nm%item)) deallocate(buffer_2_nm%item)
+
+            if (allocated(a_n%item)) deallocate(a_n%item)
+            if (allocated(b_n%item)) deallocate(b_n%item)
+
+            if (allocated(a_nmnumu%item)) deallocate(a_nmnumu%item)
+            if (allocated(b_nmnumu%item)) deallocate(b_nmnumu%item)
 
         end function lib_mie_ms_ml_fmm_get_u_phi_i_j
 
@@ -593,6 +636,7 @@ module lib_mie_ms_ml_fmm_interface
 
             type(lib_tree_spatial_point) :: x_unscaled
             type(cartesian_coordinate_real_type) :: d_j_l
+            type(cartesian_coordinate_real_type) :: k_d_j_l
 
             integer, dimension(2) :: n_range
             integer(kind=4), dimension(2) :: n_range_j
@@ -616,6 +660,9 @@ module lib_mie_ms_ml_fmm_interface
             d_j_l = make_cartesian(x_unscaled%x(1), &
                                    x_unscaled%x(2), &
                                    x_unscaled%x(3))
+            k_d_j_l = 2 * PI * simulation_data%refractive_index_medium &
+                       / simulation_data%illumination%lambda_0 &
+                       * d_j_l
 
             j = element_number_j - lbound(simulation_data%sphere_list, 1) + 1
             no = simulation_data%sphere_list(j)%sphere_parameter_index
@@ -641,7 +688,7 @@ module lib_mie_ms_ml_fmm_interface
                 buffer_b_1_nm = D%a_nm
                 buffer_b_2_nm = D%b_nm
             else
-                call lib_math_vector_spherical_harmonics_translation_coefficient(d_j_l, &
+                call lib_math_vector_spherical_harmonics_translation_coefficient(k_d_j_l, &
                         n_range_j, n_range_l, z_selector, &
                         a_nmnumu, b_nmnumu)
 
@@ -678,6 +725,9 @@ module lib_mie_ms_ml_fmm_interface
 
             rv%a_nm = buffer_b_1_nm
             rv%b_nm = buffer_b_2_nm
+
+            if (allocated(a_nmnumu%item)) deallocate(a_nmnumu%item)
+            if (allocated(b_nmnumu%item)) deallocate(b_nmnumu%item)
 
         end function lib_mie_ms_ml_fmm_dor
 
