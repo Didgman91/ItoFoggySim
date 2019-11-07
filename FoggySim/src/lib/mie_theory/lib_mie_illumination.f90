@@ -19,13 +19,24 @@ module lib_mie_illumination
     end interface
 
     type lib_mie_illumination_plane_wave_parameter
-        double precision :: g ! e_x_field_0 / e_field_0
+        double precision :: g ! ratio of the e-field of this plane wave to the "global" e-field:  e_x_field_0 / e_field_0
         type(cartesian_coordinate_real_type) :: d_0_i ! [m]
         type(cartesian_coordinate_real_type) :: wave_vector_0 ! |k| = 2 Pi / lambda, wave_vector = [1/m]
     end type lib_mie_illumination_plane_wave_parameter
 
-    ! illumination parameter
+    type lib_mie_illumination_elliptical_gaussian_beam_parameter
+        double precision :: g ! ratio of the e-field of this Gaussian beam to the "global" e-field:  e_x_field_0 / e_field_0
+        type(cartesian_coordinate_real_type) :: d_0_i ! [m]
+        double precision :: wave_number_0 ! |k| = 2 Pi / lambda, wave_number = [1/m]
+        double precision :: w0x ! beam waist radius along the x-axis
+        double precision :: w0y ! beam waist radius along the y-axis
+    end type lib_mie_illumination_elliptical_gaussian_beam_parameter
+
+    ! Illumination Parameter
+    ! ----
     !
+    ! Plane Wave
+    ! -----
     !             _________
     !             ___k^____
     !             ____|____
@@ -44,15 +55,35 @@ module lib_mie_illumination
     ! K_0: world coordinate system
     ! K_i: illumination coordinate system
     !
+    !
+    ! Gaussian Beam
+    ! -----
+    !          _______________
+    !            ___________
+    !             ___k,z___
+    !               __^__   Gaussian beam
+    !                _|_
+    !                 --> x
+    !                ^
+    !               /
+    !           z  /d_0_i
+    !           ^ /
+    !       K_0 |/
+    !           --> x
+    !
+    ! K_0: world coordinate system
+    ! K_i: illumination coordinate system
+    !
     type lib_mie_illumination_parameter
         integer :: type    ! 1: plane wave
         double precision :: e_field_0 ! [V/m]
         double precision :: lambda_0 ! wave_length_vaccum
         type(lib_mie_illumination_plane_wave_parameter), dimension(:), allocatable :: plane_wave
+        type(lib_mie_illumination_elliptical_gaussian_beam_parameter), dimension(:), allocatable :: elliptical_gaussian_beam
     end type lib_mie_illumination_parameter
 
     ! --- caching ---
-    type cache_coefficients_p_0_q_0_type
+    type cache_coefficients_p_0_q_0_plane_wave_type
         double precision :: alpha
         double precision :: beta
         integer :: n_max
@@ -60,8 +91,8 @@ module lib_mie_illumination
         type(list_list_cmplx) :: q_0
     end type
 
-    type(cache_coefficients_p_0_q_0_type), dimension(:), allocatable :: cache_coefficients_p_0_q_0
-    logical :: cache_coefficients_p_0_q_0_enabled = .false.
+    type(cache_coefficients_p_0_q_0_plane_wave_type), dimension(:), allocatable :: cache_coefficients_p_0_q_0_plane_wave
+    logical :: cache_coefficients_p_0_q_0_plane_wave_enabled = .false.
     ! ~~~ caching ~~~
 
     contains
@@ -85,35 +116,35 @@ module lib_mie_illumination
             integer :: i
 
             ! --- init: cache_coefficients_a_b_cmplx_barberh_x ---
-            if (allocated(cache_coefficients_p_0_q_0)) then
-                deallocate(cache_coefficients_p_0_q_0)
+            if (allocated(cache_coefficients_p_0_q_0_plane_wave)) then
+                deallocate(cache_coefficients_p_0_q_0_plane_wave)
             end if
 
-            allocate(cache_coefficients_p_0_q_0(size(alpha)))
-            cache_coefficients_p_0_q_0_enabled = .false.
+            allocate(cache_coefficients_p_0_q_0_plane_wave(size(alpha)))
+            cache_coefficients_p_0_q_0_plane_wave_enabled = .false.
 
             do i=1, size(alpha)
-                cache_coefficients_p_0_q_0(i)%alpha = alpha(i)
-                cache_coefficients_p_0_q_0(i)%beta = beta(i)
-                cache_coefficients_p_0_q_0(i)%n_max = n_max(i)
+                cache_coefficients_p_0_q_0_plane_wave(i)%alpha = alpha(i)
+                cache_coefficients_p_0_q_0_plane_wave(i)%beta = beta(i)
+                cache_coefficients_p_0_q_0_plane_wave(i)%n_max = n_max(i)
 
-                call get_p_q_j_j_core(alpha(i), beta(i), (/1, n_max(i)/), &
-                                      cache_coefficients_p_0_q_0(i)%p_0, &
-                                      cache_coefficients_p_0_q_0(i)%q_0, &
-                                      caching=.false.)
+                call get_p_q_j_j_plane_wave_core(alpha(i), beta(i), (/1, n_max(i)/), &
+                                                 cache_coefficients_p_0_q_0_plane_wave(i)%p_0, &
+                                                 cache_coefficients_p_0_q_0_plane_wave(i)%q_0, &
+                                                 caching=.false.)
             end do
 
-            cache_coefficients_p_0_q_0_enabled = .true.
+            cache_coefficients_p_0_q_0_plane_wave_enabled = .true.
 
         end subroutine lib_mie_illumination_init_plane_wave
 
         subroutine lib_mie_illumination_destructor
             implicit none
 
-            if (allocated(cache_coefficients_p_0_q_0)) then
-                deallocate(cache_coefficients_p_0_q_0)
+            if (allocated(cache_coefficients_p_0_q_0_plane_wave)) then
+                deallocate(cache_coefficients_p_0_q_0_plane_wave)
             end if
-            cache_coefficients_p_0_q_0_enabled = .false.
+            cache_coefficients_p_0_q_0_plane_wave_enabled = .false.
         end subroutine
 
         ! Calculates the coefficients (of vector spherical components) of a plane incident wave
@@ -185,10 +216,10 @@ module lib_mie_illumination
                 ! j-th coordinate system
                 dot_k_d = dot_product(k, d_0_j)
                 exp_k_d = cmplx(cos(dot_k_d), sin(dot_k_d), kind=8)
-                call get_p_q_j_j_core(alpha, beta, n_range, p, q, exp_k_d, caching=caching)
+                call get_p_q_j_j_plane_wave_core(alpha, beta, n_range, p, q, exp_k_d, caching=caching)
             else
                 ! 0-th coordinate system
-                call get_p_q_j_j_core(alpha, beta, n_range, p, q, caching=caching)
+                call get_p_q_j_j_plane_wave_core(alpha, beta, n_range, p, q, caching=caching)
             end if
 
         end subroutine lib_mie_illumination_get_p_q_j_j_single_plane_wave
@@ -315,7 +346,7 @@ module lib_mie_illumination
         !   q: type(list_list_cmplx)
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres Yu-lin Xu, eq. 20
-        subroutine get_p_q_j_j_core(alpha, beta, n_range, p, q, exp_k_d, caching)
+        subroutine get_p_q_j_j_plane_wave_core(alpha, beta, n_range, p, q, exp_k_d, caching)
             implicit none
             ! dummy
             double precision, intent(in) :: alpha
@@ -346,7 +377,7 @@ module lib_mie_illumination
             ! >0: element number of the cache array
             integer :: cache_no
 
-            if (cache_coefficients_p_0_q_0_enabled) then
+            if (cache_coefficients_p_0_q_0_plane_wave_enabled) then
                 if (present(caching)) then
                     m_caching = caching
                 else
@@ -357,10 +388,10 @@ module lib_mie_illumination
             end if
 
             if (m_caching) then
-                do i=1, size(cache_coefficients_p_0_q_0)
-                    if ((cache_coefficients_p_0_q_0(i)%alpha .eq. alpha) &
-                        .and. (cache_coefficients_p_0_q_0(i)%beta .eq. beta) &
-                        .and. (cache_coefficients_p_0_q_0(i)%n_max .le. n_range(2))) then
+                do i=1, size(cache_coefficients_p_0_q_0_plane_wave)
+                    if ((cache_coefficients_p_0_q_0_plane_wave(i)%alpha .eq. alpha) &
+                        .and. (cache_coefficients_p_0_q_0_plane_wave(i)%beta .eq. beta) &
+                        .and. (cache_coefficients_p_0_q_0_plane_wave(i)%n_max .le. n_range(2))) then
                         cache_no = i
                     else
                         cache_no = 0
@@ -423,8 +454,8 @@ module lib_mie_illumination
                     double complex :: buffer_cmplx
 
                     if (cache_no .gt. 0) then
-                        p = cache_coefficients_p_0_q_0(cache_no)%p_0%item(n)%item(m)
-                        q = cache_coefficients_p_0_q_0(cache_no)%q_0%item(n)%item(m)
+                        p = cache_coefficients_p_0_q_0_plane_wave(cache_no)%p_0%item(n)%item(m)
+                        q = cache_coefficients_p_0_q_0_plane_wave(cache_no)%q_0%item(n)%item(m)
                     else
                         buffer_real = -m * beta
                         buffer_cmplx = cmplx(cos(buffer_real), sin(buffer_real), kind=8)
@@ -442,5 +473,5 @@ module lib_mie_illumination
 
                 end subroutine
 
-        end subroutine get_p_q_j_j_core
+        end subroutine get_p_q_j_j_plane_wave_core
 end module lib_mie_illumination
