@@ -14,6 +14,7 @@ module lib_mie_single_sphere
     use lib_field
     use lib_mie_type
     use lib_mie_type_functions
+    use lib_mie_illumination
     use lib_mie_ss_helper_functions
     implicit none
 
@@ -92,7 +93,7 @@ module lib_mie_single_sphere
                     beta(i) = d_0_i_spherical%phi
                 end do
 
-                call lib_mie_ss_hf_init_coeff_p0_q0(alpha, beta, m_n_range_max)
+                call lib_mie_illumination_init_plane_wave(alpha, beta, m_n_range_max)
             end if
 
         end subroutine lib_mie_ss_init_illumination
@@ -573,7 +574,7 @@ module lib_mie_single_sphere
             d_0_j%y = 0
             d_0_j%z = 0
 
-            call lib_mie_ss_hf_get_p_q_j_j(illumination, n_medium, d_0_j, n_range, p0_nm, q0_nm)
+            call lib_mie_illumination_get_p_q_j_j(illumination, n_medium, d_0_j, n_range, p0_nm, q0_nm)
 
             z_selector = 1
 
@@ -1293,8 +1294,6 @@ module lib_mie_single_sphere
             ! dummy
 
             ! auxiliary
-            integer :: n
-            integer :: m
             integer, dimension(2) :: n_range
             integer :: sphere_no
             integer :: parameter_no
@@ -1310,29 +1309,23 @@ module lib_mie_single_sphere
             type(cartesian_coordinate_real_type) :: d_0_j
 
             !$OMP PARALLEL DO PRIVATE(sphere_no, parameter_no, d_0_j, n_range, p_nm, q_nm) &
-            !$OMP  PRIVATE(n, m, buffer_a_n, buffer_b_n, a_nm, b_nm)
+            !$OMP  PRIVATE(buffer_a_n, buffer_b_n, a_nm, b_nm)
             do sphere_no = lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
                 parameter_no = simulation_data%sphere_list(sphere_no)%sphere_parameter_index
                 d_0_j = simulation_data%sphere_list(sphere_no)%d_0_j
 
                 n_range = simulation_data%sphere_parameter_list(parameter_no)%n_range
 
-                call lib_mie_ss_hf_get_p_q_j_j(simulation_data%illumination, simulation_data%refractive_index_medium, &
-                                               d_0_j, n_range, &
-                                               p_nm, q_nm)
+                call lib_mie_illumination_get_p_q_j_j(simulation_data%illumination, &
+                                                      simulation_data%refractive_index_medium, &
+                                                      d_0_j, n_range, &
+                                                      p_nm, q_nm)
+
                 call init_list(a_nm, n_range(1), n_range(2) - n_range(1) + 1)
                 call init_list(b_nm, n_range(1), n_range(2) - n_range(1) + 1)
 
-                !$OMP PARALLEL DO PRIVATE(n, m, buffer_a_n, buffer_b_n)
-                do n = n_range(1), n_range(2)
-                    buffer_a_n = simulation_data%sphere_parameter_list(parameter_no)%a_n%item(n)
-                    buffer_b_n = simulation_data%sphere_parameter_list(parameter_no)%b_n%item(n)
-                    do m = -n, n
-                        a_nm%item(n)%item(m) = buffer_a_n * p_nm%item(n)%item(m)
-                        b_nm%item(n)%item(m) = buffer_b_n * q_nm%item(n)%item(m)
-                    end do
-                end do
-                !$OMP END PARALLEL DO
+                a_nm = simulation_data%sphere_parameter_list(parameter_no)%a_n * p_nm
+                b_nm = simulation_data%sphere_parameter_list(parameter_no)%b_n * q_nm
 
                 simulation_data%sphere_list(sphere_no)%a_nm = a_nm
                 simulation_data%sphere_list(sphere_no)%b_nm = b_nm
@@ -1637,7 +1630,7 @@ module lib_mie_single_sphere
 #endif
             end if
 
-            call lib_mie_ss_hf_get_p_q_j_j(k_cartesian, d_0_j, n_range, p_nm, q_nm)
+            call lib_mie_illumination_get_p_q_j_j(k_cartesian, d_0_j, n_range, p_nm, q_nm)
 
             call lib_mie_ss_hf_get_coefficient_a_nm_b_nm(x, n_particle, n_medium, p_nm, q_nm, a_nm, b_nm)
 
@@ -2058,6 +2051,7 @@ module lib_mie_single_sphere
 
                 function test_get_field_initial_incident_multi_wave_real() result (rv)
                     use file_io
+                    use lib_mie_illumination
                     implicit none
                     ! dummy
                     logical :: rv

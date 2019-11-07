@@ -1,41 +1,9 @@
 module lib_mie_type
     use libmath
+    use lib_mie_illumination
     implicit none
 
     public
-
-    type lib_mie_illumination_plane_wave_parameter
-        double precision :: g ! e_x_field_0 / e_field_0
-        type(cartesian_coordinate_real_type) :: d_0_i ! [m]
-        type(cartesian_coordinate_real_type) :: wave_vector_0 ! |k| = 2 Pi / lambda, wave_vector = [1/m]
-    end type lib_mie_illumination_plane_wave_parameter
-
-    ! illumination parameter
-    !
-    !             _________
-    !             ___k^____
-    !             ____|____
-    !             _________ plane wave
-    !                 z
-    !                 ^
-    !             K_i |
-    !                 --> x
-    !                ^
-    !               /
-    !           z  /d_0_i
-    !           ^ /
-    !       K_0 |/
-    !           --> x
-    !
-    ! K_0: world coordinate system
-    ! K_i: illumination coordinate system
-    !
-    type lib_mie_illumination_parameter
-        integer :: type    ! 1: plane wave
-        double precision :: e_field_0 ! [V/m]
-        double precision :: lambda_0 ! wave_length_vaccum
-        type(lib_mie_illumination_plane_wave_parameter), dimension(:), allocatable :: plane_wave
-    end type lib_mie_illumination_parameter
 
     !                 z
     !                 ^

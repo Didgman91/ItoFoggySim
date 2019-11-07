@@ -5,6 +5,7 @@ module lib_mie_ms_solver_interface
 
     use lib_mie_type
     use lib_mie_type_functions
+    use lib_mie_illumination
 
     use lib_mie_ms_solver_interface_helper_functions
     use lib_mie_ms_ml_fmm_interface
@@ -198,6 +199,7 @@ module lib_mie_ms_solver_interface
         ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
         !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
         subroutine lib_mie_ms_solver_get_vector_b_all(vector_b)
+            use lib_mie_illumination
             use lib_mie_ms_data_container
             implicit none
             ! dummy
@@ -224,29 +226,29 @@ module lib_mie_ms_solver_interface
             type(list_cmplx) :: a_n
             type(list_cmplx) :: b_n
 
-            type(list_list_cmplx), dimension(:), allocatable :: p_nm
-            type(list_list_cmplx), dimension(:), allocatable :: q_nm
+            type(list_list_cmplx), allocatable :: p_nm
+            type(list_list_cmplx), allocatable :: q_nm
 
 
             first_sphere = lbound(simulation_data%sphere_list, 1)
             last_sphere = ubound(simulation_data%sphere_list, 1)
 
-            allocate(p_nm(first_sphere:last_sphere))
-            allocate(q_nm(first_sphere:last_sphere))
+!            allocate(p_nm(first_sphere:last_sphere))
+!            allocate(q_nm(first_sphere:last_sphere))
 
             ! create vector_b
-            counter = 0
-            !$OMP PARALLEL DO PRIVATE(i, d_0_j, sphere_parameter_no, n_range)
-            do i = first_sphere, last_sphere
-                d_0_j = simulation_data%sphere_list(i)%d_0_j
-                sphere_parameter_no = simulation_data%sphere_list(i)%sphere_parameter_index
-                n_range = simulation_data%sphere_parameter_list(sphere_parameter_no)%n_range
-
-                call lib_mie_ss_hf_get_p_q_j_j(simulation_data%illumination, &
-                                               simulation_data%refractive_index_medium, &
-                                               d_0_j, n_range, p_nm(i), q_nm(i))
-            end do
-            !$OMP END PARALLEL DO
+!            counter = 0
+!            !$OMP PARALLEL DO PRIVATE(i, d_0_j, sphere_parameter_no, n_range)
+!            do i = first_sphere, last_sphere
+!                d_0_j = simulation_data%sphere_list(i)%d_0_j
+!                sphere_parameter_no = simulation_data%sphere_list(i)%sphere_parameter_index
+!                n_range = simulation_data%sphere_parameter_list(sphere_parameter_no)%n_range
+!
+!                call lib_mie_illumination_get_p_q_j_j_plane_wave(simulation_data%illumination, &
+!                                                                simulation_data%refractive_index_medium, &
+!                                                                d_0_j, n_range, p_nm(i), q_nm(i))
+!            end do
+!            !$OMP END PARALLEL DO
 
             n_range = simulation_data%spherical_harmonics%n_range
             counter = (1 + n_range(2))**2 - n_range(1)**2
@@ -261,16 +263,24 @@ module lib_mie_ms_solver_interface
                 allocate(vector_b(counter_sum))
             end if
 
-            !$OMP PARALLEL DO PRIVATE(i, first, last, a_n, b_n)
+            !$OMP PARALLEL DO PRIVATE(i, d_0_j, sphere_parameter_no, n_range, a_n, b_n)
             do i = first_sphere, last_sphere
+                d_0_j = simulation_data%sphere_list(i)%d_0_j
+                sphere_parameter_no = simulation_data%sphere_list(i)%sphere_parameter_index
+                n_range = simulation_data%sphere_parameter_list(sphere_parameter_no)%n_range
+
+                call lib_mie_illumination_get_p_q_j_j(simulation_data%illumination, &
+                                                      simulation_data%refractive_index_medium, &
+                                                      d_0_j, n_range, p_nm, q_nm)
+
                 sphere_parameter_no = simulation_data%sphere_list(i)%sphere_parameter_index
                 a_n = simulation_data%sphere_parameter_list(sphere_parameter_no)%a_n
                 b_n = simulation_data%sphere_parameter_list(sphere_parameter_no)%b_n
 
-                p_nm(i) = a_n * p_nm(i)
-                q_nm(i) = b_n * q_nm(i)
+                p_nm = a_n * p_nm
+                q_nm = b_n * q_nm
 
-                call lib_mie_ms_solver_hf_insert_list_list_cmplx_into_array(p_nm(i), q_nm(i), &
+                call lib_mie_ms_solver_hf_insert_list_list_cmplx_into_array(p_nm, q_nm, &
                                                                             i-first_sphere+1, n_range, &
                                                                             vector_b)
             end do
@@ -300,6 +310,7 @@ module lib_mie_ms_solver_interface
         ! Reference: [1] Computation of scattering from clusters of spheres using the fast multipole method, Nail A. Gumerov, and Ramani Duraiswami
         !            [2] Electromagnetic scatteringby an aggregate of spheres, Yu-lin Xu
         subroutine lib_mie_ms_solver_get_vector_b_selection(sphere_no_list, vector_b)
+            use lib_mie_illumination
             use lib_mie_ms_data_container
             implicit none
             ! dummy
@@ -348,9 +359,9 @@ module lib_mie_ms_solver_interface
                 sphere_parameter_no = simulation_data%sphere_list(ii)%sphere_parameter_index
                 n_range = simulation_data%sphere_parameter_list(sphere_parameter_no)%n_range
 
-                call lib_mie_ss_hf_get_p_q_j_j(simulation_data%illumination, &
-                                               simulation_data%refractive_index_medium, &
-                                               d_0_j, n_range, p_nm(i), q_nm(i))
+                call lib_mie_illumination_get_p_q_j_j(simulation_data%illumination, &
+                                                      simulation_data%refractive_index_medium, &
+                                                      d_0_j, n_range, p_nm(i), q_nm(i))
             end do
             !$OMP END PARALLEL DO
 
