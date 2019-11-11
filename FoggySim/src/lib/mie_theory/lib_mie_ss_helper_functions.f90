@@ -1809,6 +1809,8 @@ module lib_mie_ss_helper_functions
                     double precision, dimension(:,:), allocatable :: data_refractive_index_particle
                     double precision, dimension(:), allocatable :: data_refractive_index_particle_interpolation
 
+                    type(lib_mie_illumination_parameter) :: illumination
+
                     lambda_start = 350 * unit_nm
                     lambda_stop = 800 * unit_nm
                     lambda_step = 10 * unit_nm
@@ -1836,6 +1838,7 @@ module lib_mie_ss_helper_functions
                     allocate( data_refractive_index_particle_interpolation(3) )
                     call read_csv(file_name_refractive_index_particle, 3, data_refractive_index_particle)
 
+                    allocate(illumination%plane_wave(1))
 
                     print *, "test_get_cross_section"
                     do r=10, 100, 20
@@ -1857,6 +1860,12 @@ module lib_mie_ss_helper_functions
                             k_spherical = make_spherical(k, 0D0, 0D0)
                             k_cartesian = k_spherical
 
+                            illumination%e_field_0 = 1d0
+                            illumination%lambda_0 = lambda
+
+                            illumination%plane_wave(1)%g = 1d0
+                            illumination%plane_wave(1)%wave_vector_0 = make_cartesian(0d0, 0d0, 2d0 * PI / lambda)
+
                             call data_interpolation(data_refractive_index_particle, 1, lambda / unit_mu, &
                                                     data_refractive_index_particle_interpolation)
                             n_particle = dcmplx(data_refractive_index_particle_interpolation(2), &
@@ -1870,6 +1879,8 @@ module lib_mie_ss_helper_functions
                             d_0_j%x = 0
                             d_0_j%y = 0
                             d_0_j%z = 0
+
+                            illumination%plane_wave(1)%d_0_i = d_0_j
 
                             x = abs(k * r_particle)
 
@@ -1888,7 +1899,8 @@ module lib_mie_ss_helper_functions
                             call lib_mie_illumination_init_plane_wave((/ 0D0 /), (/ 0D0 /), (/ n_range(2) /))
                             call lib_mie_ss_hf_init_coeff_a_n_b_n_cmplx((/ x /), (/ n_particle / n_medium /), (/ n_range(2) /))
 
-                            call lib_mie_illumination_get_p_q_j_j(k_cartesian, d_0_j, n_range, p, q)
+!                            call lib_mie_illumination_get_p_q_j_j(k_cartesian, d_0_j, n_range, p, q)
+                            call lib_mie_illumination_get_p_q_j_j(illumination, n_medium, d_0_j, n_range, p, q)
 
                             allocate (a_n%item(n_range(2)-n_range(1)+1))
                             allocate (b_n%item(n_range(2)-n_range(1)+1))

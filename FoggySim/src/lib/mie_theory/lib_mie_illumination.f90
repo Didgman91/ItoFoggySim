@@ -13,16 +13,25 @@ module lib_mie_illumination
     public :: lib_mie_illumination_parameter
     public :: lib_mie_illumination_plane_wave_parameter
 
-    interface lib_mie_illumination_get_p_q_j_j
-        module procedure lib_mie_illumination_get_p_q_j_j_single_plane_wave
-        module procedure lib_mie_illumination_get_p_q_j_j_multi_plane_wave
-    end interface
+!    interface lib_mie_illumination_get_p_q_j_j
+!        module procedure lib_mie_illumination_get_p_q_j_j_single_plane_wave
+!        module procedure lib_mie_illumination_get_p_q_j_j_multi_plane_wave
+!    end interface
 
     type lib_mie_illumination_plane_wave_parameter
         double precision :: g ! ratio of the e-field of this plane wave to the "global" e-field:  e_x_field_0 / e_field_0
         type(cartesian_coordinate_real_type) :: d_0_i ! [m]
         type(cartesian_coordinate_real_type) :: wave_vector_0 ! |k| = 2 Pi / lambda, wave_vector = [1/m]
     end type lib_mie_illumination_plane_wave_parameter
+
+    type lib_mie_illumination_gaussian_beam_parameter
+        double precision :: g ! ratio of the e-field of this Gaussian beam to the "global" e-field:  e_x_field_0 / e_field_0
+        type(cartesian_coordinate_real_type) :: d_0_i ! [m]
+        double precision :: wave_number_0 ! |k| = 2 Pi / lambda, wave_number = [1/m]
+        double precision :: w0 ! beam waist radius
+        integer :: calculation_type ! 1: Localised Approximation, 2: Localised Approximation + additions theorem
+        integer(kind=1) :: z_selector_translation ! necessary for calculation_type = 2
+    end type lib_mie_illumination_gaussian_beam_parameter
 
     type lib_mie_illumination_elliptical_gaussian_beam_parameter
         double precision :: g ! ratio of the e-field of this Gaussian beam to the "global" e-field:  e_x_field_0 / e_field_0
@@ -79,6 +88,7 @@ module lib_mie_illumination
         double precision :: e_field_0 ! [V/m]
         double precision :: lambda_0 ! wave_length_vaccum
         type(lib_mie_illumination_plane_wave_parameter), dimension(:), allocatable :: plane_wave
+        type(lib_mie_illumination_gaussian_beam_parameter), dimension(:), allocatable :: gaussian_beam
         type(lib_mie_illumination_elliptical_gaussian_beam_parameter), dimension(:), allocatable :: elliptical_gaussian_beam
     end type lib_mie_illumination_parameter
 
@@ -145,6 +155,48 @@ module lib_mie_illumination
                 deallocate(cache_coefficients_p_0_q_0_plane_wave)
             end if
             cache_coefficients_p_0_q_0_plane_wave_enabled = .false.
+        end subroutine
+
+        subroutine lib_mie_illumination_get_p_q_j_j(illumination, n_medium, d_0_j, n_range, p_nm, q_nm, caching)
+            implicit none
+            ! dummy
+            type(lib_mie_illumination_parameter), intent(in) :: illumination
+            double precision :: n_medium
+            type(cartesian_coordinate_real_type), intent(in) :: d_0_j
+            integer(kind=4), dimension(2),intent(in) :: n_range
+
+            logical, intent(in), optional :: caching
+
+            type(list_list_cmplx), intent(inout) :: p_nm
+            type(list_list_cmplx), intent(inout) :: q_nm
+
+            ! auxiliary
+            logical :: m_caching
+            type(list_list_cmplx) :: buffer_p_nm
+            type(list_list_cmplx) :: buffer_q_nm
+
+            m_caching = .true.
+            if (present(caching)) m_caching = caching
+
+            call init_list(p_nm, n_range(1), n_range(2) - n_range(1) + 1, dcmplx(0,0))
+            call init_list(q_nm, n_range(1), n_range(2) - n_range(1) + 1, dcmplx(0,0))
+
+            if (allocated(illumination%plane_wave)) then
+                call lib_mie_illumination_get_p_q_j_j_multi_plane_wave(illumination, n_medium, d_0_j, n_range, &
+                                                                       buffer_p_nm, buffer_q_nm, &
+                                                                       caching = m_caching)
+                call move_alloc(buffer_p_nm%item, p_nm%item)
+                call move_alloc(buffer_q_nm%item, q_nm%item)
+            end if
+
+            if (allocated(illumination%gaussian_beam)) then
+                call lib_mie_illumination_get_p_q_circular_gaussian_beam(illumination, n_medium, d_0_j, n_range,&
+                                                                         buffer_p_nm, buffer_q_nm)
+
+                p_nm = p_nm + buffer_p_nm
+                q_nm = q_nm + buffer_q_nm
+            end if
+
         end subroutine
 
         ! Calculates the coefficients (of vector spherical components) of a plane incident wave
@@ -474,4 +526,395 @@ module lib_mie_illumination
                 end subroutine
 
         end subroutine get_p_q_j_j_plane_wave_core
+
+        ! Calculates the beam shape coefficients of a circular Gaussian beam with the localised approximation method.
+        !
+        ! Argument
+        ! ----
+        !   illumination: type(lib_mie_illumination_parameter)
+        !   n_medium: double precision
+        !       refractive index of the medium
+        !   d_0_j: type(cartesian_coordinate_real_type)
+        !       point of evaluation (e.g. location of the sphere)
+        !   n_range: integer, dimension(2)
+        !
+        ! Returns
+        ! ----
+        !   p_nm, q_nm: type(list_list_cmplx)
+        !       beam shape coefficients
+        !
+        ! Reference: Generalized Lorenz-MieTheories, Gérard Gouesbet Gérard Gréhan, program GNMF
+        subroutine lib_mie_illumination_get_p_q_circular_gaussian_beam(illumination, n_medium, d_0_j, n_range, p_nm, q_nm)
+            implicit none
+            ! dummy
+            type(lib_mie_illumination_parameter), intent(in) :: illumination
+            double precision :: n_medium
+            type(cartesian_coordinate_real_type), intent(in) :: d_0_j
+            integer(kind=4), dimension(2),intent(in) :: n_range
+
+            type(list_list_cmplx), intent(inout) :: p_nm
+            type(list_list_cmplx), intent(inout) :: q_nm
+
+            ! auxiliary
+            integer :: i
+            integer :: first_beam
+            integer :: last_beam
+            integer :: calculation_type
+
+            double precision :: wave_length
+            double precision :: w0
+            type(cartesian_coordinate_real_type) :: d
+
+            type(list_list_cmplx) :: buffer_a_nm
+            type(list_list_cmplx) :: buffer_b_nm
+
+            type(list_list_cmplx), dimension(:), allocatable :: buffer_p_nm
+            type(list_list_cmplx), dimension(:), allocatable :: buffer_q_nm
+
+            integer(kind=1) :: z_selector
+
+            first_beam = lbound(illumination%gaussian_beam, 1)
+            last_beam = ubound(illumination%gaussian_beam, 1)
+
+            allocate(buffer_p_nm(first_beam:last_beam))
+            allocate(buffer_q_nm(first_beam:last_beam))
+
+            wave_length = illumination%lambda_0
+
+            do i = first_beam, last_beam
+
+                calculation_type = illumination%gaussian_beam(i)%calculation_type
+
+
+                select case(illumination%gaussian_beam(i)%calculation_type)
+                    case (1)
+                        ! localised approximation
+                        w0 = illumination%gaussian_beam(i)%w0
+                        d = d_0_j - illumination%gaussian_beam(i)%d_0_i
+
+                        call lib_mie_illumination_get_p_q_single_gaussian_beam_la(wave_length, n_medium, w0, d, n_range,&
+                                                                                  buffer_a_nm, buffer_b_nm)
+
+                        buffer_p_nm(i) = illumination%gaussian_beam(i)%g * buffer_a_nm
+                        buffer_q_nm(i) = illumination%gaussian_beam(i)%g * buffer_b_nm
+                    case (2)
+                        ! localised approximation + addition theorem
+                        w0 = illumination%gaussian_beam(i)%w0
+                        d%x = 0d0
+                        d%y = 0d0
+                        d%z = 0d0
+
+                        call lib_mie_illumination_get_p_q_single_gaussian_beam_la(wave_length, n_medium, w0, d, n_range,&
+                                                                                  buffer_a_nm, buffer_b_nm)
+
+                        d = 2 * PI * n_medium / illumination%lambda_0 &
+                            * (illumination%gaussian_beam(i)%d_0_i - d_0_j)
+
+                        z_selector = illumination%gaussian_beam(i)%z_selector_translation
+
+                        call lib_math_vector_spherical_harmonics_translate_coefficient(buffer_a_nm, buffer_b_nm, &
+                                                                                       d, &
+                                                                                       n_range, n_range, &
+                                                                                       z_selector, &
+                                                                                       buffer_p_nm(i), buffer_q_nm(i))
+
+                        buffer_p_nm(i) = illumination%gaussian_beam(i)%g * buffer_p_nm(i)
+                        buffer_q_nm(i) = illumination%gaussian_beam(i)%g * buffer_q_nm(i)
+                end select
+            end do
+
+            call init_list(p_nm, n_range(1), n_range(2) - n_range(1) + 1 )
+            call init_list(q_nm, n_range(1), n_range(2) - n_range(1) + 1 )
+
+            do i = first_beam, last_beam
+                p_nm = p_nm + buffer_p_nm(i)
+                q_nm = q_nm + buffer_q_nm(i)
+            end do
+
+        end subroutine lib_mie_illumination_get_p_q_circular_gaussian_beam
+
+
+        ! Calculates the beam shape coefficients of a circular Gaussian beam with the localised approximation method.
+        !
+        ! Argument
+        ! ----
+        !   illumination: type(lib_mie_illumination_parameter)
+        !   n_medium: double precision
+        !       refractive index of the medium
+        !   d_0_j: type(cartesian_coordinate_real_type)
+        !       point of evaluation (e.g. location of the sphere)
+        !   n_range: integer, dimension(2)
+        !   esj: double precision, optional (std: 10**-30)
+        !       "accuracy of g(n,m). The program stops when the term to add is smaller than esj"
+        ! Returns
+        ! ----
+        !   p_nm, q_nm: type(list_list_cmplx)
+        !       beam shape coefficients
+        !
+        ! Reference: Generalized Lorenz-MieTheories, Gérard Gouesbet Gérard Gréhan, program GNMF
+        subroutine lib_mie_illumination_get_p_q_single_gaussian_beam_la(wave_length, n_medium, w0, d, n_range, &
+                                                                        p_nm, q_nm, esj)
+            use gnm_mod
+            implicit none
+            ! dummy
+            double precision, intent(in) :: wave_length
+            double precision :: n_medium
+            double precision :: w0
+            type(cartesian_coordinate_real_type), intent(in) :: d
+            integer, dimension(2),intent(in) :: n_range
+
+            double precision, intent(in), optional :: esj
+
+            type(list_list_cmplx), intent(inout) :: p_nm
+            type(list_list_cmplx), intent(inout) :: q_nm
+
+            ! auxiliary
+            integer :: n
+            integer :: m
+            integer :: nmax
+            REAL(KIND=DBL)::s,l,x0ad,y0ad,z0ad,m_esj
+
+            m_esj=1.0d-30
+            if (present(esj)) m_esj = esj
+
+            nmax = n_range(2)
+
+
+            s=wave_length/(w0*2.0_DBL*PI * n_medium)
+            l=w0/s
+            x0ad=d%x/w0
+            y0ad=d%y/w0
+            z0ad=d%z/l
+
+            CALL gnmf(nmax,s,x0ad,y0ad,z0ad,esj)
+
+            call init_list(p_nm, n_range(1), n_range(2) - n_range(1) + 1, dcmplx(0,0))
+            call init_list(q_nm, n_range(1), n_range(2) - n_range(1) + 1, dcmplx(0,0))
+
+            do n = n_range(1), n_range(2)
+                if (n .le. MAX_M) then
+                    m = n
+                else
+                    m = MAX_M
+                end if
+                p_nm%item(n)%item(-m:m) = gte(n, -m:m)
+                q_nm%item(n)%item(-m:m) = gtm(n, -m:m)
+            end do
+
+        end subroutine lib_mie_illumination_get_p_q_single_gaussian_beam_la
+
+!        !
+!        subroutine lib_mie_illumination_get_p_q_elliptical_gaussian_beam(illumination, n_medium, d_0_j,  n_range, p_nm, q_nm)
+!            implicit none
+!            ! dummy
+!            type(lib_mie_illumination_parameter), intent(in) :: illumination
+!            double precision :: n_medium
+!            type(cartesian_coordinate_real_type), intent(in) :: d_0_j
+!            integer(kind=4), dimension(2),intent(in) :: n_range
+!
+!            type(list_list_cmplx), intent(inout) :: p_nm
+!            type(list_list_cmplx), intent(inout) :: q_nm
+!
+!            ! auxiliary
+!            double precision :: X0
+!            double precision :: Y0
+!            double precision :: Z0
+!
+!            double precision :: s_x
+!            double precision :: s_y
+!            double precision :: s_z
+!
+!
+!        end subroutine
+!
+!        ! Aurgument
+!        ! ----
+!        !   k: double precision
+!        !       wave number k = 2 Pi / lambda [1/m]
+!        !   n_medium: double precisio
+!        !       refractive index of the medium
+!        !   w0x: double precision
+!        !       beam waist radius along the x-axis
+!        !   w0y: double precision
+!        !       beam waist radius along the y-axis
+!        !   d_0_i: type(cartesian_coordinate_real_type)
+!        subroutine lib_mie_illumination_get_p_q_single_elliptical_gaussian_beam(k, n_medium, w0x, w0y, d, n_range, &
+!                                                                                p_nm, q_nm)
+!            implicit none
+!            ! dummy
+!            double precision, intent(in) :: k
+!            double precision :: n_medium
+!            double precision :: w0x
+!            double precision :: w0y
+!            type(cartesian_coordinate_real_type), intent(in) :: d
+!            integer(kind=4), dimension(2),intent(in) :: n_range
+!
+!            type(list_list_cmplx), intent(inout) :: p_nm
+!            type(list_list_cmplx), intent(inout) :: q_nm
+!
+!            ! auxiliary
+!
+!            double precision :: X_0
+!            double precision :: Y_0
+!            double precision :: Z_0
+!
+!            double precision :: s_x
+!            double precision :: s_y
+!            double precision :: s_z
+!
+!            double precision :: sqrt_Q
+!            double precision :: Qsx
+!            double precision :: Qsy
+!
+!            double precision :: QsxX_0
+!            double precision :: QsyY_0
+!
+!            double precision :: buffer_real
+!            double complex :: buffer_cmplx
+!
+!            double precision :: L
+!            double precision :: psi ! Psi_00_sh
+!            double precision :: F_tilde
+!            double precision :: Xi
+!            double precision :: D_tilde
+!
+!            X_0 = k * n_medium * d%x
+!            Y_0 = k * n_medium * d%y
+!            Z_0 = k * n_medium * d%z
+!
+!            s_x = 1 / (k * n_medium * w0x)
+!            s_y = 1 / (k * n_medium * w0y)
+!
+!            L = gaussian_beam_get_parameter_L(n, m)
+!
+!            ! --- eq. 13 ---
+!            sqrt_Q = sqrt(Q_x * Q_y)
+!            Qsx = Q_x * s_x**2
+!            Qsy = Q_y * s_y**2
+!
+!            QsxX0 = Qsx * X_0
+!            QsyY0 = Qsy * Y_0
+!
+!            QsxX0X0 = QsxX0 * X_0
+!            QsyY0Y0 = QsyY0 * Y_0
+!
+!            buffer_real = Z_0 - (Qsx + Qsy) * L / 2d0 - ( QsxX0X0 - QsyY0Y0 )
+!
+!            psi = cmplx(0, sqrt_Q) * exp(cmplx(0, buffer_real))
+!            ! ~~~ eq. 13 ~~~
+!
+!            ! --- eq. 17 ---
+!            F_tilde = 2 * sqrt(L * (QsxX0X0 + QyY0Y0) )
+!            ! ~~~ eq. 17 ~~~
+!
+!            ! --- eq. 18 ---
+!            if (Y_0 .eq. 0d0) then
+!                Xi = PI / 2d0 ! acos(0)
+!            else if (X_0 .eq. 0d0) then
+!                Xi = acos(QsyY0 / abs(QsyY0))
+!            else
+!                Xi = acos(QsyY0 / sqrt(QsxX0**2 + QsyY0**2))
+!            end if
+!            ! ~~~ eq. 18 ~~~
+!
+!            ! --- eq. 30 ---
+!
+!            ! ~~~ eq. 30 ~~~
+!
+!
+!        end subroutine
+!
+!        ! Argument
+!        ! ----
+!        !   n: integer
+!        !       degree of the polynomial
+!        !   m: integer
+!        !       order of the polynomial
+!        !   MLA: logical, optional (std: .false.)
+!        !       false: Orginal Localised Approximation
+!        !       true: Modified Localised Approximation
+!        !
+!        ! Returns
+!        ! ----
+!        !   L: double precision
+!        !       parameter L
+!        !       "The localization operator ˆG changes the radial parameter kr to L^1∕2"
+!        !
+!        ! refrence: Compact formulation of the beam shapecoefficients for elliptical Gaussian beambased on localized approximation
+!        !           JIANQI SHEN,* XIAOWEI JIA,AND HAITAO YU, page 2
+!        function gaussian_beam_get_parameter_L(n , m, MLA, square_root) result (L)
+!            implicit none
+!            ! dummy
+!            integer, intent(in) :: n
+!            integer, intent(in) :: m
+!            logical, intent(in), optional :: MLA
+!            logical, intent(in), optional :: square_root
+!
+!            double precision :: L
+!
+!            ! auxiliary
+!            logical :: m_MLA
+!            logical :: m_square_root
+!
+!            m_MLA = .false.
+!            if (present(MLA)) m_MLA = MLA
+!
+!            if (m_MLA) then
+!                L = ( dble(n) + 0.5d0 )**2 - / dble(abs(m)) + 0.5d0 )**2
+!            else
+!                L = ( dble(n) + 0.5d0 )**2
+!            end if
+!
+!        end function gaussian_beam_get_parameter_L
+!
+!        ! Argument
+!        ! ----
+!        !   n: integer
+!        !       degree of the polynomial
+!        !   m: integer
+!        !       order of the polynomial
+!        !
+!        ! Returns
+!        ! ----
+!        !   Z: double complex
+!        !       normalisation factor Z
+!        !
+!        ! refrence: Compact formulation of the beam shapecoefficients for elliptical Gaussian beambased on localized approximation
+!        !           JIANQI SHEN,* XIAOWEI JIA,AND HAITAO YU, eq. 5
+!        function gaussian_beam_get_normalisation_factor_Z(n, m) returns(Z)
+!            implicit none
+!            ! dummy
+!            integer, intent(in) :: n
+!            integer, intent(in) :: m
+!
+!            double complex :: Z
+!
+!            ! auxiliary
+!            double precision :: buffer
+!
+!            if (m .eq. 0) then
+!                buffer = dble(n*(n+1)) / (dble(n) + 0.5d0)
+!                Z = cmplx(0, buffer)
+!            else
+!                buffer = gaussian_beam_get_parameter_L(n,m)**(dble(abs(m)-1) / 2d0 )
+!                Z = cmplx(0, -1)**(dble(abs(m)-1) / 2d0 )
+!                Z = buffer * Z
+!            end if
+!        end function gaussian_beam_get_normalisation_factor_Z
+!
+!        ! refrence: Compact formulation of the beam shapecoefficients for elliptical Gaussian beambased on localized approximation
+!        !           JIANQI SHEN,* XIAOWEI JIA,AND HAITAO YU, eq. 15
+!        function gaussian_beam_get_Q_xy(Z_0, s_xy) result(Q_xy)
+!            implicit none
+!            ! dummy
+!            double precision, intent(in) :: Z_0
+!            double precision, intent(in) :: s_xy
+!
+!            double precision :: Q_xy
+!
+!            Q_xy = 1 / (cmplx(-2 * Z_0 * s_xy**2 ,1) )
+!
+!        end function gaussian_beam_get_Q_xy
+
+
 end module lib_mie_illumination

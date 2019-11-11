@@ -2099,8 +2099,8 @@ module lib_mie_multi_sphere
                 sphere_d_0_j%y = 0
 
                 no = 0
-                do i = 1, no_spheres_x
-                    do ii = 1, no_spheres_z
+                do ii = 1, no_spheres_z
+                    do i = 1, no_spheres_x
                         no = no + 1
                         simulation_data%sphere_list(no)%sphere_parameter_index = 1
 
@@ -2186,7 +2186,7 @@ module lib_mie_multi_sphere
                 ! evaluate and export
                 x_range = (/ 0_8 * unit_mu, (no_spheres_x) * distance_sphere * 1.2d0 /)
                 z_range = (/ 0_8 * unit_mu, (no_spheres_z) * distance_sphere * 1.2d0 /)
-                step_size = (x_range(2) - x_range(1)) / 150
+                step_size = (x_range(2) - x_range(1)) / 200
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                 no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))

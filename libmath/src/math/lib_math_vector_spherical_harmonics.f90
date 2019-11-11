@@ -18,6 +18,7 @@ module lib_math_vector_spherical_harmonics
     public :: lib_math_vector_spherical_harmonic_constructor
     public :: lib_math_vector_spherical_harmonics_components
     public :: lib_math_vector_spherical_harmonics_translation_coefficient
+    public :: lib_math_vector_spherical_harmonics_translate_coefficient
 
     interface lib_math_vector_spherical_harmonics_components
         module procedure lib_math_vector_spherical_harmonics_components_real_xu
@@ -28,6 +29,15 @@ module lib_math_vector_spherical_harmonics
         module procedure lib_math_vector_spherical_harmonics_translation_coeff_r
         module procedure lib_math_vector_spherical_harmonics_translation_coeff_spher_r
         module procedure lib_math_vector_spherical_harmonics_translation_coeff_carte_r
+    end interface
+
+    interface lib_math_vector_spherical_harmonics_translate_coefficient
+        module procedure lib_math_vector_spherical_harmonics_translate_coeff_r
+        module procedure lib_math_vector_spherical_harmonics_translate_coeff_r_spher
+        module procedure lib_math_vector_spherical_harmonics_translate_coeff_r_carte
+        module procedure lib_math_vector_spherical_harmonics_translate_coeff_r_multi
+        module procedure lib_math_vector_spherical_harmonics_translate_coeff_r_spher_m
+        module procedure lib_math_vector_spherical_harmonics_translate_coeff_r_carte_m
     end interface
 
     public :: lib_math_vector_spherical_harmonics_test_functions
@@ -1638,6 +1648,553 @@ module lib_math_vector_spherical_harmonics
                                                                                  A_mnkl, B_mnkl)
 
         end subroutine lib_math_vector_spherical_harmonics_translation_coeff_carte_r
+
+
+        ! Calculation of the coefficients from the l-th coordinate system to the j-th coordinate system
+        !
+        !
+        !
+        !            z ^
+        !              |
+        !          K_l |----> x
+        !             /
+        !            /
+        !     theta / d_lj
+        !      z ^ /
+        !        |/
+        !    K_j |-----> x
+        !
+        !   theta = angle(z_j, d_lj)
+        !
+        !
+        !              z
+        !          K_l o----> x
+        !             /
+        !            /
+        !           / d_lj
+        !          /
+        !        z/ phi
+        !    K_j o-----> x
+        !
+        !   phi = angle(d_lj, x_j)
+        !
+        !
+        ! Argument
+        ! ----
+        !   a_nm, b_nm: type(list_list_cmplx), dimension(:)
+        !       coefficients of system l
+        !   x: double precision
+        !       normalized distance: x = k * d_lj
+        !       k: wave number
+        !       d_lj: distance from origin l to origin j
+        !   theta: double precision
+        !       polar coordinate [rad]
+        !   phi: double precision
+        !       azimuthal coordinate [rad]
+        !   n_range: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       CONDITION:
+        !           - first element .le. second element
+        !           - 0 <= n
+        !
+        !   z_selector: integer
+        !       1: spherical Bessel function first kind   j_n
+        !       2: spherical Bessel function second kind  y_n
+        !       3: spherical Hankel function first kind   h^(1)_n
+        !       4: spherical Hankel function second kind  h^(2)_n
+        !
+        ! Returns
+        ! ----
+        !   a_nmt, b_nmt: type(list_list_cmplx)
+        !       translated coefficients at system j
+        !
+        ! Reference: Efficient Evaluation of Vector Translation Coefficients in Multiparticle Light-Scattering Theories, Yu-lin Xu
+        subroutine lib_math_vector_spherical_harmonics_translate_coeff_r(a_nm, b_nm, &
+                                                                         x, theta, phi, &
+                                                                         n_range, nu_range, &
+                                                                         z_selector, &
+                                                                         a_nmt, b_nmt)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: a_nm
+            type(list_list_cmplx), intent(in) :: b_nm
+            double precision, intent(in) :: x
+            double precision, intent(in) :: theta
+            double precision, intent(in) :: phi
+            integer(kind=4), dimension(2), intent(in) :: n_range
+            integer(kind=4), dimension(2), intent(in) :: nu_range
+            integer(kind=1), intent(in) :: z_selector
+
+            type(list_list_cmplx), intent(inout) :: a_nmt
+            type(list_list_cmplx), intent(inout) :: b_nmt
+
+            ! auxiliary
+            integer :: i
+            integer :: n
+            integer :: m
+
+            type(list_4_cmplx) :: A_mnkl
+            type(list_4_cmplx) :: B_mnkl
+
+            call lib_math_vector_spherical_harmonics_translation_coefficient(x, theta, phi, n_range, nu_range, z_selector,&
+                                                                             A_mnkl, B_mnkl)
+
+            call init_list(a_nmt, nu_range(1), nu_range(2) - nu_range(1) + 1)
+            call init_list(b_nmt, nu_range(1), nu_range(2) - nu_range(1) + 1)
+
+            !$OMP PARALLEL DO PRIVATE(n, m)
+            do n = n_range(1), n_range(2)
+                do m = -n, n
+                    a_nmt%item(n)%item(m) = sum(a_nm * A_mnkl%item(n)%item(m) + b_nm * B_mnkl%item(n)%item(m))
+                    b_nmt%item(n)%item(m) = sum(a_nm * B_mnkl%item(n)%item(m) + b_nm * A_mnkl%item(n)%item(m))
+                end do
+            end do
+            !$OMP END PARALLEL DO
+
+        end subroutine lib_math_vector_spherical_harmonics_translate_coeff_r
+
+        ! Calculation of the coefficients from the l-th coordinate system to the j-th coordinate system
+        !
+        !
+        !
+        !            z ^
+        !              |
+        !          K_l |----> x
+        !             /
+        !            /
+        !     theta / d_lj
+        !      z ^ /
+        !        |/
+        !    K_j |-----> x
+        !
+        !   theta = angle(z_j, d_lj)
+        !
+        !
+        !              z
+        !          K_l o----> x
+        !             /
+        !            /
+        !           / d_lj
+        !          /
+        !        z/ phi
+        !    K_j o-----> x
+        !
+        !   phi = angle(d_lj, x_j)
+        !
+        !
+        ! Argument
+        ! ----
+        !   a_nm, b_nm: type(list_list_cmplx), dimension(:)
+        !       coefficients of system l
+        !   x: type(spherical_coordinate_real_type)
+        !       coordinate of the l-th coordinate system respect to the j-th coordinate system
+        !   n_range: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       CONDITION:
+        !           - first element .le. second element
+        !           - 0 <= n
+        !
+        !   z_selector: integer
+        !       1: spherical Bessel function first kind   j_n
+        !       2: spherical Bessel function second kind  y_n
+        !       3: spherical Hankel function first kind   h^(1)_n
+        !       4: spherical Hankel function second kind  h^(2)_n
+        !
+        ! Returns
+        ! ----
+        !   a_nmt, b_nmt: type(list_list_cmplx)
+        !       translated coefficients at system j
+        !
+        ! Reference: Efficient Evaluation of Vector Translation Coefficients in Multiparticle Light-Scattering Theories, Yu-lin Xu
+        subroutine lib_math_vector_spherical_harmonics_translate_coeff_r_spher(a_nm, b_nm, &
+                                                                               x, &
+                                                                               n_range, nu_range, &
+                                                                               z_selector, &
+                                                                               a_nmt, b_nmt)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: a_nm
+            type(list_list_cmplx), intent(in) :: b_nm
+            type(spherical_coordinate_real_type), intent(in) :: x
+            integer(kind=4), dimension(2), intent(in) :: n_range
+            integer(kind=4), dimension(2), intent(in) :: nu_range
+            integer(kind=1), intent(in) :: z_selector
+
+            type(list_list_cmplx), intent(inout) :: a_nmt
+            type(list_list_cmplx), intent(inout) :: b_nmt
+
+            ! auxiliary
+            call lib_math_vector_spherical_harmonics_translate_coeff_r(a_nm, b_nm, &
+                                                                       x%rho, x%theta, x%phi, &
+                                                                       n_range, nu_range, &
+                                                                       z_selector, &
+                                                                       a_nmt, b_nmt)
+
+        end subroutine lib_math_vector_spherical_harmonics_translate_coeff_r_spher
+
+        ! Calculation of the coefficients from the l-th coordinate system to the j-th coordinate system
+        !
+        !
+        !
+        !            z ^
+        !              |
+        !          K_l |----> x
+        !             /
+        !            /
+        !     theta / d_lj
+        !      z ^ /
+        !        |/
+        !    K_j |-----> x
+        !
+        !   theta = angle(z_j, d_lj)
+        !
+        !
+        !              z
+        !          K_l o----> x
+        !             /
+        !            /
+        !           / d_lj
+        !          /
+        !        z/ phi
+        !    K_j o-----> x
+        !
+        !   phi = angle(d_lj, x_j)
+        !
+        !
+        ! Argument
+        ! ----
+        !   a_nm, b_nm: type(list_list_cmplx), dimension(:)
+        !       coefficients of system l
+        !   x: type(cartesian_coordinate_real_type)
+        !       coordinate of the l-th coordinate system respect to the j-th coordinate system
+        !   n_range: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       CONDITION:
+        !           - first element .le. second element
+        !           - 0 <= n
+        !
+        !   z_selector: integer
+        !       1: spherical Bessel function first kind   j_n
+        !       2: spherical Bessel function second kind  y_n
+        !       3: spherical Hankel function first kind   h^(1)_n
+        !       4: spherical Hankel function second kind  h^(2)_n
+        !
+        ! Returns
+        ! ----
+        !   a_nmt, b_nmt: type(list_list_cmplx)
+        !       translated coefficients at system j
+        !
+        ! Reference: Efficient Evaluation of Vector Translation Coefficients in Multiparticle Light-Scattering Theories, Yu-lin Xu
+        subroutine lib_math_vector_spherical_harmonics_translate_coeff_r_carte(a_nm, b_nm, &
+                                                                               x, &
+                                                                               n_range, nu_range, &
+                                                                               z_selector, &
+                                                                               a_nmt, b_nmt)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: a_nm
+            type(list_list_cmplx), intent(in) :: b_nm
+            type(cartesian_coordinate_real_type), intent(in) :: x
+            integer(kind=4), dimension(2), intent(in) :: n_range
+            integer(kind=4), dimension(2), intent(in) :: nu_range
+            integer(kind=1), intent(in) :: z_selector
+
+            type(list_list_cmplx), intent(inout) :: a_nmt
+            type(list_list_cmplx), intent(inout) :: b_nmt
+
+            ! auxiliary
+            type(spherical_coordinate_real_type) :: m_x
+
+            m_x = x
+
+            call lib_math_vector_spherical_harmonics_translate_coeff_r(a_nm, b_nm, &
+                                                                       m_x%rho, m_x%theta, m_x%phi, &
+                                                                       n_range, nu_range, &
+                                                                       z_selector, &
+                                                                       a_nmt, b_nmt)
+
+        end subroutine lib_math_vector_spherical_harmonics_translate_coeff_r_carte
+
+        ! Calculation of the coefficients from the l-th coordinate system to the j-th coordinate system
+        !
+        !
+        !
+        !            z ^
+        !              |
+        !          K_l |----> x
+        !             /
+        !            /
+        !     theta / d_lj
+        !      z ^ /
+        !        |/
+        !    K_j |-----> x
+        !
+        !   theta = angle(z_j, d_lj)
+        !
+        !
+        !              z
+        !          K_l o----> x
+        !             /
+        !            /
+        !           / d_lj
+        !          /
+        !        z/ phi
+        !    K_j o-----> x
+        !
+        !   phi = angle(d_lj, x_j)
+        !
+        !
+        ! Argument
+        ! ----
+        !   a_nm, b_nm: type(list_list_cmplx), dimension(:)
+        !       coefficients of system l
+        !   x: double precision
+        !       normalized distance: x = k * d_lj
+        !       k: wave number
+        !       d_lj: distance from origin l to origin j
+        !   theta: double precision
+        !       polar coordinate [rad]
+        !   phi: double precision
+        !       azimuthal coordinate [rad]
+        !   n_range: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       CONDITION:
+        !           - first element .le. second element
+        !           - 0 <= n
+        !
+        !   z_selector: integer
+        !       1: spherical Bessel function first kind   j_n
+        !       2: spherical Bessel function second kind  y_n
+        !       3: spherical Hankel function first kind   h^(1)_n
+        !       4: spherical Hankel function second kind  h^(2)_n
+        !
+        ! Returns
+        ! ----
+        !   a_nmt, b_nmt: type(list_list_cmplx)
+        !       translated coefficients at system j
+        !
+        ! Reference: Efficient Evaluation of Vector Translation Coefficients in Multiparticle Light-Scattering Theories, Yu-lin Xu
+        subroutine lib_math_vector_spherical_harmonics_translate_coeff_r_multi(a_nm, b_nm, &
+                                                                               x, theta, phi, &
+                                                                               n_range, nu_range, &
+                                                                               z_selector, &
+                                                                               a_nmt, b_nmt)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), dimension(:), intent(in) :: a_nm
+            type(list_list_cmplx), dimension(lbound(a_nm, 1):ubound(a_nm, 1)), intent(in) :: b_nm
+            double precision, intent(in) :: x
+            double precision, intent(in) :: theta
+            double precision, intent(in) :: phi
+            integer(kind=4), dimension(2), intent(in) :: n_range
+            integer(kind=4), dimension(2), intent(in) :: nu_range
+            integer(kind=1), intent(in) :: z_selector
+
+            type(list_list_cmplx), dimension(:), allocatable, intent(inout) :: a_nmt
+            type(list_list_cmplx), dimension(:), allocatable, intent(inout) :: b_nmt
+
+            ! auxiliary
+            integer :: i
+            integer :: n
+            integer :: m
+
+            type(list_4_cmplx) :: A_mnkl
+            type(list_4_cmplx) :: B_mnkl
+
+            if (allocated(a_nmt)) deallocate(a_nmt)
+            allocate(a_nmt(lbound(a_nm, 1):ubound(a_nm, 1)))
+
+            if (allocated(b_nmt)) deallocate(b_nmt)
+            allocate(b_nmt(lbound(a_nm, 1):ubound(a_nm, 1)))
+
+            call lib_math_vector_spherical_harmonics_translation_coefficient(x, theta, phi, n_range, nu_range, z_selector,&
+                                                                             A_mnkl, B_mnkl)
+
+            !$OMP PARALLEL DO PRIVATE(i)
+            do i = lbound(a_nm, 1), ubound(a_nm, 1)
+                call init_list(a_nmt(i), nu_range(1), nu_range(2) - nu_range(1) + 1)
+                call init_list(b_nmt(i), nu_range(1), nu_range(2) - nu_range(1) + 1)
+
+                !$OMP PARALLEL DO PRIVATE(n, m)
+                do n = n_range(1), n_range(2)
+                    do m = -n, n
+                        a_nmt(i)%item(n)%item(m) = sum(a_nm(i) * A_mnkl%item(n)%item(m) + b_nm(i) * B_mnkl%item(n)%item(m))
+                        b_nmt(i)%item(n)%item(m) = sum(a_nm(i) * B_mnkl%item(n)%item(m) + b_nm(i) * A_mnkl%item(n)%item(m))
+                    end do
+                end do
+                !$OMP END PARALLEL DO
+            end do
+            !$OMP END PARALLEL DO
+
+        end subroutine lib_math_vector_spherical_harmonics_translate_coeff_r_multi
+
+        ! Calculation of the coefficients from the l-th coordinate system to the j-th coordinate system
+        !
+        !
+        !
+        !            z ^
+        !              |
+        !          K_l |----> x
+        !             /
+        !            /
+        !     theta / d_lj
+        !      z ^ /
+        !        |/
+        !    K_j |-----> x
+        !
+        !   theta = angle(z_j, d_lj)
+        !
+        !
+        !              z
+        !          K_l o----> x
+        !             /
+        !            /
+        !           / d_lj
+        !          /
+        !        z/ phi
+        !    K_j o-----> x
+        !
+        !   phi = angle(d_lj, x_j)
+        !
+        !
+        ! Argument
+        ! ----
+        !   a_nm, b_nm: type(list_list_cmplx), dimension(:)
+        !       coefficients of system l
+        !   x: type(spherical_coordinate_real_type)
+        !       coordinate of the l-th coordinate system respect to the j-th coordinate system
+        !   n_range: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       CONDITION:
+        !           - first element .le. second element
+        !           - 0 <= n
+        !
+        !   z_selector: integer
+        !       1: spherical Bessel function first kind   j_n
+        !       2: spherical Bessel function second kind  y_n
+        !       3: spherical Hankel function first kind   h^(1)_n
+        !       4: spherical Hankel function second kind  h^(2)_n
+        !
+        ! Returns
+        ! ----
+        !   a_nmt, b_nmt: type(list_list_cmplx)
+        !       translated coefficients at system j
+        !
+        ! Reference: Efficient Evaluation of Vector Translation Coefficients in Multiparticle Light-Scattering Theories, Yu-lin Xu
+        subroutine lib_math_vector_spherical_harmonics_translate_coeff_r_spher_m(a_nm, b_nm, &
+                                                                               x, &
+                                                                               n_range, nu_range, &
+                                                                               z_selector, &
+                                                                               a_nmt, b_nmt)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), dimension(:), intent(in) :: a_nm
+            type(list_list_cmplx), dimension(lbound(a_nm, 1):ubound(a_nm, 1)), intent(in) :: b_nm
+            type(spherical_coordinate_real_type), intent(in) :: x
+            integer(kind=4), dimension(2), intent(in) :: n_range
+            integer(kind=4), dimension(2), intent(in) :: nu_range
+            integer(kind=1), intent(in) :: z_selector
+
+            type(list_list_cmplx), dimension(:), allocatable, intent(inout) :: a_nmt
+            type(list_list_cmplx), dimension(:), allocatable, intent(inout) :: b_nmt
+
+            ! auxiliary
+            call lib_math_vector_spherical_harmonics_translate_coeff_r_multi(a_nm, b_nm, &
+                                                                             x%rho, x%theta, x%phi, &
+                                                                             n_range, nu_range, &
+                                                                             z_selector, &
+                                                                             a_nmt, b_nmt)
+
+        end subroutine lib_math_vector_spherical_harmonics_translate_coeff_r_spher_m
+
+        ! Calculation of the coefficients from the l-th coordinate system to the j-th coordinate system
+        !
+        !
+        !
+        !            z ^
+        !              |
+        !          K_l |----> x
+        !             /
+        !            /
+        !     theta / d_lj
+        !      z ^ /
+        !        |/
+        !    K_j |-----> x
+        !
+        !   theta = angle(z_j, d_lj)
+        !
+        !
+        !              z
+        !          K_l o----> x
+        !             /
+        !            /
+        !           / d_lj
+        !          /
+        !        z/ phi
+        !    K_j o-----> x
+        !
+        !   phi = angle(d_lj, x_j)
+        !
+        !
+        ! Argument
+        ! ----
+        !   a_nm, b_nm: type(list_list_cmplx), dimension(:)
+        !       coefficients of system l
+        !   x: type(cartesian_coordinate_real_type)
+        !       coordinate of the l-th coordinate system respect to the j-th coordinate system
+        !   n_range: integer, dimension(2)
+        !       first element: start index
+        !       second element: last index
+        !       CONDITION:
+        !           - first element .le. second element
+        !           - 0 <= n
+        !
+        !   z_selector: integer
+        !       1: spherical Bessel function first kind   j_n
+        !       2: spherical Bessel function second kind  y_n
+        !       3: spherical Hankel function first kind   h^(1)_n
+        !       4: spherical Hankel function second kind  h^(2)_n
+        !
+        ! Returns
+        ! ----
+        !   a_nmt, b_nmt: type(list_list_cmplx)
+        !       translated coefficients at system j
+        !
+        ! Reference: Efficient Evaluation of Vector Translation Coefficients in Multiparticle Light-Scattering Theories, Yu-lin Xu
+        subroutine lib_math_vector_spherical_harmonics_translate_coeff_r_carte_m(a_nm, b_nm, &
+                                                                               x, &
+                                                                               n_range, nu_range, &
+                                                                               z_selector, &
+                                                                               a_nmt, b_nmt)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), dimension(:), intent(in) :: a_nm
+            type(list_list_cmplx), dimension(lbound(a_nm, 1):ubound(a_nm, 1)), intent(in) :: b_nm
+            type(cartesian_coordinate_real_type), intent(in) :: x
+            integer(kind=4), dimension(2), intent(in) :: n_range
+            integer(kind=4), dimension(2), intent(in) :: nu_range
+            integer(kind=1), intent(in) :: z_selector
+
+            type(list_list_cmplx), dimension(:), allocatable, intent(inout) :: a_nmt
+            type(list_list_cmplx), dimension(:), allocatable, intent(inout) :: b_nmt
+
+            ! auxiliary
+            type(spherical_coordinate_real_type) :: m_x
+
+            m_x = x
+
+            call lib_math_vector_spherical_harmonics_translate_coeff_r_multi(a_nm, b_nm, &
+                                                                             m_x%rho, m_x%theta, m_x%phi, &
+                                                                             n_range, nu_range, &
+                                                                             z_selector, &
+                                                                             a_nmt, b_nmt)
+
+        end subroutine lib_math_vector_spherical_harmonics_translate_coeff_r_carte_m
 
         ! Reference: Efficient Evaluation of Vector Translation Coefficients in Multiparticle Light-Scattering Theories, Yu-lin Xu
         !            eq. 25

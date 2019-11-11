@@ -1657,15 +1657,15 @@ module lib_tree
 #elif (_FMM_DIMENSION_ == 3)
         if (m_mirror) then
             do i=1, list_length
-                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
-                element_list(i)%point_x%x(2) = ((1.0 - 0.9) * i)/(1.0*list_length)
-                element_list(i)%point_x%x(3) = ((1.0 - 0.9) * i)/(1.0*list_length)
+                element_list(i)%point_x%x(1) = (0.9 * real(i))/(1.0*list_length)
+                element_list(i)%point_x%x(2) = ((1.0 - 0.9) * real(i))/(1.0*list_length)
+                element_list(i)%point_x%x(3) = ((1.0 - 0.9) * real(i))/(1.0*list_length)
             end do
         else
             do i=1, list_length
-                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
-                element_list(i)%point_x%x(2) = (0.9 * i)/(1.0*list_length)
-                element_list(i)%point_x%x(3) = (0.9 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(1) = (0.9 * real(i))/(1.0*list_length)
+                element_list(i)%point_x%x(2) = (0.9 * real(i))/(1.0*list_length)
+                element_list(i)%point_x%x(3) = (0.9 * real(i))/(1.0*list_length)
             end do
         end if
 #endif

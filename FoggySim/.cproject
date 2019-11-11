@@ -75,6 +75,8 @@
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libtoolbox/Debug}&quot;"/>
                                     									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath_external/Debug}&quot;"/>
+                                    									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libmath/Debug}&quot;"/>
                                     								
                                 </option>

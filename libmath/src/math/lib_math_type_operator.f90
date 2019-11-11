@@ -115,6 +115,7 @@ module lib_math_type_operator
 
         ! list list
         module procedure lib_math_list_list_real_mul_real
+        module procedure lib_math_real_mul_list_list_cmplx
         module procedure lib_math_list_list_cmplx_mul_real
 
         module procedure lib_math_list_list_cmplx_mul_cmplx
@@ -2736,6 +2737,28 @@ module lib_math_type_operator
             end do
             !$OMP END PARALLEL DO
         end function lib_math_list_list_real_mul_real
+
+        ! Elementwise multiplication
+        !
+        ! Arguments
+        ! ----
+        !   lhs: real(kind=lib_math_type_kind)
+        !   rhs: type(list_list_cmplx)
+        !
+        ! Retruns
+        ! ----
+        !   rv: type(list_list_cmplx)
+        function lib_math_real_mul_list_list_cmplx(lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: lhs
+            real(kind=lib_math_type_kind), intent(in) :: rhs
+
+            type(list_list_cmplx) :: rv
+
+            rv = rhs * lhs
+
+        end function lib_math_real_mul_list_list_cmplx
 
         ! Elementwise multiplication
         !

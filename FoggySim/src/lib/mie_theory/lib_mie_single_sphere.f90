@@ -1604,17 +1604,26 @@ module lib_mie_single_sphere
             double precision :: k
 
             type(cartesian_coordinate_real_type) :: d_0_j
-
             type(cartesian_coordinate_real_type) :: k_cartesian
+            type(lib_mie_illumination_parameter) :: illumination
 
             d_0_j%x = 0
             d_0_j%y = 0
             d_0_j%z = 0
 
-            k = 2D0 * PI * n_medium / lambda
+            k = 2D0 * PI / lambda
             k_cartesian%x = 0
             k_cartesian%y = 0
             k_cartesian%z = k
+
+            illumination%lambda_0 = lambda
+            illumination%e_field_0 = 1d0
+
+            allocate(illumination%plane_wave(1))
+            illumination%plane_wave(1)%d_0_i = d_0_j
+            illumination%plane_wave(1)%g = 1d0
+            illumination%plane_wave(1)%wave_vector_0 = k_cartesian
+
 
             x = abs(k * r_particle)
 
@@ -1630,7 +1639,7 @@ module lib_mie_single_sphere
 #endif
             end if
 
-            call lib_mie_illumination_get_p_q_j_j(k_cartesian, d_0_j, n_range, p_nm, q_nm)
+            call lib_mie_illumination_get_p_q_j_j(illumination, n_medium, d_0_j, n_range, p_nm, q_nm)
 
             call lib_mie_ss_hf_get_coefficient_a_nm_b_nm(x, n_particle, n_medium, p_nm, q_nm, a_nm, b_nm)
 
@@ -1664,6 +1673,7 @@ module lib_mie_single_sphere
 !            if (.not. test_get_field_initial_incident_multi_wave_real()) then
 !                rv = rv + 1
 !            end if
+            if (.not. test_get_field_initial_incident_gaussian_beam()) rv = rv + 1
             if (.not. test_get_field_scattered_plane_section_real()) then
                 rv = rv + 1
             end if
@@ -2329,6 +2339,285 @@ module lib_mie_single_sphere
                     close(u)
 
                 end function test_get_field_initial_incident_multi_wave_real
+
+                function test_get_field_initial_incident_gaussian_beam() result (rv)
+                    use file_io
+                    use lib_mie_illumination
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! parameter
+
+                    ! auxiliary
+                    integer :: i
+                    integer :: ii
+                    double precision :: x
+                    double precision :: y
+                    double precision :: z
+                    integer :: u
+
+                    double precision :: alpha
+                    double precision :: beta
+
+                    double precision :: lambda
+                    double precision :: k0
+                    double precision :: e_field_0
+                    double precision :: n_medium
+
+                    integer(kind=4), dimension(2) :: n_range
+
+                    double precision, dimension(2) :: x_range
+                    double precision, dimension(2) :: z_range
+                    real(kind=8) :: step_size
+
+                    integer :: no_x_values
+                    integer :: no_z_values
+
+                    type(spherical_coordinate_cmplx_type), dimension(2) :: buffer_field
+                    type(cartesian_coordinate_real_type) :: point_cartesian
+                    type(spherical_coordinate_real_type) :: point_spherical
+
+                    type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field_s
+                    double precision, dimension(:, :), allocatable :: e_field_s_real_x
+                    double precision, dimension(:, :), allocatable :: e_field_s_real_y
+                    double precision, dimension(:, :), allocatable :: e_field_s_real_z
+
+                    type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field_s
+                    double precision, dimension(:, :), allocatable :: h_field_s_real_x
+                    double precision, dimension(:, :), allocatable :: h_field_s_real_y
+                    double precision, dimension(:, :), allocatable :: h_field_s_real_z
+
+                    type(cartesian_coordinate_real_type), dimension(:, :), allocatable :: poynting_s
+                    type(cartesian_coordinate_cmplx_type) :: buffer_cartesian_cmplx
+                    double precision, dimension(:, :), allocatable :: poynting_s_abs
+
+                    type(cartesian_coordinate_real_type) :: buffer_car
+                    type(lib_mie_illumination_parameter) :: illumination
+
+                    ! CPU-time
+                    real :: start, finish
+                    ! WALL-time
+                    INTEGER :: count_start, count_finish, count_rate
+
+                    x_range = (/ -5_8 * unit_mu, 5.0_8 * unit_mu /)
+                    z_range = (/ -5_8 * unit_mu, 10.0_8 * unit_mu /)
+!                    step_size = 0.02_8 * unit_mu
+                    step_size = 0.05_8 * unit_mu
+
+                    no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                    no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
+
+                    allocate(e_field_s(no_x_values, no_z_values))
+                    allocate(e_field_s_real_x(no_x_values, no_z_values))
+                    allocate(e_field_s_real_y(no_x_values, no_z_values))
+                    allocate(e_field_s_real_z(no_x_values, no_z_values))
+
+                    allocate(h_field_s(no_x_values, no_z_values))
+                    allocate(h_field_s_real_x(no_x_values, no_z_values))
+                    allocate(h_field_s_real_y(no_x_values, no_z_values))
+                    allocate(h_field_s_real_z(no_x_values, no_z_values))
+
+                    allocate(poynting_s(no_x_values, no_z_values))
+                    allocate(poynting_s_abs(no_x_values, no_z_values))
+
+                    allocate(illumination%gaussian_beam(1))
+
+                    x = 0
+                    y = 0
+                    z = 0
+
+                    e_field_0 = 1
+                    lambda = 0.7 * unit_mu
+                    alpha = PI / 4D0
+                    beta = 0
+
+                    n_medium = 1
+
+                    k0 = 2 * PI / lambda
+
+
+                    illumination%lambda_0 = lambda
+
+                    illumination%gaussian_beam(:)%g = 1
+
+                    buffer_car%x = 0
+                    buffer_car%y = 0
+                    buffer_car%z = 0
+                    illumination%gaussian_beam(:)%d_0_i = buffer_car
+
+                    illumination%gaussian_beam(:)%wave_number_0 = k0
+                    illumination%gaussian_beam(:)%calculation_type = 1
+
+                    illumination%gaussian_beam(1)%w0 = 50 * unit_mu
+
+
+!                    buffer_car%x = -1
+!                    buffer_car%y = 0
+!                    buffer_car%z = 1
+!                    buffer_car = buffer_car / abs(buffer_car) / lambda
+!                    illumination%gaussian_beam(2)%wave_vector_0 = buffer_car
+
+
+!                    buffer_car%x = 0
+!                    buffer_car%y = 0
+!                    buffer_car%z = 1
+!                    buffer_car = buffer_car / abs(buffer_car) / lambda
+!                    illumination(3)%wave_vector_0 = buffer_car
+
+                    n_range(1) = 1
+                    n_range(2) = 20!N_MAX
+                    print *, "NOTE: max degree = ", n_range(2)
+
+                    call lib_math_factorial_initialise_caching(n_range(2))
+
+                    call system_clock(count_start, count_rate)
+                    call cpu_time(start)
+                    !$OMP PARALLEL DO PRIVATE(i, ii, point_cartesian, point_spherical, buffer_field) &
+                    !$OMP  PRIVATE(buffer_cartesian_cmplx) &
+                    !$OMP  FIRSTPRIVATE(x, y, z)
+                    do i=1, no_x_values
+                        x = x_range(1) + (i-1) * step_size
+                        do ii=1, no_z_values
+                            z = z_range(1) + (ii-1) * step_size
+
+                            point_cartesian%x = x
+                            point_cartesian%y = y
+                            point_cartesian%z = z
+
+                            point_spherical = point_cartesian
+
+                            buffer_field = get_field_initial_incident_multi_wave_real(point_spherical%theta, &
+                                                                       point_spherical%phi, &
+                                                                       point_spherical%rho, &
+                                                                       e_field_0, n_medium, &
+                                                                       n_range, illumination)
+                            e_field_s(i, ii) = make_cartesian(buffer_field(1), point_spherical%theta, point_spherical%phi)
+                            h_field_s(i, ii) = make_cartesian(buffer_field(2), point_spherical%theta, point_spherical%phi)
+
+                            e_field_s_real_x(i, ii) = real(e_field_s(i, ii)%x)
+                            e_field_s_real_y(i, ii) = real(e_field_s(i, ii)%y)
+                            e_field_s_real_z(i, ii) = real(e_field_s(i, ii)%z)
+
+                            h_field_s_real_x(i, ii) = real(h_field_s(i, ii)%x)
+                            h_field_s_real_y(i, ii) = real(h_field_s(i, ii)%y)
+                            h_field_s_real_z(i, ii) = real(h_field_s(i, ii)%z)
+
+                            ! calculate the Poynting vector: S = E x H*
+                            ! eq. 43
+                            h_field_s(i, ii)%x = conjg(h_field_s(i, ii)%x)
+                            h_field_s(i, ii)%y = conjg(h_field_s(i, ii)%y)
+                            h_field_s(i, ii)%z = conjg(h_field_s(i, ii)%z)
+
+                            buffer_cartesian_cmplx = cross_product(e_field_s(i, ii), h_field_s(i, ii))
+
+                            poynting_s(i, ii)%x = real(buffer_cartesian_cmplx%x) / 2.0_8
+                            poynting_s(i, ii)%y = real(buffer_cartesian_cmplx%y) / 2.0_8
+                            poynting_s(i, ii)%z = real(buffer_cartesian_cmplx%z) / 2.0_8
+
+                            poynting_s_abs(i, ii) = abs(poynting_s(i, ii))
+                        end do
+                        print *, "  x-Value: ", x
+                    end do
+                    !$OMP END PARALLEL DO
+                    call cpu_time(finish)
+                    call system_clock(count_finish, count_rate)
+                    print *, "get_field_initial_incident_xu_real"
+                    print '("  CPU-Time = ",f10.3," seconds.")',finish-start
+
+                    print '("  WALL-Time = ",f10.3," seconds.")',(count_finish-count_start) / real(count_rate)
+
+                    ! --- wirte to PPM ---
+                    ! e field
+                    u = 99
+                    open(unit=u, file="temp/real/e_field_0_x.ppm", status='unknown')
+                    rv = write_ppm_p3(u, e_field_s_real_x)
+                    close(u)
+
+                    open(unit=u, file="temp/real/e_field_0_y.ppm", status='unknown')
+                    rv = write_ppm_p3(u, e_field_s_real_y)
+                    close(u)
+
+                    open(unit=u, file="temp/real/e_field_0_z.ppm", status='unknown')
+                    rv = write_ppm_p3(u, e_field_s_real_z)
+                    close(u)
+
+                    u = 99
+                    open(unit=u, file="temp/real/e_field_0_x_log.ppm", status='unknown')
+                    rv = write_ppm_p3(u, e_field_s_real_x, logarithmic = .true.)
+                    close(u)
+
+                    open(unit=u, file="temp/real/e_field_0_y_log.ppm", status='unknown')
+                    rv = write_ppm_p3(u, e_field_s_real_y, logarithmic = .true.)
+                    close(u)
+
+                    open(unit=u, file="temp/real/e_field_0_z_log.ppm", status='unknown')
+                    rv = write_ppm_p3(u, e_field_s_real_z, logarithmic = .true.)
+                    close(u)
+
+                    ! h field
+                    u = 99
+                    open(unit=u, file="temp/real/h_field_0_x.ppm", status='unknown')
+                    rv = write_ppm_p3(u, h_field_s_real_x)
+                    close(u)
+
+                    open(unit=u, file="temp/real/h_field_0_y.ppm", status='unknown')
+                    rv = write_ppm_p3(u, h_field_s_real_y)
+                    close(u)
+
+                    open(unit=u, file="temp/real/h_field_0_z.ppm", status='unknown')
+                    rv = write_ppm_p3(u, h_field_s_real_z)
+                    close(u)
+
+                    u = 99
+                    open(unit=u, file="temp/real/h_field_0_x_log.ppm", status='unknown')
+                    rv = write_ppm_p3(u, h_field_s_real_x, logarithmic = .true.)
+                    close(u)
+
+                    open(unit=u, file="temp/real/h_field_0_y_log.ppm", status='unknown')
+                    rv = write_ppm_p3(u, h_field_s_real_y, logarithmic = .true.)
+                    close(u)
+
+                    open(unit=u, file="temp/real/h_field_0_z_log.ppm", status='unknown')
+                    rv = write_ppm_p3(u, h_field_s_real_z, logarithmic = .true.)
+                    close(u)
+
+                    ! Poynting
+                    u = 99
+                    open(unit=u, file="temp/real/poynting_0_x.ppm", status='unknown')
+                    rv = write_ppm_p3(u, poynting_s(:,:)%x)
+                    close(u)
+
+                    open(unit=u, file="temp/real/poynting_0_y.ppm", status='unknown')
+                    rv = write_ppm_p3(u, poynting_s(:,:)%y)
+                    close(u)
+
+                    open(unit=u, file="temp/real/poynting_0_z.ppm", status='unknown')
+                    rv = write_ppm_p3(u, poynting_s(:,:)%z)
+                    close(u)
+
+                    u = 99
+                    open(unit=u, file="temp/real/poynting_0_x_log.ppm", status='unknown')
+                    rv = write_ppm_p3(u, poynting_s(:,:)%x, logarithmic = .true.)
+                    close(u)
+
+                    open(unit=u, file="temp/real/poynting_0_y_log.ppm", status='unknown')
+                    rv = write_ppm_p3(u, poynting_s(:,:)%y, logarithmic = .true.)
+                    close(u)
+
+                    open(unit=u, file="temp/real/poynting_0_z_log.ppm", status='unknown')
+                    rv = write_ppm_p3(u, poynting_s(:,:)%z, logarithmic = .true.)
+                    close(u)
+
+                    ! Poynting abs
+                    open(unit=u, file="temp/real/poynting_0_abs.ppm", status='unknown')
+                    rv = write_ppm_p3(u, poynting_s_abs)
+                    close(u)
+                    open(unit=u, file="temp/real/poynting_0_abs_log.ppm", status='unknown')
+                    rv = write_ppm_p3(u, poynting_s_abs, logarithmic = .true.)
+                    close(u)
+
+                end function test_get_field_initial_incident_gaussian_beam
 
                 function test_get_field_scattered_plane_section_real() result (rv)
                     use file_io
