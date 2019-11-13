@@ -2394,10 +2394,13 @@ module lib_math_type_operator
             end if
 
             if (m_set_zero) then
-                do n = lbound(list%item, 1), lbound(list%item, 1)
+                do n = lbound(list%item, 1), ubound(list%item, 1)
                     do m = -n, n
-                        if (abs(list%item(n)%item(m)) .le. abs(threshold)) then
-                            list%item(n)%item(m) = cmplx(0 ,0, kind=lib_math_type_kind)
+                        if (abs(real(list%item(n)%item(m))) .le. real(threshold)) then
+                            list%item(n)%item(m) = cmplx(0 , aimag(list%item(n)%item(m)), kind=lib_math_type_kind)
+                        end if
+                        if (abs(aimag(list%item(n)%item(m))) .le. aimag(threshold)) then
+                            list%item(n)%item(m) = cmplx(real(list%item(n)%item(m)), 0, kind=lib_math_type_kind)
                         end if
                     end do
                 end do
