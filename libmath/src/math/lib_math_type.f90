@@ -24,6 +24,18 @@ module lib_math_type
         type(cartesian_coordinate_cmplx_type), dimension(:), allocatable :: coordinate
     end type list_cartesian_coordinate_cmplx_type
 
+    type cartresian_coordinate_rot_matrix_type
+        real(kind=lib_math_type_kind) :: r_11
+        real(kind=lib_math_type_kind) :: r_12
+        real(kind=lib_math_type_kind) :: r_13
+        real(kind=lib_math_type_kind) :: r_21
+        real(kind=lib_math_type_kind) :: r_22
+        real(kind=lib_math_type_kind) :: r_23
+        real(kind=lib_math_type_kind) :: r_31
+        real(kind=lib_math_type_kind) :: r_32
+        real(kind=lib_math_type_kind) :: r_33
+    end type
+
     ! spherical coordinates
     type spherical_coordinate_real_type
         real(kind=lib_math_type_kind) :: rho

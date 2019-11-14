@@ -30,6 +30,10 @@ module lib_math_type_operator
 
     public :: lib_math_type_operator_test_functions
 
+    public :: lib_math_get_matrix_rot_x
+    public :: lib_math_get_matrix_rot_y
+    public :: lib_math_get_matrix_rot_z
+
     ! ---- operator ----
     interface operator (+)
         ! real coordinates
@@ -51,6 +55,10 @@ module lib_math_type_operator
         module procedure lib_math_list_spherical_operator_add_array_cmplx
         module procedure lib_math_list_spherical_operator_0d_add_array_cmplx
         module procedure lib_math_list_spherical_operator_array_add_0d_cmplx
+
+        module procedure lib_math_cartesian_operator_matrix_mul_real
+        module procedure lib_math_cartesian_operator_matrix_mul_cmplx
+        module procedure lib_math_cartesian_operator_matrix_mul_matrix
 
         ! list list
         module procedure lib_math_list_list_real_add
@@ -1351,6 +1359,206 @@ module lib_math_type_operator
             !$OMP END PARALLEL DO
 
         end function
+
+        function lib_math_cartesian_operator_matrix_mul_real(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type(cartresian_coordinate_rot_matrix_type), intent(in) :: lhs
+            type(cartesian_coordinate_real_type), intent(in) :: rhs
+
+            type(cartesian_coordinate_real_type) :: rv
+
+            rv%x = lhs%r_11 * rhs%x + lhs%r_12 * rhs%y + lhs%r_13 * rhs%z
+            rv%y = lhs%r_21 * rhs%x + lhs%r_22 * rhs%y + lhs%r_23 * rhs%z
+            rv%z = lhs%r_31 * rhs%x + lhs%r_32 * rhs%y + lhs%r_33 * rhs%z
+
+        end function
+
+        function lib_math_cartesian_operator_matrix_mul_cmplx(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type(cartresian_coordinate_rot_matrix_type), intent(in) :: lhs
+            type(cartesian_coordinate_cmplx_type), intent(in) :: rhs
+
+            type(cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = lhs%r_11 * rhs%x + lhs%r_12 * rhs%y + lhs%r_13 * rhs%z
+            rv%y = lhs%r_21 * rhs%x + lhs%r_22 * rhs%y + lhs%r_23 * rhs%z
+            rv%z = lhs%r_31 * rhs%x + lhs%r_32 * rhs%y + lhs%r_33 * rhs%z
+
+        end function
+
+        ! Formula: c = a * b
+        !
+        !
+        !                 b_11 b_12 b_13
+        !                 b_21 b_22 b_23
+        !                 b_31 b_32 b_33
+        !
+        ! a_11 a_12 a_13  c_11 c_12 c_13
+        ! a_21 a_22 a_23  c_21 c_22 c_23
+        ! a_31 a_32 a_33  c_31 c_32 c_33
+        !
+        !
+        ! c_11 = a_11 * b_11 + a_12 * b_21 + a_13 * b_31
+        ! c_12 = a_11 * b_12 + a_12 * b_22 + a_13 * b_32
+        ! c_13 = a_11 * b_13 * a_12 * b_23 + a_13 * b_33
+        !
+        ! c_21 = a_21 * b_11 + a_22 * b_21 + a_23 * b_31
+        ! c_22 = a_21 * b_12 + a_22 * b_22 + a_23 * b_32
+        ! c_23 = a_21 * b_13 * a_22 * b_23 + a_23 * b_33
+        !
+        ! c_31 = a_31 * b_11 + a_32 * b_21 + a_33 * b_31
+        ! c_32 = a_31 * b_12 + a_32 * b_22 + a_33 * b_32
+        ! c_33 = a_31 * b_13 * a_32 * b_23 + a_33 * b_33
+        !
+        function lib_math_cartesian_operator_matrix_mul_matrix(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type(cartresian_coordinate_rot_matrix_type), intent(in) :: lhs
+            type(cartresian_coordinate_rot_matrix_type), intent(in) :: rhs
+
+            type(cartresian_coordinate_rot_matrix_type) :: rv
+
+            rv%r_11 = lhs%r_11 * rhs%r_11 + lhs%r_12 * rhs%r_21 + lhs%r_13 * rhs%r_31
+            rv%r_12 = lhs%r_11 * rhs%r_12 + lhs%r_12 * rhs%r_22 + lhs%r_13 * rhs%r_32
+            rv%r_13 = lhs%r_11 * rhs%r_13 * lhs%r_12 * rhs%r_23 + lhs%r_13 * rhs%r_33
+
+            rv%r_21 = lhs%r_21 * rhs%r_11 + lhs%r_22 * rhs%r_21 + lhs%r_23 * rhs%r_31
+            rv%r_22 = lhs%r_21 * rhs%r_12 + lhs%r_22 * rhs%r_22 + lhs%r_23 * rhs%r_32
+            rv%r_23 = lhs%r_21 * rhs%r_13 * lhs%r_22 * rhs%r_23 + lhs%r_23 * rhs%r_33
+
+            rv%r_31 = lhs%r_31 * rhs%r_11 + lhs%r_32 * rhs%r_21 + lhs%r_33 * rhs%r_31
+            rv%r_32 = lhs%r_31 * rhs%r_12 + lhs%r_32 * rhs%r_22 + lhs%r_33 * rhs%r_32
+            rv%r_33 = lhs%r_31 * rhs%r_13 * lhs%r_32 * rhs%r_23 + lhs%r_33 * rhs%r_33
+
+        end function
+
+        ! "coordinate system rotations of the x-, y-, and z-axes in a counterclockwise direction 
+        !  when looking towards the origin give the matrices"
+        !
+        ! Argument
+        ! ----
+        !   alpha: double precision
+        !       angle [rad]
+        !
+        ! Returns
+        ! ----
+        !   rv: type(cartresian_coordinate_rot_matrix_type)
+        !       rotation matrix
+        !
+        ! Reference: http://mathworld.wolfram.com/RotationMatrix.html
+        function lib_math_get_matrix_rot_x(alpha) result(rv)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: alpha
+
+            type(cartresian_coordinate_rot_matrix_type) :: rv
+
+            ! auxiliary
+            double precision :: cos_alpha
+            double precision :: sin_alpha
+
+            cos_alpha = cos(alpha)
+            sin_alpha = sin(alpha)
+
+            rv%r_11 = 1
+            rv%r_12 = 0
+            rv%r_13 = 0
+
+            rv%r_21 = 0
+            rv%r_22 = cos_alpha
+            rv%r_23 = sin_alpha
+
+            rv%r_31 = 0
+            rv%r_32 = -sin_alpha
+            rv%r_33 = cos_alpha
+
+        end function lib_math_get_matrix_rot_x
+
+        ! "coordinate system rotations of the x-, y-, and z-axes in a counterclockwise direction 
+        !  when looking towards the origin give the matrices"
+        !
+        ! Argument
+        ! ----
+        !   alpha: double precision
+        !       angle [rad]
+        !
+        ! Returns
+        ! ----
+        !   rv: type(cartresian_coordinate_rot_matrix_type)
+        !       rotation matrix
+        !
+        ! Reference: http://mathworld.wolfram.com/RotationMatrix.html
+        function lib_math_get_matrix_rot_y(beta) result(rv)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: beta
+
+            type(cartresian_coordinate_rot_matrix_type) :: rv
+
+            ! auxiliary
+            double precision :: cos_beta
+            double precision :: sin_beta
+
+            cos_beta = cos(beta)
+            sin_beta = sin(beta)
+
+            rv%r_11 = cos_beta
+            rv%r_12 = 0
+            rv%r_13 = -sin_beta
+
+            rv%r_21 = 0
+            rv%r_22 = 1
+            rv%r_23 = 0
+
+            rv%r_31 = sin_beta
+            rv%r_32 = 0
+            rv%r_33 = cos_beta
+
+        end function lib_math_get_matrix_rot_y
+
+        ! "coordinate system rotations of the x-, y-, and z-axes in a counterclockwise direction 
+        !  when looking towards the origin give the matrices"
+        !
+        ! Argument
+        ! ----
+        !   alpha: double precision
+        !       angle [rad]
+        !
+        ! Returns
+        ! ----
+        !   rv: type(cartresian_coordinate_rot_matrix_type)
+        !       rotation matrix
+        !
+        ! Reference: http://mathworld.wolfram.com/RotationMatrix.html
+        function lib_math_get_matrix_rot_z(gamma) result(rv)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: gamma
+
+            type(cartresian_coordinate_rot_matrix_type) :: rv
+
+            ! auxiliary
+            double precision :: cos_gamma
+            double precision :: sin_gamma
+
+            cos_gamma = cos(gamma)
+            sin_gamma = sin(gamma)
+
+            rv%r_11 = cos_gamma
+            rv%r_12 = sin_gamma
+            rv%r_13 = 0
+
+            rv%r_21 = -sin_gamma
+            rv%r_22 = cos_gamma
+            rv%r_23 = 0
+
+            rv%r_31 = 0
+            rv%r_32 = 0
+            rv%r_33 = 1
+
+        end function lib_math_get_matrix_rot_z
 
 ! ---- list_cartesian_coordinate ----
         function lib_math_list_cartesian_operator_add_array_cmplx(lhs, rhs) result(rv)
