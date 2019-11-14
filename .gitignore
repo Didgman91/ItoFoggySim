@@ -484,3 +484,5 @@ Debug_WIN
 *.u2d
 
 libmath_external
+
+release*
