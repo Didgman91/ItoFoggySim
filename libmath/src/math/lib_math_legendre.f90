@@ -103,6 +103,7 @@ module lib_math_legendre
         !       pd(1,:): result of the deriviative of the associated Legendre polynomial with a negativ m
         !       pd(2,:): result of the deriviative of the associated Legendre polynomial with a positiv m
         !
+        ! Refrence: http://mathworld.wolfram.com/AssociatedLegendrePolynomial.html
         subroutine lib_math_associated_legendre_polynomial_with_negative_m(x, m, fnu, n, pm, pd, condon_shortley_phase)
             implicit none
             ! dummy

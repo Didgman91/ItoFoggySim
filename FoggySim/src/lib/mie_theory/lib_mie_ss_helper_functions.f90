@@ -908,7 +908,7 @@ module lib_mie_ss_helper_functions
         ! ----
         !   x: double precision
         !       size parameter
-        !       x = r / lambda
+        !       x = r * 2 * Pi / lambda
         !       r: radius
         !       lambda: wavelength
         !

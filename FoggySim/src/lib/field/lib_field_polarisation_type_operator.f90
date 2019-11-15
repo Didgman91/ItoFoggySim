@@ -11,6 +11,9 @@ module lib_field_polarisation_type_operator
 
 
     interface operator(*)
+        module procedure scalar_field_dot_jones_vector
+        module procedure field_dot_jones_vector
+
         module procedure jones_matrix_dot_vector
         module procedure jones_matrix_dot_matrix
     end interface

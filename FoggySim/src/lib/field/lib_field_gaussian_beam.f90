@@ -1,10 +1,35 @@
 module lib_field_gaussian_beam
     use libmath
+    use lib_fiel_polarisation
     implicit none
+
+    type lib_field_gaussian_beam_hermite_type
+        double precision :: e_field_0                   ! [V/m]
+        double precision :: wave_length_0               ! [m]
+        double precision :: refractive_index_medium     ! [1]
+        double precision :: waist_x0                    ! [m]
+        double precision :: waist_y0                    ! [m]
+        integer :: tem_m                                ! Hermite-Gaussian Mode
+        integer :: tem_n                                ! Hermite-Gaussian Mode
+    end type
 
     contains
 
+        ! Argument
+        ! ----
+        !   parameter: type(lib_field_gaussian_beam_hermite_type)
+        !       parameter of the Hermite-Gaussian beam
+        !   x: type(cartesian_coordinate_real_type)
+        !       evaluation point
+        !
+        subroutine lib_field_gaussian_beam_hermite(parameter, evaluation_point_x, polarisation, propagation)
+            implicit none
+            ! dummy
+            type(lib_field_gaussian_beam_hermite_type), intent(in) :: parameter
+            type(cartesian_coordinate_real_type), intent(in) :: x
+            type(lib_field_polarisation_jones_vector_type), intent(in) :: polarisation
 
+        end subroutine
 
         ! Argument
         ! ----
@@ -27,6 +52,17 @@ module lib_field_gaussian_beam
         ! ----
         !   field: double cmplx
         !       Gaussian field distribution with a propagation along the z-axis
+        !
+        !
+        !          \     z       / <-- Gaussian beam
+        !           \     ^     /
+        !            \ K_B|    /
+        !          -->|   --> |<-- 2 w_0x,y
+        !            /     x,y \
+        !           /           \
+        !
+        !       K_B: beam coordinate system
+        !       z:   propagation along the z-axis
         !
         ! TeX: $$ \begin{aligned} E_{m n}(x, y, z, t)=& \sqrt{\frac{w_{x, 0}}{w_{x}(z)}} H_{m}\left(\frac{x \sqrt{2}}{w_{x}(z)}\right) e^{-\frac{x^{2}}{w_{x}^{2}(z)}} e^{-i \frac{k}{2 R_{x}(z)}} \\ &\times \sqrt{\frac{w_{y, 0}}{w_{y}(z)} H_{n}\left(\frac{y \sqrt{2}}{w_{y}(z)}\right.}{w_{y}(z)}) e^{\frac{y^{2}}{w_{y}^{2}(z)}}{e^{w_{y}^{2}(z)}}-i \frac{k}{2 R_{y}(z)} \\ & \times E_{0} \sqrt{\frac{1}{2^{m+n} m ! n ! \pi}} e^{-i(k z-\omega t)} \times \\ & \times e^{i(m+1 / 2) \arctan \left(z / z_{R, x}\right)} e^{i(n+1 / 2) \arctan \left(z / z_{R, y}\right)} \end{aligned}$$
         !

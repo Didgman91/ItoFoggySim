@@ -63,6 +63,12 @@ module lib_mie_ms_ml_fmm_interface
 
         end subroutine lib_mie_ms_ml_fmm_destructor
 
+        ! Argument
+        ! ----
+        !   vector_x: double complex, dimension(:)
+        !       vector x: M x = b
+        !   vector_b: double complex, dimension(:)
+        !       vector x:
         subroutine lib_mie_ms_ml_fmm_calculate_vector_b(vector_x, vector_b)
             use lib_mie_ms_data_container
             implicit none
@@ -139,6 +145,7 @@ module lib_mie_ms_ml_fmm_interface
 
         end function lib_mie_ms_ml_fmm_get_procedures
 
+        !
         function lib_mie_ms_ml_fmm_get_u_B_i(x, data_element, element_number) result(u_B_i)
             use libmath
             use lib_tree_public

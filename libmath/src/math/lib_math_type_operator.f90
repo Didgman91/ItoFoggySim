@@ -33,6 +33,7 @@ module lib_math_type_operator
     public :: lib_math_get_matrix_rot_x
     public :: lib_math_get_matrix_rot_y
     public :: lib_math_get_matrix_rot_z
+    public :: lib_math_get_matrix_rot_x_y_z
 
     ! ---- operator ----
     interface operator (+)
@@ -1559,6 +1560,70 @@ module lib_math_type_operator
             rv%r_33 = 1
 
         end function lib_math_get_matrix_rot_z
+
+        ! Argument
+        ! ----
+        !   psi: double precsision
+        !       rotation about the x-axis [rad]
+        !   theta: double precsision
+        !       rotation about the y-axis [rad]
+        !   phi: double precision
+        !       rotation about the z-axis [rad]
+        !
+        ! Returns
+        ! ----
+        !   rv: type(cartresian_coordinate_rot_matrix_type)
+        !       rotation matrix
+        !
+        ! Convention
+        ! ----
+        !   Tait-Bryan angles: z-y'-x'' (intrinsic rotations) or
+        !                      x-y-z   (extrinsic rotations)
+        !   The intrinsic rotations are known as: yaw, pitch and roll
+        !
+        function lib_math_get_matrix_rot_x_y_z(psi, theta, phi) result(rv)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: psi
+            double precision, intent(in) :: theta
+            double precision, intent(in) :: phi
+
+            type(cartresian_coordinate_rot_matrix_type) :: rv
+
+            ! auxiliary
+            double precision :: cos_theta
+            double precision :: sin_theta
+
+            double precision :: cos_phi
+            double precision :: sin_phi
+
+            double precision :: cos_psi
+            double precision :: sin_psi
+
+            cos_theta = cos(theta)
+            sin_theta = sin(theta)
+
+            cos_phi = cos(phi)
+            sin_phi = sin(phi)
+
+            cos_psi = cos(psi)
+            sin_psi = sin(psi)
+
+            rv%r_11 = cos_theta * cos_psi
+            rv%r_12 = -cos_phi * sin_psi + sin_phi * sin_theta * cos_psi
+            rv%r_13 = sin_phi * sin_psi + cos_phi * sin_theta * cos_psi
+
+            rv%r_21 = cos_theta * sin_psi
+            rv%r_22 = cos_phi * cos_psi + sin_phi * sin_theta * sin_psi
+            rv%r_23 = -sin_phi * cos_psi + cos_phi * sin_theta * sin_psi
+
+            rv%r_31 = -sin_theta
+            rv%r_32 = sin_phi * cos_theta
+            rv%r_33 = cos_phi * cos_theta
+
+        end function lib_math_get_matrix_rot_z
+
+        function
 
 ! ---- list_cartesian_coordinate ----
         function lib_math_list_cartesian_operator_add_array_cmplx(lhs, rhs) result(rv)
