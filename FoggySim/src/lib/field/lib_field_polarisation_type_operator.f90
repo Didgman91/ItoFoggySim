@@ -12,7 +12,10 @@ module lib_field_polarisation_type_operator
 
     interface operator(*)
         module procedure scalar_field_dot_jones_vector
+        module procedure jones_vector_dot_scalar_field
+
         module procedure field_dot_jones_vector
+        module procedure jones_vector_dot_field
 
         module procedure jones_matrix_dot_vector
         module procedure jones_matrix_dot_matrix
@@ -34,6 +37,18 @@ module lib_field_polarisation_type_operator
 
         end function
 
+        function jones_vector_dot_scalar_field(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type(jones_vector_type), intent(in) :: lhs
+            double complex, intent(in) :: rhs
+
+            type(cartesian_coordinate_cmplx_type) :: rv
+
+            rv = scalar_field_dot_jones_vector(rhs, lhs)
+
+        end function
+
         function field_dot_jones_vector(lhs, rhs) result(rv)
             implicit none
             ! dummy
@@ -45,6 +60,18 @@ module lib_field_polarisation_type_operator
             rv%x = lhs%x * rhs%x
             rv%y = lhs%z * rhs%y
             rv%z = dcmplx(0, 0)
+
+        end function
+
+        function jones_vector_dot_field(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type(jones_vector_type), intent(in) :: lhs
+            type(cartesian_coordinate_cmplx_type), intent(in) :: rhs
+
+            type(cartesian_coordinate_cmplx_type) :: rv
+
+            rv = field_dot_jones_vector(rhs, lhs)
 
         end function
 

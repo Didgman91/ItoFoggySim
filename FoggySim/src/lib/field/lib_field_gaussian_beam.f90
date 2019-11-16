@@ -221,7 +221,7 @@ module lib_field_gaussian_beam
             buffer_real = sqrt(waist_y0 / w_y) * h(2, m_tem_n) * exp(- x%y**2 / w_y**2)
             buffer_cmplx = buffer_real * exp(dcmplx(0, -k * x%y**2 * cr_y / 2)) * buffer_cmplx
 
-            buffer_real = e_field_0 * sqrt(dble(2**(-m_tem_m - m_tem_n)) &
+            buffer_real = e_field_0 * sqrt(2d0**dble(-m_tem_m - m_tem_n) &
                                            / (dble(lib_math_factorial_get_factorial(m_tem_m) &
                                               * lib_math_factorial_get_factorial(m_tem_n)) * PI))
             buffer_cmplx = buffer_real * exp(dcmplx(0, -k * x%z)) * buffer_cmplx
@@ -367,10 +367,10 @@ module lib_field_gaussian_beam
                 type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field
                 type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field
 
-                x_range = (/ -5_8 * unit_mu, 5.0_8 * unit_mu /)
-                z_range = (/ -5_8 * unit_mu, 10.0_8 * unit_mu /)
+                x_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+                z_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
 !                    step_size = 0.02_8 * unit_mu
-                step_size = 0.05_8 * unit_mu
+                step_size = 0.075_8 * unit_mu
 
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
@@ -381,22 +381,23 @@ module lib_field_gaussian_beam
 
                 x = 0
                 y = 0
-                z = 0
+                z = 10 * unit_mu
 
                 gauss_parameter%e_field_0 = 1
                 gauss_parameter%refractive_index_medium = 1
                 gauss_parameter%tem_m = 0
                 gauss_parameter%tem_n = 0
+!                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_type_get_linear_rot(PI/4d0)
                 gauss_parameter%polarisation = lib_field_polarisation_jones_vector_type_get_linear_h()
-                gauss_parameter%waist_x0 = 1 * unit_mu
-                gauss_parameter%waist_y0 = 1 * unit_mu
+                gauss_parameter%waist_x0 = 2.5 * unit_mu
+                gauss_parameter%waist_y0 = 2.5 * unit_mu
                 gauss_parameter%wave_length_0 = 0.55 * unit_mu
 
-!                !$OMP PARALLEL DO PRIVATE(i, ii, x, z)
+!                !$OMP PARALLEL DO PRIVATE(i, ii) FIRSTPRIVATE x, y, z)
                 do i=1, no_x_values
                     x = x_range(1) + (i-1) * step_size
                     do ii=1, no_z_values
-                        z = z_range(1) + (ii-1) * step_size
+                        y = z_range(1) + (ii-1) * step_size
 
                         point_cartesian%x = x
                         point_cartesian%y = y

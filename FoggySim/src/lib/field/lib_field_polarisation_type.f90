@@ -58,7 +58,7 @@ module lib_field_polarisation_type
         ! Argument
         ! ----
         !   phi: double precision
-        !       angel to x-axis [rad]
+        !       angel to x-axis [0, PI/2] [rad]
         !
         ! Retruns
         ! ----
