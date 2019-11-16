@@ -84,7 +84,7 @@ module lib_math_hermite
             integer ( kind = 4 ) m_n
             real ( kind = 8 ), dimension(:,:), allocatable :: m_p
 
-            allocate(m_p(1,0:fnu+n-1))
+            allocate(m_p(lbound(x, 1):ubound(x, 1),0:fnu+n-1))
 
             m_m = size(x)
 
@@ -97,7 +97,7 @@ module lib_math_hermite
             else
                 call h_polynomial_value ( m_m, m_n, x, m_p )
 
-                h = m_p(1:size(x), fnu:fnu+n-1)
+                h = m_p(lbound(x, 1):ubound(x, 1), fnu:fnu+n-1)
             end if
 
         end subroutine lib_math_hermite_polynomial_array_x
