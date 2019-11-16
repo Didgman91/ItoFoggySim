@@ -102,12 +102,14 @@ module lib_mie_multi_sphere
 
             call lib_math_factorial_initialise_caching(2 * n_range(2))
 
+            call lib_mie_ss_constructor(n_range)
+
             if (m_init_with_single_sphere) then
-                call lib_mie_ss_constructor(n_range)
+                call lib_mie_ss_calculate_scattering_coefficients_ab_nm()
             end if
 
             solver_parameter%use_initial_guess = m_init_with_single_sphere
-            solver_parameter%convergence_tolerance = 1D-8
+            solver_parameter%convergence_tolerance = 1D-7
             solver_parameter%use_ml_fmm = use_ml_fmm
 
             call lib_mie_ms_solver_constructor(solver_parameter)
@@ -149,7 +151,7 @@ module lib_mie_multi_sphere
             logical :: m_dynamic_step_size
 
             ! initial values
-            call lib_mie_ss_calculate_scattering_coefficients_ab_nm()
+!            call lib_mie_ss_calculate_scattering_coefficients_ab_nm()
 
             if ( present(update_initial_guess_with_n_max) ) then
                 n_range_org = simulation_data%spherical_harmonics%n_range
@@ -422,6 +424,7 @@ module lib_mie_multi_sphere
             call cpu_time(test_start)
 
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1()) rv = rv + 1
+!            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3()) rv = rv + 1
             if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_parallel_sphere_assemply()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_sphere_grid_assemply()) rv = rv + 1
@@ -496,7 +499,7 @@ module lib_mie_multi_sphere
 
                 simulation_data%spherical_harmonics%z_selector_incident_wave = 1
                 simulation_data%spherical_harmonics%z_selector_scatterd_wave = 3
-                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 1
+                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 3
                 simulation_data%spherical_harmonics%z_selector_translation_le_r = 1
 
                 ! set illumination parameter
@@ -623,6 +626,8 @@ module lib_mie_multi_sphere
                                                                                           n_range)
 
                 n_range = simulation_data%spherical_harmonics%n_range
+!                n_range(2) = 12
+!                simulation_data%spherical_harmonics%n_range = n_range
 
                 call lib_mie_ms_constructor(n_range, use_ml_fmm = .true., init_with_single_sphere = .true.)
 
@@ -632,9 +637,10 @@ module lib_mie_multi_sphere
 
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(5), 6)
                 call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(n_range(2) / 2), 4)
-!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(, int(n_range(2) / 2), 2)
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(n_range(2) / 2), 2)
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(, int(n_range(2) / 2))
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(10)
 
                 call cpu_time(test_finish_sub)
                 call system_clock(test_count_finish_sub, test_count_rate_sub)
@@ -1850,7 +1856,7 @@ module lib_mie_multi_sphere
                                                                                           n_range)
 
                 n_range = simulation_data%spherical_harmonics%n_range
-                n_range(2) = int(ceiling(real(n_range(2)) * 1.2))
+                n_range(2) = 12 !int(ceiling(real(n_range(2)) * 1.2))
                 simulation_data%spherical_harmonics%n_range = n_range
 
                 call lib_mie_ms_constructor(n_range, use_ml_fmm = .false., init_with_single_sphere = .true.)
@@ -1858,8 +1864,8 @@ module lib_mie_multi_sphere
                 call system_clock(test_count_start_sub, test_count_rate_sub)
                 call cpu_time(test_start_sub)
 
-                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(10, 1)
-!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(10, 1)
+                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
                 a_nm_t_matrix(:) = simulation_data%sphere_list(:)%a_nm
                 b_nm_t_matrix(:) = simulation_data%sphere_list(:)%b_nm
 

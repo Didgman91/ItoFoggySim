@@ -289,7 +289,7 @@ module lib_mie_ms_ml_fmm_interface
             type(list_4_cmplx) :: a_nmnumu
             type(list_4_cmplx) :: b_nmnumu
 
-            z_selector = simulation_data%spherical_harmonics%z_selector_translation_gt_r
+            z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
             n_range = simulation_data%spherical_harmonics%n_range
 
 
@@ -358,7 +358,7 @@ module lib_mie_ms_ml_fmm_interface
             type(list_4_cmplx) :: a_nmnumu
             type(list_4_cmplx) :: b_nmnumu
 
-            z_selector = simulation_data%spherical_harmonics%z_selector_translation_gt_r
+            z_selector = simulation_data%spherical_harmonics%z_selector_incident_wave
             n_range = simulation_data%spherical_harmonics%n_range
 
 
@@ -427,7 +427,7 @@ module lib_mie_ms_ml_fmm_interface
             type(list_4_cmplx) :: a_nmnumu
             type(list_4_cmplx) :: b_nmnumu
 
-            z_selector = simulation_data%spherical_harmonics%z_selector_translation_gt_r
+            z_selector = simulation_data%spherical_harmonics%z_selector_incident_wave
             n_range = simulation_data%spherical_harmonics%n_range
 
 
@@ -554,7 +554,7 @@ module lib_mie_ms_ml_fmm_interface
                 b_n = simulation_data%sphere_parameter_list(no)%b_n
 
                 n_range = simulation_data%spherical_harmonics%n_range
-                z_selector = simulation_data%spherical_harmonics%z_selector_translation_gt_r
+                z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
 
 
                 d_0_l = simulation_data%sphere_list(l)%d_0_j

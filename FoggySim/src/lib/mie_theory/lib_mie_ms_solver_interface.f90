@@ -226,8 +226,8 @@ module lib_mie_ms_solver_interface
             type(list_cmplx) :: a_n
             type(list_cmplx) :: b_n
 
-            type(list_list_cmplx), allocatable :: p_nm
-            type(list_list_cmplx), allocatable :: q_nm
+            type(list_list_cmplx) :: p_nm
+            type(list_list_cmplx) :: q_nm
 
 
             first_sphere = lbound(simulation_data%sphere_list, 1)
@@ -263,11 +263,11 @@ module lib_mie_ms_solver_interface
                 allocate(vector_b(counter_sum))
             end if
 
-            !$OMP PARALLEL DO PRIVATE(i, d_0_j, sphere_parameter_no, n_range, a_n, b_n)
+            !$OMP PARALLEL DO PRIVATE(i, d_0_j, sphere_parameter_no, n_range, a_n, b_n, p_nm, q_nm)
             do i = first_sphere, last_sphere
                 d_0_j = simulation_data%sphere_list(i)%d_0_j
                 sphere_parameter_no = simulation_data%sphere_list(i)%sphere_parameter_index
-                n_range = simulation_data%sphere_parameter_list(sphere_parameter_no)%n_range
+                n_range = simulation_data%spherical_harmonics%n_range
 
                 call lib_mie_illumination_get_p_q_j_j(simulation_data%illumination, &
                                                       simulation_data%refractive_index_medium, &
@@ -834,7 +834,7 @@ module lib_mie_ms_solver_interface
             first_sphere = lbound(simulation_data%sphere_list, 1)
             last_sphere = ubound(simulation_data%sphere_list, 1)
 
-            z_selector = simulation_data%spherical_harmonics%z_selector_translation_gt_r
+            z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
 
             n_range = simulation_data%spherical_harmonics%n_range
 

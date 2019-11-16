@@ -1,4 +1,4 @@
-#define _TRACE_
+!#define _TRACE_
 
 #define _FMM_DIMENSION_ 3
 
