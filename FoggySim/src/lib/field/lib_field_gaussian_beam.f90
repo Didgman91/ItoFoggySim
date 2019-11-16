@@ -1,6 +1,6 @@
 module lib_field_gaussian_beam
     use libmath
-    use lib_fiel_polarisation
+    use lib_field_polarisation
     implicit none
 
     type lib_field_gaussian_beam_hermite_type
@@ -22,12 +22,14 @@ module lib_field_gaussian_beam
         !   x: type(cartesian_coordinate_real_type)
         !       evaluation point
         !
-        subroutine lib_field_gaussian_beam_hermite(parameter, evaluation_point_x, polarisation, propagation)
+        subroutine lib_field_gaussian_beam_hermite(parameter, evaluation_point_x, polarisation, propagation_direction)
             implicit none
+
             ! dummy
             type(lib_field_gaussian_beam_hermite_type), intent(in) :: parameter
-            type(cartesian_coordinate_real_type), intent(in) :: x
-            type(lib_field_polarisation_jones_vector_type), intent(in) :: polarisation
+            type(cartesian_coordinate_real_type), intent(in) :: evaluation_point_x
+            type(jones_vector_type), intent(in) :: polarisation
+            type(cartesian_coordinate_real_type), intent(in) :: propagation_direction
 
         end subroutine
 

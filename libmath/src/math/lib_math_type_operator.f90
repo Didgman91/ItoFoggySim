@@ -1621,9 +1621,7 @@ module lib_math_type_operator
             rv%r_32 = sin_phi * cos_theta
             rv%r_33 = cos_phi * cos_theta
 
-        end function lib_math_get_matrix_rot_z
-
-        function
+        end function lib_math_get_matrix_rot_x_y_z
 
 ! ---- list_cartesian_coordinate ----
         function lib_math_list_cartesian_operator_add_array_cmplx(lhs, rhs) result(rv)
