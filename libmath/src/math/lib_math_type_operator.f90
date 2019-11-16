@@ -57,10 +57,6 @@ module lib_math_type_operator
         module procedure lib_math_list_spherical_operator_0d_add_array_cmplx
         module procedure lib_math_list_spherical_operator_array_add_0d_cmplx
 
-        module procedure lib_math_cartesian_operator_matrix_mul_real
-        module procedure lib_math_cartesian_operator_matrix_mul_cmplx
-        module procedure lib_math_cartesian_operator_matrix_mul_matrix
-
         ! list list
         module procedure lib_math_list_list_real_add
         module procedure lib_math_list_list_cmplx_add
@@ -95,6 +91,8 @@ module lib_math_type_operator
         module procedure lib_math_cartesian_operator_real_mul_scalar_real
         module procedure lib_math_cartesian_operator_real_mul_scalar_cmplx
 
+        module procedure lib_math_cartesian_operator_matrix_mul_real
+
         ! cmplx coordinates
         module procedure lib_math_cartesian_operator_scalar_real_mul
         module procedure lib_math_cartesian_operator_scalar_cmplx_mul
@@ -121,6 +119,10 @@ module lib_math_type_operator
         module procedure lib_math_list_spherical_operator_array_c_mul_array_cmplx
         module procedure lib_math_list_spherical_operator_real_mul_array_cmplx
         module procedure lib_math_list_spherical_operator_cmplx_mul_array_cmplx
+
+        module procedure lib_math_cartesian_operator_matrix_mul_cmplx
+
+        module procedure lib_math_cartesian_operator_matrix_mul_matrix
 
         ! list list
         module procedure lib_math_list_list_real_mul_real

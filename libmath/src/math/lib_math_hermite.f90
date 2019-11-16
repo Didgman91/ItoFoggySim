@@ -88,15 +88,17 @@ module lib_math_hermite
 
             m_m = size(x)
 
-            m_n = fnu + n - 1
-
-            call h_polynomial_value ( m_m, m_n, x, m_p )
-
             if (allocated(h)) deallocate(h)
-
             allocate(h(lbound(x,1):ubound(x,1), fnu:fnu+n-1))
 
-            h = m_p(1:size(x), fnu:fnu+n-1)
+            m_n = fnu + n - 1
+            if (m_n .eq. 0) then
+                h = 1
+            else
+                call h_polynomial_value ( m_m, m_n, x, m_p )
+
+                h = m_p(1:size(x), fnu:fnu+n-1)
+            end if
 
         end subroutine lib_math_hermite_polynomial_array_x
 

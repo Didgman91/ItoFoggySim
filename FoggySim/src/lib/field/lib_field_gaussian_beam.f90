@@ -1,7 +1,18 @@
 module lib_field_gaussian_beam
     use libmath
+    use lib_constants
     use lib_field_polarisation
     implicit none
+
+    private
+
+    ! public function
+    public :: lib_field_gaussian_beam_hermite_get_field
+
+    public :: lib_field_gaussian_beam_test_functions
+
+    ! public types
+    public :: lib_field_gaussian_beam_hermite_type
 
     type lib_field_gaussian_beam_hermite_type
         double precision :: e_field_0                   ! [V/m]
@@ -11,6 +22,7 @@ module lib_field_gaussian_beam
         double precision :: waist_y0                    ! [m]
         integer :: tem_m                                ! Hermite-Gaussian Mode
         integer :: tem_n                                ! Hermite-Gaussian Mode
+        type(jones_vector_type) :: polarisation
     end type
 
     contains
@@ -19,17 +31,86 @@ module lib_field_gaussian_beam
         ! ----
         !   parameter: type(lib_field_gaussian_beam_hermite_type)
         !       parameter of the Hermite-Gaussian beam
-        !   x: type(cartesian_coordinate_real_type)
-        !       evaluation point
+        !   evaluation_point_x: type(cartesian_coordinate_real_type)
+        !       evaluation point at the beam koordinate system
+        !   polarisation: type(jones_vector_type)
+        !       beam polarisation
+        !   psi: double precsision, optional (std: 0)
+        !       rotation about the x-axis [rad]
+        !   theta: double precsision, optional (std: 0)
+        !       rotation about the y-axis [rad]
+        !   phi: double precision, optional (std: 0)
+        !       rotation about the z-axis [rad]
         !
-        subroutine lib_field_gaussian_beam_hermite(parameter, evaluation_point_x, polarisation, propagation_direction)
+        ! Returns
+        ! ----
+        !   e_field: type(cartesian_coordinate_cmplx_type)
+        !       electical field component at "evaluation_point_x"
+        !   h_field: type(cartesian_coordinate_cmplx_type)
+        !       magnetical field component at "evaluation_point_x"
+        !
+        ! Convention
+        ! ----
+        !   Tait-Bryan angles: z-y'-x'' (intrinsic rotations) or
+        !                      x-y-z   (extrinsic rotations)
+        !   The intrinsic rotations are known as: yaw, pitch and roll
+        !
+        subroutine lib_field_gaussian_beam_hermite_get_field(parameter, evaluation_point_x, &
+                                                   e_field, h_field,&
+                                                   phi, theta, psi)
             implicit none
 
             ! dummy
             type(lib_field_gaussian_beam_hermite_type), intent(in) :: parameter
             type(cartesian_coordinate_real_type), intent(in) :: evaluation_point_x
-            type(jones_vector_type), intent(in) :: polarisation
-            type(cartesian_coordinate_real_type), intent(in) :: propagation_direction
+
+            double precision, intent(in), optional :: phi
+            double precision, intent(in), optional :: theta
+            double precision, intent(in), optional :: psi
+
+
+            type(cartesian_coordinate_cmplx_type) :: e_field
+            type(cartesian_coordinate_cmplx_type) :: h_field
+
+            ! auxiliary
+            double complex :: field
+            double precision :: wave_impedance
+
+            double precision :: m_phi
+            double precision :: m_theta
+            double precision :: m_psi
+            type(cartresian_coordinate_rot_matrix_type) :: rot
+
+            m_phi = 0
+            if (present(phi)) m_phi = phi
+
+            m_theta = 0
+            if (present(theta)) m_theta = theta
+
+            m_psi = 0
+            if (present(psi)) m_psi = psi
+
+            field = lib_fiel_gaussian_beam_hermite_scalar(parameter%e_field_0, &
+                                                          parameter%wave_length_0, &
+                                                          parameter%refractive_index_medium, &
+                                                          parameter%waist_x0, parameter%waist_y0, &
+                                                          evaluation_point_x, &
+                                                          tem_m=parameter%tem_m, &
+                                                          tem_n=parameter%tem_n)
+            e_field = field * parameter%polarisation;
+
+            ! Quantum Optics: An Introduction, Mark Fox
+            ! eq. 2.25 but plane wave
+            wave_impedance = const_z_0 / parameter%refractive_index_medium
+            h_field%x = e_field%y / wave_impedance
+            h_field%y = e_field%x / wave_impedance
+            h_field%z = e_field%z / wave_impedance
+
+            if (m_phi .ne. 0 .or. m_theta .ne. 0 .or. m_psi .ne. 0) then
+                rot  = lib_math_get_matrix_rot_x_y_z(m_phi, m_theta, m_psi)
+                e_field = rot * e_field
+                h_field = rot * h_field
+            end if
 
         end subroutine
 
@@ -70,10 +151,9 @@ module lib_field_gaussian_beam
         !
         ! Reference: Laser in der Fertigung Helmut Hügel, Thomas Graf
         !            eq. 2.28 without the time-dependent term
-        subroutine lib_fiel_gaussian_beam_hermite_scalar(e_field_0, wave_length_0, n_medium, &
+        function lib_fiel_gaussian_beam_hermite_scalar(e_field_0, wave_length_0, n_medium, &
                                                   waist_x0, waist_y0, &
-                                                  x, tem_m, tem_n, &
-                                                  field)
+                                                  x, tem_m, tem_n) result(field)
             implicit none
             ! dummy
             double precision, intent(in) :: e_field_0
@@ -152,7 +232,7 @@ module lib_field_gaussian_beam
 
             field = buffer_cmplx
 
-        end subroutine lib_fiel_gaussian_beam_hermite_scalar
+        end function lib_fiel_gaussian_beam_hermite_scalar
 
         ! Argument
         ! ----
@@ -245,5 +325,96 @@ module lib_field_gaussian_beam
             zr = PI * w0**2 * n_medium / wave_length_0
 
         end function lib_field_gaussian_beam_rayleigh_length
+
+        function lib_field_gaussian_beam_test_functions() result(rv)
+            use lib_field
+            implicit none
+            ! dummy
+            integer :: rv
+
+            rv = 0
+
+            if (.not. test_lib_field_gaussian_beam_hermite_get_field()) rv = rv + 1
+
+            contains
+
+            function test_lib_field_gaussian_beam_hermite_get_field() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! auxiliary
+                integer :: i
+                integer :: ii
+
+                double precision :: x
+                double precision :: y
+                double precision :: z
+                type(lib_field_gaussian_beam_hermite_type) :: gauss_parameter
+
+                double precision, dimension(2) :: x_range
+                double precision, dimension(2) :: z_range
+                real(kind=8) :: step_size
+
+                integer :: no_x_values
+                integer :: no_z_values
+
+                type(cartesian_coordinate_real_type) :: point_cartesian
+
+                type(cartesian_coordinate_cmplx_type) :: buffer_e_field
+                type(cartesian_coordinate_cmplx_type) :: buffer_h_field
+
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field
+
+                x_range = (/ -5_8 * unit_mu, 5.0_8 * unit_mu /)
+                z_range = (/ -5_8 * unit_mu, 10.0_8 * unit_mu /)
+!                    step_size = 0.02_8 * unit_mu
+                step_size = 0.05_8 * unit_mu
+
+
+                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
+
+                allocate(e_field(no_x_values, no_z_values))
+                allocate(h_field(no_x_values, no_z_values))
+
+                x = 0
+                y = 0
+                z = 0
+
+                gauss_parameter%e_field_0 = 1
+                gauss_parameter%refractive_index_medium = 1
+                gauss_parameter%tem_m = 0
+                gauss_parameter%tem_n = 0
+                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_type_get_linear_h()
+                gauss_parameter%waist_x0 = 1 * unit_mu
+                gauss_parameter%waist_y0 = 1 * unit_mu
+                gauss_parameter%wave_length_0 = 0.55 * unit_mu
+
+!                !$OMP PARALLEL DO PRIVATE(i, ii, x, z)
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii=1, no_z_values
+                        z = z_range(1) + (ii-1) * step_size
+
+                        point_cartesian%x = x
+                        point_cartesian%y = y
+                        point_cartesian%z = z
+
+                        call lib_field_gaussian_beam_hermite_get_field(gauss_parameter, &
+                                                                       point_cartesian, &
+                                                                       buffer_e_field, buffer_h_field)
+                        e_field(i,ii) = buffer_e_field
+                        h_field(i,ii) = buffer_h_field
+                    end do
+                end do
+!                !$OMP END PARALLEL DO
+
+                rv = lib_field_export(e_field, h_field, "temp/real/gauss_")
+
+            end function
+
+        end function
 
 end module lib_field_gaussian_beam
