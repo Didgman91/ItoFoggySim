@@ -80,6 +80,7 @@ module lib_field_gaussian_beam
             double precision :: m_theta
             double precision :: m_psi
             type(cartresian_coordinate_rot_matrix_type) :: rot
+            type(cartesian_coordinate_real_type) :: point_x
 
             m_phi = 0
             if (present(phi)) m_phi = phi
@@ -90,11 +91,18 @@ module lib_field_gaussian_beam
             m_psi = 0
             if (present(psi)) m_psi = psi
 
+            if (m_phi .ne. 0 .or. m_theta .ne. 0 .or. m_psi .ne. 0) then
+                rot  = lib_math_get_matrix_rot_x_y_z(m_phi, m_theta, m_psi)
+                point_x = rot * evaluation_point_x
+            else
+                point_x = evaluation_point_x
+            end if
+
             field = lib_fiel_gaussian_beam_hermite_scalar(parameter%e_field_0, &
                                                           parameter%wave_length_0, &
                                                           parameter%refractive_index_medium, &
                                                           parameter%waist_x0, parameter%waist_y0, &
-                                                          evaluation_point_x, &
+                                                          point_x, &
                                                           tem_m=parameter%tem_m, &
                                                           tem_n=parameter%tem_n)
             e_field = field * parameter%polarisation;
@@ -107,7 +115,7 @@ module lib_field_gaussian_beam
             h_field%z = e_field%z / wave_impedance
 
             if (m_phi .ne. 0 .or. m_theta .ne. 0 .or. m_psi .ne. 0) then
-                rot  = lib_math_get_matrix_rot_x_y_z(m_phi, m_theta, m_psi)
+!                rot  = lib_math_get_matrix_rot_x_y_z(m_phi, m_theta, m_psi)
                 e_field = rot * e_field
                 h_field = rot * h_field
             end if
@@ -353,11 +361,11 @@ module lib_field_gaussian_beam
                 type(lib_field_gaussian_beam_hermite_type) :: gauss_parameter
 
                 double precision, dimension(2) :: x_range
-                double precision, dimension(2) :: z_range
+                double precision, dimension(2) :: y_range
                 real(kind=8) :: step_size
 
                 integer :: no_x_values
-                integer :: no_z_values
+                integer :: no_y_values
 
                 type(cartesian_coordinate_real_type) :: point_cartesian
 
@@ -368,16 +376,16 @@ module lib_field_gaussian_beam
                 type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field
 
                 x_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
-                z_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+                y_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
 !                    step_size = 0.02_8 * unit_mu
                 step_size = 0.075_8 * unit_mu
 
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
-                no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
+                no_y_values = abs(int(floor((y_range(2)-y_range(1))/step_size)))
 
-                allocate(e_field(no_x_values, no_z_values))
-                allocate(h_field(no_x_values, no_z_values))
+                allocate(e_field(no_x_values, no_y_values))
+                allocate(h_field(no_x_values, no_y_values))
 
                 x = 0
                 y = 0
@@ -396,8 +404,8 @@ module lib_field_gaussian_beam
 !                !$OMP PARALLEL DO PRIVATE(i, ii) FIRSTPRIVATE x, y, z)
                 do i=1, no_x_values
                     x = x_range(1) + (i-1) * step_size
-                    do ii=1, no_z_values
-                        y = z_range(1) + (ii-1) * step_size
+                    do ii=1, no_y_values
+                        y = y_range(1) + (ii-1) * step_size
 
                         point_cartesian%x = x
                         point_cartesian%y = y
@@ -405,7 +413,9 @@ module lib_field_gaussian_beam
 
                         call lib_field_gaussian_beam_hermite_get_field(gauss_parameter, &
                                                                        point_cartesian, &
-                                                                       buffer_e_field, buffer_h_field)
+                                                                       buffer_e_field, buffer_h_field, &
+                                                                       theta = PI / 8d0, &
+                                                                       psi = PI / 8d0)
                         e_field(i,ii) = buffer_e_field
                         h_field(i,ii) = buffer_h_field
                     end do
