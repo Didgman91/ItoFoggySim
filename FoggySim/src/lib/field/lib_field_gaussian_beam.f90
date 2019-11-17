@@ -110,12 +110,12 @@ module lib_field_gaussian_beam
             ! Quantum Optics: An Introduction, Mark Fox
             ! eq. 2.25 but plane wave
             wave_impedance = const_z_0 / parameter%refractive_index_medium
-            h_field%x = e_field%y / wave_impedance
-            h_field%y = e_field%x / wave_impedance
-            h_field%z = e_field%z / wave_impedance
+
+            rot  = lib_math_get_matrix_rot_x_y_z(0d0, 0d0, PI / 2d0)
+            h_field = rot * e_field / wave_impedance
 
             if (m_phi .ne. 0 .or. m_theta .ne. 0 .or. m_psi .ne. 0) then
-!                rot  = lib_math_get_matrix_rot_x_y_z(m_phi, m_theta, m_psi)
+                rot  = lib_math_get_matrix_rot_x_y_z(m_phi, m_theta, m_psi)
                 e_field = rot * e_field
                 h_field = rot * h_field
             end if
@@ -343,6 +343,7 @@ module lib_field_gaussian_beam
             rv = 0
 
             if (.not. test_lib_field_gaussian_beam_hermite_get_field()) rv = rv + 1
+!            if (.not. test_lib_field_gaussian_beam_hermite_get_field_2()) rv = rv + 1
 
             contains
 
@@ -397,9 +398,91 @@ module lib_field_gaussian_beam
                 gauss_parameter%tem_n = 0
 !                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_type_get_linear_rot(PI/4d0)
                 gauss_parameter%polarisation = lib_field_polarisation_jones_vector_type_get_linear_h()
+!                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_type_get_circular_plus()
                 gauss_parameter%waist_x0 = 2.5 * unit_mu
                 gauss_parameter%waist_y0 = 2.5 * unit_mu
                 gauss_parameter%wave_length_0 = 0.55 * unit_mu
+
+!                !$OMP PARALLEL DO PRIVATE(i, ii) FIRSTPRIVATE x, y, z)
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii= no_y_values, 1, -1
+                        y = y_range(1) + (ii-1) * step_size
+
+                        point_cartesian%x = x
+                        point_cartesian%y = y
+                        point_cartesian%z = z
+
+                        call lib_field_gaussian_beam_hermite_get_field(gauss_parameter, &
+                                                                       point_cartesian, &
+                                                                       buffer_e_field, buffer_h_field, &
+                                                                       phi = PI / 8d0) !, &
+!                                                                       psi = PI / 8d0)
+                        e_field(i,ii) = buffer_e_field
+                        h_field(i,ii) = buffer_h_field
+                    end do
+                end do
+!                !$OMP END PARALLEL DO
+
+                rv = lib_field_export(e_field, h_field, "temp/real/gauss_")
+
+            end function test_lib_field_gaussian_beam_hermite_get_field
+
+            function test_lib_field_gaussian_beam_hermite_get_field_2() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! auxiliary
+                integer :: i
+                integer :: ii
+
+                double precision :: x
+                double precision :: y
+                double precision :: z
+                type(lib_field_gaussian_beam_hermite_type), dimension(2) :: gauss_parameter
+
+                double precision, dimension(2) :: x_range
+                double precision, dimension(2) :: y_range
+                real(kind=8) :: step_size
+
+                integer :: no_x_values
+                integer :: no_y_values
+
+                type(cartesian_coordinate_real_type) :: point_cartesian
+
+                type(cartesian_coordinate_cmplx_type) :: buffer_e_field
+                type(cartesian_coordinate_cmplx_type) :: buffer_h_field
+
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field
+
+                x_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+                y_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+!                    step_size = 0.02_8 * unit_mu
+                step_size = 0.075_8 * unit_mu
+
+
+                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_y_values = abs(int(floor((y_range(2)-y_range(1))/step_size)))
+
+                allocate(e_field(no_x_values, no_y_values))
+                allocate(h_field(no_x_values, no_y_values))
+
+                x = 0
+                y = 0
+                z = 10 * unit_mu
+
+                gauss_parameter(:)%e_field_0 = 1
+                gauss_parameter(:)%refractive_index_medium = 1
+                gauss_parameter(:)%tem_m = 0
+                gauss_parameter(:)%tem_n = 0
+!                gauss_paramete(:)r%polarisation = lib_field_polarisation_jones_vector_type_get_linear_rot(PI/4d0)
+                gauss_parameter(:)%polarisation = lib_field_polarisation_jones_vector_type_get_linear_h()
+!                gauss_paramete(:)r%polarisation = lib_field_polarisation_jones_vector_type_get_circular_plus()
+                gauss_parameter(:)%waist_x0 = 2.5 * unit_mu
+                gauss_parameter(:)%waist_y0 = 2.5 * unit_mu
+                gauss_parameter(:)%wave_length_0 = 0.55 * unit_mu
 
 !                !$OMP PARALLEL DO PRIVATE(i, ii) FIRSTPRIVATE x, y, z)
                 do i=1, no_x_values
@@ -411,13 +494,21 @@ module lib_field_gaussian_beam
                         point_cartesian%y = y
                         point_cartesian%z = z
 
-                        call lib_field_gaussian_beam_hermite_get_field(gauss_parameter, &
+                        call lib_field_gaussian_beam_hermite_get_field(gauss_parameter(1), &
                                                                        point_cartesian, &
-                                                                       buffer_e_field, buffer_h_field, &
-                                                                       theta = PI / 8d0, &
-                                                                       psi = PI / 8d0)
+                                                                       buffer_e_field, buffer_h_field , &
+                                                                       theta = PI / 16d0)!, &
+!                                                                       psi = PI / 16d0)
                         e_field(i,ii) = buffer_e_field
                         h_field(i,ii) = buffer_h_field
+
+                        call lib_field_gaussian_beam_hermite_get_field(gauss_parameter(2), &
+                                                                       point_cartesian, &
+                                                                       buffer_e_field, buffer_h_field , &
+                                                                       theta = PI / 16d0)!, &
+!                                                                       psi = PI / 16d0)
+                        e_field(i,ii) = e_field(i,ii) + buffer_e_field
+                        h_field(i,ii) = h_field(i,ii) + buffer_h_field
                     end do
                 end do
 !                !$OMP END PARALLEL DO

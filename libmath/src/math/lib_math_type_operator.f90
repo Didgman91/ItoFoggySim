@@ -1583,7 +1583,10 @@ module lib_math_type_operator
         !                      x-y-z   (extrinsic rotations)
         !   The intrinsic rotations are known as: yaw, pitch and roll
         !
-        function lib_math_get_matrix_rot_x_y_z(psi, theta, phi) result(rv)
+        ! Refrence: http://mathworld.wolfram.com/EulerAngles.html
+        !           eq. 51 .. 59
+        !
+        function lib_math_get_matrix_rot_x_y_z(phi, theta, psi) result(rv)
             implicit none
             ! dummy
             double precision, intent(in) :: psi
@@ -1602,26 +1605,26 @@ module lib_math_type_operator
             double precision :: cos_psi
             double precision :: sin_psi
 
+            cos_psi = cos(phi)
+            sin_psi = sin(phi)
+
             cos_theta = cos(theta)
             sin_theta = sin(theta)
 
-            cos_phi = cos(phi)
-            sin_phi = sin(phi)
+            cos_phi = cos(psi)
+            sin_phi = sin(psi)
 
-            cos_psi = cos(psi)
-            sin_psi = sin(psi)
+            rv%r_11 = cos_theta * cos_phi
+            rv%r_12 = cos_theta * sin_phi
+            rv%r_13 = -sin_theta
 
-            rv%r_11 = cos_theta * cos_psi
-            rv%r_12 = -cos_phi * sin_psi + sin_phi * sin_theta * cos_psi
-            rv%r_13 = sin_phi * sin_psi + cos_phi * sin_theta * cos_psi
+            rv%r_21 = sin_psi * sin_theta * cos_phi - cos_psi * sin_phi
+            rv%r_22 = sin_psi * sin_theta * sin_phi + cos_psi * cos_phi
+            rv%r_23 = cos_theta * sin_psi
 
-            rv%r_21 = cos_theta * sin_psi
-            rv%r_22 = cos_phi * cos_psi + sin_phi * sin_theta * sin_psi
-            rv%r_23 = -sin_phi * cos_psi + cos_phi * sin_theta * sin_psi
-
-            rv%r_31 = -sin_theta
-            rv%r_32 = sin_phi * cos_theta
-            rv%r_33 = cos_phi * cos_theta
+            rv%r_31 = cos_psi * sin_theta * cos_phi + sin_psi * sin_phi
+            rv%r_32 = cos_psi * sin_theta * sin_phi - sin_psi * cos_phi
+            rv%r_33 = cos_theta * cos_psi
 
         end function lib_math_get_matrix_rot_x_y_z
 
