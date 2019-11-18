@@ -33,7 +33,7 @@ module lib_math_type_operator
     public :: lib_math_get_matrix_rot_x
     public :: lib_math_get_matrix_rot_y
     public :: lib_math_get_matrix_rot_z
-    public :: lib_math_get_matrix_rot_x_y_z
+    public :: lib_math_get_matrix_rot
 
     ! ---- operator ----
     interface operator (+)
@@ -1565,28 +1565,24 @@ module lib_math_type_operator
 
         ! Argument
         ! ----
-        !   psi: double precsision
-        !       rotation about the x-axis [rad]
-        !   theta: double precsision
-        !       rotation about the y-axis [rad]
-        !   phi: double precision
+        !   phi: double precsision
         !       rotation about the z-axis [rad]
+        !   theta: double precsision
+        !       rotation about the x'-axis [0, Pi] [rad]
+        !   psi: double precision
+        !       rotation about the z'-axis [rad]
         !
         ! Returns
         ! ----
         !   rv: type(cartresian_coordinate_rot_matrix_type)
         !       rotation matrix
         !
-        ! Convention
-        ! ----
-        !   Tait-Bryan angles: z-y'-x'' (intrinsic rotations) or
-        !                      x-y-z   (extrinsic rotations)
-        !   The intrinsic rotations are known as: yaw, pitch and roll
+        ! Convention: x-convention
         !
         ! Refrence: http://mathworld.wolfram.com/EulerAngles.html
-        !           eq. 51 .. 59
+        !           eq. 6..14
         !
-        function lib_math_get_matrix_rot_x_y_z(phi, theta, psi) result(rv)
+        function lib_math_get_matrix_rot(phi, theta, psi) result(rv)
             implicit none
             ! dummy
             double precision, intent(in) :: psi
@@ -1605,28 +1601,30 @@ module lib_math_type_operator
             double precision :: cos_psi
             double precision :: sin_psi
 
-            cos_psi = cos(phi)
-            sin_psi = sin(phi)
+            cos_phi = cos(phi)
+            sin_phi = sin(phi)
 
             cos_theta = cos(theta)
             sin_theta = sin(theta)
 
-            cos_phi = cos(psi)
-            sin_phi = sin(psi)
+            cos_psi = cos(psi)
+            sin_psi = sin(psi)
 
-            rv%r_11 = cos_theta * cos_phi
-            rv%r_12 = cos_theta * sin_phi
-            rv%r_13 = -sin_theta
+            ! Refrence: http://mathworld.wolfram.com/EulerAngles.html
+            !           eq. 6..14
+            rv%r_11 = cos_psi * cos_phi - cos_theta * sin_phi * sin_psi
+            rv%r_12 = cos_psi * sin_phi + cos_theta * cos_phi * sin_psi
+            rv%r_13 = sin_psi * sin_theta
 
-            rv%r_21 = sin_psi * sin_theta * cos_phi - cos_psi * sin_phi
-            rv%r_22 = sin_psi * sin_theta * sin_phi + cos_psi * cos_phi
-            rv%r_23 = cos_theta * sin_psi
+            rv%r_21 = -sin_psi * cos_phi - cos_theta * sin_phi * cos_psi
+            rv%r_22 = -sin_psi * sin_phi + cos_theta * cos_phi * cos_psi
+            rv%r_23 = cos_psi * sin_theta
 
-            rv%r_31 = cos_psi * sin_theta * cos_phi + sin_psi * sin_phi
-            rv%r_32 = cos_psi * sin_theta * sin_phi - sin_psi * cos_phi
-            rv%r_33 = cos_theta * cos_psi
+            rv%r_31 = sin_theta * sin_phi
+            rv%r_32 = -sin_theta * cos_phi
+            rv%r_33 = cos_theta
 
-        end function lib_math_get_matrix_rot_x_y_z
+        end function lib_math_get_matrix_rot
 
 ! ---- list_cartesian_coordinate ----
         function lib_math_list_cartesian_operator_add_array_cmplx(lhs, rhs) result(rv)
@@ -3821,6 +3819,8 @@ module lib_math_type_operator
                 rv = rv + 1
             end if
 
+            if (.not. test_lib_math_get_matrix_rot()) rv = rv + 1
+
             print *, "--------lib_math_type_operator_test_functions--------"
             if (rv == 0) then
                 print *, "lib_math_type_operator_test_functions tests: OK"
@@ -5905,6 +5905,89 @@ module lib_math_type_operator
                     end do
 
                 end function test_lib_math_array_make_list_of_list_list_cmplx
+
+                function test_lib_math_get_matrix_rot() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliaray
+                    integer :: i
+                    double precision :: buffer
+                    character(len=30) :: str
+
+                    double precision :: phi
+                    double precision :: theta
+                    double precision :: psi
+                    type(cartresian_coordinate_rot_matrix_type) :: rot
+
+                    type(cartesian_coordinate_real_type), dimension(3) :: point
+                    type(cartesian_coordinate_real_type), dimension(3) :: point_rot
+                    type(cartesian_coordinate_real_type), dimension(3) :: ground_truth_point_rot
+
+
+                    phi = PI / 2d0
+                    theta = PI / 2d0
+                    psi = PI / 2d0
+                    rot = lib_math_get_matrix_rot(phi, theta, psi)
+
+                    point(1)%x = 1
+                    point(1)%y = 0
+                    point(1)%z = 0
+
+                    point_rot(1) = rot * point(1)
+
+                    ground_truth_point_rot(1)%x = 0
+                    ground_truth_point_rot(1)%y = 0
+                    ground_truth_point_rot(1)%z = 1
+
+                    ! ---
+
+                    point(2)%x = 0
+                    point(2)%y = 1
+                    point(2)%z = 0
+
+                    point_rot(2) = rot * point(2)
+
+                    ground_truth_point_rot(2)%x = 0
+                    ground_truth_point_rot(2)%y = -1
+                    ground_truth_point_rot(2)%z = 0
+
+                    ! ---
+
+                    point(3)%x = 0
+                    point(3)%y = 0
+                    point(3)%z = 1
+
+                    point_rot(3) = rot * point(3)
+
+                    ground_truth_point_rot(3)%x = 1
+                    ground_truth_point_rot(3)%y = 0
+                    ground_truth_point_rot(3)%z = 0
+
+
+                    rv = .true.
+                    print *, "test_lib_math_get_matrix_rot:"
+                    do i=1, size(ground_truth_point_rot, 1)
+                        ! x
+                        buffer = ground_truth_point_rot(i)%x - point_rot(i)%x
+                        write(str, '(2X, A, 1X, I2, 3X, A, 1X)') "i =", i, "x:"
+                        if (.not. evaluate(buffer, i, trim(str))) rv = .false.
+
+                        ! y
+                        buffer = ground_truth_point_rot(i)%y - point_rot(i)%y
+                        write(str, '(2X, A, 1X, I2, 3X, A, 1X)') "i =", i, "y:"
+                        if (.not. evaluate(buffer, i, trim(str))) rv = .false.
+
+                        ! z
+                        buffer = ground_truth_point_rot(i)%z - point_rot(i)%z
+                        write(str, '(2X, A, 1X, I2, 3X, A, 1X)') "i =", i, "z:"
+                        if (.not. evaluate(buffer, i, trim(str))) rv = .false.
+
+                        print *, ""
+                    end do
+
+                end function test_lib_math_get_matrix_rot
 
         end function lib_math_type_operator_test_functions
 
