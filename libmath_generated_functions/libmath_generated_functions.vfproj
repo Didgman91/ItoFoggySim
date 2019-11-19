@@ -47,8 +47,7 @@
 		<Filter Name="src">
 		<Filter Name="lib">
 		<Filter Name="legendre_poly">
-		<File RelativePath=".\src\lib\legendre_poly\limit_new.f90"/>
-		<File RelativePath=".\src\lib\legendre_poly\poly_derivative_new.f90"/>
-		<File RelativePath=".\src\lib\legendre_poly\poly_new.f90"/></Filter>
+		<File RelativePath=".\src\lib\legendre_poly\PiPoly.f90"/>
+		<File RelativePath=".\src\lib\legendre_poly\TauPoly.f90"/></Filter>
 		<File RelativePath=".\src\lib\libmath_generated_functions.f90"/></Filter></Filter></Filter></Files>
 	<Globals/></VisualStudioProject>
