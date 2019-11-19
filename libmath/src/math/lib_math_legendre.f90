@@ -103,6 +103,7 @@ module lib_math_legendre
         !       pd(1,:): result of the deriviative of the associated Legendre polynomial with a negativ m
         !       pd(2,:): result of the deriviative of the associated Legendre polynomial with a positiv m
         !
+        ! Refrence: http://mathworld.wolfram.com/AssociatedLegendrePolynomial.html
         subroutine lib_math_associated_legendre_polynomial_with_negative_m(x, m, fnu, n, pm, pd, condon_shortley_phase)
             implicit none
             ! dummy
@@ -158,6 +159,75 @@ module lib_math_legendre
             end if
 
         end subroutine lib_math_associated_legendre_polynomial_with_negative_m
+
+        ! calculates the associated Legendre polynomial
+        !
+        ! Argument
+        ! ----
+        !   x: double precision
+        !       input value
+        !   fnu: integer
+        !       degree of initial function, fnu .GE. 0
+        !   n: integer
+        !       number of members of the sequence, n .GE. 1
+        !   condon_shortley_phase: boolean, optional(std: false)
+        !       true: with Condon–Shortley phase
+        !       false: without Condon–Shortley phase
+        !
+        ! Results
+        ! ----
+        !   pm: type(list_list_real)
+        !       result of the associated Legendre polynomial
+        !   pd: double precision, dimension(2, n)
+        !       result of the deriviative of the associated Legendre polynomial
+        subroutine lib_math_associated_legendre_polynomial_range(x, fnu, n, pm, pd, condon_shortley_phase)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: x
+            integer(kind=4), intent(in) :: fnu
+            integer(kind=4), intent(in) :: n
+
+            type(list_list_real) :: pm
+            type(list_list_real) :: pd
+
+            logical, optional :: condon_shortley_phase
+
+
+            ! auxiliaray
+            integer :: m_n
+            integer :: m_m
+
+            double precision, dimension(:, :), allocatable :: buffer_pm
+            double precision, dimension(:, :), allocatable :: buffer_pd
+
+            logical :: m_condon_shortley_phase
+
+            m_condon_shortley_phase = .false.
+            if (present(condon_shortley_phase)) m_condon_shortley_phase = condon_shortley_phase
+
+            allocate (buffer_pm(2, 0:fnu+n-1))
+            allocate (buffer_pd(2, 0:fnu+n-1))
+
+            call init_list(pm, fnu, n)
+            call init_list(pd, fnu, n)
+
+            do m_m=fnu, fnu+n-1
+                call lib_math_associated_legendre_polynomial_with_negative_m(x, m_m, &
+                                                                             m_m, fnu+n-1, &
+                                                                             buffer_pm, buffer_pd, &
+                                                                             m_condon_shortley_phase)
+                do m_n=m_m, fnu+n-1
+                        pm%item(m_n)%item(-m_m) = buffer_pm(1,m_n-m_m)
+                        pm%item(m_n)%item(m_m) = buffer_pm(2,m_n-m_m)
+
+                        pd%item(m_n)%item(-m_m) = buffer_pd(1,m_n-m_m)
+                        pd%item(m_n)%item(m_m) = buffer_pd(2,m_n-m_m)
+                end do
+            end do
+
+            deallocate (buffer_pm)
+            deallocate (buffer_pd)
+        end subroutine lib_math_associated_legendre_polynomial_range
 
         ! calculates the associated Legendre polynomial
         !
@@ -747,27 +817,83 @@ module lib_math_legendre
 
             if (x .eq. 1.0_8 .or.&
                 x .eq. -1.0_8) then
-                do n=1, n_max
-                    do m=-n, n
-                        pi_nm%item(n)%item(m) = get_associated_legendre_polynomial_limit(n, m)
-                    end do
+!                !$OMP PARALLEL DO PRIVATE(n, m)
+!                do n=1, n_max
+!                    do m=-n, n
+!                        pi_nm%item(n)%item(m) = get_associated_legendre_polynomial_limit(n, m)
+!                    end do
+!                end do
+!                !$OMP END PARALLEL DO
+
+                !$OMP PARALLEL DO PRIVATE(n)
+                do n = 1, n_max
+                    pi_nm%item(n)%item(:) = 0
+                    pi_nm%item(n)%item(-1) = -0.5_8 !0.5_8
+
+                    pi_nm%item(n)%item(1) = -n * (n + 1) / 2 !n * (n + 1) / 2
                 end do
+                !$OMP END PARALLEL DO
+
+                if (x .eq. -1.0_8) then
+                    !$OMP PARALLEL DO PRIVATE(n)
+                    do n = 2, n_max, 2
+                        pi_nm%item(n)%item(-1) = - pi_nm%item(n)%item(-1)
+                        pi_nm%item(n)%item(1) = - pi_nm%item(n)%item(1)
+                    end do
+                    !$OMP END PARALLEL DO
+                end if
             else
+                !$OMP PARALLEL DO PRIVATE(n, m)
                 do n=1, n_max
                     do m=-n, n
                         pi_nm%item(n)%item(m) = get_associated_legendre_polynomial(n, m, theta)
                     end do
                 end do
+                !$OMP END PARALLEL DO
             end if
 
-            do n=1, n_max
-                do m=-n, n
-                    tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative(n, m, theta)
-                end do
-            end do
+            if (x .eq. 1.0_8 .or.&
+                x .eq. -1.0_8) then
+!                !$OMP PARALLEL DO PRIVATE(n, m)
+!                do n=1, n_max
+!                    do m=-n, n
+!                        tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative_limit(n, m)
+!                    end do
+!                end do
+!                !$OMP END PARALLEL DO
 
+                !$OMP PARALLEL DO PRIVATE(n)
+                do n = 1, n_max
+                    tau_nm%item(n)%item(:) = 0
+                    tau_nm%item(n)%item(-1) = 0.5_8 !-0.5_8
+
+                    tau_nm%item(n)%item(1) = -n * (n + 1) / 2 !n * (n + 1) / 2
+                end do
+                !$OMP END PARALLEL DO
+
+                if (x .eq. -1.0_8) then
+                    !$OMP PARALLEL DO PRIVATE(n)
+                    do n = 1, n_max, 2
+                        tau_nm%item(n)%item(-1) = - pi_nm%item(n)%item(-1)
+                        tau_nm%item(n)%item(1) = - pi_nm%item(n)%item(1)
+                    end do
+                    !$OMP END PARALLEL DO
+                end if
+            else
+                !$OMP PARALLEL DO PRIVATE(n, m)
+                do n=1, n_max
+                    do m=-n, n
+                        tau_nm%item(n)%item(m) = get_associated_legendre_polynomial_derivative(n, m, theta)
+                    end do
+                end do
+                !$OMP END PARALLEL DO
+            end if
+
+            ! HINT: the calculation of the polynomial includes the condon shortley phase
             if (present(condon_shortley_phase)) then
                 if (.not. condon_shortley_phase) then
+                    ! remove phase
+                    !$OMP PARALLEL DO PRIVATE(n, m)
                     do n=0, n_max
                         do m=-n, n
                             if (IAND(abs(m), 1) .eq. 1) then
@@ -776,9 +902,22 @@ module lib_math_legendre
                             end if
                         end do
                     end do
+                    !$OMP END PARALLEL DO
 !                    pm = (-1.0_8)**m * pm
 !                    pd = (-1.0_8)**m * pd
                 end if
+            else
+                ! std: remove phase
+                !$OMP PARALLEL DO PRIVATE(n, m)
+                do n=0, n_max
+                    do m=-n, n
+                        if (IAND(abs(m), 1) .eq. 1) then
+                            pi_nm%item(n)%item(m) = -pi_nm%item(n)%item(m)
+                            tau_nm%item(n)%item(m) = -tau_nm%item(n)%item(m)
+                        end if
+                    end do
+                end do
+                !$OMP END PARALLEL DO
             end if
 
         end subroutine
@@ -840,7 +979,7 @@ module lib_math_legendre
             integer :: rv
 
             ! auxiliaray
-            double precision, parameter :: ground_truth_e = 10.0_8**(-6.0_8)
+            double precision, parameter :: ground_truth_e = 5.0_8 * 10.0_8**(-5.0_8)
 
             rv = 0
 
@@ -860,6 +999,10 @@ module lib_math_legendre
             if (.not. test_lib_math_associated_legendre_polynomial_m0()) then
                 rv = rv + 1
             end if
+            if (.not. test_lib_math_associated_legendre_polynomial_m0_2()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_associated_legendre_polynomial_range()) rv = rv + 1
             if (.not. test_lib_math_associated_legendre_polynomial_with_negative_m1()) then
                 rv = rv + 1
             end if
@@ -872,9 +1015,9 @@ module lib_math_legendre
 !            if (.not. test_lib_math_associated_legendre_polynomial_theta_m1()) then
 !                rv = rv + 1
 !            end if
-            if (.not. test_lib_math_associated_legendre_polynomial_theta_xu_n0_3()) then
-                rv = rv + 1
-            end if
+!            if (.not. test_lib_math_associated_legendre_polynomial_theta_xu_n0_3()) then
+!                rv = rv + 1
+!            end if
             if (.not. test_lib_math_associated_legendre_polynomial_theta_wa_n0_3()) then
                 rv = rv + 1
             end if
@@ -883,6 +1026,14 @@ module lib_math_legendre
             if (.not. test_lib_math_legendre_polynomial()) then
                 rv = rv + 1
             end if
+
+            print *, "-------------lib_math_legendre_test_functions-------------"
+            if (rv == 0) then
+                print *, "lib_math_legendre_test_functions tests: OK"
+            else
+                print *, rv,"lib_math_legendre_test_functions test(s) FAILED"
+            end if
+            print *, "----------------------------------------------------------"
 
 
             contains
@@ -1322,6 +1473,93 @@ module lib_math_legendre
                 end do
 
             end function test_lib_math_associated_legendre_polynomial_m0
+
+            function test_lib_math_associated_legendre_polynomial_m0_2() result (rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! parameter
+                integer(kind=4), parameter :: fnu = 0
+                integer(kind=4), parameter :: n = 6
+                integer(kind=4), parameter :: m = 0
+
+                ! auxiliary
+                integer(kind=4) :: i
+                double precision :: x
+                double precision, dimension(n) :: pm
+                double precision, dimension(n) :: pd
+
+                double precision, dimension(n) :: ground_truth_pm
+                double precision, dimension(n) :: ground_truth_pd
+
+                double precision :: buffer
+
+                ! Values were generated with sageMath
+                !
+                ! source code:
+                !  >>>  var('l')
+                !  >>>  var('m')
+                !  >>>  var('x')
+                !  >>>
+                !  >>>  m=0
+                !  >>>
+                !  >>>  P_d(l,x) = derivative(legendre_P(l,x), x, m)
+                !  >>>  P_a(l,x) = (-1)**m * (1-x**2)**(m/2) * P_d(l,x)
+                !  >>>  P_ad(l,x) = derivative(P_a(l,x), x).simplify_full()
+                !  >>>
+                !  >>>  x=math.cos(0.5)
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_a(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_ad(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
+                ground_truth_pm(1) = 1.00000000000000_8
+                ground_truth_pm(2) = 0.877582561890373_8
+                ground_truth_pm(3) = 0.655226729401105_8
+                ground_truth_pm(4) = 0.373304211751205_8
+                ground_truth_pm(5) = 0.0818891693470757_8
+                ground_truth_pm(6) = -0.169287256752937_8
+
+                ground_truth_pd(1) = -0.000000000000000_8
+                ground_truth_pd(2) = 1.00000000000000_8
+                ground_truth_pd(3) = 2.63274768567112_8
+                ground_truth_pd(4) = 4.27613364700553_8
+                ground_truth_pd(5) = 5.24587716792955_8
+                ground_truth_pd(6) = 5.01313617112921_8
+
+                x = cos(0.5_8)
+
+                call lib_math_associated_legendre_polynomial(x, m, fnu, n, pm, pd, .true.)
+
+
+                rv = .true.
+                print *, "test_lib_math_associated_legendre_polynomial_m0_2:"
+                do i=1, n
+                    buffer = abs(pm(i) - ground_truth_pm(i))
+                    if (buffer .gt. ground_truth_e) then
+                        print *, "  ", i , "difference: ", buffer, " : FAILED"
+                        rv = .false.
+                    else
+                        print *, "  ", i, ": OK"
+                    end if
+                end do
+
+                print*, "  deriviation:"
+                do i=1, n
+                    buffer = abs(pd(i) - ground_truth_pd(i))
+                    if (buffer .gt. ground_truth_e) then
+                        print *, "  ", i , "difference: ", buffer, " : FAILED"
+                        rv = .false.
+                    else
+                        print *, "  ", i, ": OK"
+                    end if
+                end do
+
+            end function test_lib_math_associated_legendre_polynomial_m0_2
 
             function test_lib_math_associated_legendre_polynomial_with_negative_m1() result(rv)
                 implicit none
@@ -1840,7 +2078,7 @@ module lib_math_legendre
                 call init_list(ground_truth_pi_nm, 0, n_max+1)
                 call init_list(ground_truth_tau_nm, 0, n_max+1)
 
-                ! Values were generated with WolframAplpha
+                ! Values were generated with WolframAplpha.
                 !
                 ! source code:
                 !  >>>  N[m*LegendreP[n, m, cos (t)]/sin (t), 16], where n = 0, m = 0, t = 2
@@ -1867,29 +2105,31 @@ module lib_math_legendre
                 ground_truth_pi_nm%item(3)%item( 2) = -11.35203742961892_8
                 ground_truth_pi_nm%item(3)%item( 3) = -37.20698146943127_8
 
+                ! Values were generated with Mathematica
+                ! -> libmath_generated_functions/src/lib/legendre_poly/generator/legendre2_onlyD.nb
                 ground_truth_tau_nm%item(0)%item(0) = 0_8
 
-                ground_truth_tau_nm%item(1)%item(-1) = 0.0_8
-                ground_truth_tau_nm%item(1)%item( 0) = 0.0_8
-                ground_truth_tau_nm%item(1)%item( 1) = 0.0_8
+                ground_truth_tau_nm%item(1)%item(-1) = -0.208073_8
+                ground_truth_tau_nm%item(1)%item( 0) = -0.909297_8
+                ground_truth_tau_nm%item(1)%item( 1) = 0.416147_8
 
-                ground_truth_tau_nm%item(2)%item(-2) =  0.1040367091367856_8
-                ground_truth_tau_nm%item(2)%item(-1) =  0.4546487134128408_8
-                ground_truth_tau_nm%item(2)%item( 0) = 0_8
-                ground_truth_tau_nm%item(2)%item( 1) = 2.727892280477045_8
-                ground_truth_tau_nm%item(2)%item( 2) = -2.496881019282854_8
+                ground_truth_tau_nm%item(2)%item(-2) = -0.0946003_8
+                ground_truth_tau_nm%item(2)%item(-1) = -0.326822_8
+                ground_truth_tau_nm%item(2)%item( 0) = 1.1352_8
+                ground_truth_tau_nm%item(2)%item( 1) = 1.96093_8
+                ground_truth_tau_nm%item(2)%item( 2) = -2.27041_8
 
-                ground_truth_tau_nm%item(3)%item(-3) =  0.04730015595674552_8
-                ground_truth_tau_nm%item(3)%item(-2) =  0.1634109052159030_8
-                ground_truth_tau_nm%item(3)%item(-1) =  -0.4730015595674552_8
-                ground_truth_tau_nm%item(3)%item( 0) = 0_8
-                ground_truth_tau_nm%item(3)%item( 1) = -5.676018714809462_8
-                ground_truth_tau_nm%item(3)%item( 2) = -19.60930862590836_8
-                ground_truth_tau_nm%item(3)%item( 3) = 34.05611228885677_8
+                ground_truth_tau_nm%item(3)%item(-3) = -0.021505_8
+                ground_truth_tau_nm%item(3)%item(-2) = -0.0546107_8
+                ground_truth_tau_nm%item(3)%item(-1) =  0.437075_8
+                ground_truth_tau_nm%item(3)%item( 0) = 0.182918_8
+                ground_truth_tau_nm%item(3)%item( 1) = -5.2449_8
+                ground_truth_tau_nm%item(3)%item( 2) = -6.55329_8
+                ground_truth_tau_nm%item(3)%item( 3) = 15.4836_8
 
                 theta = 2.0_8
 
-                call lib_math_associated_legendre_polynomial_theta_wa(theta, n_max, pi_nm, tau_nm)
+                call lib_math_associated_legendre_polynomial_theta_wa(theta, n_max, pi_nm, tau_nm, .true.)
 
 
                 rv = .true.
@@ -1922,15 +2162,6 @@ module lib_math_legendre
                     end do
                     print*, ""
                 end do
-!                do i=0, n_max
-!                    buffer = abs(tau_nm(i, 1) - ground_truth_tau_n1(i))
-!                    if (buffer .gt. ground_truth_e) then
-!                        print *, "  ", i , "difference: ", buffer, " : FAILED"
-!                        rv = .false.
-!                    else
-!                        print *, "  ", i, ": OK"
-!                    end if
-!                end do
 
             end function test_lib_math_associated_legendre_polynomial_theta_wa_n0_3
 
@@ -2014,6 +2245,90 @@ module lib_math_legendre
                 end do
 
             end function test_lib_math_legendre_polynomial
+
+            function test_lib_math_associated_legendre_polynomial_range() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! parameter
+                integer(kind=4), parameter :: fnu = 1
+                integer(kind=4), parameter :: n = 5
+                integer(kind=4), parameter :: m = 1
+
+                ! auxiliary
+                integer :: i
+                double precision :: x
+
+                type(list_list_real) :: pm
+                type(list_list_real) :: pd
+
+                double precision, dimension(n) :: ground_truth_pm
+                double precision, dimension(n) :: ground_truth_pd
+
+                double precision :: buffer
+
+                ! Values were generated with sageMath
+                !
+                ! source code:
+                !  >>>  var('l')
+                !  >>>  var('m')
+                !  >>>  var('x')
+                !  >>>
+                !  >>>  m=1
+                !  >>>
+                !  >>>  P_d(l,x) = derivative(legendre_P(l,x), x, m)
+                !  >>>  P_a(l,x) = (1-x**2)**(m/2) * P_d(l,x)
+                !  >>>  P_ad(l,x) = derivative(P_a(l,x), x).simplify_full()
+                !  >>>
+                !  >>>  x=0.2
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_a(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
+                !  >>>
+                !  >>>  for i in range(0,6):
+                !  >>>      value = numerical_approx(P_ad(i,x))
+                !  >>>      print("l = {}: {}".format(i, value))
+                ground_truth_pm(1) = 0.979795897113271_8
+                ground_truth_pm(2) = 0.587877538267963_8
+                ground_truth_pm(3) = -1.17575507653593_8
+                ground_truth_pm(4) = -1.33252242007405_8
+                ground_truth_pm(5) = 0.870058756636585_8
+
+                ground_truth_pd(1) = -0.204124145231932_8
+                ground_truth_pd(2) = 2.81691320420066_8
+                ground_truth_pd(3) = 3.18433666561813_8
+                ground_truth_pd(4) = -5.01328900689624_8
+                ground_truth_pd(5) = -9.23457633029258_8
+
+                x = 0.2
+
+                call lib_math_associated_legendre_polynomial_range(x, fnu, n, pm, pd)
+
+                rv = .true.
+                print *, "test_lib_math_associated_legendre_polynomial_range:"
+                do i=1, n
+                    buffer = abs(pm%item(i)%item(m) - ground_truth_pm(i))
+                    if (buffer .gt. ground_truth_e) then
+                        print *, "  ", i , "difference: ", buffer, " : FAILED"
+                        rv = .false.
+                    else
+                        print *, "  ", i, ": OK"
+                    end if
+                end do
+
+                print*, "  deriviation:"
+                do i=1, n
+                    buffer = abs(pd%item(i)%item(m) - ground_truth_pd(i))
+                    if (buffer .gt. ground_truth_e) then
+                        print *, "  ", i , "difference: ", buffer, " : FAILED"
+                        rv = .false.
+                    else
+                        print *, "  ", i, ": OK"
+                    end if
+                end do
+            end function
 
         end function lib_math_legendre_test_functions
 

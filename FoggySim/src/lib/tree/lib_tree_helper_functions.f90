@@ -32,7 +32,7 @@
 
 
 ! spatial dimension, value = [2,3]
-#define _FMM_DIMENSION_ 2
+#define _FMM_DIMENSION_ 3
 
 ! 1: true, 0: false (-> spatial point is real)
 #define _SPATIAL_POINT_IS_DOUBLE_ 1
@@ -54,8 +54,8 @@
 
 module lib_tree_helper_functions
     !$  use omp_lib
-    use lib_tree_type
     use file_io
+    use lib_tree_type
     implicit none
 
     private
@@ -301,7 +301,8 @@ contains
             do ii=1, TREE_DIMENSIONS  ! get column entries
                 ob_buffer_DIM(ii) = cb_buffer(i + (ii-1)*COORDINATE_BINARY_BYTES/INTERLEAVE_BITS_INTEGER_KIND)
             end do
-            ib_buffer = lib_tree_hf_interleave_bits_use_lut(ob_buffer_DIM)
+!            ib_buffer = lib_tree_hf_interleave_bits_use_lut(ob_buffer_DIM)
+            ib_buffer = lib_tree_hf_interleave_bits(ob_buffer_DIM)
 
             ! e.g.    12                4       (4..1)        3
             ! ii = total length - (total columns - i + 1) * length(ib_buffer) + 1
@@ -1140,14 +1141,10 @@ contains
         integer(kind=integer_kind*2) :: iii
 
         integer(kind=integer_kind), dimension(3) :: buffer
-        integer(kind=1) :: p
-        integer(kind=1) :: p_old
-        ! ---- OMP semaphore ----
-        !$  logical :: mutex_rv
-        !$  mutex_rv = .true.
-        ! ~~~~ OMP semaphore ~~~~
+!        integer(kind=1) :: p
+!        integer(kind=1) :: p_old
 
-        p_old = 0
+!        p_old = 0
 !        !$OMP PARALLEL DO PRIVATE(i, ii, iii, buffer)
         do i = integer_range_low, integer_range_high
             do ii = integer_range_low, integer_range_high
@@ -1156,25 +1153,17 @@ contains
                     buffer(2) = int(ii,1)
                     buffer(3) = int(iii,1)
                     buffer = lib_tree_hf_interleave_bits(buffer)
-                    !$  if (mutex_rv .eqv. .false.) then
-                    !$      do
-                    !$          if (mutex_rv .eqv. .true.) then
-                    !$              exit
-                    !$          end if
-                    !$      end do
-                    !$  end if
-                    !$  mutex_rv = .false.
+
                     rv(i,ii, iii,1) = buffer(1)
                     rv(i,ii, iii,2) = buffer(2)
                     rv(i,ii, iii,3) = buffer(3)
-                    !$  mutex_rv = .true.
                 end do
             end do
-            p = int(100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), 1)
-            if (int(p/10, 1) .ne. int(p_old/10, 1)) then
-                print *, "Interleave bits: create LUT: ", p, "%"
-            end if
-            p_old = p
+!            p = int(100.0*real(i-integer_range_low)/real(integer_range_high-integer_range_low), 1)
+!            if (int(p/10, 1) .ne. int(p_old/10, 1)) then
+!                print *, "Interleave bits: create LUT: ", p, "%"
+!            end if
+!            p_old = p
         end do
 !        !$OMP END PARALLEL DO
 #endif
@@ -1450,10 +1439,10 @@ contains
         integer(kind=integer_kind*2) :: iii
 
         integer(kind=integer_kind), dimension(3) :: buffer
-        integer(kind=1) :: p
-        integer(kind=1) :: p_old
+!        integer(kind=1) :: p
+!        integer(kind=1) :: p_old
 
-        p_old = 0
+!        p_old = 0
         do i = integer_range_low, integer_range_high
             do ii = integer_range_low, integer_range_high
                 do iii = integer_range_low, integer_range_high
@@ -1466,11 +1455,11 @@ contains
                     rv(i,ii, iii,3) = buffer(3)
                 end do
             end do
-            p = int(100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), 1)
-            if (int(p/10, 1) .ne. int(p_old/10, 1)) then
-                print *, "Deinterleave bits: create LUT: ", p, "%"
-            end if
-            p_old = p
+!            p = int(100.0*(i-integer_range_low)/(integer_range_high-integer_range_low), 1)
+!            if (int(p/10, 1) .ne. int(p_old/10, 1)) then
+!                print *, "Deinterleave bits: create LUT: ", p, "%"
+!            end if
+!            p_old = p
         end do
 #endif
     end function lib_tree_hf_creat_deinterleave_bits_lut
@@ -1762,7 +1751,8 @@ contains
             do ii=1, TREE_DIMENSIONS  ! get column entries
                 ob_buffer_DIM(ii) = cb_buffer(i + (ii-1)*UINDEX_BYTES/INTERLEAVE_BITS_INTEGER_KIND)
             end do
-            ib_buffer = lib_tree_hf_interleave_bits_use_lut(ob_buffer_DIM)
+!            ib_buffer = lib_tree_hf_interleave_bits_use_lut(ob_buffer_DIM)
+            ib_buffer = lib_tree_hf_interleave_bits(ob_buffer_DIM)
 
             ! e.g.    12                4       (4..1)        3
             ! ii = total length - (total columns - i + 1) * length(ib_buffer) + 1
@@ -2117,36 +2107,36 @@ contains
         if (.not. test_lib_tree_hf_interleave_bits_2()) then
             error_counter = error_counter + 1
         end if
-        if (.not. test_lib_tree_hf_interleave_bits_use_lut()) then
-            error_counter = error_counter + 1
-        end if
-        if (.not. test_lib_tree_hf_interleave_bits_use_lut_2()) then
-            error_counter = error_counter + 1
-        end if
+!        if (.not. test_lib_tree_hf_interleave_bits_use_lut()) then
+!            error_counter = error_counter + 1
+!        end if
+!        if (.not. test_lib_tree_hf_interleave_bits_use_lut_2()) then
+!            error_counter = error_counter + 1
+!        end if
         if (.not. test_lib_tree_hf_deinterleave_bits()) then
             error_counter = error_counter + 1
         end if
         if (.not. test_lib_tree_hf_deinterleave_bits_2()) then
             error_counter = error_counter + 1
         end if
-        if (.not. test_lib_tree_hf_deinterleave_bits_use_lut()) then
-            error_counter = error_counter + 1
-        end if
-        if (.not. test_lib_tree_hf_deinterleave_bits_use_lut_2()) then
-            error_counter = error_counter + 1
-        end if
+!        if (.not. test_lib_tree_hf_deinterleave_bits_use_lut()) then
+!            error_counter = error_counter + 1
+!        end if
+!        if (.not. test_lib_tree_hf_deinterleave_bits_use_lut_2()) then
+!            error_counter = error_counter + 1
+!        end if
         if (.not. test_lib_tree_hf_interleave_bits_treeD_to_1D()) then
             error_counter = error_counter + 1
         end if
-        if (.not. test_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut()) then
-            error_counter = error_counter + 1
-        end if
+!        if (.not. test_lib_tree_hf_interleave_bits_treeD_to_1D_use_lut()) then
+!            error_counter = error_counter + 1
+!        end if
         if (.not. test_lib_tree_hf_deinterleave_bits_1D_to_treeD()) then
             error_counter = error_counter + 1
         end if
-        if (.not. test_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut()) then
-            error_counter = error_counter + 1
-        end if
+!        if (.not. test_lib_tree_hf_deinterleave_bits_1D_to_treeD_use_lut()) then
+!            error_counter = error_counter + 1
+!        end if
 
 
         print *, "-------------lib_tree_hf_test_functions-------------"
@@ -2609,9 +2599,9 @@ contains
                 coordinate_binary_xD_ground_trouth(2) = 1610612736          ! |0110 0000|0000 0000| ... |0000 0000| byte 3-0
                 coordinate_binary_xD_ground_trouth(3) = 1879048192          ! |0111 0000|0000 0000| ... |0000 0000| byte 3-0
             else if (COORDINATE_BINARY_BYTES == 8) then
-                coordinate_binary_xD_ground_trouth(1) = 2**62               ! |0100 0000|0000 0000| ... |0000 0000| byte 7-0
-                coordinate_binary_xD_ground_trouth(2) = 2**62+2**61         ! |0110 0000|0000 0000| ... |0000 0000| byte 7-0
-                coordinate_binary_xD_ground_trouth(3) = 2**62+2**61+2**60   ! |0111 0000|0000 0000| ... |0000 0000| byte 7-0
+                coordinate_binary_xD_ground_trouth(1) = 2**62_8               ! |0100 0000|0000 0000| ... |0000 0000| byte 7-0
+                coordinate_binary_xD_ground_trouth(2) = 2**62_8+2**61_8         ! |0110 0000|0000 0000| ... |0000 0000| byte 7-0
+                coordinate_binary_xD_ground_trouth(3) = 2**62_8+2**61_8+2**60_8   ! |0111 0000|0000 0000| ... |0000 0000| byte 7-0
             end if
 #else
             print *, "test_lib_tree_hf_get_coordinate_binary_number_xD: Dimension not defines: ", FMM_DIMENSION
@@ -3216,7 +3206,7 @@ contains
             delta = finish-start
             print *, "  Interleave + LUT Time (second run) = ", delta/number_of_runs, " seconds."
 
-            number_of_runs = 10**17
+            number_of_runs = 10**17_8
             call cpu_time(start)
             do i=1, number_of_runs
                 buffer = lib_tree_hf_interleave_bits(x)
@@ -3257,7 +3247,7 @@ contains
             delta = finish-start
             print *, "  Deinterleave + LUT Time (second run) = ", delta/number_of_runs, " seconds."
 
-            number_of_runs = 10**17
+            number_of_runs = 10**17_8
             call cpu_time(start)
             do i=1, number_of_runs
                 buffer = lib_tree_hf_deinterleave_bits(x)
@@ -3298,7 +3288,7 @@ contains
             delta = finish-start
             print *, "  Interleave + LUT Time (second run) = ", delta/number_of_runs, " seconds."
 
-            number_of_runs = 10**18
+            number_of_runs = 10**18_8
             call cpu_time(start)
             do i=1, number_of_runs
                 buffer = lib_tree_hf_interleave_bits_treeD_to_1D(x)
@@ -3339,7 +3329,7 @@ contains
             delta = finish-start
             print *, "  Deinterleave + LUT Time (second run) = ", delta/number_of_runs, " seconds."
 
-            number_of_runs = 10**18
+            number_of_runs = 10**18_8
             call cpu_time(start)
             do i=1, number_of_runs
                 buffer = lib_tree_hf_deinterleave_bits_1D_to_treeD(x(1))

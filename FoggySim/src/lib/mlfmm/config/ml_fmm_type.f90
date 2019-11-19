@@ -1,6 +1,7 @@
 ! LIB: Mulitlevel Fast Multipole Method - type definitions
 !
 module ml_fmm_type
+    use libmath
     use lib_tree_type
     implicit none
 
@@ -17,6 +18,8 @@ module ml_fmm_type
     end type
 
     type lib_ml_fmm_v
+        type(list_list_cmplx) :: a_nm
+        type(list_list_cmplx) :: b_nm
         real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
     end type
 
@@ -39,6 +42,8 @@ module ml_fmm_type
     !
     !
     type lib_ml_fmm_coefficient
+        type(list_list_cmplx) :: a_nm
+        type(list_list_cmplx) :: b_nm
         real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
     end type
 

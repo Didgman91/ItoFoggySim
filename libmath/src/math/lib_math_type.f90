@@ -24,6 +24,18 @@ module lib_math_type
         type(cartesian_coordinate_cmplx_type), dimension(:), allocatable :: coordinate
     end type list_cartesian_coordinate_cmplx_type
 
+    type cartresian_coordinate_rot_matrix_type
+        real(kind=lib_math_type_kind) :: r_11
+        real(kind=lib_math_type_kind) :: r_12
+        real(kind=lib_math_type_kind) :: r_13
+        real(kind=lib_math_type_kind) :: r_21
+        real(kind=lib_math_type_kind) :: r_22
+        real(kind=lib_math_type_kind) :: r_23
+        real(kind=lib_math_type_kind) :: r_31
+        real(kind=lib_math_type_kind) :: r_32
+        real(kind=lib_math_type_kind) :: r_33
+    end type
+
     ! spherical coordinates
     type spherical_coordinate_real_type
         real(kind=lib_math_type_kind) :: rho
@@ -46,6 +58,30 @@ module lib_math_type
     end type list_spherical_coordinate_cmplx_type
 
     ! lists
+    type list_logical
+        logical, dimension(:), allocatable :: item
+    end type
+
+    type list_list_logical
+        type(list_logical), dimension(:), allocatable :: item
+    end type
+
+    type list_integer_sys
+        integer, dimension(:), allocatable :: item
+    end type
+
+    type list_list_integer_sys
+        type(list_integer_sys), dimension(:), allocatable :: item
+    end type
+
+    type list_integer
+        integer(kind=lib_math_type_kind), dimension(:), allocatable :: item
+    end type
+
+    type list_list_integer
+        type(list_integer), dimension(:), allocatable :: item
+    end type
+
     type list_real
         real(kind=lib_math_type_kind), dimension(:), allocatable :: item
     end type
@@ -54,12 +90,28 @@ module lib_math_type
         type(list_real), dimension(:), allocatable :: item
     end type
 
+    type list_list_list_real
+        type(list_list_real), dimension(:), allocatable :: item
+    end type
+
+    type list_4_real
+        type(list_list_list_real), dimension(:), allocatable :: item
+    end type
+
     type list_cmplx
         complex(kind=lib_math_type_kind), dimension(:), allocatable :: item
     end type
 
     type list_list_cmplx
         type(list_cmplx), dimension(:), allocatable :: item
+    end type
+
+    type list_list_list_cmplx
+        type(list_list_cmplx), dimension(:), allocatable :: item
+    end type
+
+    type list_4_cmplx
+        type(list_list_list_cmplx), dimension(:), allocatable :: item
     end type
 
 end module lib_math_type

@@ -25,8 +25,8 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
-				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" AdditionalLibraryDirectories="$(SolutionDir)\libmath\x64\Debug" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="100000000" AdditionalDependencies="libmath.lib"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="$(SolutionDir)\libtoolbox\x64\Debug;$(SolutionDir)\libmath\x64\Debug;$(SolutionDir)\libmath_generated_functions\x64\Debug;$(SolutionDir)\libmath_external\x64\Debug" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" AdditionalLibraryDirectories="$(SolutionDir)\libtoolbox\x64\Debug;$(SolutionDir)\libmath\x64\Debug;$(SolutionDir)\libmath_generated_functions\x64\Debug;$(SolutionDir)\libmath_external\x64\Debug" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="100000000" AdditionalDependencies="libmath.lib libmath_external.lib libmath_external.lib libmath_generated_functions.lib libtoolbox.lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -52,26 +52,25 @@
 		<Filter Name="lib">
 		<Filter Name="light_scattering_by_particles">
 		<File RelativePath=".\src\lib\light_scattering_by_particles\light_scattering.f90"/></Filter>
-		<Filter Name="mie_theory">
-		<File RelativePath=".\src\lib\mie_theory\lib_mie_scattering_by_a_sphere.f90"/>
-		<File RelativePath=".\src\lib\mie_theory\lib_mie_vector_spherical_harmonics.f90"/></Filter>
 		<Filter Name="mlfmm">
 		<Filter Name="config">
 		<File RelativePath=".\src\lib\mlfmm\config\ml_fmm_math.f90"/>
 		<File RelativePath=".\src\lib\mlfmm\config\ml_fmm_type.f90"/></Filter>
 		<File RelativePath=".\src\lib\mlfmm\lib_ml_fmm.f90"/>
+		<File RelativePath=".\src\lib\mlfmm\lib_ml_fmm_data_container.f90"/>
 		<File RelativePath=".\src\lib\mlfmm\lib_ml_fmm_helper_functions.f90"/>
 		<File RelativePath=".\src\lib\mlfmm\lib_ml_fmm_type_operator.f90"/></Filter>
+		<Filter Name="field">
+		<File RelativePath=".\src\lib\field\lib_field.f90"/>
+		<File RelativePath=".\src\lib\field\lib_field_gaussian_beam.f90"/>
+		<File RelativePath=".\src\lib\field\lib_field_polarisation.f90"/>
+		<File RelativePath=".\src\lib\field\lib_field_polarisation_type.f90"/>
+		<File RelativePath=".\src\lib\field\lib_field_polarisation_type_operator.f90"/></Filter>
 		<Filter Name="tree">
 		<File RelativePath=".\src\lib\tree\lib_tree.f90"/>
 		<File RelativePath=".\src\lib\tree\lib_tree_helper_functions.f90"/>
 		<File RelativePath=".\src\lib\tree\lib_tree_public.f90"/>
 		<File RelativePath=".\src\lib\tree\lib_tree_type.f90"/>
-		<File RelativePath=".\src\lib\tree\lib_tree_type_operator.f90"/></Filter>
-		<File RelativePath=".\src\lib\file_io.f90"/>
-		<File RelativePath=".\src\lib\lib_data_types.f90"/>
-		<File RelativePath=".\src\lib\lib_hash_function.f90"/>
-		<File RelativePath=".\src\lib\lib_sort.f90"/>
-		<File RelativePath=".\src\lib\toolbox.f90"/></Filter>
+		<File RelativePath=".\src\lib\tree\lib_tree_type_operator.f90"/></Filter></Filter>
 		<File RelativePath=".\src\main.f90"/></Filter></Filter></Files>
 	<Globals/></VisualStudioProject>

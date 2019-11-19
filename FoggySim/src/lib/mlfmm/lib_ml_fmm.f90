@@ -1,4 +1,6 @@
-#define _FMM_DIMENSION_ 2
+!#define _TRACE_
+
+#define _FMM_DIMENSION_ 3
 
 ! LIB: Mulitlevel Fast Multipole Method
 !
@@ -9,29 +11,22 @@ module lib_ml_fmm
     use ml_fmm_math
     use lib_ml_fmm_type_operator
     use lib_ml_fmm_helper_functions
+    use lib_ml_fmm_data_container
     implicit none
 
     private
 
     ! --- public functions ---
+    public :: lib_ml_fmm_constructor
+    public :: lib_ml_fmm_destructor
+    public :: lib_ml_fmm_run
+
     public :: lib_ml_fmm_test_functions
 
     public :: lib_ml_fmm_hf_test_functions
 
     ! --- member ---
     type(lib_ml_fmm_procedure_handles) :: m_ml_fmm_handles
-    integer(kind=2) :: m_ml_fmm_p_truncation
-
-    ! e.g. matrix vector product v = u*phi
-    ! order restiction:
-    !   1. elements of the X-hierarchy
-    !   2. elements of the XY-hierarchy
-    type(lib_ml_fmm_v), dimension(:), allocatable :: m_ml_fmm_u
-    ! e.g. matrix vector product v = u*phi
-    ! order restiction:
-    !   1. elements of the Y-hierarchy
-    !   2. elements of the XY-hierarchy
-    type(lib_ml_fmm_v), dimension(:), allocatable :: m_ml_fmm_v
 
     type(lib_ml_fmm_hierarchy), dimension(:), allocatable :: m_ml_fmm_hierarchy
 
@@ -51,16 +46,19 @@ module lib_ml_fmm
     ! 2. create ml fmm data set
     !       - C per box and per level (l_max up to l_min)
     !       - D per box and per level (l_min down to l_max)
-    subroutine lib_ml_fmm_constructor(data_elements)
+    subroutine lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures, tree_s_opt)
         implicit none
         ! dummy
         type(lib_ml_fmm_data), intent(inout) :: data_elements
+        type(ml_fmm_type_operator_procedures), intent(in) :: operator_procedures
+        type(lib_ml_fmm_procedure_handles), intent(in) :: ml_fmm_procedures
+        integer(kind=4), intent(in), optional :: tree_s_opt
+
 
         ! auxiliaray
         type(lib_tree_data_element), dimension(:), allocatable :: data_concatenated
         type(lib_tree_correspondece_vector_element), dimension(:), allocatable :: correspondence_vector
         integer(kind=UINDEX_BYTES), dimension(3) :: length
-        type(ml_fmm_type_operator_procedures) :: operator_procedures
 
         ! concatenate X-, Y- and XY-hierarchy data
         !   length(1) = size(data_elements%X)
@@ -68,29 +66,37 @@ module lib_ml_fmm
         !   length(3) = size(data_elements%XY)
         allocate(data_concatenated, source=lib_ml_fmm_concatenate_data_array(data_elements, length))
 
-        m_tree_s_opt = 1 ! todo: calculate s
+
+        m_tree_s_opt = 1
+        if (present(tree_s_opt)) m_tree_s_opt = tree_s_opt
 
         ! initiate the Tree
         call lib_tree_constructor(data_concatenated, m_tree_s_opt)
         data_concatenated = lib_tree_get_element_list()
 
         ! initiate the ml fmm type operators
-        operator_procedures = ml_fmm_type_operator_get_procedures()
+!        operator_procedures = ml_fmm_type_operator_get_procedures()
         call lib_ml_fmm_type_operator_constructor(operator_procedures)
 
         ! initiate the ml fmm procedures
-        m_ml_fmm_handles = ml_fmm_get_procedures()
+        m_ml_fmm_handles = ml_fmm_procedures
 
         ! adjust Tree parameters
         m_tree_neighbourhood_size_k = 1!lib_ml_fmm_hf_get_neighbourhood_size(R_c1, r_c2)
         m_tree_l_min = lib_tree_get_level_min(m_tree_neighbourhood_size_k)
         m_tree_l_max = lib_tree_get_level_max(m_tree_s_opt)
 
+        if (m_tree_l_max .lt. m_tree_l_min) m_tree_l_min = m_tree_l_max
+
         ! initiate the X- and Y-hierarchy
         correspondence_vector = lib_tree_get_correspondence_vector()
-        call lib_ml_fmm_hf_create_hierarchy(data_concatenated, correspondence_vector, &
+        call lib_ml_fmm_hf_create_hierarchy(data_concatenated, &
                                             length, m_tree_l_min, m_tree_l_max,&
                                             m_ml_fmm_hierarchy)
+        print *, "lib_ml_fmm_constructor: INFO"
+        print *, "  m_tree_l_min: ", m_tree_l_min
+        print *, "  m_tree_l_max: ", m_tree_l_max
+        print *, "  m_tree_s_opt: ", m_tree_s_opt
 
         if (allocated(m_ml_fmm_u)) then
             deallocate(m_ml_fmm_u)
@@ -99,8 +105,8 @@ module lib_ml_fmm
             deallocate(m_ml_fmm_v)
         end if
 
-        allocate (m_ml_fmm_u(length(HIERARCHY_X) + length(HIERARCHY_XY)))
-        allocate (m_ml_fmm_v(length(HIERARCHY_Y) + length(HIERARCHY_XY)))
+        allocate (m_ml_fmm_u(sum(length)))
+        allocate (m_ml_fmm_v(sum(length)))
     end subroutine lib_ml_fmm_constructor
 
     ! clean up
@@ -151,16 +157,54 @@ module lib_ml_fmm
 
     end subroutine lib_ml_fmm_destructor
 
-    function lib_ml_fmm_run(vector_u) result(vector_v)
+    ! Argument
+    ! ----
+    !   vector_u: type(lib_ml_fmm_v), dimension(:)
+    !       vector u of the matrix vector product PHI * u = v
+    !       HINT: length(vector_u) = no of all data elements (X-, Y- and XY-, hierarchy)
+    !       CONVENTION:
+    !           Internal representation of the element data list
+    !           from the 1-st to the N-th element.
+    !           ------------------------------------
+    !           |1    X    |     Y    |     XY    N|
+    !           ------------------------------------
+    !           X-, Y-, XY- hierarchy
+    !   use_move_alloc_vector_u: logical, optional (std: .true.)
+    !
+    ! Returns
+    ! ----
+    !   vector_v: type(lib_ml_fmm_v), dimension(:)
+    !       vector v  of the matrix vector product PHI * u = v
+    !       HINT: length(vector_u) = no of all data elements (X-, Y- and XY-, hierarchy)
+    !       CONVENTION:
+    !           Internal representation of the element data list
+    !           from the 1-st to the N-th element.
+    !           ------------------------------------
+    !           |1    X    |     Y    |     XY    N|
+    !           ------------------------------------
+    !           X-, Y-, XY- hierarchy
+    subroutine lib_ml_fmm_run(vector_u, vector_v, use_move_alloc_vector_u)
         implicit none
         ! dummy
         type(lib_ml_fmm_v), dimension(:), allocatable, intent(inout) :: vector_u
-        type(lib_ml_fmm_v), dimension(:), allocatable :: vector_v
+        type(lib_ml_fmm_v), dimension(:), allocatable, intent(inout) :: vector_v
 
-        if (allocated(m_ml_fmm_u)) then
-            m_ml_fmm_u = vector_u
+        logical, intent(in), optional :: use_move_alloc_vector_u
+
+        ! auxiliary
+        logical :: m_use_move_alloc_vector_u
+
+        m_use_move_alloc_vector_u = .true.
+        if (present(use_move_alloc_vector_u)) m_use_move_alloc_vector_u = use_move_alloc_vector_u
+
+        if (m_use_move_alloc_vector_u) then
+            call move_alloc(vector_u, m_ml_fmm_u)
         else
-            allocate(m_ml_fmm_u, source=vector_u)
+            if (allocated(m_ml_fmm_u)) then
+                m_ml_fmm_u = vector_u
+            else
+                allocate(m_ml_fmm_u, source=vector_u)
+            end if
         end if
 
         call lib_ml_fmm_calculate_upward_pass()
@@ -168,8 +212,9 @@ module lib_ml_fmm
         call lib_ml_fmm_final_summation()
 
         allocate(vector_v, source=m_ml_fmm_v)
+!        call move_alloc(m_ml_fmm_v, vector_v)
 
-    end function
+    end subroutine lib_ml_fmm_run
 
     ! Concatenates the arrays at the data_elements to one array of the type lib_tree_data_element
     !
@@ -239,7 +284,14 @@ module lib_ml_fmm
         implicit none
 
         call lib_ml_fmm_calculate_upward_pass_step_1()
+#ifdef _TRACE_
+        print *, "TRACE: lib_ml_fmm_calculate_upward_pass_step_1 ..done"
+#endif
+
         call lib_ml_fmm_calculate_upward_pass_step_2()
+#ifdef _TRACE_
+        print *, "TRACE: lib_ml_fmm_calculate_upward_pass_step_2 ..done"
+#endif
     end subroutine
 
     ! Upward pass - step 1
@@ -273,6 +325,8 @@ module lib_ml_fmm
 
         uindex%l = m_tree_l_max
         if (m_ml_fmm_hierarchy(m_tree_l_max)%is_hashed) then
+            !$OMP PARALLEL DO PRIVATE(i, hierarchy_type, C) &
+            !$OMP  FIRSTPRIVATE(uindex)
             do i=1, number_of_boxes
                 uindex%n = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
                 hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(i)
@@ -286,21 +340,29 @@ module lib_ml_fmm
                     end if
                 end if
             end do
+            !$OMP END PARALLEL DO
         else
+            !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type, C) &
+            !$OMP  FIRSTPRIVATE(uindex)
             do i=1, number_of_boxes
                 uindex%n = i - int(1, 1)
                 list_index = m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_list_index(i)
-                hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(i)
-                if ((list_index .gt. 0) .and. &
-                    ((hierarchy_type .eq. HIERARCHY_X) .or. &
-                     (hierarchy_type .eq. HIERARCHY_XY))) then
-                    C = lib_ml_fmm_get_C_i_from_elements_at_box(uindex, ignore_box)
-                    if (.not. ignore_box) then
-                        m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_list(list_index) = C
-                        m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_type(list_index) = LIB_ML_FMM_COEFFICIENT_TYPE_C
+                if (list_index .gt. 0) then
+                    hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(list_index)
+
+                    if ((hierarchy_type .eq. HIERARCHY_X) .or. &
+                        (hierarchy_type .eq. HIERARCHY_XY)) then
+
+
+                        C = lib_ml_fmm_get_C_i_from_elements_at_box(uindex, ignore_box)
+                        if (.not. ignore_box) then
+                            m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_list(list_index) = C
+                            m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_type(list_index) = LIB_ML_FMM_COEFFICIENT_TYPE_C
+                        end if
                     end if
                 end if
             end do
+            !$OMP END PARALLEL DO
         end if
 
     end subroutine lib_ml_fmm_calculate_upward_pass_step_1
@@ -340,7 +402,8 @@ module lib_ml_fmm
             ignore_box = .false.
             x_c = lib_tree_get_centre_of_box(uindex)
             do i=1, size(data_element)
-                buffer_C_i = m_ml_fmm_u(element_number(i)) * m_ml_fmm_handles%get_B_i(x_c, data_element(i))
+!                buffer_C_i = m_ml_fmm_u(element_number(i)) * m_ml_fmm_handles%get_B_i(x_c, data_element(i))
+                buffer_C_i = m_ml_fmm_handles%get_u_B_i(x_c, data_element(i), element_number(i))
                 C_i = C_i + buffer_C_i
             end do
         else
@@ -377,6 +440,8 @@ module lib_ml_fmm
             number_of_boxes = size(m_ml_fmm_hierarchy(l)%coefficient_list_index)
 
             if (m_ml_fmm_hierarchy(l)%is_hashed) then
+                !$OMP PARALLEL DO PRIVATE(i, hierarchy_type, C) &
+                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
                     if (uindex%n .ge. 0) then
@@ -389,7 +454,10 @@ module lib_ml_fmm
                         end if
                     end if
                 end do
+                !$OMP END PARALLEL DO
             else
+                !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type, C) &
+                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = i - int(1, 1)
                     list_index = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
@@ -403,6 +471,7 @@ module lib_ml_fmm
                         end if
                     end if
                 end do
+                !$OMP END PARALLEL DO
             end if
         end do
 
@@ -433,12 +502,16 @@ module lib_ml_fmm
         integer(kind=UINDEX_BYTES) :: list_index
         integer(kind=1) :: hierarchy_type
 
+        type(lib_ml_fmm_coefficient), dimension(:), allocatable :: buffer_C
+
         x_c = lib_tree_get_centre_of_box(uindex)
 
         ! get child boxes
         uindex_children = lib_tree_get_children(uindex)
 
-        call lib_ml_fmm_type_operator_set_coefficient_zero(C)
+        allocate(buffer_C(size(uindex_children)))
+
+        !$OMP PARALLEL DO PRIVATE(i, x_c_child, list_index, hierarchy_type)
         do i=1, size(uindex_children)
             x_c_child = lib_tree_get_centre_of_box(uindex_children(i))
             list_index = lib_ml_fmm_hf_get_hierarchy_index(m_ml_fmm_hierarchy, uindex_children(i))
@@ -447,18 +520,39 @@ module lib_ml_fmm
                 if (((hierarchy_type .eq. HIERARCHY_X) .or. &
                      (hierarchy_type .eq. HIERARCHY_XY))) then
                     C_child = m_ml_fmm_hierarchy(uindex_children(i)%l)%coefficient_list(list_index)
-                    C = C + m_ml_fmm_handles%get_translation_SS(C_child, x_c_child, x_c)
+                    buffer_C(i) = m_ml_fmm_handles%get_translation_SS(C_child, x_c_child, x_c)
                 end if
             end if
         end do
+        !$OMP END PARALLEL DO
+
+        call lib_ml_fmm_type_operator_set_coefficient_zero(C)
+
+        do i=1, size(uindex_children)
+            list_index = lib_ml_fmm_hf_get_hierarchy_index(m_ml_fmm_hierarchy, uindex_children(i))
+            if (list_index .gt. 0) then
+                hierarchy_type = m_ml_fmm_hierarchy(uindex_children(i)%l)%hierarchy_type(list_index)
+                if (((hierarchy_type .eq. HIERARCHY_X) .or. &
+                     (hierarchy_type .eq. HIERARCHY_XY))) then
+                    C = C + buffer_C(i)
+                end if
+            end if
+        end do
+
     end function lib_ml_fmm_get_C_of_box
 
     subroutine lib_ml_fmm_calculate_downward_pass
         implicit none
 
         call lib_ml_fmm_calculate_downward_pass_step_1()
-        call lib_ml_fmm_calculate_downward_pass_step_2()
+#ifdef _TRACE_
+        print *, "TRACE: lib_ml_fmm_calculate_downward_pass_step_1 ..done"
+#endif
 
+        call lib_ml_fmm_calculate_downward_pass_step_2()
+#ifdef _TRACE_
+        print *, "TRACE: lib_ml_fmm_calculate_downward_pass_step_2 ..done"
+#endif
 
     end subroutine
 
@@ -497,6 +591,8 @@ module lib_ml_fmm
             list_index_list(:) = -1
 
             if (m_ml_fmm_hierarchy(l)%is_hashed) then
+                !$OMP PARALLEL DO PRIVATE(i, hierarchy_type, D_tilde) &
+                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
                     if (uindex%n .ge. 0) then
@@ -509,7 +605,10 @@ module lib_ml_fmm
                         end if
                     end if
                 end do
+                !$OMP END PARALLEL DO
             else
+                !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type, D_tilde) &
+                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = i - int(1, 1)
                     list_index = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
@@ -523,15 +622,23 @@ module lib_ml_fmm
                         end if
                     end if
                 end do
+                !$OMP END PARALLEL DO
             end if
 
             ! wirte to hierarchy
+!            where (list_index_list .gt. -1)
+!                m_ml_fmm_hierarchy(l)%coefficient_list(list_index_list) = coefficient_list
+!                m_ml_fmm_hierarchy(l)%coefficient_type(list_index_list) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
+!            end where
+            !$OMP PARALLEL DO PRIVATE(i)
             do i=1, number_of_boxes
                 if (list_index_list(i) .gt. -1) then
                     m_ml_fmm_hierarchy(l)%coefficient_list(list_index_list(i)) = coefficient_list(i)
                     m_ml_fmm_hierarchy(l)%coefficient_type(list_index_list(i)) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
                 end if
             end do
+            !$OMP END PARALLEL DO
+
 
             ! clean up
             if (allocated(coefficient_list)) then
@@ -574,12 +681,16 @@ module lib_ml_fmm
         integer(kind=UINDEX_BYTES) :: list_index
         integer(kind=1) :: hierarchy_type
 
+        type(lib_ml_fmm_coefficient), dimension(:), allocatable :: buffer_D_tilde
+
         allocate(boxes_i4, source=lib_tree_get_domain_i4(uindex, m_tree_neighbourhood_size_k))
 
-        call lib_ml_fmm_type_operator_set_coefficient_zero(D_tilde)
 
         x_c = lib_tree_get_centre_of_box(uindex)
 
+        allocate(buffer_D_tilde(size(boxes_i4)))
+
+        !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type, C, x_c_neighbour)
         do i=1, size(boxes_i4)
             list_index = lib_ml_fmm_hf_get_hierarchy_index(m_ml_fmm_hierarchy, boxes_i4(i))
             if (list_index .gt. 0) then
@@ -589,12 +700,26 @@ module lib_ml_fmm
                     C = m_ml_fmm_hierarchy(uindex%l)%coefficient_list(list_index)
                     x_c_neighbour = lib_tree_get_centre_of_box(boxes_i4(i))
 
-                    D_tilde = D_tilde + m_ml_fmm_handles%get_translation_SR(C, x_c, x_c_neighbour)
+                    buffer_D_tilde(i) = m_ml_fmm_handles%get_translation_SR(C, x_c, x_c_neighbour)
+                end if
+            end if
+        end do
+        !$OMP END PARALLEL DO
+
+        call lib_ml_fmm_type_operator_set_coefficient_zero(D_tilde)
+
+        do i=1, size(boxes_i4)
+            list_index = lib_ml_fmm_hf_get_hierarchy_index(m_ml_fmm_hierarchy, boxes_i4(i))
+            if (list_index .gt. 0) then
+                hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(list_index)
+                if (((hierarchy_type .eq. HIERARCHY_X) .or. &
+                     (hierarchy_type .eq. HIERARCHY_XY))) then
+                    D_tilde = D_tilde + buffer_D_tilde(i)
                 end if
             end if
         end do
 
-    end function
+    end function lib_ml_fmm_get_D_tilde_of_box
 
     ! Downward pass - step 2
     !
@@ -619,8 +744,8 @@ module lib_ml_fmm
         integer(kind=UINDEX_BYTES) :: list_index
         integer(kind=1) :: hierarchy_type
 
-        type(lib_ml_fmm_coefficient), dimension(:), allocatable :: coefficient_list
-        integer(kind=UINDEX_BYTES), dimension(:), allocatable :: list_index_list
+!        type(lib_ml_fmm_coefficient), dimension(:), allocatable :: coefficient_list
+!        integer(kind=UINDEX_BYTES), dimension(:), allocatable :: list_index_list
 
         m_ml_fmm_hierarchy(m_tree_l_min)%coefficient_type(:) = LIB_ML_FMM_COEFFICIENT_TYPE_D
 
@@ -629,11 +754,13 @@ module lib_ml_fmm
             number_of_boxes = size(m_ml_fmm_hierarchy(l)%coefficient_list_index)
 
             ! create coefficient buffer
-            allocate(coefficient_list(number_of_boxes))
-            allocate(list_index_list(number_of_boxes))
-            list_index_list(:) = -1
+!            allocate(coefficient_list(number_of_boxes))
+!            allocate(list_index_list(number_of_boxes))
+!            list_index_list(:) = -1
 
             if (m_ml_fmm_hierarchy(l)%is_hashed) then
+                !$OMP PARALLEL DO PRIVATE(i, hierarchy_type, D) &
+                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
                     if (uindex%n .ge. 0) then
@@ -646,7 +773,10 @@ module lib_ml_fmm
                         end if
                     end if
                 end do
+                !$OMP END PARALLEL DO
             else
+                !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type, D) &
+                !$OMP  FIRSTPRIVATE(uindex)
                 do i=1, number_of_boxes
                     uindex%n = i - int(1, 1)
                     list_index = m_ml_fmm_hierarchy(l)%coefficient_list_index(i)
@@ -655,28 +785,31 @@ module lib_ml_fmm
                         if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
                              (hierarchy_type .eq. HIERARCHY_XY))) then
                             D = lib_ml_fmm_get_D_of_box(uindex)
-                            m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
-                            m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
+                            m_ml_fmm_hierarchy(l)%coefficient_list(list_index) = D
+                            m_ml_fmm_hierarchy(l)%coefficient_type(list_index) = LIB_ML_FMM_COEFFICIENT_TYPE_D
                         end if
                     end if
                 end do
+                !$OMP END PARALLEL DO
             end if
 
             ! wirte to hierarchy
-            do i=1, number_of_boxes
-                if (list_index_list(i) .gt. -1) then
-                    m_ml_fmm_hierarchy(l)%coefficient_list(list_index_list(i)) = coefficient_list(i)
-                    m_ml_fmm_hierarchy(l)%coefficient_type(list_index_list(i)) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
-                end if
-            end do
+!            !$OMP PARALLEL DO PRIVATE(i)
+!            do i=1, number_of_boxes
+!                if (list_index_list(i) .gt. -1) then
+!                    m_ml_fmm_hierarchy(l)%coefficient_list(list_index_list(i)) = coefficient_list(i)
+!                    m_ml_fmm_hierarchy(l)%coefficient_type(list_index_list(i)) = LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE
+!                end if
+!            end do
+!            !$OMP END PARALLEL DO
 
             ! clean up
-            if (allocated(coefficient_list)) then
-                deallocate(coefficient_list)
-            end if
-            if (allocated(list_index_list)) then
-                deallocate(list_index_list)
-            end if
+!            if (allocated(coefficient_list)) then
+!                deallocate(coefficient_list)
+!            end if
+!            if (allocated(list_index_list)) then
+!                deallocate(list_index_list)
+!            end if
         end do
 
     end subroutine lib_ml_fmm_calculate_downward_pass_step_2
@@ -745,6 +878,8 @@ module lib_ml_fmm
         number_of_boxes = size(m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index)
 
         if (m_ml_fmm_hierarchy(uindex%l)%is_hashed) then
+            !$OMP PARALLEL DO PRIVATE(i, hierarchy_type) &
+            !$OMP  FIRSTPRIVATE(uindex)
             do i=1, number_of_boxes
                 uindex%n = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
                 if (uindex%n .ge. 0) then
@@ -756,7 +891,10 @@ module lib_ml_fmm
                     end if
                 end if
             end do
+            !$OMP END PARALLEL DO
         else
+            !$OMP PARALLEL DO PRIVATE(i, list_index, hierarchy_type) &
+            !$OMP  FIRSTPRIVATE(uindex)
             do i=1, number_of_boxes
                 uindex%n = i - int(1, 1)
                 list_index = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
@@ -769,7 +907,11 @@ module lib_ml_fmm
                     end if
                 end if
             end do
+            !$OMP END PARALLEL DO
         end if
+#ifdef _TRACE_
+        print *, "TRACE: lib_ml_fmm_final_summation ..done"
+#endif
 
     end subroutine lib_ml_fmm_final_summation
 
@@ -810,14 +952,16 @@ module lib_ml_fmm
                                                                   element_number_e2))
 
         D = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
-        v_counter = 0
+        !$OMP PARALLEL DO PRIVATE(i, v_counter)
         do i=1, size(data_element_e1)
             if ((data_element_e1(i)%hierarchy .eq. HIERARCHY_Y) .or. &
                 (data_element_e1(i)%hierarchy .eq. HIERARCHY_XY)) then
-                v_counter = v_counter + 1
-                m_ml_fmm_v(v_counter) = lib_ml_fmm_calculate_v_y_j(data_element_e1(i), data_element_e2, D)
+                v_counter = element_number_e1(i)
+                m_ml_fmm_v(v_counter) = lib_ml_fmm_calculate_v_y_j(data_element_e1(i), element_number_e1(i), &
+                                                                   data_element_e2, element_number_e2, D)
             end if
         end do
+        !$OMP END PARALLEL DO
     end subroutine lib_ml_fmm_calculate_all_v_y_j_at_uindex
 
     ! Argument
@@ -837,11 +981,13 @@ module lib_ml_fmm
     !          at the E2 domain of the evaluation element (Y-hierarchy)
     !
     ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(38)
-    function lib_ml_fmm_calculate_v_y_j(data_element_y_j, data_element_e2, D) result(rv)
+    function lib_ml_fmm_calculate_v_y_j(data_element_y_j, element_number_j, data_element_e2, element_number_e2, D) result(rv)
         implicit none
         ! dummy
         type(lib_tree_data_element), intent(inout) :: data_element_y_j
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: element_number_j
         type(lib_tree_data_element), dimension(:), allocatable, intent(inout) :: data_element_e2
+        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number_e2
         type(lib_ml_fmm_coefficient), intent(inout) :: D
         type(lib_ml_fmm_v) :: rv
 
@@ -853,10 +999,17 @@ module lib_ml_fmm
         x_c = lib_tree_get_centre_of_box(data_element_y_j%uindex)
         y_j = data_element_y_j%point_x
 
-        rv = D .cor. (y_j - x_c)
+!        rv = D .dor. (y_j - x_c)
 
+        rv = m_ml_fmm_handles%dor(D, x_c, y_j, element_number_j)
+
+!        i=1
+!        rv = m_ml_fmm_handles%get_u_phi_i_j(data_element_e2(i), element_number_e2(i), y_j, element_number_j)
         do i=1, size(data_element_e2)
-            rv = rv + m_ml_fmm_handles%get_phi_i_j(data_element_e2(i), y_j)
+            if (data_element_e2(i)%hierarchy .eq. HIERARCHY_X &
+                .or. data_element_e2(i)%hierarchy .eq. HIERARCHY_XY) then
+                rv = rv + m_ml_fmm_handles%get_u_phi_i_j(data_element_e2(i), element_number_e2(i), y_j, element_number_j)
+            end if
         end do
 
     end function lib_ml_fmm_calculate_v_y_j
@@ -869,21 +1022,31 @@ module lib_ml_fmm
 
         error_counter = 0
 
-        if (.not. test_lib_ml_fmm_constructor()) then
-            error_counter = error_counter + 1
-        end if
+        if (.not. test_lib_ml_fmm_constructor()) error_counter = error_counter + 1
         call lib_ml_fmm_destructor()
-        if (.not. test_lib_ml_fmm_calculate_upward_pass()) then
-            error_counter = error_counter + 1
-        end if
+
+        if (.not. test_lib_ml_fmm_calculate_upward_pass()) error_counter = error_counter + 1
         call lib_ml_fmm_destructor()
-        if (.not. test_lib_ml_fmm_calculate_downward_pass_1()) then
-            error_counter = error_counter + 1
-        end if
+
+        if (.not. test_lib_ml_fmm_calculate_downward_pass_1()) error_counter = error_counter + 1
         call lib_ml_fmm_destructor()
-        if (.not. test_lib_ml_fmm_calculate_downward_pass_2()) then
-            error_counter = error_counter + 1
-        end if
+
+        if (.not. test_lib_ml_fmm_calculate_downward_pass_2()) error_counter = error_counter + 1
+        call lib_ml_fmm_destructor()
+
+        if (.not. test_lib_ml_fmm_final_summation()) error_counter = error_counter + 1
+        call lib_ml_fmm_destructor()
+
+        if (.not. test_lib_ml_fmm_calculate_upward_pass_v2()) error_counter = error_counter + 1
+        call lib_ml_fmm_destructor()
+
+        if (.not. test_lib_ml_fmm_calculate_downward_pass_1_v2()) error_counter = error_counter + 1
+        call lib_ml_fmm_destructor()
+
+        if (.not. test_lib_ml_fmm_calculate_downward_pass_2_v2()) error_counter = error_counter + 1
+        call lib_ml_fmm_destructor()
+
+        if (.not. test_lib_ml_fmm_final_summation_v2()) error_counter = error_counter + 1
         call lib_ml_fmm_destructor()
 
         print *, "-------------lib_ml_fmm_test_functions----------------"
@@ -946,6 +1109,13 @@ module lib_ml_fmm
         !          n: 0   1   2   6   10  13  15  34  42  48  49  54   61  63
         !       type: X   X   Y   X   Y   <-X ->  <-Y -> <--     X        -->
         !
+        !  Final Summation:
+        !        2*D: -   -  618  -  620  -   -  620  620 -   -   -    -   -
+        !sum(phi_e2): -   -   1   -   0   -   -   0   0   -   -   -    -   -
+        !      final: -   -  619  -  620  -   -  620  620 -   -   -    -   -
+        !          n: 0   1   2   6   10  13  15  34  42  48  49  54   61  63
+        !       type: X   X   Y   X   Y   <-X ->  <-Y -> <--     X        -->
+        !
         !  --------------------------------- ---------------------------------
         !  |  21   |  23   | 29    | 31    | |  53   |  55   | 61    | 63    |
         !  |       |       |       |       | |       |       |    X  |    X  |
@@ -979,6 +1149,8 @@ module lib_ml_fmm
             integer(kind=UINDEX_BYTES), parameter :: list_length = 10
             integer(kind=1), parameter :: element_type = 1
 
+            type(ml_fmm_type_operator_procedures) :: operator_procedures
+            type(lib_ml_fmm_procedure_handles) :: ml_fmm_procedures
             type(lib_ml_fmm_data) :: data_elements
 
              ! --- generate test data ---
@@ -998,7 +1170,10 @@ module lib_ml_fmm
             data_elements%Y(4)%point_x%x(1) = 0.99900001287460327D0
             data_elements%Y(4)%point_x%x(2) = 0.00099998712539672852D0
 
-            call lib_ml_fmm_constructor(data_elements)
+
+            operator_procedures = ml_fmm_type_operator_get_procedures()
+            ml_fmm_procedures = ml_fmm_get_test_procedures()
+            call lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures)
 
         end subroutine setup_hierarchy_with_test_data_2D
 
@@ -1238,6 +1413,428 @@ module lib_ml_fmm
 
         end subroutine setup_ground_truth_D_coefficient_list_2D
 
+        subroutine setup_ground_truth_final_summation_2D(vector_v)
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_v), dimension(:), allocatable, intent(inout) :: vector_v
+
+            ! auxiliary
+            integer :: i
+
+            allocate(vector_v(14))
+            do i=11, 14
+                allocate(vector_v(i)%dummy(1))
+            end do
+
+            vector_v(11)%dummy(1) = 619
+            vector_v(12)%dummy(1) = 620
+            vector_v(13)%dummy(1) = 620
+            vector_v(14)%dummy(1) = 620
+
+
+        end subroutine setup_ground_truth_final_summation_2D
+
+        ! Test values_2
+        !
+        !  Application
+        !  ----
+        !
+        !  level 2:
+        !      C: 1    6   -   28  -   42  97  54  124
+        !      n: 0    1   2   3   8   10  12  13  15
+        !   type: XY   X   Y   X   Y   XY  X   XY  X
+        !
+        !
+        !  level 3:
+        !      C: 0  13  49  6   63  48  61  1   54  15  42  -   -   -
+        !      n: 0  13  49  6   63  48  61  1   54  15  42  10  34  2
+        !   type: <--        X          -->  XY  XY  X   XY  <-- Y -->
+        !
+        !
+        !
+        !  Manual caluclation
+        !  ----
+        !
+        !  Upward pass
+        !  -----
+        !
+        !  level 2
+        !          C:     1       6   -     28    -   42     97   54     124
+        !          n:     0       1   2     3     8   10     12   13     15
+        !       type:     XY      X   Y     X     Y   XY     X    XY     X
+        !             ----|----   |   |   --|---  |   |   ---|--  |    --|---
+        !  level 3:
+        !          C: 0   1   -   6   -   13  15  -   42  48  49  54   61  63
+        !          n: 0   1   2   6   10  13  15  34  42  48  49  54   61  63
+        !       type: X   XY  Y   X   Y   <-X ->  Y   XY  < X  >  XY   X   X
+        !
+        !
+        !  Downward pass
+        !  -----
+        !  level 2
+        !          C:     1       6   -     28    -   42     97   54     124
+        !         D~:97+54+124+42 -   317   -  317+7 317+35  - 1+6+28+42 -
+        !          D:     317     -   317   -     324 352    -    77     -    <-- ! D=D~ ! reason: l = l_min
+        !          n:     0       1   2     3     8   10     12   13     15
+        !       type:     XY      X   Y     X     Y   XY     X    XY     X
+        !             ----|----   |   |   --|---  |   |   ---|--  |    --|---
+        !  level 3:
+        !         D~: -   28 6+28 -  7+28 -   - 28+42 0   -   - 224+48 -   -
+        !          D: - 345 317+34- 317+35-   -324+70 352 -   - 272+77 -   -
+        !          n: 0   1   2   6   10  13  15  34  42  48  49  54   61  63
+        !       type: X   XY  Y   X   Y   <-X ->  Y   XY  < X  >  XY   X   X
+        !
+        !  Final Summation:
+        !        2*D: -  690 702  -  704  -   -  788  704 -   -   698  -   -
+        !sum(phi_e2): -   6   1   -   0   -   -   0   0   -   -   110  -   -
+        !      final: -  696 703  -  704  -   -  788  704 -   -   808  -   -
+        !          n: 0   1   2   6   10  13  15  34  42  48  49  54   61  63
+        !       type: X   XY  Y   X   Y   <-X ->  Y   XY  < X  >  XY   X   X
+        !
+        !  --------------------------------- ---------------------------------
+        !  |  21   |  23   | 29    | 31    | |  53   |  55   | 61    | 63    |
+        !  |       |       |       |       | |       |       |    X  |    X  |
+        !  |-------5---------------7-------| |-------13--------------15------|
+        !  |  20   |  22   | 28    | 30    | |  52   |  54   | 60    | 62    |
+        !  |       |       |       |       | |       |    XY |       |       |
+        !  |---------------1---------------| |---------------3---------------|
+        !  |  17   |  19   | 25    | 27    | |  49   |  51   | 57    | 59    |
+        !  |       |       |       |       | |    X  |       |       |       |
+        !  |-------4---------------6-------| |-------12--------------14------|
+        !  |  16   |  18   | 24    | 26    | |  48   |  50   | 56    | 58    |
+        !  |       |       |       |       | |    X  |       |       |       |
+        !  --------------------------------- ---------------------------------
+        !  --------------------------------- ---------------------------------
+        !  |  5    |  7    | 13    | 15    | |  37   |  39   | 45    | 47    |
+        !  |       |       |    X  |    X  | |       |       |       |       |
+        !  |-------1---------------3-------| |-------9---------------11------|
+        !  |  4    |  6    | 12    | 14    | |  36   |  38   | 44    | 46    |
+        !  |       |    X  |       |       | |       |       |       |       |
+        !  |---------------0---------------| |---------------2---------------|
+        !  |  1    |  3    | 9     | 11    | |  33   |  35   | 41    | 43    |
+        !  |    XY |       |       |       | |       |       |       |       |
+        !  |-------0---------------2-------| |-------8---------------10------|
+        !  |  0    |  2    | 8     | 10    | |  32   |  34   | 40    | 42    |
+        !  |    X  |    Y  |       |     Y | |       |     Y |       |    XY |
+        !  --------------------------------- ---------------------------------
+        subroutine setup_hierarchy_with_test_data_2D_2()
+            implicit none
+
+            ! auxiliary
+            integer(kind=UINDEX_BYTES), parameter :: list_length = 10
+            integer(kind=1), parameter :: element_type = 1
+
+            type(ml_fmm_type_operator_procedures) :: operator_procedures
+            type(lib_ml_fmm_procedure_handles) :: ml_fmm_procedures
+            type(lib_ml_fmm_data) :: data_elements
+
+             ! --- generate test data ---
+            allocate(data_elements%X, source=lib_tree_get_diagonal_test_dataset(list_length, element_type, HIERARCHY_X))
+!            allocate(data_elements%Y, source=lib_tree_get_diagonal_test_dataset(4_8, element_type, HIERARCHY_Y, .true.))
+
+            allocate(data_elements%Y(4))
+            data_elements%Y(:)%hierarchy = HIERARCHY_Y
+            data_elements%Y(:)%element_type = element_type
+
+            data_elements%Y(1)%point_x%x(1) = 0.24975000321865082D0
+            data_elements%Y(1)%point_x%x(2) = 0.00024999678134918213D0
+            data_elements%Y(2)%point_x%x(1) = 0.49950000643730164D0
+            data_elements%Y(2)%point_x%x(2) = 0.00049999356269836426D0
+            data_elements%Y(3)%point_x%x(1) = 0.74924999475479126D0
+            data_elements%Y(3)%point_x%x(2) = 0.00074999034404754639D0
+            data_elements%Y(4)%point_x%x(1) = 0.99900001287460327D0
+            data_elements%Y(4)%point_x%x(2) = 0.00099998712539672852D0
+
+
+            operator_procedures = ml_fmm_type_operator_get_procedures()
+            ml_fmm_procedures = ml_fmm_get_test_procedures()
+            call lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures)
+
+        end subroutine setup_hierarchy_with_test_data_2D_2
+
+        subroutine setup_ground_truth_uindex_list_2D_2(ground_truth_uindex_list_X_l_2, &
+                                                       ground_truth_uindex_list_Y_l_2, &
+                                                       ground_truth_uindex_list_XY_l_2, &
+                                                       ground_truth_uindex_list_X_l_3, &
+                                                       ground_truth_uindex_list_Y_l_3, &
+                                                       ground_truth_uindex_list_XY_l_3)
+            implicit none
+            ! dummy
+            type(lib_tree_universal_index), dimension(:), allocatable, intent(inout) :: ground_truth_uindex_list_X_l_2
+            type(lib_tree_universal_index), dimension(:), allocatable, intent(inout) :: ground_truth_uindex_list_Y_l_2
+            type(lib_tree_universal_index), dimension(:), allocatable, intent(inout) :: ground_truth_uindex_list_XY_l_2
+
+            type(lib_tree_universal_index), dimension(:), allocatable, intent(inout) :: ground_truth_uindex_list_X_l_3
+            type(lib_tree_universal_index), dimension(:), allocatable, intent(inout) :: ground_truth_uindex_list_Y_l_3
+            type(lib_tree_universal_index), dimension(:), allocatable, intent(inout) :: ground_truth_uindex_list_XY_l_3
+
+            ! --- setup ground truth data (2D) ---
+            allocate(ground_truth_uindex_list_X_l_2(4))
+            allocate(ground_truth_uindex_list_Y_l_2(3))
+            allocate(ground_truth_uindex_list_XY_l_2(3))
+
+            ground_truth_uindex_list_X_l_2(:)%l = 2
+            ground_truth_uindex_list_X_l_2(1)%n = 1
+            ground_truth_uindex_list_X_l_2(2)%n = 3
+            ground_truth_uindex_list_X_l_2(3)%n = 12
+            ground_truth_uindex_list_X_l_2(4)%n = 15
+
+            ground_truth_uindex_list_Y_l_2(:)%l = 2
+            ground_truth_uindex_list_Y_l_2(1)%n = 2
+            ground_truth_uindex_list_Y_l_2(2)%n = 8
+
+            ground_truth_uindex_list_XY_l_2(:)%l = 2
+            ground_truth_uindex_list_XY_l_2(1)%n = 0
+            ground_truth_uindex_list_XY_l_2(2)%n = 10
+            ground_truth_uindex_list_XY_l_2(3)%n = 13
+
+            allocate(ground_truth_uindex_list_X_l_3(8))
+            allocate(ground_truth_uindex_list_Y_l_3(3))
+            allocate(ground_truth_uindex_list_XY_l_3(3))
+
+            ground_truth_uindex_list_X_l_3(:)%l = 3
+            ground_truth_uindex_list_X_l_3(1)%n = 0
+            ground_truth_uindex_list_X_l_3(2)%n = 13
+            ground_truth_uindex_list_X_l_3(3)%n = 49
+            ground_truth_uindex_list_X_l_3(4)%n = 6
+            ground_truth_uindex_list_X_l_3(5)%n = 63
+            ground_truth_uindex_list_X_l_3(6)%n = 48
+            ground_truth_uindex_list_X_l_3(7)%n = 61
+            ground_truth_uindex_list_X_l_3(8)%n = 15
+
+            ground_truth_uindex_list_Y_l_3(:)%l = 3
+            ground_truth_uindex_list_Y_l_3(1)%n = 10
+            ground_truth_uindex_list_Y_l_3(2)%n = 34
+            ground_truth_uindex_list_Y_l_3(3)%n = 2
+
+            ground_truth_uindex_list_XY_l_3(:)%l = 3
+            ground_truth_uindex_list_XY_l_3(1)%n = 1
+            ground_truth_uindex_list_XY_l_3(2)%n = 54
+            ground_truth_uindex_list_XY_l_3(3)%n = 42
+
+        end subroutine setup_ground_truth_uindex_list_2D_2
+
+        subroutine setup_ground_truth_C_coefficient_list_2D_2(ground_truth_coefficient_list_l_2, &
+                                                              ground_truth_uindex_list_l_2, &
+                                                              ground_truth_coefficient_list_l_3, &
+                                                              ground_truth_uindex_list_l_3)
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_coefficient), dimension(:), allocatable :: ground_truth_coefficient_list_l_2
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_list_l_2
+
+            type(lib_ml_fmm_coefficient), dimension(:), allocatable :: ground_truth_coefficient_list_l_3
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_list_l_3
+
+            ! auxiliary
+
+            allocate(ground_truth_coefficient_list_l_3(11))
+            allocate(ground_truth_uindex_list_l_3(11))
+
+            ground_truth_uindex_list_l_3(:)%l = 3
+
+            allocate(ground_truth_coefficient_list_l_3(1)%dummy, source = (/0.0D0/))
+            ground_truth_uindex_list_l_3(1)%n = 0
+
+            allocate(ground_truth_coefficient_list_l_3(2)%dummy, source = (/13D0/))
+            ground_truth_uindex_list_l_3(2)%n = 13
+
+            allocate(ground_truth_coefficient_list_l_3(3)%dummy, source = (/49D0/))
+            ground_truth_uindex_list_l_3(3)%n = 49
+
+            allocate(ground_truth_coefficient_list_l_3(4)%dummy, source = (/6D0/))
+            ground_truth_uindex_list_l_3(4)%n = 6
+
+            allocate(ground_truth_coefficient_list_l_3(5)%dummy, source = (/63D0/))
+            ground_truth_uindex_list_l_3(5)%n = 63
+
+            allocate(ground_truth_coefficient_list_l_3(6)%dummy, source = (/48D0/))
+            ground_truth_uindex_list_l_3(6)%n = 48
+
+            allocate(ground_truth_coefficient_list_l_3(7)%dummy, source = (/61D0/))
+            ground_truth_uindex_list_l_3(7)%n = 61
+
+            allocate(ground_truth_coefficient_list_l_3(8)%dummy, source = (/1D0/))
+            ground_truth_uindex_list_l_3(8)%n = 1
+
+            allocate(ground_truth_coefficient_list_l_3(9)%dummy, source = (/54D0/))
+            ground_truth_uindex_list_l_3(9)%n = 54
+
+            allocate(ground_truth_coefficient_list_l_3(10)%dummy, source = (/15D0/))
+            ground_truth_uindex_list_l_3(10)%n = 15
+
+            allocate(ground_truth_coefficient_list_l_3(11)%dummy, source = (/42D0/))
+            ground_truth_uindex_list_l_3(11)%n = 42
+
+
+            allocate(ground_truth_coefficient_list_l_2(7))
+            allocate(ground_truth_uindex_list_l_2(7))
+            ground_truth_uindex_list_l_2(:)%l = 2
+
+            allocate(ground_truth_coefficient_list_l_2(1)%dummy, source = (/1D0/))
+            ground_truth_uindex_list_l_2(1)%n = 0
+
+            allocate(ground_truth_coefficient_list_l_2(2)%dummy, source = (/6D0/))
+            ground_truth_uindex_list_l_2(2)%n = 1
+
+            allocate(ground_truth_coefficient_list_l_2(3)%dummy, source = (/28D0/))
+            ground_truth_uindex_list_l_2(3)%n = 3
+
+            allocate(ground_truth_coefficient_list_l_2(4)%dummy, source = (/97D0/))
+            ground_truth_uindex_list_l_2(4)%n = 12
+
+            allocate(ground_truth_coefficient_list_l_2(5)%dummy, source = (/54D0/))
+            ground_truth_uindex_list_l_2(5)%n = 13
+
+            allocate(ground_truth_coefficient_list_l_2(6)%dummy, source = (/124D0/))
+            ground_truth_uindex_list_l_2(6)%n = 15
+
+            allocate(ground_truth_coefficient_list_l_2(7)%dummy, source = (/42D0/))
+            ground_truth_uindex_list_l_2(7)%n = 10
+
+        end subroutine setup_ground_truth_C_coefficient_list_2D_2
+
+        subroutine setup_ground_truth_D_tilde_coefficient_list_2D_2(ground_truth_coefficient_list_l_2, &
+                                                                  ground_truth_uindex_list_l_2, &
+                                                                  ground_truth_coefficient_list_l_3, &
+                                                                  ground_truth_uindex_list_l_3)
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_coefficient), dimension(:), allocatable :: ground_truth_coefficient_list_l_2
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_list_l_2
+
+            type(lib_ml_fmm_coefficient), dimension(:), allocatable :: ground_truth_coefficient_list_l_3
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_list_l_3
+
+            ! auxiliary
+
+            allocate(ground_truth_coefficient_list_l_3(6))
+            allocate(ground_truth_uindex_list_l_3(6))
+
+            ground_truth_uindex_list_l_3(:)%l = 3
+
+            allocate(ground_truth_coefficient_list_l_3(1)%dummy, source = (/34D0/))
+            ground_truth_uindex_list_l_3(1)%n = 2
+
+            allocate(ground_truth_coefficient_list_l_3(2)%dummy, source = (/35D0/))
+            ground_truth_uindex_list_l_3(2)%n = 10
+
+            allocate(ground_truth_coefficient_list_l_3(3)%dummy, source = (/70D0/))
+            ground_truth_uindex_list_l_3(3)%n = 34
+
+            allocate(ground_truth_coefficient_list_l_3(4)%dummy, source = (/0D0/))
+            ground_truth_uindex_list_l_3(4)%n = 42
+
+            allocate(ground_truth_coefficient_list_l_3(5)%dummy, source = (/28D0/))
+            ground_truth_uindex_list_l_3(5)%n = 1
+
+            allocate(ground_truth_coefficient_list_l_3(6)%dummy, source = (/272D0/))
+            ground_truth_uindex_list_l_3(6)%n = 54
+
+
+            allocate(ground_truth_coefficient_list_l_2(5))
+            allocate(ground_truth_uindex_list_l_2(5))
+            ground_truth_uindex_list_l_2(:)%l = 2
+
+            allocate(ground_truth_coefficient_list_l_2(1)%dummy, source = (/317D0/))
+            ground_truth_uindex_list_l_2(1)%n = 0
+
+            allocate(ground_truth_coefficient_list_l_2(2)%dummy, source = (/317D0/))
+            ground_truth_uindex_list_l_2(2)%n = 2
+
+            allocate(ground_truth_coefficient_list_l_2(3)%dummy, source = (/324D0/))
+            ground_truth_uindex_list_l_2(3)%n = 8
+
+            allocate(ground_truth_coefficient_list_l_2(4)%dummy, source = (/352D0/))
+            ground_truth_uindex_list_l_2(4)%n = 10
+
+            allocate(ground_truth_coefficient_list_l_2(5)%dummy, source = (/77D0/))
+            ground_truth_uindex_list_l_2(5)%n = 13
+
+        end subroutine setup_ground_truth_D_tilde_coefficient_list_2D_2
+
+        subroutine setup_ground_truth_D_coefficient_list_2D_2(ground_truth_coefficient_list_l_2, &
+                                                            ground_truth_uindex_list_l_2, &
+                                                            ground_truth_coefficient_list_l_3, &
+                                                            ground_truth_uindex_list_l_3)
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_coefficient), dimension(:), allocatable :: ground_truth_coefficient_list_l_2
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_list_l_2
+
+            type(lib_ml_fmm_coefficient), dimension(:), allocatable :: ground_truth_coefficient_list_l_3
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_list_l_3
+
+            ! auxiliary
+
+            allocate(ground_truth_coefficient_list_l_3(4))
+            allocate(ground_truth_uindex_list_l_3(4))
+
+            ground_truth_uindex_list_l_3(:)%l = 3
+
+            allocate(ground_truth_coefficient_list_l_3(1)%dummy, source = (/351D0/))
+            ground_truth_uindex_list_l_3(1)%n = 2
+
+            allocate(ground_truth_coefficient_list_l_3(2)%dummy, source = (/352D0/))
+            ground_truth_uindex_list_l_3(2)%n = 10
+
+            allocate(ground_truth_coefficient_list_l_3(3)%dummy, source = (/394D0/))
+            ground_truth_uindex_list_l_3(3)%n = 34
+
+            allocate(ground_truth_coefficient_list_l_3(4)%dummy, source = (/352D0/))
+            ground_truth_uindex_list_l_3(4)%n = 42
+
+            allocate(ground_truth_coefficient_list_l_3(5)%dummy, source = (/345D0/))
+            ground_truth_uindex_list_l_3(5)%n = 1
+
+            allocate(ground_truth_coefficient_list_l_3(6)%dummy, source = (/349D0/))
+            ground_truth_uindex_list_l_3(6)%n = 54
+
+
+            allocate(ground_truth_coefficient_list_l_2(5))
+            allocate(ground_truth_uindex_list_l_2(5))
+            ground_truth_uindex_list_l_2(:)%l = 2
+
+            allocate(ground_truth_coefficient_list_l_2(1)%dummy, source = (/317D0/))
+            ground_truth_uindex_list_l_2(1)%n = 0
+
+            allocate(ground_truth_coefficient_list_l_2(2)%dummy, source = (/317D0/))
+            ground_truth_uindex_list_l_2(2)%n = 2
+
+            allocate(ground_truth_coefficient_list_l_2(3)%dummy, source = (/324D0/))
+            ground_truth_uindex_list_l_2(3)%n = 8
+
+            allocate(ground_truth_coefficient_list_l_2(4)%dummy, source = (/352D0/))
+            ground_truth_uindex_list_l_2(4)%n = 10
+
+            allocate(ground_truth_coefficient_list_l_2(5)%dummy, source = (/77D0/))
+            ground_truth_uindex_list_l_2(5)%n = 13
+
+        end subroutine setup_ground_truth_D_coefficient_list_2D_2
+
+        subroutine setup_ground_truth_final_summation_2D_2(vector_v)
+            implicit none
+            ! dummy
+            type(lib_ml_fmm_v), dimension(:), allocatable, intent(inout) :: vector_v
+
+            ! auxiliary
+            integer :: i
+
+            allocate(vector_v(14))
+            do i=11, 14
+                allocate(vector_v(i)%dummy(1))
+            end do
+
+            vector_v(11)%dummy(1) = 703
+            vector_v(12)%dummy(1) = 704
+            vector_v(13)%dummy(1) = 788
+            vector_v(14)%dummy(1) = 696
+            vector_v(15)%dummy(1) = 704
+            vector_v(16)%dummy(1) = 808
+
+
+        end subroutine setup_ground_truth_final_summation_2D_2
+
         function test_lib_ml_fmm_constructor() result(rv)
             implicit none
             ! dummy
@@ -1380,6 +1977,7 @@ module lib_ml_fmm
             end if
 #else
             print *, "test_lib_ml_fmm_constructor (3D): NOT DEFINED"
+            rv = .true.
 #endif
 
 !            allocate(vector_u(list_length+4_8))
@@ -1400,16 +1998,13 @@ module lib_ml_fmm
 
             ! auxiliaray
             type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
-            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_v
 
             integer(kind=UINDEX_BYTES), parameter :: list_length = 10
             integer(kind=1), parameter :: element_type = 1
-            type(lib_ml_fmm_data) :: data_elements
 
             real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
             type(lib_ml_fmm_coefficient) :: coefficient
             integer(kind=UINDEX_BYTES) :: i
-            integer(kind=UINDEX_BYTES) :: list_index
 
             type(lib_tree_universal_index) :: uindex
             integer(kind=1) :: coefficient_type
@@ -1476,6 +2071,7 @@ module lib_ml_fmm
 
 #else
             print *, "test_lib_ml_fmm_calculate_upward_pass (3D): NOT DEFINED"
+            rv = .true.
 #endif
 
 
@@ -1488,16 +2084,13 @@ module lib_ml_fmm
 
             ! auxiliary
             type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
-            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_v
 
             integer(kind=UINDEX_BYTES), parameter :: list_length = 10
             integer(kind=1), parameter :: element_type = 1
-            type(lib_ml_fmm_data) :: data_elements
 
             real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
             type(lib_ml_fmm_coefficient) :: coefficient
             integer(kind=UINDEX_BYTES) :: i
-            integer(kind=UINDEX_BYTES) :: list_index
 
             type(lib_tree_universal_index) :: uindex
             integer(kind=1) :: coefficient_type
@@ -1566,6 +2159,7 @@ module lib_ml_fmm
 
 #else
             print *, "test_lib_ml_fmm_calculate_downward_pass_1 (3D): NOT DEFINED"
+            rv = .true.
 #endif
         end function test_lib_ml_fmm_calculate_downward_pass_1
 
@@ -1576,16 +2170,13 @@ module lib_ml_fmm
 
             ! auxiliary
             type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
-            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_v
 
             integer(kind=UINDEX_BYTES), parameter :: list_length = 10
             integer(kind=1), parameter :: element_type = 1
-            type(lib_ml_fmm_data) :: data_elements
 
             real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
             type(lib_ml_fmm_coefficient) :: coefficient
             integer(kind=UINDEX_BYTES) :: i
-            integer(kind=UINDEX_BYTES) :: list_index
 
             type(lib_tree_universal_index) :: uindex
             integer(kind=1) :: coefficient_type
@@ -1655,8 +2246,406 @@ module lib_ml_fmm
 
 #else
             print *, "test_lib_ml_fmm_calculate_downward_pass_2 (3D): NOT DEFINED"
+            rv = .true.
 #endif
         end function test_lib_ml_fmm_calculate_downward_pass_2
+
+        function test_lib_ml_fmm_final_summation() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
+
+            integer(kind=UINDEX_BYTES), parameter :: list_length = 10
+            integer(kind=1), parameter :: element_type = 1
+
+            real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
+            integer(kind=UINDEX_BYTES) :: i
+
+            type(lib_ml_fmm_v), dimension(:), allocatable :: ground_truth_vector_v
+            double precision :: diff
+
+#if (_FMM_DIMENSION_ == 2)
+            ! --- generate test data & setup the heriarchy ---
+            call setup_hierarchy_with_test_data_2D()
+
+            allocate(vector_u(list_length+4_8))
+            allocate(dummy(1))
+            dummy(1) = 1.0
+            do i=1, size(vector_u)
+                vector_u(i)%dummy = dummy
+            end do
+
+            if (allocated(m_ml_fmm_u)) then
+                m_ml_fmm_u = vector_u
+            else
+                allocate(m_ml_fmm_u, source=vector_u)
+            end if
+
+            call lib_ml_fmm_calculate_upward_pass()
+            call lib_ml_fmm_calculate_downward_pass_step_1()
+            call lib_ml_fmm_calculate_downward_pass_step_2()
+
+            ! --- setup ground truth data ---
+            call setup_ground_truth_final_summation_2D(ground_truth_vector_v)
+
+            ! --- function to test ---
+            call lib_ml_fmm_final_summation()
+
+
+            ! --- test ---
+            rv = .true.
+
+            print *, "test_lib_ml_fmm_final_summation"
+            do i=1, size(ground_truth_vector_v)
+                if (allocated(m_ml_fmm_v(i)%dummy)) then
+                    diff = m_ml_fmm_v(i)%dummy(1) - ground_truth_vector_v(i)%dummy(1)
+                    if ( diff .lt. 1D-14 ) then
+                        print *, "  m_ml_fmm_v(i=", i, "):  OK"
+                    else
+                        rv = .false.
+                        print *, "  m_ml_fmm_v(i=", i, "):  FAILED"
+                        print *, "    m_ml_fmm_v: ", m_ml_fmm_v(i)%dummy(1)
+                        print *, "    GT        : ", ground_truth_vector_v(i)%dummy(1)
+                    end if
+                end if
+            end do
+
+#else
+            print *, "test_lib_ml_fmm_final_summation (3D): NOT DEFINED"
+            rv = .true.
+#endif
+        end function test_lib_ml_fmm_final_summation
+
+        function test_lib_ml_fmm_calculate_upward_pass_v2() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliaray
+            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
+
+            integer(kind=UINDEX_BYTES), parameter :: list_length = 10
+            integer(kind=1), parameter :: element_type = 1
+
+            real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
+            type(lib_ml_fmm_coefficient) :: coefficient
+            integer(kind=UINDEX_BYTES) :: i
+
+            type(lib_tree_universal_index) :: uindex
+            integer(kind=1) :: coefficient_type
+
+            type(lib_ml_fmm_coefficient), dimension(:), allocatable :: ground_truth_coefficient_list_l_2
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_list_l_2
+
+            type(lib_ml_fmm_coefficient), dimension(:), allocatable :: ground_truth_coefficient_list_l_3
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_list_l_3
+
+#if (_FMM_DIMENSION_ == 2)
+            ! --- generate test data & setup the heriarchy ---
+            call setup_hierarchy_with_test_data_2D()
+
+            allocate(vector_u(list_length+4_8))
+            allocate(dummy(1))
+            dummy(1) = 1.0
+            do i=1, size(vector_u)
+                vector_u(i)%dummy = dummy
+            end do
+
+            if (allocated(m_ml_fmm_u)) then
+                m_ml_fmm_u = vector_u
+            else
+                allocate(m_ml_fmm_u, source=vector_u)
+            end if
+
+            ! --- setup ground truth data ---
+            call setup_ground_truth_C_coefficient_list_2D(ground_truth_coefficient_list_l_2, &
+                                                        ground_truth_uindex_list_l_2, &
+                                                        ground_truth_coefficient_list_l_3, &
+                                                        ground_truth_uindex_list_l_3)
+
+            ! --- function to test ---
+            call lib_ml_fmm_calculate_upward_pass()
+
+            ! --- test ---
+            rv = .true.
+
+            print *, "test_lib_ml_fmm_calculate_upward_pass_v2"
+            do i=1, size(ground_truth_coefficient_list_l_2)
+                uindex = ground_truth_uindex_list_l_2(i)
+                coefficient = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
+                if ((coefficient .eq. ground_truth_coefficient_list_l_2(i)) .and. &
+                    (coefficient_type .eq. LIB_ML_FMM_COEFFICIENT_TYPE_C)) then
+                    print *, "  uinedx(l = 2) n:", uindex%n, ":  OK"
+                else
+                    rv = .false.
+                    print *, "  uinedx(l = 2) n:", uindex%n, ":  FAILED"
+                end if
+            end do
+
+            do i=1, size(ground_truth_coefficient_list_l_3)
+                uindex = ground_truth_uindex_list_l_3(i)
+                coefficient = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
+                if ((coefficient .eq. ground_truth_coefficient_list_l_3(i)) .and. &
+                    (coefficient_type .eq. LIB_ML_FMM_COEFFICIENT_TYPE_C)) then
+                    print *, "  uinedx(l = 3) n:", uindex%n, ":  OK"
+                else
+                    rv = .false.
+                    print *, "  uinedx(l = 3) n:", uindex%n, ":  FAILED"
+                end if
+            end do
+
+#else
+            print *, "test_lib_ml_fmm_calculate_upward_pass_v2 (3D): NOT DEFINED"
+            rv = .true.
+#endif
+
+
+        end function test_lib_ml_fmm_calculate_upward_pass_v2
+
+        function test_lib_ml_fmm_calculate_downward_pass_1_v2() result(rv)
+            implicit none
+            ! dummy
+            logical rv
+
+            ! auxiliary
+            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
+
+            integer(kind=UINDEX_BYTES), parameter :: list_length = 10
+            integer(kind=1), parameter :: element_type = 1
+
+            real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
+            type(lib_ml_fmm_coefficient) :: coefficient
+            integer(kind=UINDEX_BYTES) :: i
+
+            type(lib_tree_universal_index) :: uindex
+            integer(kind=1) :: coefficient_type
+
+            type(lib_ml_fmm_coefficient), dimension(:), allocatable :: ground_truth_coefficient_list_l_2
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_list_l_2
+
+            type(lib_ml_fmm_coefficient), dimension(:), allocatable :: ground_truth_coefficient_list_l_3
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_list_l_3
+
+#if (_FMM_DIMENSION_ == 2)
+            ! --- generate test data & setup the heriarchy ---
+            call setup_hierarchy_with_test_data_2D()
+
+            allocate(vector_u(list_length+4_8))
+            allocate(dummy(1))
+            dummy(1) = 1.0
+            do i=1, size(vector_u)
+                vector_u(i)%dummy = dummy
+            end do
+
+            if (allocated(m_ml_fmm_u)) then
+                m_ml_fmm_u = vector_u
+            else
+                allocate(m_ml_fmm_u, source=vector_u)
+            end if
+
+            call lib_ml_fmm_calculate_upward_pass()
+
+            ! --- setup ground truth data ---
+            call setup_ground_truth_D_tilde_coefficient_list_2D(ground_truth_coefficient_list_l_2, &
+                                                        ground_truth_uindex_list_l_2, &
+                                                        ground_truth_coefficient_list_l_3, &
+                                                        ground_truth_uindex_list_l_3)
+
+            ! --- function to test ---
+            call lib_ml_fmm_calculate_downward_pass_step_1()
+
+            ! --- test ---
+            rv = .true.
+
+            print *, "test_lib_ml_fmm_calculate_downward_pass_1_v2"
+            do i=1, size(ground_truth_coefficient_list_l_2)
+                uindex = ground_truth_uindex_list_l_2(i)
+                coefficient = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
+                if ((coefficient .eq. ground_truth_coefficient_list_l_2(i)) .and. &
+                    (coefficient_type .eq. LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE)) then
+                    print *, "  uinedx(l = 2) n:", uindex%n, ":  OK"
+                else
+                    rv = .false.
+                    print *, "  uinedx(l = 2) n:", uindex%n, ":  FAILED"
+                end if
+            end do
+
+            do i=1, size(ground_truth_coefficient_list_l_3)
+                uindex = ground_truth_uindex_list_l_3(i)
+                coefficient = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
+                if ((coefficient .eq. ground_truth_coefficient_list_l_3(i)) .and. &
+                    (coefficient_type .eq. LIB_ML_FMM_COEFFICIENT_TYPE_D_TILDE)) then
+                    print *, "  uinedx(l = 3) n:", uindex%n, ":  OK"
+                else
+                    rv = .false.
+                    print *, "  uinedx(l = 3) n:", uindex%n, ":  FAILED"
+                end if
+            end do
+
+#else
+            print *, "test_lib_ml_fmm_calculate_downward_pass_1_v2 (3D): NOT DEFINED"
+            rv = .true.
+#endif
+        end function test_lib_ml_fmm_calculate_downward_pass_1_v2
+
+        function test_lib_ml_fmm_calculate_downward_pass_2_v2() result(rv)
+            implicit none
+            ! dummy
+            logical rv
+
+            ! auxiliary
+            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
+
+            integer(kind=UINDEX_BYTES), parameter :: list_length = 10
+            integer(kind=1), parameter :: element_type = 1
+
+            real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
+            type(lib_ml_fmm_coefficient) :: coefficient
+            integer(kind=UINDEX_BYTES) :: i
+
+            type(lib_tree_universal_index) :: uindex
+            integer(kind=1) :: coefficient_type
+
+            type(lib_ml_fmm_coefficient), dimension(:), allocatable :: ground_truth_coefficient_list_l_2
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_list_l_2
+
+            type(lib_ml_fmm_coefficient), dimension(:), allocatable :: ground_truth_coefficient_list_l_3
+            type(lib_tree_universal_index), dimension(:), allocatable :: ground_truth_uindex_list_l_3
+
+#if (_FMM_DIMENSION_ == 2)
+            ! --- generate test data & setup the heriarchy ---
+            call setup_hierarchy_with_test_data_2D()
+
+            allocate(vector_u(list_length+4_8))
+            allocate(dummy(1))
+            dummy(1) = 1.0
+            do i=1, size(vector_u)
+                vector_u(i)%dummy = dummy
+            end do
+
+            if (allocated(m_ml_fmm_u)) then
+                m_ml_fmm_u = vector_u
+            else
+                allocate(m_ml_fmm_u, source=vector_u)
+            end if
+
+            call lib_ml_fmm_calculate_upward_pass()
+            call lib_ml_fmm_calculate_downward_pass_step_1()
+
+            ! --- setup ground truth data ---
+            call setup_ground_truth_D_coefficient_list_2D(ground_truth_coefficient_list_l_2, &
+                                                          ground_truth_uindex_list_l_2, &
+                                                          ground_truth_coefficient_list_l_3, &
+                                                          ground_truth_uindex_list_l_3)
+
+            ! --- function to test ---
+            call lib_ml_fmm_calculate_downward_pass_step_2()
+
+            ! --- test ---
+            rv = .true.
+
+            print *, "test_lib_ml_fmm_calculate_downward_pass_v2"
+            do i=1, size(ground_truth_coefficient_list_l_2)
+                uindex = ground_truth_uindex_list_l_2(i)
+                coefficient = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
+                if ((coefficient .eq. ground_truth_coefficient_list_l_2(i)) .and. &
+                    (coefficient_type .eq. LIB_ML_FMM_COEFFICIENT_TYPE_D)) then
+                    print *, "  uinedx(l = 2) n:", uindex%n, ":  OK"
+                else
+                    rv = .false.
+                    print *, "  uinedx(l = 2) n:", uindex%n, ":  FAILED"
+                end if
+            end do
+
+            do i=1, size(ground_truth_coefficient_list_l_3)
+                uindex = ground_truth_uindex_list_l_3(i)
+                coefficient = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
+                if ((coefficient .eq. ground_truth_coefficient_list_l_3(i)) .and. &
+                    (coefficient_type .eq. LIB_ML_FMM_COEFFICIENT_TYPE_D)) then
+                    print *, "  uinedx(l = 3) n:", uindex%n, ":  OK"
+                else
+                    rv = .false.
+                    print *, "  uinedx(l = 3) n:", uindex%n, ":  FAILED"
+                end if
+            end do
+
+#else
+            print *, "test_lib_ml_fmm_calculate_downward_pass_v2 (3D): NOT DEFINED"
+            rv = .true.
+#endif
+        end function test_lib_ml_fmm_calculate_downward_pass_2_v2
+
+        function test_lib_ml_fmm_final_summation_v2() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            type(lib_ml_fmm_v), dimension(:), allocatable :: vector_u
+
+            integer(kind=UINDEX_BYTES), parameter :: list_length = 10
+            integer(kind=1), parameter :: element_type = 1
+
+            real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
+            integer(kind=UINDEX_BYTES) :: i
+
+            type(lib_ml_fmm_v), dimension(:), allocatable :: ground_truth_vector_v
+            double precision :: diff
+
+#if (_FMM_DIMENSION_ == 2)
+            ! --- generate test data & setup the heriarchy ---
+            call setup_hierarchy_with_test_data_2D()
+
+            allocate(vector_u(list_length+4_8))
+            allocate(dummy(1))
+            dummy(1) = 1.0
+            do i=1, size(vector_u)
+                vector_u(i)%dummy = dummy
+            end do
+
+            if (allocated(m_ml_fmm_u)) then
+                m_ml_fmm_u = vector_u
+            else
+                allocate(m_ml_fmm_u, source=vector_u)
+            end if
+
+            call lib_ml_fmm_calculate_upward_pass()
+            call lib_ml_fmm_calculate_downward_pass_step_1()
+            call lib_ml_fmm_calculate_downward_pass_step_2()
+
+            ! --- setup ground truth data ---
+            call setup_ground_truth_final_summation_2D(ground_truth_vector_v)
+
+            ! --- function to test ---
+            call lib_ml_fmm_final_summation()
+
+
+            ! --- test ---
+            rv = .true.
+
+            print *, "test_lib_ml_fmm_final_summation_v2"
+            do i=1, size(ground_truth_vector_v)
+                if (allocated(m_ml_fmm_v(i)%dummy)) then
+                    diff = m_ml_fmm_v(i)%dummy(1) - ground_truth_vector_v(i)%dummy(1)
+                    if ( diff .lt. 1D-14 ) then
+                        print *, "  m_ml_fmm_v(i=", i, "):  OK"
+                    else
+                        rv = .false.
+                        print *, "  m_ml_fmm_v(i=", i, "):  FAILED"
+                        print *, "    m_ml_fmm_v: ", m_ml_fmm_v(i)%dummy(1)
+                        print *, "    GT        : ", ground_truth_vector_v(i)%dummy(1)
+                    end if
+                end if
+            end do
+
+#else
+            print *, "test_lib_ml_fmm_final_summation_v2 (3D): NOT DEFINED"
+            rv = .true.
+#endif
+        end function test_lib_ml_fmm_final_summation_v2
 
     end function lib_ml_fmm_test_functions
 

@@ -3,6 +3,8 @@
 	<name>FoggySim</name>
 	<comment></comment>
 	<projects>
+		<project>libmath</project>
+		<project>libtoolbox</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
