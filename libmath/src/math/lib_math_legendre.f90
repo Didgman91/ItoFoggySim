@@ -211,17 +211,27 @@ module lib_math_legendre
             call init_list(pm, fnu, n)
             call init_list(pd, fnu, n)
 
-            do m_m=fnu, fnu+n-1
+            call lib_math_associated_legendre_polynomial_with_negative_m(x, 0, &
+                                                                         0, fnu+n-1, &
+                                                                         buffer_pm, buffer_pd)
+            do m_n=fnu, fnu+n-1
+                pm%item(m_n)%item(0) = buffer_pm(1,m_n)
+
+                pd%item(m_n)%item(0) = buffer_pd(1,m_n)
+            end do
+
+            do m_m=1, fnu+n-1
                 call lib_math_associated_legendre_polynomial_with_negative_m(x, m_m, &
                                                                              m_m, fnu+n-1, &
-                                                                             buffer_pm, buffer_pd, &
-                                                                             m_condon_shortley_phase)
+                                                                             buffer_pm, buffer_pd)
                 do m_n=m_m, fnu+n-1
+                    if (m_n .ge. fnu) then
                         pm%item(m_n)%item(-m_m) = buffer_pm(1,m_n-m_m)
                         pm%item(m_n)%item(m_m) = buffer_pm(2,m_n-m_m)
 
                         pd%item(m_n)%item(-m_m) = buffer_pd(1,m_n-m_m)
                         pd%item(m_n)%item(m_m) = buffer_pd(2,m_n-m_m)
+                    end if
                 end do
             end do
 
@@ -2308,7 +2318,7 @@ module lib_math_legendre
 
                 rv = .true.
                 print *, "test_lib_math_associated_legendre_polynomial_range:"
-                do i=1, n
+                do i=fnu, fnu+n-1
                     buffer = abs(pm%item(i)%item(m) - ground_truth_pm(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
@@ -2319,7 +2329,7 @@ module lib_math_legendre
                 end do
 
                 print*, "  deriviation:"
-                do i=1, n
+                do i=fnu, fnu+n-1
                     buffer = abs(pd%item(i)%item(m) - ground_truth_pd(i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
