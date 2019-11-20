@@ -6,7 +6,7 @@ module lib_ml_fmm_type_operator
     ! ----- public functions -----
     public :: lib_ml_fmm_type_operator_constructor
 
-    public :: operator (*)
+    !public :: operator (*)
     public :: operator (+)
 !    public :: operator (-)
 !

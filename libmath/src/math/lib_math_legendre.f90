@@ -10,6 +10,7 @@ module lib_math_legendre
     ! --- public ---
     public :: lib_math_associated_legendre_polynomial
     public :: lib_math_associated_legendre_polynomial_with_negative_m
+	 public :: lib_math_associated_legendre_polynomial_range
     public :: lib_math_associated_legendre_polynomial_theta
     public :: lib_math_legendre_polynomial
 
@@ -213,7 +214,8 @@ module lib_math_legendre
 
             call lib_math_associated_legendre_polynomial_with_negative_m(x, 0, &
                                                                          0, fnu+n-1, &
-                                                                         buffer_pm, buffer_pd)
+                                                                         buffer_pm, buffer_pd, &
+																								 m_condon_shortley_phase)
             do m_n=fnu, fnu+n-1
                 pm%item(m_n)%item(0) = buffer_pm(1,m_n)
 
@@ -223,7 +225,8 @@ module lib_math_legendre
             do m_m=1, fnu+n-1
                 call lib_math_associated_legendre_polynomial_with_negative_m(x, m_m, &
                                                                              m_m, fnu+n-1, &
-                                                                             buffer_pm, buffer_pd)
+                                                                             buffer_pm, buffer_pd, &
+																									  m_condon_shortley_phase)
                 do m_n=m_m, fnu+n-1
                     if (m_n .ge. fnu) then
                         pm%item(m_n)%item(-m_m) = buffer_pm(1,m_n-m_m)
