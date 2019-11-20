@@ -156,8 +156,8 @@ module lib_mie_illumination
             end if
             cache_coefficients_p_0_q_0_plane_wave_enabled = .false.
         end subroutine
-
         subroutine lib_mie_illumination_get_p_q_j_j(illumination, n_medium, d_0_j, n_range, p_nm, q_nm, caching)
+
             implicit none
             ! dummy
             type(lib_mie_illumination_parameter), intent(in) :: illumination
@@ -358,6 +358,120 @@ module lib_mie_illumination
             end do
 
         end subroutine lib_mie_illumination_get_p_q_j_j_multi_plane_wave
+
+!        ! Argument
+!        ! ----
+!        !   illumination: type(lib_mie_illumination_parameter)
+!        !       illumination parameter
+!        !   d_0_j: type(cartesian_coordinate_real_type)
+!        !       vector from the
+!        !   n_range: integer, dimension(2)
+!        !       first and last index (degree) of the sum to calculate the electical field
+!        !       e.g. n = (/ 1, 45 /) <-- size parameter
+!        !
+!        ! Returns
+!        ! ----
+!        !   p: type(list_list_cmplx)
+!        !       coefficient of vector spherical componets
+!        !   q: type(list_list_cmplx)
+!        !       coefficient of vector spherical componets
+!        !
+!        ! Reference: Expansion of an arbitrarily oriented, located, and shaped beam in spheroidal coordinates, Feng Xu
+!        !            eq. 6, 7
+!        subroutine lib_mie_illumination_get_p_q_j_j_arbitrary_field(illumination, n_medium, d_0_j, n_range, p_nm, q_nm)
+!            implicit none
+!            ! dummy
+!            type(lib_mie_illumination_parameter), intent(in) :: illumination
+!            double precision :: n_medium
+!            type(cartesian_coordinate_real_type), intent(in) :: d_0_j
+!            integer(kind=4), dimension(2),intent(in) :: n_range
+!
+!            type(list_list_cmplx), intent(inout) :: p_nm
+!            type(list_list_cmplx), intent(inout) :: q_nm
+!
+!            ! auxiliaray
+!            integer :: n
+!            integer :: m
+!
+!            integer :: z_selector
+!
+!            double precision :: prefactor
+!            double complex :: prefactor_r
+!
+!            double precision :: kr
+!
+!
+!            prefactor = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n, abs(m)) * kr / (4d0 * PI)
+!
+!            prefactor_r = dcmplx(0,1)**(n+1) * prefactor / get_z_function(x, selector, n_range)
+!
+!
+!
+!
+!
+!        end subroutine lib_mie_illumination_get_p_q_j_j_arbitrary_field
+!
+!        function get_z_function(x, selector, n_range) result (rv)
+!            implicit none
+!            ! dummy
+!            double precision, intent(in) :: x
+!            integer, intent(in) :: selector
+!            integer, dimension(2), intent(in) :: n_range
+!
+!            type(list_cmplx) :: rv
+!
+!
+!            ! auxiliary
+!            integer :: n
+!            double precision, dimension(:), allocatable :: z_n_real
+!            double complex, dimension(:), allocatable :: z_n_cmplx
+!
+!            ! z function
+!            select case (z_selector)
+!                case(1)
+!                    ! spherical Bessel function first kind j_n
+!                    allocate(z_n_real(0:n_range(2)+1))
+!                    z_n_real = lib_math_bessel_spherical_first_kind(x, 0, n_range(2)+1)
+!                case(2)
+!                    ! spherical Bessel function second kind y_n
+!                    allocate(z_n_real(0:n_range(2)+1))
+!                    z_n_real = lib_math_bessel_spherical_second_kind(x, 0, n_range(2)+1)
+!                case(3)
+!                    ! spherical Hankel function first kind   h^(1)_n
+!                    allocate(z_n_cmplx(0:n_range(2)+1))
+!                    z_n_cmplx = lib_math_hankel_spherical_1(x, 0, n_range(2)+1)
+!                case(4)
+!                    ! spherical Hankel function second kind   h^(2)_n
+!                    allocate(z_n_cmplx(0:n_range(2)+1))
+!                    z_n_cmplx = lib_math_hankel_spherical_2(x, 0, n_range(2)+1)
+!                case default
+!                    z_n_real = 0
+!                    z_n_cmplx = cmplx(0,0)
+!
+!                    print*, "get_z_function: ERROR"
+!                    print*, "  undefined z_selector value[1-4]: ", z_selector
+!                    return
+!            end select
+!
+!            call init_list(rv, n_range(1), n_range(2)-n_range(1)+1)
+!
+!            select case (z_selector)
+!                case(1, 2)
+!                    do n = n_range(1), n_range(2)
+!                        rv%item(n) = dcmplx(z_n_real(n), 0)
+!                    end do
+!
+!                    deallocate(z_n_real)
+!                case(3, 4)
+!                    do n = n_range(1), n_range(2)
+!                        rv%item(n) = z_n_cmplx(n)
+!                    end do
+!
+!                    deallocate(z_n_cmplx)
+!            end select
+!        end function
+
+
 
         ! Calculates the coefficients (of vector spherical components) of a plane incident wave
         ! - transverse magnetic mode (TM)
