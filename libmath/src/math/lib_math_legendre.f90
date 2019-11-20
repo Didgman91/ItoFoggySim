@@ -1,4 +1,4 @@
-module lib_math_legendre
+﻿module lib_math_legendre
     use lib_math_factorial
     use lib_math_type
     use lib_math_type_operator
@@ -10,6 +10,7 @@ module lib_math_legendre
     ! --- public ---
     public :: lib_math_associated_legendre_polynomial
     public :: lib_math_associated_legendre_polynomial_with_negative_m
+    public :: lib_math_associated_legendre_polynomial_range
     public :: lib_math_associated_legendre_polynomial_theta
     public :: lib_math_legendre_polynomial
 
