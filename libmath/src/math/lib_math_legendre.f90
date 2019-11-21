@@ -10,7 +10,7 @@ module lib_math_legendre
     ! --- public ---
     public :: lib_math_associated_legendre_polynomial
     public :: lib_math_associated_legendre_polynomial_with_negative_m
-	 public :: lib_math_associated_legendre_polynomial_range
+    public :: lib_math_associated_legendre_polynomial_range
     public :: lib_math_associated_legendre_polynomial_theta
     public :: lib_math_legendre_polynomial
 
@@ -98,11 +98,11 @@ module lib_math_legendre
         ! Results
         ! ----
         !   pm: double precision, dimension(2, n)
-        !       pm(1,:): result of the associated Legendre polynomial with a negativ m
-        !       pm(2,:): result of the associated Legendre polynomial with a positiv m
+        !       pm(1,fnu:fnu+n-1): result of the associated Legendre polynomial with a negativ m
+        !       pm(2,fnu:fnu+n-1): result of the associated Legendre polynomial with a positiv m
         !   pd: double precision, dimension(2, n)
-        !       pd(1,:): result of the deriviative of the associated Legendre polynomial with a negativ m
-        !       pd(2,:): result of the deriviative of the associated Legendre polynomial with a positiv m
+        !       pd(1,fnu:fnu+n-1): result of the deriviative of the associated Legendre polynomial with a negativ m
+        !       pd(2,fnu:fnu+n-1): result of the deriviative of the associated Legendre polynomial with a positiv m
         !
         ! Refrence: http://mathworld.wolfram.com/AssociatedLegendrePolynomial.html
         subroutine lib_math_associated_legendre_polynomial_with_negative_m(x, m, fnu, n, pm, pd, condon_shortley_phase)
@@ -113,8 +113,8 @@ module lib_math_legendre
             integer(kind=4), intent(in) :: fnu
             integer(kind=4), intent(in) :: n
 
-            double precision, dimension(2, n), intent(inout) :: pm
-            double precision, dimension(2, n), intent(inout) :: pd
+            double precision, allocatable, dimension(:,:), intent(out) :: pm
+            double precision, allocatable, dimension(:,:), intent(out) :: pd
             logical, optional :: condon_shortley_phase
 
             ! auxiliary
@@ -125,17 +125,23 @@ module lib_math_legendre
 
             call LPMNS(m, fnu+n, x, buffer_pm, buffer_pd)
 
-            pm(2, :) = buffer_pm(fnu:fnu+n-1)
-            pd(2, :) = buffer_pd(fnu:fnu+n-1)
+            if (allocated(pm)) deallocate(pm)
+            allocate(pm(2, fnu:fnu+n-1))
+
+            if (allocated(pd)) deallocate(pd)
+            allocate(pd(2, fnu:fnu+n-1))
+
+            pm(2, fnu:fnu+n-1) = buffer_pm(fnu:fnu+n-1)
+            pd(2, fnu:fnu+n-1) = buffer_pd(fnu:fnu+n-1)
 
             ! calculation with negative m
 
-            do i=1, n
-                if (fnu .eq. 0 .and. i .eq. 1) then
-                    pm(1, 1) = pm(2, 1)
-                    pd(1, 1) = pd(2, 1)
+            do i=fnu, fnu+n-1
+                if (i .eq. 0) then
+                    pm(1, 0) = pm(2, 0)
+                    pd(1, 0) = pd(2, 0)
                 else
-                    buffer = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(fnu+i-1, m)
+                    buffer = lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(i, m)
 
                     if ( IAND(m, 1) .eq. 1) then
                         ! m is odd
@@ -206,16 +212,16 @@ module lib_math_legendre
             m_condon_shortley_phase = .false.
             if (present(condon_shortley_phase)) m_condon_shortley_phase = condon_shortley_phase
 
-            allocate (buffer_pm(2, 0:fnu+n-1))
-            allocate (buffer_pd(2, 0:fnu+n-1))
 
             call init_list(pm, fnu, n)
             call init_list(pd, fnu, n)
 
+!            allocate (buffer_pm(2, 0:fnu+n-1))
+!            allocate (buffer_pd(2, 0:fnu+n-1))
             call lib_math_associated_legendre_polynomial_with_negative_m(x, 0, &
-                                                                         0, fnu+n-1, &
+                                                                         0, fnu+n, &
                                                                          buffer_pm, buffer_pd, &
-																								 m_condon_shortley_phase)
+                                                                         m_condon_shortley_phase)
             do m_n=fnu, fnu+n-1
                 pm%item(m_n)%item(0) = buffer_pm(1,m_n)
 
@@ -223,17 +229,19 @@ module lib_math_legendre
             end do
 
             do m_m=1, fnu+n-1
+!                allocate (buffer_pm(2, m_m:fnu+n-1))
+!                allocate (buffer_pd(2, m_m:fnu+n-1))
                 call lib_math_associated_legendre_polynomial_with_negative_m(x, m_m, &
-                                                                             m_m, fnu+n-1, &
+                                                                             m_m, fnu+n-m_m, &
                                                                              buffer_pm, buffer_pd, &
-																									  m_condon_shortley_phase)
+                                                                             m_condon_shortley_phase)
                 do m_n=m_m, fnu+n-1
                     if (m_n .ge. fnu) then
-                        pm%item(m_n)%item(-m_m) = buffer_pm(1,m_n-m_m)
-                        pm%item(m_n)%item(m_m) = buffer_pm(2,m_n-m_m)
+                        pm%item(m_n)%item(-m_m) = buffer_pm(1,m_n)
+                        pm%item(m_n)%item(m_m) = buffer_pm(2,m_n)
 
-                        pd%item(m_n)%item(-m_m) = buffer_pd(1,m_n-m_m)
-                        pd%item(m_n)%item(m_m) = buffer_pd(2,m_n-m_m)
+                        pd%item(m_n)%item(-m_m) = buffer_pd(1,m_n)
+                        pd%item(m_n)%item(m_m) = buffer_pd(2,m_n)
                     end if
                 end do
             end do
@@ -1016,6 +1024,7 @@ module lib_math_legendre
                 rv = rv + 1
             end if
             if (.not. test_lib_math_associated_legendre_polynomial_range()) rv = rv + 1
+            if (.not. test_lib_math_associated_legendre_polynomial_range_2()) rv = rv + 1
             if (.not. test_lib_math_associated_legendre_polynomial_with_negative_m1()) then
                 rv = rv + 1
             end if
@@ -1587,8 +1596,8 @@ module lib_math_legendre
                 ! auxiliary
                 integer(kind=4) :: i
                 double precision :: x
-                double precision, dimension(2, n) :: pm
-                double precision, dimension(2, n) :: pd
+                double precision, dimension(:,:), allocatable :: pm
+                double precision, dimension(:,:), allocatable :: pd
 
                 double precision, dimension(2, n) :: ground_truth_pm
                 double precision, dimension(2, n) :: ground_truth_pd
@@ -1678,8 +1687,8 @@ module lib_math_legendre
                 ! auxiliary
                 integer(kind=4) :: i
                 double precision :: x
-                double precision, dimension(2, n) :: pm
-                double precision, dimension(2, n) :: pd
+                double precision, dimension(:,:), allocatable :: pm
+                double precision, dimension(:,:), allocatable :: pd
 
                 double precision, dimension(2, n) :: ground_truth_pm
                 double precision, dimension(2, n) :: ground_truth_pd
@@ -1730,7 +1739,7 @@ module lib_math_legendre
                 rv = .true.
                 print *, "test_lib_math_associated_legendre_polynomial_with_negative_m2:"
                 do i=1, n
-                    buffer = abs(pm(1,i) - ground_truth_pm(1,i))
+                    buffer = abs(pm(1,fnu+i-1) - ground_truth_pm(1,i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
                         rv = .false.
@@ -1741,7 +1750,7 @@ module lib_math_legendre
 
                 print*, "  deriviation:"
                 do i=1, n
-                    buffer = abs(pd(1,i) - ground_truth_pd(1,i))
+                    buffer = abs(pd(1,fnu+i-1) - ground_truth_pd(1,i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
                         rv = .false.
@@ -1765,8 +1774,8 @@ module lib_math_legendre
                 ! auxiliary
                 integer(kind=4) :: i
                 double precision :: x
-                double precision, dimension(2, n) :: pm
-                double precision, dimension(2, n) :: pd
+                double precision, dimension(:,:), allocatable :: pm
+                double precision, dimension(:,:), allocatable :: pd
 
                 double precision, dimension(2, n) :: ground_truth_pm
                 double precision, dimension(2, n) :: ground_truth_pd
@@ -1813,7 +1822,7 @@ module lib_math_legendre
                 rv = .true.
                 print *, "test_lib_math_associated_legendre_polynomial_with_negative_m3:"
                 do i=1, n
-                    buffer = abs(pm(1,i) - ground_truth_pm(1,i))
+                    buffer = abs(pm(1,fnu+i-1) - ground_truth_pm(1,i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
                         rv = .false.
@@ -1824,7 +1833,7 @@ module lib_math_legendre
 
                 print*, "  deriviation:"
                 do i=1, n
-                    buffer = abs(pd(1,i) - ground_truth_pd(1,i))
+                    buffer = abs(pd(1,fnu+i-1) - ground_truth_pd(1,i))
                     if (buffer .gt. ground_truth_e) then
                         print *, "  ", i , "difference: ", buffer, " : FAILED"
                         rv = .false.
@@ -2342,6 +2351,138 @@ module lib_math_legendre
                     end if
                 end do
             end function
+
+            function test_lib_math_associated_legendre_polynomial_range_2() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! parameter
+                integer(kind=4), parameter :: fnu = 0
+                integer(kind=4), parameter :: n = 5
+                integer(kind=4), parameter :: m = 1
+
+                ! auxiliary
+                integer :: i
+                integer :: ii
+                double precision :: x
+
+                type(list_list_real) :: pm
+                type(list_list_real) :: pd
+
+                type(list_list_real) :: ground_truth_pm
+                type(list_list_real) :: ground_truth_pd
+
+                double precision :: buffer
+
+                call init_list(ground_truth_pm, fnu, n)
+                call init_list(ground_truth_pd, fnu, n)
+
+                ! Values were generated with sageMath
+                !
+                ! source code:
+                !  >>> x = 0.2
+                !  >>>
+                !  >>> nStart = 0;
+                !  >>> nStop = 4;
+                !  >>>
+                !  >>> For[n = nStart, n <= nStop, n = n + 1,
+                !  >>>  For[m = -n, m <= n, m = m + 1,
+                !  >>>   val = LP[m, n, x];
+                !  >>>   Print["%item(", n, ")%item(", m, ") = ", val];
+                !  >>>   ]
+                !  >>>  ]
+                !  >>> Print[" --- derivative ---"]
+                !  >>> For[n = nStart, n <= nStop, n = n + 1,
+                !  >>>  For[m = -n, m <= n, m = m + 1,
+                !  >>>   val = LPD[m, n, x];
+                !  >>>   Print["%item(", n, ")%item(", m, ") = ", val];
+                !  >>>   ]
+                !  >>>  ]
+                !  >>>
+                ground_truth_pm%item(0)%item(0) = 1.
+                ground_truth_pm%item(1)%item(-1) = -0.489898
+                ground_truth_pm%item(1)%item(0) = 0.2
+                ground_truth_pm%item(1)%item(1) = 0.979796
+                ground_truth_pm%item(2)%item(-2) = 0.12
+                ground_truth_pm%item(2)%item(-1) = -0.0979796
+                ground_truth_pm%item(2)%item(0) = -0.44
+                ground_truth_pm%item(2)%item(1) = 0.587878
+                ground_truth_pm%item(2)%item(2) = 2.88
+                ground_truth_pm%item(3)%item(-3) = -0.0195959
+                ground_truth_pm%item(3)%item(-2) = 0.024
+                ground_truth_pm%item(3)%item(-1) = 0.0979796
+                ground_truth_pm%item(3)%item(0) = -0.28
+                ground_truth_pm%item(3)%item(1) = -1.17576
+                ground_truth_pm%item(3)%item(2) = 2.88
+                ground_truth_pm%item(3)%item(3) = 14.1091
+                ground_truth_pm%item(4)%item(-4) = 0.0024
+                ground_truth_pm%item(4)%item(-3) = -0.00391918
+                ground_truth_pm%item(4)%item(-2) = -0.0144
+                ground_truth_pm%item(4)%item(-1) = 0.0666261
+                ground_truth_pm%item(4)%item(0) = 0.232
+                ground_truth_pm%item(4)%item(1) = -1.33252
+                ground_truth_pm%item(4)%item(2) = -5.184
+                ground_truth_pm%item(4)%item(3) = 19.7527
+                ground_truth_pm%item(4)%item(4) = 96.768
+
+                ground_truth_pd%item(0)%item(0) = 2.89121D-17
+                ground_truth_pd%item(1)%item(-1) = 0.102062
+                ground_truth_pd%item(1)%item(0) = 1.
+                ground_truth_pd%item(1)%item(1) = -0.204124
+                ground_truth_pd%item(2)%item(-2) = -0.05
+                ground_truth_pd%item(2)%item(-1) = -0.469486
+                ground_truth_pd%item(2)%item(0) = 0.6
+                ground_truth_pd%item(2)%item(1) = 2.81691
+                ground_truth_pd%item(2)%item(2) = -1.2
+                ground_truth_pd%item(3)%item(-3) = 0.0122474
+                ground_truth_pd%item(3)%item(-2) = 0.11
+                ground_truth_pd%item(3)%item(-1) = -0.265361
+                ground_truth_pd%item(3)%item(0) = -1.2
+                ground_truth_pd%item(3)%item(1) = 3.18434
+                ground_truth_pd%item(3)%item(2) = 13.2
+                ground_truth_pd%item(3)%item(3) = -8.81816
+                ground_truth_pd%item(4)%item(-4) = -0.002
+                ground_truth_pd%item(4)%item(-3) = -0.0171464
+                ground_truth_pd%item(4)%item(-2) = 0.062
+                ground_truth_pd%item(4)%item(-1) = 0.250664
+                ground_truth_pd%item(4)%item(0) = -1.36
+                ground_truth_pd%item(4)%item(1) = -5.01329
+                ground_truth_pd%item(4)%item(2) = 22.32
+                ground_truth_pd%item(4)%item(3) = 86.418
+                ground_truth_pd%item(4)%item(4) = -80.64
+
+                x = 0.2
+
+                call lib_math_associated_legendre_polynomial_range(x, fnu, n, pm, pd)
+
+                rv = .true.
+                print *, "test_lib_math_associated_legendre_polynomial_range:"
+                do i=fnu, fnu+n-1
+                    do ii=-i, i
+                        buffer = abs(pm%item(i)%item(ii) - ground_truth_pm%item(i)%item(ii))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  n:", i , " m:", ii, " difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  n:", i , " m:", ii, ": OK"
+                        end if
+                    end do
+                end do
+
+                print*, "  deriviation:"
+                do i=fnu, fnu+n-1
+                    do ii=-i, i
+                        buffer = abs(pd%item(i)%item(ii) - ground_truth_pd%item(i)%item(ii))
+                        if (buffer .gt. ground_truth_e) then
+                            print *, "  n:", i , " m:", ii, " difference: ", buffer, " : FAILED"
+                            rv = .false.
+                        else
+                            print *, "  n:", i , " m:", ii, ": OK"
+                        end if
+                    end do
+                end do
+            end function test_lib_math_associated_legendre_polynomial_range_2
 
         end function lib_math_legendre_test_functions
 

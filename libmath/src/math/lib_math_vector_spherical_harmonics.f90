@@ -142,8 +142,8 @@ module lib_math_vector_spherical_harmonics
             double precision, dimension(n_range(2)-n_range(1)+1) :: buffer_p_n
             double precision, dimension(n_range(2)-n_range(1)+1) :: buffer_p_d_n
 
-            double precision, dimension(2, n_range(2)-n_range(1)+1) :: buffer_p_n_m_neg
-            double precision, dimension(2, n_range(2)-n_range(1)+1) :: buffer_p_d_n_m_neg
+            double precision, dimension(:,:), allocatable :: buffer_p_n_m_neg
+            double precision, dimension(:,:), allocatable :: buffer_p_d_n_m_neg
 
             double precision, dimension(n_range(2)-n_range(1)+1) :: z_n_real
             complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: z_n_cmplx
@@ -255,15 +255,19 @@ module lib_math_vector_spherical_harmonics
             !        +++  <- -m
             !         ++
             !          +
-            !$OMP PARALLEL DO PRIVATE(m, n, i, buffer_p_n_m_neg, buffer_p_d_n_m_neg)
+            !$OMP PARALLEL DO PRIVATE(m, n, buffer_p_n_m_neg, buffer_p_d_n_m_neg)
             do m=1, n_range(2)
+                allocate(buffer_p_n_m_neg(2, n_range(2)-m+1))
+                allocate(buffer_p_d_n_m_neg(2, n_range(2)-m+1))
                 call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, m, m, n_range(2) - m + 1, &
                                                                          buffer_p_n_m_neg, buffer_p_d_n_m_neg, .false.)
                 do n=m, n_range(2)
-                    i = n - m + 1
-                    p_nm%item(n)%item( m) = buffer_p_n_m_neg(2, i)
-                    p_nm%item(n)%item(-m) = buffer_p_n_m_neg(1, i)
+                    p_nm%item(n)%item( m) = buffer_p_n_m_neg(2, n)
+                    p_nm%item(n)%item(-m) = buffer_p_n_m_neg(1, n)
                 end do
+
+                deallocate(buffer_p_n_m_neg)
+                deallocate(buffer_p_d_n_m_neg)
             end do
             !$OMP END PARALLEL DO
 
@@ -463,8 +467,8 @@ module lib_math_vector_spherical_harmonics
             double precision, dimension(n_range(2)-n_range(1)+1) :: buffer_p_n
             double precision, dimension(n_range(2)-n_range(1)+1) :: buffer_p_d_n
 
-            double precision, dimension(2, n_range(2)-n_range(1)+1) :: buffer_p_n_m_neg
-            double precision, dimension(2, n_range(2)-n_range(1)+1) :: buffer_p_d_n_m_neg
+            double precision, dimension(:,:), allocatable :: buffer_p_n_m_neg
+            double precision, dimension(:,:), allocatable :: buffer_p_d_n_m_neg
 
             complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: z_n_cmplx
             complex(kind=8), dimension(n_range(2)-n_range(1)+1) :: z_d_cmplx ! deriviative
@@ -560,15 +564,18 @@ module lib_math_vector_spherical_harmonics
             !        +++  <- -m
             !         ++
             !          +
-            !$OMP PARALLEL DO PRIVATE(m, n, i, buffer_p_n_m_neg, buffer_p_d_n_m_neg)
+            !$OMP PARALLEL DO PRIVATE(m, n, buffer_p_n_m_neg, buffer_p_d_n_m_neg)
             do m=1, n_range(2)
+                allocate(buffer_p_n_m_neg(2, m:n_range(2)-m+1))
+                allocate(buffer_p_d_n_m_neg(2, m:n_range(2)-m+1))
                 call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, m, m, n_range(2) - m + 1, &
                                                                          buffer_p_n_m_neg, buffer_p_d_n_m_neg, .false.)
                 do n=m, n_range(2)
-                    i = n - m + 1
-                    p_nm%item(n)%item( m) = buffer_p_n_m_neg(2, i)
-                    p_nm%item(n)%item(-m) = buffer_p_n_m_neg(1, i)
+                    p_nm%item(n)%item( m) = buffer_p_n_m_neg(2, n)
+                    p_nm%item(n)%item(-m) = buffer_p_n_m_neg(1, n)
                 end do
+                deallocate(buffer_p_n_m_neg)
+                deallocate(buffer_p_d_n_m_neg)
             end do
             !$OMP END PARALLEL DO
 
@@ -1360,6 +1367,7 @@ module lib_math_vector_spherical_harmonics
             double precision :: cos_theta
 
             type(list_list_real) :: p_k_minus_m_p
+            type(list_list_real) :: dp_k_minus_m_p
             double precision, dimension(:, :), allocatable :: buffer_pm
             double precision, dimension(:, :), allocatable :: buffer_pd
 
@@ -1437,22 +1445,28 @@ module lib_math_vector_spherical_harmonics
 
             ! Legendre Polynomial
             cos_theta = cos(theta)
-            call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, 0, &
-                                                                         0, 2*n_max_range(2)+1+1, &
-                                                                         buffer_pm, buffer_pd)
-            do n=0, 2*n_max_range(2)+1
-                p_k_minus_m_p%item(n)%item(0) = buffer_pm(1,n)
-            end do
-
-            do m=1, 2*n_max_range(2)+1
-                call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, m, &
-                                                                             m, 2*n_max_range(2)-m+1+1, &
-                                                                             buffer_pm, buffer_pd)
-                do n=m, 2*n_max_range(2)+1
-                        p_k_minus_m_p%item(n)%item(-m) = buffer_pm(1,n-m)
-                        p_k_minus_m_p%item(n)%item(m) = buffer_pm(2,n-m)
-                end do
-            end do
+            call lib_math_associated_legendre_polynomial_range(cos_theta, 0, 2*n_max_range(2)+1, &
+                                                               p_k_minus_m_p, dp_k_minus_m_p)
+!            call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, 0, &
+!                                                                         0, 2*n_max_range(2)+1+1, &
+!                                                                         buffer_pm, buffer_pd)
+!            do n=0, 2*n_max_range(2)+1
+!                p_k_minus_m_p%item(n)%item(0) = buffer_pm(1,n)
+!            end do
+!            deallocate(buffer_pm)
+!            deallocate(buffer_pd)
+!
+!            do m=1, 2*n_max_range(2)+1
+!                call lib_math_associated_legendre_polynomial_with_negative_m(cos_theta, m, &
+!                                                                             m, 2*n_max_range(2)-m+1+1, &
+!                                                                             buffer_pm, buffer_pd)
+!                do n=m, 2*n_max_range(2)+1
+!                        p_k_minus_m_p%item(n)%item(-m) = buffer_pm(1,n)
+!                        p_k_minus_m_p%item(n)%item(m) = buffer_pm(2,n)
+!                end do
+!                deallocate(buffer_pm)
+!                deallocate(buffer_pd)
+!            end do
 
             ! --- calculate A and B
             !$  thread_first_run = .true.
