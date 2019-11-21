@@ -19,9 +19,11 @@ module lib_mie_illumination
 !    end interface
 
     type lib_mie_illumination_plane_wave_parameter
-        double precision :: g ! ratio of the e-field of this plane wave to the "global" e-field:  e_x_field_0 / e_field_0
+        double precision :: g = 1 ! ratio of the e-field of this plane wave to the "global" e-field:  e_x_field_0 / e_field_0
         type(cartesian_coordinate_real_type) :: d_0_i ! [m]
         type(cartesian_coordinate_real_type) :: wave_vector_0 ! |k| = 2 Pi / lambda, wave_vector = [1/m]
+        logical :: te_mode = .false. ! true: transversal electric (TE) mode, false: tranversal magnetic (TM) mode
+        double precision :: phase = 0 ! additional phase
     end type lib_mie_illumination_plane_wave_parameter
 
     type lib_mie_illumination_gaussian_beam_parameter
@@ -203,7 +205,8 @@ module lib_mie_illumination
         end subroutine
 
         ! Calculates the coefficients (of vector spherical components) of a plane incident wave
-        ! - transverse magnetic mode (TM)
+        ! - transverse magnetic mode (TM) (std)
+        ! - transverse electric mode (TE)
         !
         !                 z
         !                 ^
@@ -229,6 +232,11 @@ module lib_mie_illumination
         !   n_range: integer, dimension(2)
         !       first and last index (degree) of the sum to calculate the electical field
         !       e.g. n = (/ 1, 45 /) <-- size parameter
+        !   te_mode: logical (std: .false.)
+        !       false: TM mode referred to the incident plane (k-vector, z-axis)
+        !       true: TE mode referred to the incident plane (k-vector, z-axis)
+        !   phase: double precision (std: 0)
+        !       add an additional phase
         !   caching: logical (std: .true.)
         !
         ! Returns
@@ -239,7 +247,8 @@ module lib_mie_illumination
         !       coefficient of vector spherical componets
         !
         ! Reference: Electromagnetic scattering by an aggregate of spheres Yu-lin Xu, eq. 20
-        subroutine lib_mie_illumination_get_p_q_j_j_single_plane_wave(k, d_0_j, n_range, p, q, caching)
+        subroutine lib_mie_illumination_get_p_q_j_j_single_plane_wave(k, d_0_j, n_range, p, q, &
+                                                                      te_mode, phase, caching)
             implicit none
             ! dummy
             type(cartesian_coordinate_real_type), intent(in) :: k
@@ -249,6 +258,8 @@ module lib_mie_illumination
             type(list_list_cmplx), intent(inout) :: p
             type(list_list_cmplx), intent(inout) :: q
 
+            logical, optional :: te_mode
+            double precision, optional :: phase
             logical, optional :: caching
 
             ! auxiliary
@@ -261,20 +272,38 @@ module lib_mie_illumination
 
             complex(kind=8) :: exp_k_d
 
+            double precision :: m_phase
+
+            logical :: m_te_mode
+            type(list_list_cmplx) :: buffer
+
+            m_phase = 0
+            if (present(phase)) m_phase = phase
+
+            m_te_mode = .false.
+            if (present(te_mode)) m_te_mode = te_mode
+
             ! --- pre-calc ---
             k_spherical = k
 
             alpha = k_spherical%theta
             beta = k_spherical%phi
 
-            if (abs(d_0_j) .gt. 0.0) then
+            if (abs(d_0_j) .gt. 0.0 .or. m_phase .ne. 0) then
                 ! j-th coordinate system
-                dot_k_d = dot_product(k, d_0_j)
+                dot_k_d = dot_product(k, d_0_j) + m_phase
                 exp_k_d = cmplx(cos(dot_k_d), sin(dot_k_d), kind=8)
                 call get_p_q_j_j_plane_wave_core(alpha, beta, n_range, p, q, exp_k_d, caching=caching)
             else
                 ! 0-th coordinate system
                 call get_p_q_j_j_plane_wave_core(alpha, beta, n_range, p, q, caching=caching)
+            end if
+
+            if (m_te_mode) then
+                call move_alloc(p%item, buffer%item)
+
+                call move_alloc(q%item, p%item)
+                call move_alloc(buffer%item, q%item)
             end if
 
         end subroutine lib_mie_illumination_get_p_q_j_j_single_plane_wave
@@ -345,6 +374,8 @@ module lib_mie_illumination
 
                 call lib_mie_illumination_get_p_q_j_j_single_plane_wave(k, d_i_j, n_range, &
                                                                         buffer_p_nm(i), buffer_q_nm(i),&
+                                                                        phase = illumination%plane_wave(i)%phase, &
+                                                                        te_mode = illumination%plane_wave(i)%te_mode, &
                                                                         caching=caching)
             end do
             !$OMP END PARALLEL DO

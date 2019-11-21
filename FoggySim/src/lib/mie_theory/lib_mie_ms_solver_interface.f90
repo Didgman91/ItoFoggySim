@@ -212,9 +212,6 @@ module lib_mie_ms_solver_interface
             integer :: first_sphere
             integer :: last_sphere
 
-            integer :: first
-            integer :: last
-
             integer :: sphere_parameter_no
 
             integer :: counter
