@@ -2381,6 +2381,10 @@ module lib_math_legendre
                 ! Values were generated with sageMath
                 !
                 ! source code:
+                !  >>> LP[m_, n_, x_] := (-1)^m LegendreP[n, m, x];
+                !  >>> LPDt = D[LP[md, nd, xd], xd];
+                !  >>> LPD[m_, n_, x_] := LPDt /. {md -> m, nd -> n, xd -> x};
+                !  >>>
                 !  >>> x = 0.2
                 !  >>>
                 !  >>> nStart = 0;
