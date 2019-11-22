@@ -1670,9 +1670,9 @@ module lib_mie_single_sphere
 !            if (.not. test_get_field_initial_incident_xu_real()) then
 !                rv = rv + 1
 !            end if
-!            if (.not. test_get_field_initial_incident_multi_wave_real()) then
-!                rv = rv + 1
-!            end if
+            if (.not. test_get_field_initial_incident_multi_wave_real()) then
+                rv = rv + 1
+            end if
             if (.not. test_get_field_initial_incident_gaussian_beam()) rv = rv + 1
             if (.not. test_get_field_scattered_plane_section_real()) then
                 rv = rv + 1
@@ -2446,10 +2446,11 @@ module lib_mie_single_sphere
                     buffer_car%z = 0
                     illumination%gaussian_beam(:)%d_0_i = buffer_car
 
-                    illumination%gaussian_beam(:)%wave_number_0 = k0
+                    illumination%gaussian_beam(:)%beam_parameter%wave_length_0 = lambda
                     illumination%gaussian_beam(:)%calculation_type = 1
 
-                    illumination%gaussian_beam(1)%w0 = 50 * unit_mu
+                    illumination%gaussian_beam(1)%beam_parameter%waist_x0 = 50 * unit_mu
+                    illumination%gaussian_beam(1)%beam_parameter%waist_y0 = 50 * unit_mu
 
 
 !                    buffer_car%x = -1

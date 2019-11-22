@@ -1,5 +1,7 @@
 module lib_mie_illumination
     use libmath
+
+    use lib_field_gaussian_beam
     implicit none
 
     private
@@ -19,29 +21,50 @@ module lib_mie_illumination
 !    end interface
 
     type lib_mie_illumination_plane_wave_parameter
-        double precision :: g = 1 ! ratio of the e-field of this plane wave to the "global" e-field:  e_x_field_0 / e_field_0
+        ! ratio of the e-field of this plane wave to the "global" e-field:  e_x_field_0 / e_field_0
+        double precision :: g = 1
         type(cartesian_coordinate_real_type) :: d_0_i ! [m]
-        type(cartesian_coordinate_real_type) :: wave_vector_0 ! |k| = 2 Pi / lambda, wave_vector = [1/m]
-        logical :: te_mode = .false. ! true: transversal electric (TE) mode, false: tranversal magnetic (TM) mode
-        double precision :: phase = 0 ! additional phase
+         ! |k| = 2 Pi / lambda, wave_vector = [1/m]
+        type(cartesian_coordinate_real_type) :: wave_vector_0
+        ! true: transversal electric (TE) mode, false: tranversal magnetic (TM) mode
+        logical :: te_mode = .false.
+        ! additional phase: exp(I phase)
+        double precision :: phase = 0
     end type lib_mie_illumination_plane_wave_parameter
 
     type lib_mie_illumination_gaussian_beam_parameter
-        double precision :: g ! ratio of the e-field of this Gaussian beam to the "global" e-field:  e_x_field_0 / e_field_0
-        type(cartesian_coordinate_real_type) :: d_0_i ! [m]
-        double precision :: wave_number_0 ! |k| = 2 Pi / lambda, wave_number = [1/m]
-        double precision :: w0 ! beam waist radius
-        integer :: calculation_type ! 1: Localised Approximation, 2: Localised Approximation + additions theorem
-        integer(kind=1) :: z_selector_translation ! necessary for calculation_type = 2
+        ! ratio of the e-field of this Gaussian beam to the "global" e-field:  e_x_field_0 / e_field_0
+        ! g = (0..1]
+        double precision :: g = 1
+        ! position of the origin of the beam coordinate system [m]
+        type(cartesian_coordinate_real_type) :: d_0_i
+        ! popagation direction: polar angle [0, Pi] [rad]
+        double precision :: theta = 0
+        ! propagation direction: azimuthal angle [0, 2 Pi) [rad]
+        double precision :: phi = 0
+        ! beam parameter
+        type(lib_field_gaussian_beam_hermite_type) :: beam_parameter
+        ! 1: Localised Approximation
+        !       restictions:, TEM 00theta = 0, phi = 0
+        !           - circular beam: w0 = wx0
+        !           - mode: TEM 00
+        !           - popagation direction: along the z axis
+        !               - thete = 0, phi = 0
+        ! 2: Localised Approximation + additions theorem
+        !       restictions:, TEM 00theta = 0, phi = 0
+        !           - circular beam: w0 = wx0
+        !           - mode: TEM 00
+        !           - popagation direction: along the z axis
+        !               - thete = 0, phi = 0
+        ! 3: plane wave approximation
+        !       HINT:
+        !           - beam_parameter%e_field_0 = 1, will be set automatically
+        !             otherwise the scaling factor "g" doesn't work correctly
+        !             -> e_field = e_field_0 * g * beam_parameter%e_field_0
+        integer :: calculation_type
+        ! necessary for calculation_type = 2
+        integer(kind=1) :: z_selector_translation
     end type lib_mie_illumination_gaussian_beam_parameter
-
-    type lib_mie_illumination_elliptical_gaussian_beam_parameter
-        double precision :: g ! ratio of the e-field of this Gaussian beam to the "global" e-field:  e_x_field_0 / e_field_0
-        type(cartesian_coordinate_real_type) :: d_0_i ! [m]
-        double precision :: wave_number_0 ! |k| = 2 Pi / lambda, wave_number = [1/m]
-        double precision :: w0x ! beam waist radius along the x-axis
-        double precision :: w0y ! beam waist radius along the y-axis
-    end type lib_mie_illumination_elliptical_gaussian_beam_parameter
 
     ! Illumination Parameter
     ! ----
@@ -91,7 +114,6 @@ module lib_mie_illumination
         double precision :: lambda_0 ! wave_length_vaccum
         type(lib_mie_illumination_plane_wave_parameter), dimension(:), allocatable :: plane_wave
         type(lib_mie_illumination_gaussian_beam_parameter), dimension(:), allocatable :: gaussian_beam
-        type(lib_mie_illumination_elliptical_gaussian_beam_parameter), dimension(:), allocatable :: elliptical_gaussian_beam
     end type lib_mie_illumination_parameter
 
     ! --- caching ---
@@ -192,7 +214,7 @@ module lib_mie_illumination
             end if
 
             if (allocated(illumination%gaussian_beam)) then
-                call lib_mie_illumination_get_p_q_circular_gaussian_beam(illumination, n_medium, d_0_j, n_range,&
+                call lib_mie_illumination_get_p_q_gaussian_beam(illumination, n_medium, d_0_j, n_range,&
                                                                          buffer_p_nm, buffer_q_nm)
 
                 call remove_zeros(buffer_p_nm, dcmplx(1d-290, 1d-290), .true.)
@@ -605,9 +627,9 @@ module lib_mie_illumination
 !            if (alpha .eq. 0.d0) then
 !                allocate(p%item(n_range(1):n_range(2)))
 !                allocate(q%item(n_range(1):n_range(2)))
-!
 !                do i=n_range(1), n_range(2)
 !                    allocate(p%item(i)%item(-1:1))
+!
 !                    allocate(q%item(i)%item(-1:1))
 !                end do
 !            else
@@ -675,7 +697,7 @@ module lib_mie_illumination
 
         end subroutine get_p_q_j_j_plane_wave_core
 
-        ! Calculates the beam shape coefficients of a circular Gaussian beam with the localised approximation method.
+        ! Calculates the beam shape coefficients of a Gaussian beam
         !
         ! Argument
         ! ----
@@ -691,8 +713,7 @@ module lib_mie_illumination
         !   p_nm, q_nm: type(list_list_cmplx)
         !       beam shape coefficients
         !
-        ! Reference: Generalized Lorenz-MieTheories, Gérard Gouesbet Gérard Gréhan, program GNMF
-        subroutine lib_mie_illumination_get_p_q_circular_gaussian_beam(illumination, n_medium, d_0_j, n_range, p_nm, q_nm)
+        subroutine lib_mie_illumination_get_p_q_gaussian_beam(illumination, n_medium, d_0_j, n_range, p_nm, q_nm)
             implicit none
             ! dummy
             type(lib_mie_illumination_parameter), intent(in) :: illumination
@@ -739,7 +760,8 @@ module lib_mie_illumination
                 select case(illumination%gaussian_beam(i)%calculation_type)
                     case (1)
                         ! localised approximation
-                        w0 = illumination%gaussian_beam(i)%w0
+                        ! Reference: Generalized Lorenz-MieTheories, Gérard Gouesbet Gérard Gréhan, program GNMF
+                        w0 = illumination%gaussian_beam(i)%beam_parameter%waist_x0
                         d = d_0_j - illumination%gaussian_beam(i)%d_0_i
 
                         call lib_mie_illumination_get_p_q_single_gaussian_beam_la(wave_length, n_medium, w0, d, n_range,&
@@ -749,7 +771,8 @@ module lib_mie_illumination
                         buffer_q_nm(i) = illumination%gaussian_beam(i)%g * buffer_b_nm
                     case (2)
                         ! localised approximation + addition theorem
-                        w0 = illumination%gaussian_beam(i)%w0
+                        ! Reference: Generalized Lorenz-MieTheories, Gérard Gouesbet Gérard Gréhan, program GNMF
+                        w0 = illumination%gaussian_beam(i)%beam_parameter%waist_x0
                         d%x = 0d0
                         d%y = 0d0
                         d%z = 0d0
@@ -770,6 +793,18 @@ module lib_mie_illumination
 
                         buffer_p_nm(i) = illumination%gaussian_beam(i)%g * buffer_p_nm(i)
                         buffer_q_nm(i) = illumination%gaussian_beam(i)%g * buffer_q_nm(i)
+                    case (3)
+                        ! plane wave approximation
+
+                        ! HINT: beam_parameter%e_field_0 = 1, will be set automatically
+                        !       otherwise the scaling factor "g" doesn't work correctly
+                        !       -> e_field = e_field_0 * g * beam_parameter%e_field_0
+                        call lib_mie_illumination_get_p_q_single_gaussian_beam_pw(illumination%gaussian_beam(i), n_medium, &
+                                                                                  d_0_j, n_range, &
+                                                                                  buffer_a_nm, buffer_b_nm)
+
+                        buffer_p_nm(i) = illumination%gaussian_beam(i)%g * buffer_a_nm
+                        buffer_q_nm(i) = illumination%gaussian_beam(i)%g * buffer_b_nm
                 end select
             end do
 
@@ -813,7 +848,7 @@ module lib_mie_illumination
                 end do
             end do
 
-        end subroutine lib_mie_illumination_get_p_q_circular_gaussian_beam
+        end subroutine lib_mie_illumination_get_p_q_gaussian_beam
 
 
         ! Calculates the beam shape coefficients of a circular Gaussian beam with the localised approximation method.
@@ -916,6 +951,38 @@ module lib_mie_illumination
             end do
 
         end subroutine lib_mie_illumination_get_p_q_single_gaussian_beam_la
+
+        subroutine lib_mie_illumination_get_p_q_single_gaussian_beam_pw(illumination, n_medium, d_0_j, n_range, p_nm, q_nm)
+            implicit none
+            ! dummy
+            type(lib_mie_illumination_gaussian_beam_parameter), intent(in) :: illumination
+            double precision :: n_medium
+            type(cartesian_coordinate_real_type), intent(in) :: d_0_j
+            integer(kind=4), dimension(2),intent(in) :: n_range
+
+            type(list_list_cmplx), intent(inout) :: p_nm
+            type(list_list_cmplx), intent(inout) :: q_nm
+
+            ! auxiliary
+            type(cartesian_coordinate_cmplx_type) :: e_field
+            type(cartesian_coordinate_cmplx_type) :: h_field
+
+            type(cartesian_coordinate_real_type) :: k_vector_n
+
+
+            call lib_field_gaussian_beam_hermite_get_field(illumination%beam_parameter, d_0_j, &
+                                                           e_field, h_field,&
+                                                           illumination%theta, illumination%phi)
+
+
+
+            ! get k vector
+            ! get phase
+            ! get projected polarisation
+
+            ! make a plane wave equivalent
+
+        end subroutine
 
 !        !
 !        subroutine lib_mie_illumination_get_p_q_elliptical_gaussian_beam(illumination, n_medium, d_0_j,  n_range, p_nm, q_nm)
