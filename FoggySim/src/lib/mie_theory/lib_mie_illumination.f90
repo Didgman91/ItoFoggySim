@@ -970,9 +970,9 @@ module lib_mie_illumination
             type(cartesian_coordinate_real_type) :: k_vector_n
 
 
-            call lib_field_gaussian_beam_hermite_get_field(illumination%beam_parameter, d_0_j, &
-                                                           e_field, h_field,&
-                                                           illumination%theta, illumination%phi)
+
+!            call lib_field_gaussian_beam_hermite_get_field(illumination%beam_parameter, d_0_j, &
+!                                                           e_field, h_field)
 
 
 
