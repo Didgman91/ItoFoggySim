@@ -9,6 +9,8 @@ module lib_field_plane_wave
     ! public function
     public :: lib_field_plane_wave_get_field
 
+    public :: lib_field_plane_wave_test_functions
+
     ! public types
     public :: lib_field_plane_wave_type
 
@@ -68,7 +70,9 @@ module lib_field_plane_wave
             double complex :: field
 
             if (parameter%phi .ne. 0 .or. parameter%theta .ne. 0) then
-                rot  = lib_math_get_matrix_rot(parameter%phi, parameter%theta, parameter%phi)
+                rot  = lib_math_get_matrix_rot(PI / 2d0 + parameter%phi, &
+                                               parameter%theta, &
+                                               PI / 2d0 + parameter%phi)
                 point_x = rot * evaluation_point_x
             else
                 point_x = evaluation_point_x
@@ -81,6 +85,8 @@ module lib_field_plane_wave
                                                 phase=parameter%phase, &
                                                 convention=parameter%convention)
 
+            e_field = field * parameter%polarisation;
+
             ! Quantum Optics: An Introduction, Mark Fox
             ! eq. 2.25 but plane wave
             wave_impedance = const_z_0 / parameter%refractive_index_medium
@@ -89,7 +95,9 @@ module lib_field_plane_wave
             h_field = rot * e_field / wave_impedance
 
             if (parameter%phi .ne. 0 .or. parameter%theta .ne. 0) then
-                rot  = lib_math_get_matrix_rot(-parameter%phi, -parameter%theta, -parameter%phi)
+                rot  = lib_math_get_matrix_rot(-PI / 2d0 - parameter%phi, &
+                                               -parameter%theta, &
+                                               -PI / 2d0 - parameter%phi)
                 e_field = rot * e_field
                 h_field = rot * h_field
             end if
@@ -164,4 +172,102 @@ module lib_field_plane_wave
             field = e_field_0 * exp(dcmplx(0, buffer_real))
 
         end function lib_field_plane_wave_scalar
+
+        function lib_field_plane_wave_test_functions() result(rv)
+            use lib_field
+            implicit none
+            ! dummy
+            integer :: rv
+
+            rv = 0
+
+            if (.not. test_lib_field_plane_wave_get_field()) rv = rv + 1
+
+            if (rv == 0) then
+                print *, "lib_field_plane_wave_test_functions tests: OK"
+            else
+                print *, rv,"lib_field_plane_wave_test_functions test(s) FAILED"
+            end if
+
+            contains
+
+            function test_lib_field_plane_wave_get_field() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! auxiliary
+                integer :: i
+                integer :: ii
+
+                double precision :: x
+                double precision :: y
+                double precision :: z
+                type(lib_field_plane_wave_type) :: plane_wave_parameter
+
+                double precision, dimension(2) :: x_range
+                double precision, dimension(2) :: y_range
+                real(kind=8) :: step_size
+
+                integer :: no_x_values
+                integer :: no_y_values
+
+                type(cartesian_coordinate_real_type) :: point_cartesian
+
+                type(cartesian_coordinate_cmplx_type) :: buffer_e_field
+                type(cartesian_coordinate_cmplx_type) :: buffer_h_field
+
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field
+
+                x_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+                y_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+!                    step_size = 0.02_8 * unit_mu
+                step_size = 0.075_8 * unit_mu
+
+
+                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_y_values = abs(int(floor((y_range(2)-y_range(1))/step_size)))
+
+                allocate(e_field(no_x_values, no_y_values))
+                allocate(h_field(no_x_values, no_y_values))
+
+                x = 0
+                y = 0
+                z = 10 * unit_mu
+
+                plane_wave_parameter%e_field_0 = 1
+                plane_wave_parameter%refractive_index_medium = 1
+!                plane_wave_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_rot(PI/4d0)
+                plane_wave_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
+!                plane_wave_parameter%polarisation = lib_field_polarisation_jones_vector_get_circular_plus()
+                plane_wave_parameter%wave_length_0 = 1 * unit_mu
+
+                plane_wave_parameter%theta = PI / 8d0
+                plane_wave_parameter%phi = 0
+
+!                !$OMP PARALLEL DO PRIVATE(i, ii) FIRSTPRIVATE x, y, z)
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii= 1, no_y_values
+                        z = y_range(2) - (ii-1) * step_size
+
+                        point_cartesian%x = x
+                        point_cartesian%y = y
+                        point_cartesian%z = z
+
+                        call lib_field_plane_wave_get_field(plane_wave_parameter, &
+                                                            point_cartesian, &
+                                                            buffer_e_field, buffer_h_field)
+
+                        e_field(i,ii) = buffer_e_field
+                        h_field(i,ii) = buffer_h_field
+                    end do
+                end do
+!                !$OMP END PARALLEL DO
+
+                rv = lib_field_export(e_field, h_field, "temp/real/plane_wave_")
+
+            end function test_lib_field_plane_wave_get_field
+        end function
 end module lib_field_plane_wave

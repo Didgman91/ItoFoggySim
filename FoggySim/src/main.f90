@@ -13,8 +13,9 @@ program main
     use ml_fmm_math
     use lib_ml_fmm_type_operator
 
-    use lib_field_gaussian_beam
     use lib_field_polarisation
+    use lib_field_plane_wave
+    use lib_field_gaussian_beam
 
     use lib_mie_single_sphere
     use lib_mie_ss_helper_functions
@@ -77,6 +78,7 @@ program main
 !    error_counter = error_counter + lib_mie_ms_solver_interface_hf_helper_functions()
 !    error_counter = error_counter + lib_mie_ms_solver_interface_test_functions()
 !    error_counter = error_counter + lib_field_polarisation_operator_test_functions()
+!    error_counter = error_counter + lib_field_plane_wave_test_functions()
     error_counter = error_counter + lib_field_gaussian_beam_test_functions()
 !    error_counter = error_counter + lib_mie_multi_sphere_test_functions()
 
