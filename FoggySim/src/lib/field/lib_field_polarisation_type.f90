@@ -28,7 +28,7 @@ module lib_field_polarisation_type
         !
         ! Reference: Experimentalphysik 2, W. Demtröder
         !            p. 289
-        function lib_field_polarisation_jones_vector_type_get_linear_h() result(J)
+        function lib_field_polarisation_jones_vector_get_linear_h() result(J)
             implicit none
             ! dummy
             type(jones_vector_type) :: J
@@ -45,7 +45,7 @@ module lib_field_polarisation_type
         !
         ! Reference: Experimentalphysik 2, W. Demtröder
         !            p. 289
-        function lib_field_polarisation_jones_vector_type_get_linear_v() result(J)
+        function lib_field_polarisation_jones_vector_get_linear_v() result(J)
             implicit none
             ! dummy
             type(jones_vector_type) :: J
@@ -67,7 +67,7 @@ module lib_field_polarisation_type
         !
         ! Reference: Experimentalphysik 2, W. Demtröder
         !            eq. 9.52
-        function lib_field_polarisation_jones_vector_type_get_linear_rot(phi) result(J)
+        function lib_field_polarisation_jones_vector_get_linear_rot(phi) result(J)
             implicit none
             ! dummy
             double precision, intent(in) :: phi
@@ -86,7 +86,7 @@ module lib_field_polarisation_type
         !
         ! Reference: Experimentalphysik 2, W. Demtröder
         !            eq. 9.53a
-        function lib_field_polarisation_jones_vector_type_get_circular_plus() result(J)
+        function lib_field_polarisation_jones_vector_get_circular_plus() result(J)
             implicit none
             ! dummy
             type(jones_vector_type) :: J
@@ -103,7 +103,7 @@ module lib_field_polarisation_type
         !
         ! Reference: Experimentalphysik 2, W. Demtröder
         !            eq. 9.53b
-        function lib_field_polarisation_jones_vector_type_get_circular_minus() result(J)
+        function lib_field_polarisation_jones_vector_get_circular_minus() result(J)
             implicit none
             ! dummy
             type(jones_vector_type) :: J
@@ -125,7 +125,7 @@ module lib_field_polarisation_type
         !
         ! Reference: Experimentalphysik 2, W. Demtröder
         !            p. 289
-        function lib_field_polarisation_jones_vector_type_get_elliptical(phi) result(J)
+        function lib_field_polarisation_jones_vector_get_elliptical(phi) result(J)
             implicit none
             ! dummy
             double precision, intent(in) :: phi

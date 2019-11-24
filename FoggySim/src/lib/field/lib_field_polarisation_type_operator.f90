@@ -135,7 +135,7 @@ module lib_field_polarisation_type_operator
 
                     double complex :: buffer
 
-                    j = lib_field_polarisation_jones_vector_type_get_linear_rot(PI / 4d0)
+                    j = lib_field_polarisation_jones_vector_get_linear_rot(PI / 4d0)
                     m = lib_field_polarisation_jones_matrix_get_x_polariser()
 
                     j_res = m * j
