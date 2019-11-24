@@ -231,7 +231,9 @@ module lib_math_type_operator
         module procedure lib_math_spherical_components_to_cartesian_components_cmplx_a
         module procedure lib_math_spherical_components_to_cartesian_components_cmplx_c
         module procedure lib_math_spherical_components_to_cartesian_components_cmplx_s
-        module procedure lib_math_make_cartesian_coordiante
+
+        module procedure lib_math_make_cartesian_coordiante_real
+        module procedure lib_math_make_cartesian_coordiante_cmplx
     end interface
 
     interface make_spherical
@@ -3539,7 +3541,7 @@ module lib_math_type_operator
                                                                                 coordinate%phi)
         end function lib_math_cartesian_components_to_spherical_components_cmplx_s
 
-        function lib_math_make_cartesian_coordiante(x, y, z) result(rv)
+        function lib_math_make_cartesian_coordiante_real(x, y, z) result(rv)
             implicit none
             ! dummy
             double precision :: x
@@ -3552,7 +3554,22 @@ module lib_math_type_operator
             rv%y = y
             rv%z = z
 
-        end function lib_math_make_cartesian_coordiante
+        end function lib_math_make_cartesian_coordiante_real
+
+        function lib_math_make_cartesian_coordiante_cmplx(x, y, z) result(rv)
+            implicit none
+            ! dummy
+            double complex :: x
+            double complex :: y
+            double complex :: z
+
+            type(cartesian_coordinate_cmplx_type) :: rv
+
+            rv%x = x
+            rv%y = y
+            rv%z = z
+
+        end function lib_math_make_cartesian_coordiante_cmplx
 
         function lib_math_make_spherical_coordiante(rho, theta, phi) result(rv)
             implicit none
