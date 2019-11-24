@@ -1760,8 +1760,6 @@ module lib_mie_ss_helper_functions
                     ! auxiliary
                     integer :: i
                     integer :: r
-                    integer :: n
-                    integer :: m
 
                     type(list_cmplx) :: a_n
                     type(list_cmplx) :: b_n
