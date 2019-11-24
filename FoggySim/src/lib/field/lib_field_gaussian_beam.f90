@@ -130,7 +130,9 @@ module lib_field_gaussian_beam
             h_field = rot * e_field / wave_impedance
 
             if (parameter%phi .ne. 0 .or. parameter%theta .ne. 0) then
-                rot  = lib_math_get_matrix_rot(-PI / 2d0 - parameter%phi, -parameter%theta, -PI / 2d0 - parameter%phi)
+                rot  = lib_math_get_matrix_rot(-PI / 2d0 - parameter%phi, &
+                                               -parameter%theta, &
+                                               -PI / 2d0 - parameter%phi)
                 e_field = rot * e_field
                 h_field = rot * h_field
             end if
@@ -242,14 +244,23 @@ module lib_field_gaussian_beam
             type(cartesian_coordinate_real_type) :: k_vector_n
             type(spherical_coordinate_real_type) :: k_vector_n_spherical
 
-            type(cartesian_coordinate_cmplx_type) :: e_field
-            type(cartesian_coordinate_cmplx_type) :: h_field
-
             type(cartresian_coordinate_rot_matrix_type) :: rot
             type(cartesian_coordinate_real_type) :: x_axis_pw
             type(cartesian_coordinate_real_type) :: y_axis_pw
+            type(cartesian_coordinate_real_type) :: point_x
+
+            double precision :: absolute
+            double precision :: argument
 
             double precision :: buffer
+
+
+            if (parameter%phi .ne. 0 .or. parameter%theta .ne. 0) then
+                rot  = lib_math_get_matrix_rot(PI / 2d0 + parameter%phi, parameter%theta, PI / 2d0 + parameter%phi)
+                point_x = rot * evaluation_point_x
+            else
+                point_x = evaluation_point_x
+            end if
 
             plane_wave = parameter
 
@@ -262,10 +273,19 @@ module lib_field_gaussian_beam
             plane_wave%phi = k_vector_n_spherical%phi
 
             ! get absolut value und phase of the gaussian beam at the evaluation point
-            call lib_field_gaussian_beam_hermite_get_field(parameter, evaluation_point_x, e_field, h_field)
+            call get_absolute_value_and_argument(parameter%e_field_0, &
+                                                 parameter%wave_length_0, &
+                                                 parameter%refractive_index_medium, &
+                                                 parameter%waist_x0, &
+                                                 parameter%waist_y0, &
+                                                 point_x, &
+                                                 absolute, argument, &
+                                                 tem_m=parameter%tem_m, &
+                                                 tem_n=parameter%tem_n, &
+                                                 convention=parameter%convention)
 
-            plane_wave%phase = atan2(aimag(abs(e_field)), real(abs(e_field)))
-            plane_wave%e_field_0 = abs(abs(e_field))
+            plane_wave%phase = argument
+            plane_wave%e_field_0 = absolute
 
             ! get the polarisation of the plane wave at the evaluation point
             x_axis_pw = make_cartesian(1d0, 0d0, 0d0)
@@ -609,20 +629,24 @@ module lib_field_gaussian_beam
 
         end function get_derivative_z
 
-        function get_phase_and_argument(wave_length_0, n_medium, waist_x0, waist_y0, x, tem_m, tem_n, convention) &
-                          result(phase)
+        subroutine get_absolute_value_and_argument(e_field_0, wave_length_0, n_medium, waist_x0, waist_y0, x, &
+                                                   absolute, argument, &
+                                                   tem_m, tem_n, convention)
             implicit none
             ! dummy
+            double precision, intent(in) :: e_field_0
             double precision, intent(in) :: wave_length_0
             double precision, intent(in) :: n_medium
             double precision, intent(in) :: waist_x0
             double precision, intent(in) :: waist_y0
             type(cartesian_coordinate_real_type), intent(in) :: x
+
             integer, intent(in), optional :: tem_m
             integer, intent(in), optional :: tem_n
             integer, intent(in), optional :: convention
 
-            double precision :: phase
+            double precision :: absolute
+            double precision :: argument
 
             ! auxiliary
             double precision :: zrx
@@ -659,11 +683,19 @@ module lib_field_gaussian_beam
             select case(m_convention)
                 case(1)
                     ! exp(-i(k*z - omega*t))
-                    kz = mod(k * x%z, 2d0 * PI)
+                    if (x%z .lt. 0) then
+                        kz = -abs(mod(k * x%z, 2d0 * PI))
+                    else
+                        kz = abs(mod(k * x%z, 2d0 * PI))
+                    end if
 
                 case(2)
                     ! exp(i(k*z - omega*t))
-                    kz = -mod(k * x%z, 2d0 * PI)
+                    if (x%z .lt. 0) then
+                        kz = abs(mod(k * x%z, 2d0 * PI))
+                    else
+                        kz = -abs(mod(k * x%z, 2d0 * PI))
+                    end if
 
                 case default
                     print *, "lib_field_gaussian_beam__get_phase: ERROR"
@@ -679,11 +711,13 @@ module lib_field_gaussian_beam
             crx = lib_field_gaussian_beam_curvature(zrx, x%z)
             cry = lib_field_gaussian_beam_curvature(zry, x%z)
 
-            phase = -mod(k * crx * x%x* x%x / 2d0, 2d0 * PI) &
-                    -mod(k * cry * x%y* x%y / 2d0, 2d0 * PI) &
+
+            ! Calculation of the argument of the complex electrictical field
+            argument = -abs(mod(k * crx * x%x* x%x / 2d0, 2d0 * PI)) &
+                    -abs(mod(k * cry * x%y* x%y / 2d0, 2d0 * PI)) &
                     - kz &
-                    + (dble(tem_m) + 0.5d0) * atan2(x%z, zrx) &
-                    + (dble(tem_n) + 0.5d0) * atan2(x%z, zry)
+                    + (dble(m_tem_m) + 0.5d0) * atan2(x%z, zrx) &
+                    + (dble(m_tem_n) + 0.5d0) * atan2(x%z, zry)
 
             h_min_i = min(m_tem_m, m_tem_n)
             h_max_i = max(m_tem_m, m_tem_n)
@@ -692,11 +726,24 @@ module lib_field_gaussian_beam
                                                x%y * sqrt(2d0) / wy /), &
                                             h_min_i, h_max_i - h_min_i + 1, h)
 
-            if (h(1, m_tem_m) * h(2, m_tem_n) .ge. 0d0) then
-                phase = phase - PI
+            if (h(1, m_tem_m) * h(2, m_tem_n) .lt. 0d0) then
+                argument = argument - PI
             end if
 
-        end function get_phase_and_argument
+            argument = abs(mod(argument, 2d0 * PI))
+
+            ! Calculation of the absolute value of the complex electrical field
+            absolute = sqrt(waist_x0 / wx) * h(1, m_tem_m) * exp(-(x%x / wx)**2d0) &
+                       * sqrt(waist_y0 / wy) * h(2, m_tem_n) * exp(-(x%y / wy)**2d0) &
+                       * e_field_0 &
+                       * sqrt(1d0 / (dble(2**(m_tem_m + m_tem_n)) &
+                                    * lib_math_factorial_get_factorial(m_tem_m) &
+                                    * lib_math_factorial_get_factorial(m_tem_n) &
+                                     * PI))
+
+            print *, "test"
+
+        end subroutine get_absolute_value_and_argument
 
         ! Argument
         ! ----
@@ -803,6 +850,11 @@ module lib_field_gaussian_beam
             if (.not. test_lib_field_gaussian_beam_hermite_get_field()) rv = rv + 1
             if (.not. test_lib_field_gaussian_beam_hermite_get_field_2()) rv = rv + 1
 
+            if (rv == 0) then
+                print *, "lib_field_gaussian_beam_test_functions tests: OK"
+            else
+                print *, rv,"lib_field_gaussian_beam_test_functions test(s) FAILED"
+            end if
 
             contains
 
@@ -1523,7 +1575,7 @@ module lib_field_gaussian_beam
 
                 call lib_field_gaussian_beam_hermite_get_field(gauss_parameter, evaluation_point_x, &
                                                                e_field_gauss, h_field_gauss)
-                call lib_field_plane_wave_get_field(plane_wave_approximation, evaluation_point_x, &
+                call lib_field_plane_wave_get_field(plane_wave_approximation, make_cartesian(0d0, 0d0, 0d0), &
                                                     e_field_pw, h_field_pw)
 
 
