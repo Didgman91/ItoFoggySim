@@ -1,6 +1,8 @@
 module lib_mie_illumination
     use libmath
 
+    use lib_field_polarisation
+    use lib_field_plane_wave
     use lib_field_gaussian_beam
     implicit none
 
@@ -24,12 +26,14 @@ module lib_mie_illumination
         ! ratio of the e-field of this plane wave to the "global" e-field:  e_x_field_0 / e_field_0
         double precision :: g = 1
         type(cartesian_coordinate_real_type) :: d_0_i ! [m]
-         ! |k| = 2 Pi / lambda, wave_vector = [1/m]
-        type(cartesian_coordinate_real_type) :: wave_vector_0
-        ! true: transversal electric (TE) mode, false: tranversal magnetic (TM) mode
-        logical :: te_mode = .false.
-        ! additional phase: exp(I phase)
-        double precision :: phase = 0
+
+        type(lib_field_plane_wave_type) :: beam_parameter
+!         ! |k| = 2 Pi / lambda, wave_vector = [1/m]
+!        type(cartesian_coordinate_real_type) :: wave_vector_0
+!        ! true: transversal electric (TE) mode, false: tranversal magnetic (TM) mode
+!        logical :: te_mode = .false.
+!        ! additional phase: exp(I phase)
+!        double precision :: phase = 0
     end type lib_mie_illumination_plane_wave_parameter
 
     type lib_mie_illumination_gaussian_beam_parameter
@@ -38,10 +42,10 @@ module lib_mie_illumination
         double precision :: g = 1
         ! position of the origin of the beam coordinate system [m]
         type(cartesian_coordinate_real_type) :: d_0_i
-        ! popagation direction: polar angle [0, Pi] [rad]
-        double precision :: theta = 0
-        ! propagation direction: azimuthal angle [0, 2 Pi) [rad]
-        double precision :: phi = 0
+!        ! popagation direction: polar angle [0, Pi] [rad]
+!        double precision :: theta = 0
+!        ! propagation direction: azimuthal angle [0, 2 Pi) [rad]
+!        double precision :: phi = 0
         ! beam parameter
         type(lib_field_gaussian_beam_hermite_type) :: beam_parameter
         ! 1: Localised Approximation
@@ -109,7 +113,6 @@ module lib_mie_illumination
     ! K_i: illumination coordinate system
     !
     type lib_mie_illumination_parameter
-        integer :: type    ! 1: plane wave
         double precision :: e_field_0 ! [V/m]
         double precision :: lambda_0 ! wave_length_vaccum
         type(lib_mie_illumination_plane_wave_parameter), dimension(:), allocatable :: plane_wave
@@ -206,7 +209,7 @@ module lib_mie_illumination
             call init_list(q_nm, n_range(1), n_range(2) - n_range(1) + 1, dcmplx(0,0))
 
             if (allocated(illumination%plane_wave)) then
-                call lib_mie_illumination_get_p_q_j_j_multi_plane_wave(illumination, n_medium, d_0_j, n_range, &
+                call lib_mie_illumination_get_p_q_j_j_multi_plane_wave(illumination%plane_wave, n_medium, d_0_j, n_range, &
                                                                        buffer_p_nm, buffer_q_nm, &
                                                                        caching = m_caching)
                 call move_alloc(buffer_p_nm%item, p_nm%item)
@@ -214,7 +217,7 @@ module lib_mie_illumination
             end if
 
             if (allocated(illumination%gaussian_beam)) then
-                call lib_mie_illumination_get_p_q_gaussian_beam(illumination, n_medium, d_0_j, n_range,&
+                call lib_mie_illumination_get_p_q_gaussian_beam(illumination%gaussian_beam, n_medium, d_0_j, n_range,&
                                                                          buffer_p_nm, buffer_q_nm)
 
                 call remove_zeros(buffer_p_nm, dcmplx(1d-290, 1d-290), .true.)
@@ -366,11 +369,10 @@ module lib_mie_illumination
         !   q: type(list_list_cmplx)
         !       coefficient of vector spherical componets
         !
-        ! Reference: Electromagnetic scattering by an aggregate of spheres Yu-lin Xu, eq. 20
         subroutine lib_mie_illumination_get_p_q_j_j_multi_plane_wave(illumination, n_medium, d_0_j, n_range, p_nm, q_nm, caching)
             implicit none
             ! dummy
-            type(lib_mie_illumination_parameter), intent(in) :: illumination
+            type(lib_mie_illumination_plane_wave_parameter), dimension(:), intent(in) :: illumination
             double precision :: n_medium
             type(cartesian_coordinate_real_type), intent(in) :: d_0_j
             integer(kind=4), dimension(2),intent(in) :: n_range
@@ -384,30 +386,73 @@ module lib_mie_illumination
             integer :: i
 
             type(cartesian_coordinate_real_type) :: k
+            type(spherical_coordinate_real_type) :: k_spherical
             type(cartesian_coordinate_real_type) :: d_i_j
 
-            type(list_list_cmplx), dimension(size(illumination%plane_wave)) :: buffer_p_nm
-            type(list_list_cmplx), dimension(size(illumination%plane_wave)) :: buffer_q_nm
+            type(list_list_cmplx) :: buffer_a
+            type(list_list_cmplx) :: buffer_b
 
-            !$OMP PARALLEL DO PRIVATE(i, d_i_j, k)
-            do i = 1, size(illumination%plane_wave)
-                d_i_j = d_0_j - illumination%plane_wave(i)%d_0_i
-                k = illumination%plane_wave(i)%wave_vector_0 * n_medium
+            type(list_list_cmplx), dimension(size(illumination)) :: buffer_p_nm
+            type(list_list_cmplx), dimension(size(illumination)) :: buffer_q_nm
 
-                call lib_mie_illumination_get_p_q_j_j_single_plane_wave(k, d_i_j, n_range, &
-                                                                        buffer_p_nm(i), buffer_q_nm(i),&
-                                                                        phase = illumination%plane_wave(i)%phase, &
-                                                                        te_mode = illumination%plane_wave(i)%te_mode, &
-                                                                        caching=caching)
+            double precision :: buffer_abs
+            double precision :: buffer_arg
+
+            !$OMP PARALLEL DO PRIVATE(i, d_i_j, k, buffer_a, buffer_b, buffer_abs, buffer_arg)
+            do i = 1, size(illumination)
+                d_i_j = d_0_j - illumination(i)%d_0_i
+                k_spherical = make_spherical(2d0 * PI * n_medium / illumination(i)%beam_parameter%wave_length_0, &
+                                             illumination(i)%beam_parameter%theta, &
+                                             illumination(i)%beam_parameter%phi)
+                k = k_spherical
+
+                ! calculate TE
+                buffer_abs = abs(illumination(i)%beam_parameter%polarisation%x)
+                buffer_arg = atan2(aimag(illumination(i)%beam_parameter%polarisation%x), &
+                                   real(illumination(i)%beam_parameter%polarisation%x))
+                buffer_arg = buffer_arg + illumination(i)%beam_parameter%phase
+
+                if (buffer_abs .gt. 0) then
+                    call lib_mie_illumination_get_p_q_j_j_single_plane_wave(k, d_i_j, n_range, &
+                                                                            buffer_a, buffer_b,&
+                                                                            phase = buffer_arg, &
+                                                                            te_mode = .true., &
+                                                                            caching=caching)
+
+                    buffer_p_nm(i) = buffer_abs * buffer_a
+                    buffer_q_nm(i) = buffer_abs * buffer_b
+                else
+                    call init_list(buffer_p_nm(i), 0, 1, dcmplx(0, 0))
+                    call init_list(buffer_q_nm(i), 0, 1, dcmplx(0, 0))
+                end if
+
+                ! calculate TM
+                buffer_abs = abs(illumination(i)%beam_parameter%polarisation%y)
+                buffer_arg = atan2(aimag(illumination(i)%beam_parameter%polarisation%y), &
+                                   real(illumination(i)%beam_parameter%polarisation%y))
+                buffer_arg = buffer_arg + illumination(i)%beam_parameter%phase
+
+                if (buffer_abs .gt. 0) then
+                    call lib_mie_illumination_get_p_q_j_j_single_plane_wave(k, d_i_j, n_range, &
+                                                                            buffer_a, buffer_b,&
+                                                                            phase = buffer_arg, &
+                                                                            te_mode = .false., &
+                                                                            caching=caching)
+
+                    buffer_p_nm(i) = buffer_p_nm(i) + buffer_abs * buffer_a
+                    buffer_q_nm(i) = buffer_q_nm(i) + buffer_abs * buffer_b
+                end if
+
+
             end do
             !$OMP END PARALLEL DO
 
             call init_list(p_nm, n_range(1), n_range(2)-n_range(1)+1, dcmplx(0,0))
             call init_list(q_nm, n_range(1), n_range(2)-n_range(1)+1, dcmplx(0,0))
 
-            do i = 1, size(illumination%plane_wave)
-                p_nm = p_nm + illumination%plane_wave(i)%g * buffer_p_nm(i)
-                q_nm = q_nm + illumination%plane_wave(i)%g * buffer_q_nm(i)
+            do i = 1, size(illumination)
+                p_nm = p_nm + illumination(i)%g * buffer_p_nm(i)
+                q_nm = q_nm + illumination(i)%g * buffer_q_nm(i)
             end do
 
         end subroutine lib_mie_illumination_get_p_q_j_j_multi_plane_wave
@@ -716,7 +761,7 @@ module lib_mie_illumination
         subroutine lib_mie_illumination_get_p_q_gaussian_beam(illumination, n_medium, d_0_j, n_range, p_nm, q_nm)
             implicit none
             ! dummy
-            type(lib_mie_illumination_parameter), intent(in) :: illumination
+            type(lib_mie_illumination_gaussian_beam_parameter), dimension(:), intent(in) :: illumination
             double precision :: n_medium
             type(cartesian_coordinate_real_type), intent(in) :: d_0_j
             integer(kind=4), dimension(2),intent(in) :: n_range
@@ -744,35 +789,35 @@ module lib_mie_illumination
 
             integer(kind=1) :: z_selector
 
-            first_beam = lbound(illumination%gaussian_beam, 1)
-            last_beam = ubound(illumination%gaussian_beam, 1)
+            first_beam = lbound(illumination, 1)
+            last_beam = ubound(illumination, 1)
 
             allocate(buffer_p_nm(first_beam:last_beam))
             allocate(buffer_q_nm(first_beam:last_beam))
 
-            wave_length = illumination%lambda_0
 
             do i = first_beam, last_beam
+                wave_length = illumination(i)%beam_parameter%wave_length_0
 
-                calculation_type = illumination%gaussian_beam(i)%calculation_type
+                calculation_type = illumination(i)%calculation_type
 
 
-                select case(illumination%gaussian_beam(i)%calculation_type)
+                select case(illumination(i)%calculation_type)
                     case (1)
                         ! localised approximation
                         ! Reference: Generalized Lorenz-MieTheories, Gérard Gouesbet Gérard Gréhan, program GNMF
-                        w0 = illumination%gaussian_beam(i)%beam_parameter%waist_x0
-                        d = d_0_j - illumination%gaussian_beam(i)%d_0_i
+                        w0 = illumination(i)%beam_parameter%waist_x0
+                        d = d_0_j - illumination(i)%d_0_i
 
                         call lib_mie_illumination_get_p_q_single_gaussian_beam_la(wave_length, n_medium, w0, d, n_range,&
                                                                                   buffer_a_nm, buffer_b_nm)
 
-                        buffer_p_nm(i) = illumination%gaussian_beam(i)%g * buffer_a_nm
-                        buffer_q_nm(i) = illumination%gaussian_beam(i)%g * buffer_b_nm
+                        buffer_p_nm(i) = illumination(i)%g * buffer_a_nm
+                        buffer_q_nm(i) = illumination(i)%g * buffer_b_nm
                     case (2)
                         ! localised approximation + addition theorem
                         ! Reference: Generalized Lorenz-MieTheories, Gérard Gouesbet Gérard Gréhan, program GNMF
-                        w0 = illumination%gaussian_beam(i)%beam_parameter%waist_x0
+                        w0 = illumination(i)%beam_parameter%waist_x0
                         d%x = 0d0
                         d%y = 0d0
                         d%z = 0d0
@@ -780,10 +825,9 @@ module lib_mie_illumination
                         call lib_mie_illumination_get_p_q_single_gaussian_beam_la(wave_length, n_medium, w0, d, n_range,&
                                                                                   buffer_a_nm, buffer_b_nm)
 
-                        d = 2 * PI * n_medium / illumination%lambda_0 &
-                            * (illumination%gaussian_beam(i)%d_0_i - d_0_j)
+                        d = (illumination(i)%d_0_i - d_0_j) * 2d0 * PI * n_medium / wave_length
 
-                        z_selector = illumination%gaussian_beam(i)%z_selector_translation
+                        z_selector = illumination(i)%z_selector_translation
 
                         call lib_math_vector_spherical_harmonics_translate_coefficient(buffer_a_nm, buffer_b_nm, &
                                                                                        d, &
@@ -791,20 +835,20 @@ module lib_mie_illumination
                                                                                        z_selector, &
                                                                                        buffer_p_nm(i), buffer_q_nm(i))
 
-                        buffer_p_nm(i) = illumination%gaussian_beam(i)%g * buffer_p_nm(i)
-                        buffer_q_nm(i) = illumination%gaussian_beam(i)%g * buffer_q_nm(i)
+                        buffer_p_nm(i) = illumination(i)%g * buffer_p_nm(i)
+                        buffer_q_nm(i) = illumination(i)%g * buffer_q_nm(i)
                     case (3)
                         ! plane wave approximation
 
                         ! HINT: beam_parameter%e_field_0 = 1, will be set automatically
                         !       otherwise the scaling factor "g" doesn't work correctly
                         !       -> e_field = e_field_0 * g * beam_parameter%e_field_0
-                        call lib_mie_illumination_get_p_q_single_gaussian_beam_pw(illumination%gaussian_beam(i), n_medium, &
+                        call lib_mie_illumination_get_p_q_single_gaussian_beam_pw(illumination(i), n_medium, &
                                                                                   d_0_j, n_range, &
                                                                                   buffer_a_nm, buffer_b_nm)
 
-                        buffer_p_nm(i) = illumination%gaussian_beam(i)%g * buffer_a_nm
-                        buffer_q_nm(i) = illumination%gaussian_beam(i)%g * buffer_b_nm
+                        buffer_p_nm(i) = illumination(i)%g * buffer_a_nm
+                        buffer_q_nm(i) = illumination(i)%g * buffer_b_nm
                 end select
             end do
 
@@ -819,28 +863,28 @@ module lib_mie_illumination
             do n = n_range(1), n_range(2)
                 do m = -n, n
                     if (isnan(real(p_nm%item(n)%item(m)))) then
-                        print *, "lib_mie_illumination_get_p_q_circular_gaussian_beam: ERROR"
+                        print *, "lib_mie_illumination_get_p_q_gaussian_beam: ERROR"
                         print *, "  Re(p_nm) is NaN"
                         print * , "  n = ", n
                         print * , "  m = ", m
                     end if
 
                     if (isnan(aimag(p_nm%item(n)%item(m)))) then
-                        print *, "lib_mie_illumination_get_p_q_circular_gaussian_beam: ERROR"
+                        print *, "lib_mie_illumination_get_p_q_gaussian_beam: ERROR"
                         print *, "  Im(p_nm) is NaN"
                         print * , "  n = ", n
                         print * , "  m = ", m
                     end if
 
                     if (isnan(real(q_nm%item(n)%item(m)))) then
-                        print *, "lib_mie_illumination_get_p_q_circular_gaussian_beam: ERROR"
+                        print *, "lib_mie_illumination_get_p_q_gaussian_beam: ERROR"
                         print *, "  Re(q_nm) is NaN"
                         print * , "  n = ", n
                         print * , "  m = ", m
                     end if
 
                     if (isnan(aimag(q_nm%item(n)%item(m)))) then
-                        print *, "lib_mie_illumination_get_p_q_circular_gaussian_beam: ERROR"
+                        print *, "lib_mie_illumination_get_p_q_gaussian_beam: ERROR"
                         print *, "  Im(q_nm) is NaN"
                         print * , "  n = ", n
                         print * , "  m = ", m
@@ -952,10 +996,10 @@ module lib_mie_illumination
 
         end subroutine lib_mie_illumination_get_p_q_single_gaussian_beam_la
 
-        subroutine lib_mie_illumination_get_p_q_single_gaussian_beam_pw(illumination, n_medium, d_0_j, n_range, p_nm, q_nm)
+        subroutine lib_mie_illumination_get_p_q_single_gaussian_beam_pw(beam_parameter, n_medium, d_0_j, n_range, p_nm, q_nm)
             implicit none
             ! dummy
-            type(lib_mie_illumination_gaussian_beam_parameter), intent(in) :: illumination
+            type(lib_mie_illumination_gaussian_beam_parameter), intent(in) :: beam_parameter
             double precision :: n_medium
             type(cartesian_coordinate_real_type), intent(in) :: d_0_j
             integer(kind=4), dimension(2),intent(in) :: n_range
@@ -964,23 +1008,21 @@ module lib_mie_illumination
             type(list_list_cmplx), intent(inout) :: q_nm
 
             ! auxiliary
-            type(cartesian_coordinate_cmplx_type) :: e_field
-            type(cartesian_coordinate_cmplx_type) :: h_field
-
-            type(cartesian_coordinate_real_type) :: k_vector_n
+            type(cartesian_coordinate_real_type) :: evaluation_point_x
+            type(lib_mie_illumination_plane_wave_parameter) :: plane_wave
 
 
+            plane_wave%g = beam_parameter%g
+            plane_wave%d_0_i = beam_parameter%d_0_i
 
-!            call lib_field_gaussian_beam_hermite_get_field(illumination%beam_parameter, d_0_j, &
-!                                                           e_field, h_field)
+            evaluation_point_x = d_0_j - beam_parameter%d_0_i
+            plane_wave%beam_parameter = lib_field_gaussian_beam_hermite_get_plane_wave_approximation( &
+                                                                            beam_parameter%beam_parameter, &
+                                                                            evaluation_point_x)
 
-
-
-            ! get k vector
-            ! get phase
-            ! get projected polarisation
-
-            ! make a plane wave equivalent
+            call lib_mie_illumination_get_p_q_j_j_multi_plane_wave((/ plane_wave /), &
+                                                                   n_medium, d_0_j, n_range, &
+                                                                   p_nm, q_nm)
 
         end subroutine
 

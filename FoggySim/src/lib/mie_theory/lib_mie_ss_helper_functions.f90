@@ -1862,7 +1862,7 @@ module lib_mie_ss_helper_functions
                             illumination%lambda_0 = lambda
 
                             illumination%plane_wave(1)%g = 1d0
-                            illumination%plane_wave(1)%wave_vector_0 = make_cartesian(0d0, 0d0, 2d0 * PI / lambda)
+                            illumination%plane_wave(1)%beam_parameter%wave_length_0 = lambda
 
                             call data_interpolation(data_refractive_index_particle, 1, lambda / unit_mu, &
                                                     data_refractive_index_particle_interpolation)

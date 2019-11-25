@@ -12,6 +12,7 @@ module lib_mie_single_sphere
     use libmath
     use lib_constants
     use lib_field
+    use lib_field_polarisation
     use lib_mie_type
     use lib_mie_type_functions
     use lib_mie_illumination
@@ -73,7 +74,7 @@ module lib_mie_single_sphere
             type(spherical_coordinate_real_type) :: d_0_i_spherical
             integer, dimension(:), allocatable :: m_n_range_max
 
-            if (illumination%type .eq. 1) then
+            if (allocated(illumination%plane_wave)) then
 
                 allocate(alpha(size(illumination%plane_wave)))
                 allocate(beta(size(illumination%plane_wave)))
@@ -1622,7 +1623,11 @@ module lib_mie_single_sphere
             allocate(illumination%plane_wave(1))
             illumination%plane_wave(1)%d_0_i = d_0_j
             illumination%plane_wave(1)%g = 1d0
-            illumination%plane_wave(1)%wave_vector_0 = k_cartesian
+            illumination%plane_wave(1)%beam_parameter%wave_length_0 = lambda
+            illumination%plane_wave(1)%beam_parameter%theta = 0
+            illumination%plane_wave(1)%beam_parameter%phi = 0
+            illumination%plane_wave(1)%beam_parameter%convention = 2
+            illumination%plane_wave(1)%beam_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
 
 
             x = abs(k * r_particle)
@@ -1670,13 +1675,13 @@ module lib_mie_single_sphere
 !            if (.not. test_get_field_initial_incident_xu_real()) then
 !                rv = rv + 1
 !            end if
-            if (.not. test_get_field_initial_incident_multi_wave_real()) then
-                rv = rv + 1
-            end if
+!            if (.not. test_get_field_initial_incident_multi_wave_real()) then
+!                rv = rv + 1
+!            end if
             if (.not. test_get_field_initial_incident_gaussian_beam()) rv = rv + 1
-            if (.not. test_get_field_scattered_plane_section_real()) then
-                rv = rv + 1
-            end if
+!            if (.not. test_get_field_scattered_plane_section_real()) then
+!                rv = rv + 1
+!            end if
 !            if (.not. test_get_field_scattered_plane_section_cmplx()) then
 !                rv = rv + 1
 !            end if
@@ -2164,21 +2169,10 @@ module lib_mie_single_sphere
                     buffer_car%z = 0
                     plane_wave(:)%d_0_i = buffer_car
 
-                    buffer_car%x = 1
-                    buffer_car%y = 0
-                    buffer_car%z = 1
-                    buffer_car = buffer_car / abs(buffer_car) / lambda
-                    plane_wave(1)%wave_vector_0 = buffer_car
-
-                    buffer_car%x = -1
-                    buffer_car%y = 0
-                    buffer_car%z = 1
-                    buffer_car = buffer_car / abs(buffer_car) / lambda
-                    plane_wave(2)%wave_vector_0 = buffer_car
-
                     illumination = lib_mie_type_func_get_plane_wave_illumination(lambda, e_field_0, &
                                                                                  plane_wave(:)%g, &
-                                                                                 plane_wave(:)%wave_vector_0, &
+                                                                                 (/ make_cartesian(1d0, 0d0, 1d0), &
+                                                                                    make_cartesian(-1d0, 0d0, 1d0)/), &
                                                                                  plane_wave(:)%d_0_i)
 !                    buffer_car%x = 0
 !                    buffer_car%y = 0
@@ -2446,11 +2440,19 @@ module lib_mie_single_sphere
                     buffer_car%z = 0
                     illumination%gaussian_beam(:)%d_0_i = buffer_car
 
-                    illumination%gaussian_beam(:)%beam_parameter%wave_length_0 = lambda
-                    illumination%gaussian_beam(:)%calculation_type = 1
+                    illumination%gaussian_beam(:)%calculation_type = 3
 
-                    illumination%gaussian_beam(1)%beam_parameter%waist_x0 = 50 * unit_mu
-                    illumination%gaussian_beam(1)%beam_parameter%waist_y0 = 50 * unit_mu
+                    illumination%gaussian_beam(:)%beam_parameter%refractive_index_medium = 1
+
+                    illumination%gaussian_beam(:)%beam_parameter%e_field_0 = 1
+                    illumination%gaussian_beam(:)%beam_parameter%phase = 0
+                    illumination%gaussian_beam(:)%beam_parameter%wave_length_0 = lambda
+                    illumination%gaussian_beam(:)%beam_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
+
+                    illumination%gaussian_beam(1)%beam_parameter%waist_x0 = 2.5 * unit_mu
+                    illumination%gaussian_beam(1)%beam_parameter%waist_y0 = 2.5 * unit_mu
+                    illumination%gaussian_beam(1)%beam_parameter%convention = 2
+
 
 
 !                    buffer_car%x = -1
@@ -2489,10 +2491,10 @@ module lib_mie_single_sphere
                             point_spherical = point_cartesian
 
                             buffer_field = get_field_initial_incident_multi_wave_real(point_spherical%theta, &
-                                                                       point_spherical%phi, &
-                                                                       point_spherical%rho, &
-                                                                       e_field_0, n_medium, &
-                                                                       n_range, illumination)
+                                                                                      point_spherical%phi, &
+                                                                                      point_spherical%rho, &
+                                                                                      e_field_0, n_medium, &
+                                                                                      n_range, illumination)
                             e_field_s(i, ii) = make_cartesian(buffer_field(1), point_spherical%theta, point_spherical%phi)
                             h_field_s(i, ii) = make_cartesian(buffer_field(2), point_spherical%theta, point_spherical%phi)
 
@@ -2521,6 +2523,7 @@ module lib_mie_single_sphere
                         print *, "  x-Value: ", x
                     end do
                     !$OMP END PARALLEL DO
+
                     call cpu_time(finish)
                     call system_clock(count_finish, count_rate)
                     print *, "get_field_initial_incident_xu_real"

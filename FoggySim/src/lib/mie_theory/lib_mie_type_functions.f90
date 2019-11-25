@@ -109,25 +109,32 @@ module lib_mie_type_functions
             type(cartesian_coordinate_real_type), dimension(lbound(g, 1):ubound(g, 1)), intent(in) :: k
             type(cartesian_coordinate_real_type), dimension(lbound(g, 1):ubound(g, 1)), intent(in) :: d_0_i
 
+
             type(lib_mie_illumination_parameter) :: illumination
 
             ! auxiliary
             integer :: i
-            double precision :: abs_k
+            type(spherical_coordinate_real_type) :: k_spherical
 
-            illumination%type = 1
             illumination%lambda_0 = lambda_0
             illumination%e_field_0 = e_field_0
 
             allocate(illumination%plane_wave(lbound(g, 1):ubound(g, 1)))
 
             do i = lbound(g, 1), ubound(g, 1)
-                abs_k = abs(k(i))
+                k_spherical = k(i)
 
-                if (abs_k .gt. 0) then
+                if (k_spherical%rho .gt. 0) then
                     illumination%plane_wave(i)%g = g(i)
                     illumination%plane_wave(i)%d_0_i = d_0_i(i)
-                    illumination%plane_wave(i)%wave_vector_0 = k(i) * 2D0 * PI / (abs_k * lambda_0)
+                    illumination%plane_wave(i)%beam_parameter%wave_length_0 = lambda_0
+                    illumination%plane_wave(i)%beam_parameter%theta = k_spherical%theta
+                    illumination%plane_wave(i)%beam_parameter%phi = k_spherical%phi
+
+                    illumination%plane_wave(i)%beam_parameter%e_field_0 = e_field_0
+                    illumination%plane_wave(i)%beam_parameter%polarisation%x = 1
+                    illumination%plane_wave(i)%beam_parameter%polarisation%y = 0
+                    illumination%plane_wave(i)%beam_parameter%convention = 2
                 else
                     print *, "lib_mie_type_func_get_illumination: ERROR"
                     print *, "  abs(k(i=", i, ")) = 0"
