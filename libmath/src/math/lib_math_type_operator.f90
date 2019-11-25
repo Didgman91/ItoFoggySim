@@ -3291,7 +3291,11 @@ module lib_math_type_operator
                 lhs%theta = acos(rhs%z / r)
             end if
 
-            lhs%phi = atan(rhs%y, rhs%x)
+            if (rhs%x .eq. 0 .and. rhs%y .eq. 0) then
+                lhs%phi = 0
+            else
+                lhs%phi = atan(rhs%y, rhs%x)
+            end if
 
         end subroutine lib_math_cartesian_point_to_spherical_point
 
