@@ -285,6 +285,27 @@ module lib_field_gaussian_beam
                                                  convention=parameter%convention)
 
             plane_wave%phase = argument
+
+            select case(parameter%convention)
+                case (1)
+                    ! exp(-i(k*z - omega*t))
+                    plane_wave%phase = argument + mod(2d0 * PI * point_x%z / parameter%wave_length_0, 2d0 * PI)
+
+                case (2)
+                    ! exp(i(k*z - omega*t))
+                    plane_wave%phase = argument - mod(2d0 * PI * point_x%z / parameter%wave_length_0, 2d0 * PI)
+
+                case default
+                    print *, "lib_field_gaussian_beam_hermite_get_plane_wave_approximation: ERROR"
+                    print *, "  convention is not defined: ", parameter%convention
+            end select
+
+
+            plane_wave%phase = mod(plane_wave%phase, 2d0 * PI)
+            if (plane_wave%phase .lt. 0d0) then
+                plane_wave%phase = 2d0 * PI + plane_wave%phase
+            end if
+
             plane_wave%e_field_0 = absolute
 
             ! get the polarisation of the plane wave at the evaluation point
@@ -292,17 +313,18 @@ module lib_field_gaussian_beam
             y_axis_pw = make_cartesian(0d0, 1d0, 0d0)
 
             if (plane_wave%phi .ne. 0 .or. plane_wave%theta .ne. 0) then
-                rot  = lib_math_get_matrix_rot_z(-plane_wave%phi) &
-                       * lib_math_get_matrix_rot_y(-plane_wave%theta)
+                rot  = lib_math_get_matrix_rot(-PI / 2d0 - parameter%phi, &
+                                               -parameter%theta, &
+                                               -PI / 2d0 - parameter%phi)
                 x_axis_pw = rot * x_axis_pw
                 y_axis_pw = rot * y_axis_pw
             end if
 
-            plane_wave%polarisation%x = parameter%polarisation%x * x_axis_pw%x &
-                                        + parameter%polarisation%y * y_axis_pw%x
+            plane_wave%polarisation%x = parameter%polarisation%x * abs(x_axis_pw%x) &
+                                        + parameter%polarisation%y * abs(y_axis_pw%x)
 
-            plane_wave%polarisation%y = parameter%polarisation%y * y_axis_pw%y &
-                                        + parameter%polarisation%x * x_axis_pw%y
+            plane_wave%polarisation%y = parameter%polarisation%y * abs(y_axis_pw%y) &
+                                        + parameter%polarisation%x * abs(x_axis_pw%y)
 
             buffer = abs(abs(make_cartesian(plane_wave%polarisation%x, &
                                             plane_wave%polarisation%y, &
@@ -683,19 +705,21 @@ module lib_field_gaussian_beam
             select case(m_convention)
                 case(1)
                     ! exp(-i(k*z - omega*t))
-                    if (x%z .lt. 0) then
-                        kz = -abs(mod(k * x%z, 2d0 * PI))
-                    else
-                        kz = abs(mod(k * x%z, 2d0 * PI))
-                    end if
+                    kz = mod(k * x%z, 2d0 * PI)
+!                    if (x%z .lt. 0) then
+!                        kz = -abs(mod(k * x%z, 2d0 * PI))
+!                    else
+!                        kz = abs(mod(k * x%z, 2d0 * PI))
+!                    end if
 
                 case(2)
                     ! exp(i(k*z - omega*t))
-                    if (x%z .lt. 0) then
-                        kz = abs(mod(k * x%z, 2d0 * PI))
-                    else
-                        kz = -abs(mod(k * x%z, 2d0 * PI))
-                    end if
+                    kz = -mod(k * x%z, 2d0 * PI)
+!                    if (x%z .lt. 0) then
+!                        kz = abs(mod(k * x%z, 2d0 * PI))
+!                    else
+!                        kz = -abs(mod(k * x%z, 2d0 * PI))
+!                    end if
 
                 case default
                     print *, "lib_field_gaussian_beam__get_phase: ERROR"
@@ -713,11 +737,11 @@ module lib_field_gaussian_beam
 
 
             ! Calculation of the argument of the complex electrictical field
-            argument = -abs(mod(k * crx * x%x* x%x / 2d0, 2d0 * PI)) &
-                    -abs(mod(k * cry * x%y* x%y / 2d0, 2d0 * PI)) &
-                    - kz &
-                    + (dble(m_tem_m) + 0.5d0) * atan2(x%z, zrx) &
-                    + (dble(m_tem_n) + 0.5d0) * atan2(x%z, zry)
+            argument = -mod(k * crx * x%x*x%x / 2d0, 2d0 * PI)
+            argument = argument -mod(k * cry * x%y*x%y / 2d0, 2d0 * PI)
+            argument = argument - kz
+            argument = argument + (dble(m_tem_m) + 0.5d0) * atan2(x%z, zrx)
+            argument = argument + (dble(m_tem_n) + 0.5d0) * atan2(x%z, zry)
 
             h_min_i = min(m_tem_m, m_tem_n)
             h_max_i = max(m_tem_m, m_tem_n)
@@ -727,10 +751,14 @@ module lib_field_gaussian_beam
                                             h_min_i, h_max_i - h_min_i + 1, h)
 
             if (h(1, m_tem_m) * h(2, m_tem_n) .lt. 0d0) then
-                argument = argument - PI
+                argument = argument + PI
             end if
 
-            argument = abs(mod(argument, 2d0 * PI))
+            argument = mod(argument, 2d0 * PI)
+
+            if (argument .lt. 0d0) then
+                argument = 2d0 * PI + argument
+            end if
 
             ! Calculation of the absolute value of the complex electrical field
             absolute = sqrt(waist_x0 / wx) * h(1, m_tem_m) * exp(-(x%x / wx)**2d0) &
@@ -740,8 +768,6 @@ module lib_field_gaussian_beam
                                     * lib_math_factorial_get_factorial(m_tem_m) &
                                     * lib_math_factorial_get_factorial(m_tem_n) &
                                      * PI))
-
-            print *, "test"
 
         end subroutine get_absolute_value_and_argument
 
@@ -843,12 +869,17 @@ module lib_field_gaussian_beam
             ! dummy
             integer :: rv
 
+            ! parameter
+            double precision, parameter :: ground_truth_e = 1d-7
+
             rv = 0
 
             if (.not. test_lib_field_gaussian_beam_hermite_get_plane_wave_approx()) rv = rv + 1
+            if (.not. test_lib_field_gaussian_beam_hermite_get_field_approximation()) rv = rv + 1
             if (.not. test_lib_field_gaussian_beam_hermite_get_propagation_direction()) rv = rv + 1
             if (.not. test_lib_field_gaussian_beam_hermite_get_field()) rv = rv + 1
             if (.not. test_lib_field_gaussian_beam_hermite_get_field_2()) rv = rv + 1
+
 
             if (rv == 0) then
                 print *, "lib_field_gaussian_beam_test_functions tests: OK"
@@ -1556,17 +1587,19 @@ module lib_field_gaussian_beam
                 type(cartesian_coordinate_cmplx_type) :: e_field_pw
                 type(cartesian_coordinate_cmplx_type) :: h_field_pw
 
-                evaluation_point_x = make_cartesian(0.5 * unit_mm, 0d0, 1 * unit_mm)
+                double precision :: buffer
+
+                evaluation_point_x = make_cartesian(0d0, 0d0, 4.75 * unit_mu)
 
                 gauss_parameter%e_field_0 = 1
                 gauss_parameter%wave_length_0 = 0.5 * unit_mu
                 gauss_parameter%refractive_index_medium = 1
-                gauss_parameter%waist_x0 = 500 * unit_mu
-                gauss_parameter%waist_y0 = 500 * unit_mu
+                gauss_parameter%waist_x0 = 2.5 * unit_mu
+                gauss_parameter%waist_y0 = 2.5 * unit_mu
                 gauss_parameter%tem_m = 0
                 gauss_parameter%tem_n = 0
                 gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
-                gauss_parameter%theta = PI / 8d0
+                gauss_parameter%theta = 0! PI / 8d0
                 gauss_parameter%phi = 0
                 gauss_parameter%convention = 1
 
@@ -1575,12 +1608,181 @@ module lib_field_gaussian_beam
 
                 call lib_field_gaussian_beam_hermite_get_field(gauss_parameter, evaluation_point_x, &
                                                                e_field_gauss, h_field_gauss)
-                call lib_field_plane_wave_get_field(plane_wave_approximation, make_cartesian(0d0, 0d0, 0d0), &
+                call lib_field_plane_wave_get_field(plane_wave_approximation, evaluation_point_x, &
                                                     e_field_pw, h_field_pw)
 
+                print *, " gauss: ", abs(e_field_gauss)
+                print *, "approx: ", abs(e_field_pw)
 
+                rv = .true.
+                print *, "test_lib_field_gaussian_beam_hermite_get_plane_wave_approx: "
+
+                buffer = abs(real(e_field_gauss%x) - real(e_field_pw%x))
+                if (buffer .lt. ground_truth_e) then
+                    print *, "  real(x): OK"
+                else
+                    print *, "  real(x): FAILED"
+                    print *, "           diff = ", buffer
+                    print *, "           gauss: ", real(e_field_gauss%x)
+                    print *, "              pw: ", real(e_field_pw%x)
+                    rv = .false.
+                end if
+
+                buffer = abs(aimag(e_field_gauss%x) - aimag(e_field_pw%x))
+                if (buffer .lt. ground_truth_e) then
+                    print *, "  aimag(x): OK"
+                else
+                    print *, "  aimag(x): FAILED"
+                    print *, "            diff = ", buffer
+                    print *, "            gauss: ", real(e_field_gauss%x)
+                    print *, "               pw: ", real(e_field_pw%x)
+                    rv = .false.
+                end if
+
+
+                buffer = abs(real(e_field_gauss%y) - real(e_field_pw%y))
+                if (buffer .lt. ground_truth_e) then
+                    print *, "  real(y): OK"
+                else
+                    print *, "  real(y): FAILED"
+                    print *, "           diff = ", buffer
+                    print *, "           gauss: ", real(e_field_gauss%y)
+                    print *, "              pw: ", real(e_field_pw%y)
+                    rv = .false.
+                end if
+
+                buffer = abs(aimag(e_field_gauss%y) - aimag(e_field_pw%y))
+                if (buffer .lt. ground_truth_e) then
+                    print *, "  aimag(y): OK"
+                else
+                    print *, "  aimag(y): FAILED"
+                    print *, "            diff = ", buffer
+                    print *, "            gauss: ", aimag(e_field_gauss%y)
+                    print *, "               pw: ", aimag(e_field_pw%y)
+                    rv = .false.
+                end if
+
+
+                buffer = abs(real(e_field_gauss%x) - real(e_field_pw%x))
+                if (buffer .lt. ground_truth_e) then
+                    print *, "  real(z): OK"
+                else
+                    print *, "  real(z): FAILED"
+                    print *, "           diff = ", buffer
+                    print *, "           gauss: ", real(e_field_gauss%x)
+                    print *, "              pw: ", real(e_field_pw%x)
+                    rv = .false.
+                end if
+
+                buffer = abs(aimag(e_field_gauss%x) - aimag(e_field_pw%x))
+                if (buffer .lt. ground_truth_e) then
+                    print *, "  aimag(z): OK"
+                else
+                    print *, "  aimag(z): FAILED"
+                    print *, "            diff = ", buffer
+                    print *, "            gauss: ", aimag(e_field_gauss%z)
+                    print *, "               pw: ", aimag(e_field_pw%z)
+                    rv = .false.
+                end if
 
             end function test_lib_field_gaussian_beam_hermite_get_plane_wave_approx
+
+            function test_lib_field_gaussian_beam_hermite_get_field_approximation() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! auxiliary
+                integer :: i
+                integer :: ii
+
+                double precision :: x
+                double precision :: y
+                double precision :: z
+                type(lib_field_gaussian_beam_hermite_type) :: gauss_parameter
+
+                double precision, dimension(2) :: x_range
+                double precision, dimension(2) :: y_range
+                real(kind=8) :: step_size
+
+                integer :: no_x_values
+                integer :: no_y_values
+
+                type(cartesian_coordinate_real_type) :: point_cartesian
+
+                type(cartesian_coordinate_real_type) :: evaluation_point_x
+                type(lib_field_plane_wave_type) :: plane_wave_approximation
+
+                type(cartesian_coordinate_cmplx_type) :: buffer_e_field
+                type(cartesian_coordinate_cmplx_type) :: buffer_h_field
+
+                type(cartesian_coordinate_cmplx_type) :: e_field_pw
+                type(cartesian_coordinate_cmplx_type) :: h_field_pw
+
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field
+
+                x_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+                y_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+!                    step_size = 0.02_8 * unit_mu
+                step_size = 0.05_8 * unit_mu
+
+
+                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_y_values = abs(int(floor((y_range(2)-y_range(1))/step_size)))
+
+                allocate(e_field(no_x_values, no_y_values))
+                allocate(h_field(no_x_values, no_y_values))
+
+                x = 0
+                y = 0
+                z = 10 * unit_mu
+
+                gauss_parameter%e_field_0 = 1
+                gauss_parameter%refractive_index_medium = 1
+                gauss_parameter%tem_m = 0
+                gauss_parameter%tem_n = 0
+!                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_rot(PI/4d0)
+                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
+!                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_circular_plus()
+                gauss_parameter%waist_x0 = 2.5 * unit_mu
+                gauss_parameter%waist_y0 = 2.5 * unit_mu
+                gauss_parameter%wave_length_0 = 0.55 * unit_mu
+
+                gauss_parameter%theta = PI / 8d0
+                gauss_parameter%phi = 0!PI
+
+                evaluation_point_x = make_cartesian(2 * unit_mu, 0d0, 5 * unit_mu)
+
+                plane_wave_approximation = lib_field_gaussian_beam_hermite_get_plane_wave_approximation(gauss_parameter, &
+                                                                                                        evaluation_point_x)
+
+!                !$OMP PARALLEL DO PRIVATE(i, ii) FIRSTPRIVATE x, y, z)
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii= 1, no_y_values
+                        z = y_range(2) - (ii-1) * step_size
+
+                        point_cartesian%x = x
+                        point_cartesian%y = y
+                        point_cartesian%z = z
+
+                        call lib_field_gaussian_beam_hermite_get_field(gauss_parameter, &
+                                                                       point_cartesian, &
+                                                                       buffer_e_field, buffer_h_field)
+
+                        call lib_field_plane_wave_get_field(plane_wave_approximation, point_cartesian, &
+                                                    e_field_pw, h_field_pw)
+
+                        e_field(i,ii) = buffer_e_field - e_field_pw
+                        h_field(i,ii) = buffer_h_field - h_field_pw
+                    end do
+                end do
+!                !$OMP END PARALLEL DO
+
+                rv = lib_field_export(e_field, h_field, "temp/real/gauss_approx_")
+
+            end function test_lib_field_gaussian_beam_hermite_get_field_approximation
 
         end function lib_field_gaussian_beam_test_functions
 
