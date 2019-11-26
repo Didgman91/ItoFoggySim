@@ -1178,7 +1178,7 @@ module lib_mie_single_sphere
 
 #ifdef _DEBUG_
                             if (isnan(buffer_real)) then
-                                print *, "get_e_field_scattered_xu: ERROR"
+                                print *, "get_e_field_scattered_xu_cmplx: ERROR"
                                 print *, "  buffer_real is NaN"
                                 print * , "  n = ", n
                                 print * , "  m = ", m
@@ -1445,7 +1445,8 @@ module lib_mie_single_sphere
             x_j = x_0 - sphere%d_0_j
             x_j_spherical = x_j
 
-            if ( x_j_spherical%rho .gt. sphere_parameter%radius) then
+            if ( x_j_spherical%rho .gt. sphere_parameter%radius &
+                 .and. e_field_0 .gt. 1d-200) then
                 ! outside the sphere
                 call lib_math_vector_spherical_harmonics_components(x_j_spherical%theta, x_j_spherical%phi, x_j_spherical%rho, &
                                                                    k_0 * n_medium, &
@@ -2447,7 +2448,7 @@ module lib_mie_single_sphere
                     illumination%gaussian_beam(:)%beam_parameter%e_field_0 = 1
                     illumination%gaussian_beam(:)%beam_parameter%phase = 0
                     illumination%gaussian_beam(:)%beam_parameter%wave_length_0 = lambda
-                    illumination%gaussian_beam(:)%beam_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
+                    illumination%gaussian_beam(:)%beam_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_v()
 
                     illumination%gaussian_beam(1)%beam_parameter%waist_x0 = 2.5 * unit_mu
                     illumination%gaussian_beam(1)%beam_parameter%waist_y0 = 2.5 * unit_mu

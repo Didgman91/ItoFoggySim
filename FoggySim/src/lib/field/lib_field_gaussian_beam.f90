@@ -119,7 +119,8 @@ module lib_field_gaussian_beam
                                                           point_x, &
                                                           phase=parameter%phase, &
                                                           tem_m=parameter%tem_m, &
-                                                          tem_n=parameter%tem_n)
+                                                          tem_n=parameter%tem_n, &
+                                                          convention=parameter%convention)
             e_field = field * parameter%polarisation;
 
             ! Quantum Optics: An Introduction, Mark Fox
@@ -280,12 +281,12 @@ module lib_field_gaussian_beam
                                                  parameter%waist_y0, &
                                                  point_x, &
                                                  absolute, argument, &
-                                                 tem_m=parameter%tem_m, &
-                                                 tem_n=parameter%tem_n, &
-                                                 convention=parameter%convention)
+                                                 phase = parameter%phase, &
+                                                 tem_m = parameter%tem_m, &
+                                                 tem_n = parameter%tem_n, &
+                                                 convention = parameter%convention)
 
-            plane_wave%phase = argument
-
+            ! plane wave parameter at the origin
             select case(parameter%convention)
                 case (1)
                     ! exp(-i(k*z - omega*t))
@@ -293,14 +294,15 @@ module lib_field_gaussian_beam
 
                 case (2)
                     ! exp(i(k*z - omega*t))
-                    plane_wave%phase = argument - mod(2d0 * PI * point_x%z / parameter%wave_length_0, 2d0 * PI)
+!                    plane_wave%phase = argument - mod(2d0 * PI * point_x%z / parameter%wave_length_0, 2d0 * PI)
+                    plane_wave%phase = argument + mod(2d0 * PI * point_x%z / parameter%wave_length_0, 2d0 * PI)
 
                 case default
                     print *, "lib_field_gaussian_beam_hermite_get_plane_wave_approximation: ERROR"
                     print *, "  convention is not defined: ", parameter%convention
             end select
 
-
+            ! adapt range: [0, 2 Pi)
             plane_wave%phase = mod(plane_wave%phase, 2d0 * PI)
             if (plane_wave%phase .lt. 0d0) then
                 plane_wave%phase = 2d0 * PI + plane_wave%phase
@@ -461,24 +463,25 @@ module lib_field_gaussian_beam
                                            / (dble(lib_math_factorial_get_factorial(m_tem_m) &
                                               * lib_math_factorial_get_factorial(m_tem_n)) * PI))
 
+            buffer_cmplx = buffer_real * exp(dcmplx(0, -k * x%z + phase)) * buffer_cmplx
+
+            buffer_real = (dble(m_tem_m) + 0.5d0) * atan2(x%z, zr_x) &
+                          + (dble(m_tem_n) + 0.5d0) * atan2(x%z, zr_y)
+            buffer_cmplx = exp(dcmplx(0,buffer_real)) * buffer_cmplx
+
             select case(m_convention)
                 case(1)
                     ! exp(-i(k*z - omega*t))
-                    buffer_cmplx = buffer_real * exp(dcmplx(0, -k * x%z + phase)) * buffer_cmplx
+                    field = buffer_cmplx
                 case(2)
                     ! exp(i(k*z - omega*t))
-                    buffer_cmplx = buffer_real * exp(dcmplx(0, k * x%z + phase)) * buffer_cmplx
+                    field = conjg(buffer_cmplx)
 
                 case default
                     print *, "lib_fiel_gaussian_beam_hermite_scalar: ERROR"
                     print *, "  convention is not defined: ", m_convention
             end select
 
-            buffer_real = (dble(m_tem_m) + 0.5d0) * atan2(x%z, zr_x) &
-                          + (dble(m_tem_n) + 0.5d0) * atan2(x%z, zr_y)
-            buffer_cmplx = exp(dcmplx(0,buffer_real)) * buffer_cmplx
-
-            field = buffer_cmplx
 
         end function lib_fiel_gaussian_beam_hermite_scalar
 
@@ -634,26 +637,27 @@ module lib_field_gaussian_beam
 
             rv = rv + numerator / denominator
 
-            select case (m_convention)
-                case (1)
-                    ! exp(-i(k*z - omega*t))
-                    rv = rv * wave_length_0**2d0 / 2d0 - 2d0
-                case (2)
-                    ! exp(i(k*z - omega*t))
-                    rv = rv * wave_length_0**2d0 / 2d0 + 2d0
-
-                case default
-                    print *, "lib_field_gaussian_beam__get_derivative_z: ERROR"
-                    print *, "  convention is not defined: ", m_convention
-            end select
+            rv = rv * wave_length_0**2d0 / 2d0 - 2d0
 
             rv = PI * n_medium * rv / wave_length_0
+
+!            select case (m_convention)
+!                case (1)
+!                    ! exp(-i(k*z - omega*t))
+!                case (2)
+!                    ! exp(i(k*z - omega*t))
+!                    rv = - PI * n_medium * rv / wave_length_0
+!
+!                case default
+!                    print *, "lib_field_gaussian_beam__get_derivative_z: ERROR"
+!                    print *, "  convention is not defined: ", m_convention
+!            end select
 
         end function get_derivative_z
 
         subroutine get_absolute_value_and_argument(e_field_0, wave_length_0, n_medium, waist_x0, waist_y0, x, &
                                                    absolute, argument, &
-                                                   tem_m, tem_n, convention)
+                                                   phase, tem_m, tem_n, convention)
             implicit none
             ! dummy
             double precision, intent(in) :: e_field_0
@@ -663,6 +667,7 @@ module lib_field_gaussian_beam
             double precision, intent(in) :: waist_y0
             type(cartesian_coordinate_real_type), intent(in) :: x
 
+            double precision, intent(in), optional :: phase
             integer, intent(in), optional :: tem_m
             integer, intent(in), optional :: tem_n
             integer, intent(in), optional :: convention
@@ -687,9 +692,13 @@ module lib_field_gaussian_beam
             integer :: h_max_i
             double precision, dimension(:,:), allocatable :: h
 
+            double precision :: m_phase
             integer :: m_tem_m
             integer :: m_tem_n
             integer :: m_convention
+
+            m_phase = 0
+            if (present(phase)) m_phase = phase
 
             m_tem_m = 0
             if (present(tem_m)) m_tem_m = tem_m
@@ -702,29 +711,7 @@ module lib_field_gaussian_beam
 
             k = 2d0 * PI * n_medium / wave_length_0
 
-            select case(m_convention)
-                case(1)
-                    ! exp(-i(k*z - omega*t))
-                    kz = mod(k * x%z, 2d0 * PI)
-!                    if (x%z .lt. 0) then
-!                        kz = -abs(mod(k * x%z, 2d0 * PI))
-!                    else
-!                        kz = abs(mod(k * x%z, 2d0 * PI))
-!                    end if
-
-                case(2)
-                    ! exp(i(k*z - omega*t))
-                    kz = -mod(k * x%z, 2d0 * PI)
-!                    if (x%z .lt. 0) then
-!                        kz = abs(mod(k * x%z, 2d0 * PI))
-!                    else
-!                        kz = -abs(mod(k * x%z, 2d0 * PI))
-!                    end if
-
-                case default
-                    print *, "lib_field_gaussian_beam__get_phase: ERROR"
-                    print *, "  convention is not defined: ", m_convention
-            end select
+            kz = mod(k * x%z, 2d0 * PI)
 
             zrx = lib_field_gaussian_beam_rayleigh_length(waist_x0, wave_length_0, n_medium)
             zry = lib_field_gaussian_beam_rayleigh_length(waist_y0, wave_length_0, n_medium)
@@ -739,7 +726,7 @@ module lib_field_gaussian_beam
             ! Calculation of the argument of the complex electrictical field
             argument = -mod(k * crx * x%x*x%x / 2d0, 2d0 * PI)
             argument = argument -mod(k * cry * x%y*x%y / 2d0, 2d0 * PI)
-            argument = argument - kz
+            argument = argument - kz + m_phase
             argument = argument + (dble(m_tem_m) + 0.5d0) * atan2(x%z, zrx)
             argument = argument + (dble(m_tem_n) + 0.5d0) * atan2(x%z, zry)
 
@@ -759,6 +746,20 @@ module lib_field_gaussian_beam
             if (argument .lt. 0d0) then
                 argument = 2d0 * PI + argument
             end if
+
+            select case(m_convention)
+                case(1)
+                    ! exp(-i(k*z - omega*t))
+                    argument = argument
+
+                case(2)
+                    ! exp(i(k*z - omega*t))
+                    argument = -argument
+
+                case default
+                    print *, "lib_field_gaussian_beam__get_phase: ERROR"
+                    print *, "  convention is not defined: ", m_convention
+            end select
 
             ! Calculation of the absolute value of the complex electrical field
             absolute = sqrt(waist_x0 / wx) * h(1, m_tem_m) * exp(-(x%x / wx)**2d0) &
@@ -878,7 +879,7 @@ module lib_field_gaussian_beam
             if (.not. test_lib_field_gaussian_beam_hermite_get_field_approximation()) rv = rv + 1
             if (.not. test_lib_field_gaussian_beam_hermite_get_propagation_direction()) rv = rv + 1
             if (.not. test_lib_field_gaussian_beam_hermite_get_field()) rv = rv + 1
-            if (.not. test_lib_field_gaussian_beam_hermite_get_field_2()) rv = rv + 1
+!            if (.not. test_lib_field_gaussian_beam_hermite_get_field_2()) rv = rv + 1
 
 
             if (rv == 0) then
@@ -941,18 +942,20 @@ module lib_field_gaussian_beam
 !                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_rot(PI/4d0)
                 gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
 !                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_circular_plus()
-                gauss_parameter%waist_x0 = 2.5 * unit_mu
-                gauss_parameter%waist_y0 = 2.5 * unit_mu
+                gauss_parameter%waist_x0 = 1 * unit_mu
+                gauss_parameter%waist_y0 = 1 * unit_mu
                 gauss_parameter%wave_length_0 = 0.55 * unit_mu
 
                 gauss_parameter%theta = PI / 8d0
                 gauss_parameter%phi = PI
 
+                gauss_parameter%convention = 1
+
 !                !$OMP PARALLEL DO PRIVATE(i, ii) FIRSTPRIVATE x, y, z)
                 do i=1, no_x_values
                     x = x_range(1) + (i-1) * step_size
                     do ii= 1, no_y_values
-                        y = y_range(2) - (ii-1) * step_size
+                        z = y_range(2) - (ii-1) * step_size
 
                         point_cartesian%x = x
                         point_cartesian%y = y
@@ -1589,7 +1592,7 @@ module lib_field_gaussian_beam
 
                 double precision :: buffer
 
-                evaluation_point_x = make_cartesian(0d0, 0d0, 4.75 * unit_mu)
+                evaluation_point_x = make_cartesian(0d0, 0d0, 5 * unit_mu)
 
                 gauss_parameter%e_field_0 = 1
                 gauss_parameter%wave_length_0 = 0.5 * unit_mu
@@ -1599,7 +1602,7 @@ module lib_field_gaussian_beam
                 gauss_parameter%tem_m = 0
                 gauss_parameter%tem_n = 0
                 gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
-                gauss_parameter%theta = 0! PI / 8d0
+                gauss_parameter%theta = PI / 8d0
                 gauss_parameter%phi = 0
                 gauss_parameter%convention = 1
 
@@ -1634,8 +1637,8 @@ module lib_field_gaussian_beam
                 else
                     print *, "  aimag(x): FAILED"
                     print *, "            diff = ", buffer
-                    print *, "            gauss: ", real(e_field_gauss%x)
-                    print *, "               pw: ", real(e_field_pw%x)
+                    print *, "            gauss: ", aimag(e_field_gauss%x)
+                    print *, "               pw: ", aimag(e_field_pw%x)
                     rv = .false.
                 end if
 
@@ -1663,18 +1666,18 @@ module lib_field_gaussian_beam
                 end if
 
 
-                buffer = abs(real(e_field_gauss%x) - real(e_field_pw%x))
+                buffer = abs(real(e_field_gauss%z) - real(e_field_pw%z))
                 if (buffer .lt. ground_truth_e) then
                     print *, "  real(z): OK"
                 else
                     print *, "  real(z): FAILED"
                     print *, "           diff = ", buffer
-                    print *, "           gauss: ", real(e_field_gauss%x)
-                    print *, "              pw: ", real(e_field_pw%x)
+                    print *, "           gauss: ", real(e_field_gauss%z)
+                    print *, "              pw: ", real(e_field_pw%z)
                     rv = .false.
                 end if
 
-                buffer = abs(aimag(e_field_gauss%x) - aimag(e_field_pw%x))
+                buffer = abs(aimag(e_field_gauss%z) - aimag(e_field_pw%z))
                 if (buffer .lt. ground_truth_e) then
                     print *, "  aimag(z): OK"
                 else
@@ -1751,6 +1754,8 @@ module lib_field_gaussian_beam
 
                 gauss_parameter%theta = PI / 8d0
                 gauss_parameter%phi = 0!PI
+
+                gauss_parameter%convention = 1
 
                 evaluation_point_x = make_cartesian(2 * unit_mu, 0d0, 5 * unit_mu)
 

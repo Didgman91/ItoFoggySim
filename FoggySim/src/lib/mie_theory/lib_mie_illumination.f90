@@ -406,7 +406,7 @@ module lib_mie_illumination
                                              illumination(i)%beam_parameter%phi)
                 k = k_spherical
 
-                ! calculate TE
+                ! calculate TM
                 buffer_abs = abs(illumination(i)%beam_parameter%polarisation%x)
                 buffer_arg = atan2(aimag(illumination(i)%beam_parameter%polarisation%x), &
                                    real(illumination(i)%beam_parameter%polarisation%x))
@@ -416,7 +416,7 @@ module lib_mie_illumination
                     call lib_mie_illumination_get_p_q_j_j_single_plane_wave(k, d_i_j, n_range, &
                                                                             buffer_a, buffer_b,&
                                                                             phase = buffer_arg, &
-                                                                            te_mode = .true., &
+                                                                            te_mode = .false., &
                                                                             caching=caching)
 
                     buffer_p_nm(i) = buffer_abs * buffer_a
@@ -426,7 +426,7 @@ module lib_mie_illumination
                     call init_list(buffer_q_nm(i), 0, 1, dcmplx(0, 0))
                 end if
 
-                ! calculate TM
+                ! calculate TE
                 buffer_abs = abs(illumination(i)%beam_parameter%polarisation%y)
                 buffer_arg = atan2(aimag(illumination(i)%beam_parameter%polarisation%y), &
                                    real(illumination(i)%beam_parameter%polarisation%y))
@@ -436,7 +436,7 @@ module lib_mie_illumination
                     call lib_mie_illumination_get_p_q_j_j_single_plane_wave(k, d_i_j, n_range, &
                                                                             buffer_a, buffer_b,&
                                                                             phase = buffer_arg, &
-                                                                            te_mode = .false., &
+                                                                            te_mode = .true., &
                                                                             caching=caching)
 
                     buffer_p_nm(i) = buffer_p_nm(i) + buffer_abs * buffer_a
@@ -843,8 +843,11 @@ module lib_mie_illumination
                         ! HINT: beam_parameter%e_field_0 = 1, will be set automatically
                         !       otherwise the scaling factor "g" doesn't work correctly
                         !       -> e_field = e_field_0 * g * beam_parameter%e_field_0
+
+                        d = d_0_j - illumination(i)%d_0_i
+
                         call lib_mie_illumination_get_p_q_single_gaussian_beam_pw(illumination(i), n_medium, &
-                                                                                  d_0_j, n_range, &
+                                                                                  d, n_range, &
                                                                                   buffer_a_nm, buffer_b_nm)
 
                         buffer_p_nm(i) = illumination(i)%g * buffer_a_nm
