@@ -315,9 +315,9 @@ module lib_field_gaussian_beam
             y_axis_pw = make_cartesian(0d0, 1d0, 0d0)
 
             if (plane_wave%phi .ne. 0 .or. plane_wave%theta .ne. 0) then
-                rot  = lib_math_get_matrix_rot(-PI / 2d0 - parameter%phi, &
-                                               -parameter%theta, &
-                                               -PI / 2d0 - parameter%phi)
+                rot  = lib_math_get_matrix_rot(PI / 2d0 + parameter%phi, &
+                                               parameter%theta, &
+                                               PI / 2d0 + parameter%phi)
                 x_axis_pw = rot * x_axis_pw
                 y_axis_pw = rot * y_axis_pw
             end if
@@ -453,21 +453,22 @@ module lib_field_gaussian_beam
                                                x%y * sqrt(2d0) / w_y /), &
                                             h_min_i, h_max_i - h_min_i + 1, h)
 
-            buffer_real = sqrt(waist_x0 / w_x) * h(1, m_tem_m) * exp(- x%x**2 / w_x**2)
-            buffer_cmplx = buffer_real * exp(dcmplx(0, -k * x%x**2 * cr_x / 2))
+            buffer_real = sqrt(waist_x0 / w_x) * h(1, m_tem_m) * exp(- x%x**2d0 / w_x**2d0)
+            buffer_cmplx = buffer_real * exp(dcmplx(0, -k * x%x**2 * cr_x / 2d0))
 
-            buffer_real = sqrt(waist_y0 / w_y) * h(2, m_tem_n) * exp(- x%y**2 / w_y**2)
-            buffer_cmplx = buffer_real * exp(dcmplx(0, -k * x%y**2 * cr_y / 2)) * buffer_cmplx
+            buffer_real = sqrt(waist_y0 / w_y) * h(2, m_tem_n) * exp(- x%y**2d0 / w_y**2d0)
+            buffer_cmplx = buffer_real * exp(dcmplx(0, -k * x%y**2 * cr_y / 2d0)) * buffer_cmplx
 
-            buffer_real = e_field_0 * sqrt(2d0**dble(-m_tem_m - m_tem_n) &
-                                           / (dble(lib_math_factorial_get_factorial(m_tem_m) &
-                                              * lib_math_factorial_get_factorial(m_tem_n)) * PI))
+            buffer_real = e_field_0 * sqrt(1d0 &
+                                           / (2d0**dble(m_tem_m + m_tem_n) &
+                                              * lib_math_factorial_get_factorial(m_tem_m) &
+                                              * lib_math_factorial_get_factorial(m_tem_n) * PI))
 
             buffer_cmplx = buffer_real * exp(dcmplx(0, -k * x%z + phase)) * buffer_cmplx
 
             buffer_real = (dble(m_tem_m) + 0.5d0) * atan2(x%z, zr_x) &
                           + (dble(m_tem_n) + 0.5d0) * atan2(x%z, zr_y)
-            buffer_cmplx = exp(dcmplx(0,buffer_real)) * buffer_cmplx
+            buffer_cmplx = exp(dcmplx(0, buffer_real)) * buffer_cmplx
 
             select case(m_convention)
                 case(1)
@@ -567,7 +568,7 @@ module lib_field_gaussian_beam
                 rv = 0d0
             else
                 numerator = - 2d0 * PI * wave_length_0 * xy * z * n_medium
-                denominator = (PI * n_medium)**2 * waist_xy0**4 + (wave_length_0 * z)**2
+                denominator = (PI * n_medium)**2d0 * waist_xy0**4d0 + (wave_length_0 * z)**2d0
 
                 rv = numerator / denominator
             end if
@@ -617,12 +618,14 @@ module lib_field_gaussian_beam
             waist_y0_4 = waist_y0_2**2d0
 
             ! calc
-            numerator = (2d0 * m + 1d0) * waist_x0_2 + 2d0 * x**2d0
+!            numerator = (2d0 * m + 1d0) * waist_x0_2 + 2d0 * x**2d0
+            numerator = 2d0 * m * waist_x0_2 + 2d0 * x**2d0
             denominator = pi_n_medium_2 * waist_x0_4 + lambda_z_2
 
             rv = numerator / denominator
 
-            numerator = (2d0 * n + 1d0) * waist_y0_2 + 2d0 * y**2d0
+!            numerator = (2d0 * n + 1d0) * waist_y0_2 + 2d0 * y**2d0
+            numerator = 2d0 * n * waist_y0_2 + 2d0 * y**2d0
             denominator = pi_n_medium_2 * waist_y0_4 + lambda_z_2
 
             rv = rv + numerator / denominator
@@ -738,14 +741,11 @@ module lib_field_gaussian_beam
                                             h_min_i, h_max_i - h_min_i + 1, h)
 
             if (h(1, m_tem_m) * h(2, m_tem_n) .lt. 0d0) then
-                argument = argument + PI
+                argument = argument - PI
             end if
 
             argument = mod(argument, 2d0 * PI)
 
-            if (argument .lt. 0d0) then
-                argument = 2d0 * PI + argument
-            end if
 
             select case(m_convention)
                 case(1)
@@ -761,6 +761,10 @@ module lib_field_gaussian_beam
                     print *, "  convention is not defined: ", m_convention
             end select
 
+            if (argument .lt. 0d0) then
+                argument = 2d0 * PI + argument
+            end if
+
             ! Calculation of the absolute value of the complex electrical field
             absolute = sqrt(waist_x0 / wx) * h(1, m_tem_m) * exp(-(x%x / wx)**2d0) &
                        * sqrt(waist_y0 / wy) * h(2, m_tem_n) * exp(-(x%y / wy)**2d0) &
@@ -769,6 +773,8 @@ module lib_field_gaussian_beam
                                     * lib_math_factorial_get_factorial(m_tem_m) &
                                     * lib_math_factorial_get_factorial(m_tem_n) &
                                      * PI))
+
+            absolute = abs(absolute)
 
         end subroutine get_absolute_value_and_argument
 
@@ -875,8 +881,11 @@ module lib_field_gaussian_beam
 
             rv = 0
 
+            if (.not. test_get_absolute_value_and_argument_convention_1()) rv = rv + 1
+            if (.not. test_get_absolute_value_and_argument_convention_2()) rv = rv + 1
             if (.not. test_lib_field_gaussian_beam_hermite_get_plane_wave_approx()) rv = rv + 1
             if (.not. test_lib_field_gaussian_beam_hermite_get_field_approximation()) rv = rv + 1
+            if (.not. test_lib_field_gaussian_beam_hermite_get_field_approx_full()) rv = rv + 1
             if (.not. test_lib_field_gaussian_beam_hermite_get_propagation_direction()) rv = rv + 1
             if (.not. test_lib_field_gaussian_beam_hermite_get_field()) rv = rv + 1
 !            if (.not. test_lib_field_gaussian_beam_hermite_get_field_2()) rv = rv + 1
@@ -889,6 +898,296 @@ module lib_field_gaussian_beam
             end if
 
             contains
+
+            function test_get_absolute_value_and_argument_convention_1() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! auxiliary
+                integer :: i
+                integer :: ii
+
+                double precision :: x
+                double precision :: y
+                double precision :: z
+                type(lib_field_gaussian_beam_hermite_type) :: gauss_parameter
+
+                double precision, dimension(2) :: x_range
+                double precision, dimension(2) :: y_range
+                real(kind=8) :: step_size
+
+                integer :: no_x_values
+                integer :: no_y_values
+
+                type(cartesian_coordinate_real_type) :: point_cartesian
+
+                double complex :: field_scalar
+                double precision :: field_absolute
+                double precision :: field_argument
+
+                double precision :: buffer
+
+                x_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+                y_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+!                    step_size = 0.02_8 * unit_mu
+                step_size = 1.0_8 * unit_mu
+
+
+                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_y_values = abs(int(floor((y_range(2)-y_range(1))/step_size)))
+
+                x = 0
+                y = 1 * unit_mu
+                z = 10 * unit_mu
+
+                gauss_parameter%e_field_0 = 1
+                gauss_parameter%refractive_index_medium = 1
+                gauss_parameter%tem_m = 1
+                gauss_parameter%tem_n = 1
+!                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_rot(PI/4d0)
+                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
+!                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_circular_plus()
+                gauss_parameter%waist_x0 = 2 * unit_mu
+                gauss_parameter%waist_y0 = 2 * unit_mu
+                gauss_parameter%wave_length_0 = 0.55 * unit_mu
+
+                gauss_parameter%theta = 0!PI / 8d0
+                gauss_parameter%phi = 0!PI
+
+                gauss_parameter%convention = 1
+
+                rv = .true.
+                print *, "test_get_absolute_value_and_argument_convention_1"
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii= 1, no_y_values
+                        z = y_range(2) - (ii-1) * step_size
+
+                        point_cartesian%x = x
+                        point_cartesian%y = y
+                        point_cartesian%z = z
+
+                        field_scalar = lib_fiel_gaussian_beam_hermite_scalar(gauss_parameter%e_field_0, &
+                                                                             gauss_parameter%wave_length_0, &
+                                                                             gauss_parameter%refractive_index_medium, &
+                                                                             gauss_parameter%waist_x0, &
+                                                                             gauss_parameter%waist_y0, &
+                                                                             point_cartesian, &
+                                                                             gauss_parameter%phase, &
+                                                                             gauss_parameter%tem_m, &
+                                                                             gauss_parameter%tem_n, &
+                                                                             gauss_parameter%convention)
+
+                        call get_absolute_value_and_argument(gauss_parameter%e_field_0, &
+                                                             gauss_parameter%wave_length_0, &
+                                                             gauss_parameter%refractive_index_medium, &
+                                                             gauss_parameter%waist_x0, &
+                                                             gauss_parameter%waist_y0, &
+                                                             point_cartesian, &
+                                                             field_absolute, &
+                                                             field_argument, &
+                                                             gauss_parameter%phase, &
+                                                             gauss_parameter%tem_m, &
+                                                             gauss_parameter%tem_n, &
+                                                             gauss_parameter%convention)
+
+                        print *, "  (", i, ",", ii, ")"
+!                        buffer = abs(field_scalar) - field_absolute
+!                        if (abs(buffer) .lt. ground_truth_e) then
+!                            print *, "  absolute: OK"
+!                        else
+!                            print *, "  absolute: FAILED"
+!                            print *, "              diff = ", buffer
+!                            print *, "       abs(scalar) = ", abs(field_scalar)
+!                            print *, "    field_absolute = ", field_absolute
+!                            rv = .false.
+!                        end if
+!
+!                        buffer = atan2(aimag(field_scalar), real(field_scalar))
+!                        if (buffer .lt. 0d0) buffer = 2d0 * PI + buffer
+!                        buffer = buffer - field_argument
+!                        if (abs(buffer) .lt. ground_truth_e) then
+!                            print *, "  argument: OK"
+!                        else
+!                            print *, "  argument: FAILED"
+!                            print *, "              diff = ", buffer
+!                            print *, "       arg(scalar) = ", atan2(aimag(field_scalar), real(field_scalar))
+!                            print *, "    field_argument = ", field_argument
+!                            rv = .false.
+!                        end if
+
+                        buffer = real(field_scalar) - real(field_absolute * exp(dcmplx(0, field_argument)))
+                        if (abs(buffer) .lt. ground_truth_e) then
+                            print *, "  real: OK"
+                        else
+                            print *, "  real: FAILED"
+                            print *, "              diff = ", buffer
+                            print *, "       abs(scalar) = ", real(field_scalar)
+                            print *, "    field_absolute = ", real(field_absolute * exp(dcmplx(0, field_argument)))
+                            rv = .false.
+                        end if
+
+                        buffer = aimag(field_scalar) - aimag(field_absolute * exp(dcmplx(0, field_argument)))
+                        if (abs(buffer) .lt. ground_truth_e) then
+                            print *, "  cmplx: OK"
+                        else
+                            print *, "  cmplx: FAILED"
+                            print *, "              diff = ", buffer
+                            print *, "       abs(scalar) = ", aimag(field_scalar)
+                            print *, "    field_absolute = ", aimag(field_absolute * exp(dcmplx(0, field_argument)))
+                            rv = .false.
+                        end if
+
+                    end do
+                end do
+
+            end function test_get_absolute_value_and_argument_convention_1
+
+            function test_get_absolute_value_and_argument_convention_2() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! auxiliary
+                integer :: i
+                integer :: ii
+
+                double precision :: x
+                double precision :: y
+                double precision :: z
+                type(lib_field_gaussian_beam_hermite_type) :: gauss_parameter
+
+                double precision, dimension(2) :: x_range
+                double precision, dimension(2) :: y_range
+                real(kind=8) :: step_size
+
+                integer :: no_x_values
+                integer :: no_y_values
+
+                type(cartesian_coordinate_real_type) :: point_cartesian
+
+                double complex :: field_scalar
+                double precision :: field_absolute
+                double precision :: field_argument
+
+                double precision :: buffer
+
+                x_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+                y_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+!                    step_size = 0.02_8 * unit_mu
+                step_size = 1.0_8 * unit_mu
+
+
+                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_y_values = abs(int(floor((y_range(2)-y_range(1))/step_size)))
+
+                x = 0
+                y = 0
+                z = 10 * unit_mu
+
+                gauss_parameter%e_field_0 = 1
+                gauss_parameter%refractive_index_medium = 1
+                gauss_parameter%tem_m = 0
+                gauss_parameter%tem_n = 0
+!                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_rot(PI/4d0)
+                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
+!                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_circular_plus()
+                gauss_parameter%waist_x0 = 2 * unit_mu
+                gauss_parameter%waist_y0 = 2 * unit_mu
+                gauss_parameter%wave_length_0 = 0.55 * unit_mu
+
+                gauss_parameter%theta = 0!PI / 8d0
+                gauss_parameter%phi = 0!PI
+
+                gauss_parameter%convention = 2
+
+                rv = .true.
+                print *, "test_get_absolute_value_and_argument_convention_2"
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii= 1, no_y_values
+                        z = y_range(2) - (ii-1) * step_size
+
+                        point_cartesian%x = x
+                        point_cartesian%y = y
+                        point_cartesian%z = z
+
+                        field_scalar = lib_fiel_gaussian_beam_hermite_scalar(gauss_parameter%e_field_0, &
+                                                                             gauss_parameter%wave_length_0, &
+                                                                             gauss_parameter%refractive_index_medium, &
+                                                                             gauss_parameter%waist_x0, &
+                                                                             gauss_parameter%waist_y0, &
+                                                                             point_cartesian, &
+                                                                             gauss_parameter%phase, &
+                                                                             gauss_parameter%tem_m, &
+                                                                             gauss_parameter%tem_n, &
+                                                                             gauss_parameter%convention)
+
+                        call get_absolute_value_and_argument(gauss_parameter%e_field_0, &
+                                                             gauss_parameter%wave_length_0, &
+                                                             gauss_parameter%refractive_index_medium, &
+                                                             gauss_parameter%waist_x0, &
+                                                             gauss_parameter%waist_y0, &
+                                                             point_cartesian, &
+                                                             field_absolute, &
+                                                             field_argument, &
+                                                             gauss_parameter%phase, &
+                                                             gauss_parameter%tem_m, &
+                                                             gauss_parameter%tem_n, &
+                                                             gauss_parameter%convention)
+
+                        print *, "  (", i, ",", ii, ")"
+                        buffer = abs(field_scalar) - field_absolute
+                        if (abs(buffer) .lt. ground_truth_e) then
+                            print *, "  absolute: OK"
+                        else
+                            print *, "  absolute: FAILED"
+                            print *, "              diff = ", buffer
+                            print *, "       abs(scalar) = ", abs(field_scalar)
+                            print *, "    field_absolute = ", field_absolute
+                            rv = .false.
+                        end if
+
+                        buffer = atan2(aimag(field_scalar), real(field_scalar))
+                        if (buffer .lt. 0d0) buffer = 2d0 * PI + buffer
+                        buffer = buffer - field_argument
+                        if (abs(buffer) .lt. ground_truth_e) then
+                            print *, "  argument: OK"
+                        else
+                            print *, "  argument: FAILED"
+                            print *, "              diff = ", buffer
+                            print *, "       arg(scalar) = ", atan2(aimag(field_scalar), real(field_scalar))
+                            print *, "    field_argument = ", field_argument
+                            rv = .false.
+                        end if
+
+                        buffer = real(field_scalar) - real(field_absolute * exp(dcmplx(0, field_argument)))
+                        if (abs(buffer) .lt. ground_truth_e) then
+                            print *, "  real: OK"
+                        else
+                            print *, "  real: FAILED"
+                            print *, "              diff = ", buffer
+                            print *, "       abs(scalar) = ", real(field_scalar)
+                            print *, "    field_absolute = ", real(field_absolute * exp(dcmplx(0, field_argument)))
+                            rv = .false.
+                        end if
+
+                        buffer = aimag(field_scalar) - aimag(field_absolute * exp(dcmplx(0, field_argument)))
+                        if (abs(buffer) .lt. ground_truth_e) then
+                            print *, "  cmplx: OK"
+                        else
+                            print *, "  cmplx: FAILED"
+                            print *, "              diff = ", buffer
+                            print *, "       abs(scalar) = ", aimag(field_scalar)
+                            print *, "    field_absolute = ", aimag(field_absolute * exp(dcmplx(0, field_argument)))
+                            rv = .false.
+                        end if
+
+                    end do
+                end do
+
+            end function test_get_absolute_value_and_argument_convention_2
 
             function test_lib_field_gaussian_beam_hermite_get_field() result(rv)
                 implicit none
@@ -946,8 +1245,8 @@ module lib_field_gaussian_beam
                 gauss_parameter%waist_y0 = 1 * unit_mu
                 gauss_parameter%wave_length_0 = 0.55 * unit_mu
 
-                gauss_parameter%theta = PI / 8d0
-                gauss_parameter%phi = PI
+                gauss_parameter%theta = 0!PI / 8d0
+                gauss_parameter%phi = 0!PI
 
                 gauss_parameter%convention = 1
 
@@ -1093,7 +1392,7 @@ module lib_field_gaussian_beam
                 type(cartesian_coordinate_real_type) :: point_cartesian
 
                 type(cartesian_coordinate_real_type) :: buffer_k_vector_n
-                type(cartesian_coordinate_real_type), dimension(:,:), allocatable :: k_vector_n
+!                type(cartesian_coordinate_real_type), dimension(:,:), allocatable :: k_vector_n
                 type(cartesian_coordinate_real_type), dimension(:,:), allocatable :: ground_truth_k_vector_n
 
                 double precision :: buffer
@@ -1101,13 +1400,13 @@ module lib_field_gaussian_beam
                 x_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
                 y_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
 !                    step_size = 0.02_8 * unit_mu
-                step_size = 2d0 * unit_mu
+                step_size = 5d0 * unit_mu
 
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                 no_y_values = abs(int(floor((y_range(2)-y_range(1))/step_size)))
 
-                allocate(k_vector_n(no_x_values, no_y_values))
+!                allocate(k_vector_n(no_x_values, no_y_values))
                 allocate(ground_truth_k_vector_n(no_x_values, no_y_values))
 
                 x = 0
@@ -1125,408 +1424,73 @@ module lib_field_gaussian_beam
                 gauss_parameter%waist_y0 = 2.5 * unit_mu
                 gauss_parameter%wave_length_0 = 0.55 * unit_mu
 
+                gauss_parameter%theta = 0d0
+                gauss_parameter%phi = 0d0
+
                 ground_truth_k_vector_n(1,1)%x = -0.068322
                 ground_truth_k_vector_n(1,1)%y = 0.068322
                 ground_truth_k_vector_n(1,1)%z = 0.995321
 
-                ground_truth_k_vector_n(1,2)%x = -0.0691035
-                ground_truth_k_vector_n(1,2)%y = 0.0552828
-                ground_truth_k_vector_n(1,2)%z = 0.996077
+                ground_truth_k_vector_n(1,2)%x = -0.0699719
+                ground_truth_k_vector_n(1,2)%y = 0.034986
+                ground_truth_k_vector_n(1,2)%z = 0.996935
 
-                ground_truth_k_vector_n(1,3)%x = -0.0697246
-                ground_truth_k_vector_n(1,3)%y = 0.0418348
-                ground_truth_k_vector_n(1,3)%z = 0.996689
+                ground_truth_k_vector_n(1,3)%x = -0.070541
+                ground_truth_k_vector_n(1,3)%y = 0.
+                ground_truth_k_vector_n(1,3)%z = 0.997509
 
-                ground_truth_k_vector_n(1,4)%x = -0.0701757
-                ground_truth_k_vector_n(1,4)%y = 0.0280703
-                ground_truth_k_vector_n(1,4)%z = 0.99714
+                ground_truth_k_vector_n(1,4)%x = -0.0699719
+                ground_truth_k_vector_n(1,4)%y = -0.034986
+                ground_truth_k_vector_n(1,4)%z = 0.996935
 
-                ground_truth_k_vector_n(1,5)%x = -0.0704493
-                ground_truth_k_vector_n(1,5)%y = 0.0140899
-                ground_truth_k_vector_n(1,5)%z = 0.997416
+                ground_truth_k_vector_n(2,1)%x = -0.034986
+                ground_truth_k_vector_n(2,1)%y = 0.0699719
+                ground_truth_k_vector_n(2,1)%z = 0.996935
 
-                ground_truth_k_vector_n(1,6)%x = -0.070541
-                ground_truth_k_vector_n(1,6)%y = 0.
-                ground_truth_k_vector_n(1,6)%z = 0.997509
+                ground_truth_k_vector_n(2,2)%x = -0.0358548
+                ground_truth_k_vector_n(2,2)%y = 0.0358548
+                ground_truth_k_vector_n(2,2)%z = 0.998714
 
-                ground_truth_k_vector_n(1,7)%x = -0.0704493
-                ground_truth_k_vector_n(1,7)%y = -0.0140899
-                ground_truth_k_vector_n(1,7)%z = 0.997416
+                ground_truth_k_vector_n(2,3)%x = -0.0361547
+                ground_truth_k_vector_n(2,3)%y = 0.
+                ground_truth_k_vector_n(2,3)%z = 0.999346
 
-                ground_truth_k_vector_n(1,8)%x = -0.0701757
-                ground_truth_k_vector_n(1,8)%y = -0.0280703
-                ground_truth_k_vector_n(1,8)%z = 0.99714
+                ground_truth_k_vector_n(2,4)%x = -0.0358548
+                ground_truth_k_vector_n(2,4)%y = -0.0358548
+                ground_truth_k_vector_n(2,4)%z = 0.998714
 
-                ground_truth_k_vector_n(1,9)%x = -0.0697246
-                ground_truth_k_vector_n(1,9)%y = -0.0418348
-                ground_truth_k_vector_n(1,9)%z = 0.996689
+                ground_truth_k_vector_n(3,1)%x = 0.
+                ground_truth_k_vector_n(3,1)%y = 0.070541
+                ground_truth_k_vector_n(3,1)%z = 0.997509
 
-                ground_truth_k_vector_n(1,10)%x = -0.0691035
-                ground_truth_k_vector_n(1,10)%y = -0.0552828
-                ground_truth_k_vector_n(1,10)%z = 0.996077
+                ground_truth_k_vector_n(3,2)%x = 0.
+                ground_truth_k_vector_n(3,2)%y = 0.0361547
+                ground_truth_k_vector_n(3,2)%z = 0.999346
 
-                ground_truth_k_vector_n(2,1)%x = -0.0552828
-                ground_truth_k_vector_n(2,1)%y = 0.0691035
-                ground_truth_k_vector_n(2,1)%z = 0.996077
+                ground_truth_k_vector_n(3,3)%x = 0.
+                ground_truth_k_vector_n(3,3)%y = 0.
+                ground_truth_k_vector_n(3,3)%z = 1.
 
-                ground_truth_k_vector_n(2,2)%x = -0.0559234
-                ground_truth_k_vector_n(2,2)%y = 0.0559234
-                ground_truth_k_vector_n(2,2)%z = 0.996868
+                ground_truth_k_vector_n(3,4)%x = 0.
+                ground_truth_k_vector_n(3,4)%y = -0.0361547
+                ground_truth_k_vector_n(3,4)%z = 0.999346
 
-                ground_truth_k_vector_n(2,3)%x = -0.0564328
-                ground_truth_k_vector_n(2,3)%y = 0.0423246
-                ground_truth_k_vector_n(2,3)%z = 0.997509
+                ground_truth_k_vector_n(4,1)%x = 0.034986
+                ground_truth_k_vector_n(4,1)%y = 0.0699719
+                ground_truth_k_vector_n(4,1)%z = 0.996935
 
-                ground_truth_k_vector_n(2,4)%x = -0.0568028
-                ground_truth_k_vector_n(2,4)%y = 0.0284014
-                ground_truth_k_vector_n(2,4)%z = 0.997981
+                ground_truth_k_vector_n(4,2)%x = 0.0358548
+                ground_truth_k_vector_n(4,2)%y = 0.0358548
+                ground_truth_k_vector_n(4,2)%z = 0.998714
 
-                ground_truth_k_vector_n(2,5)%x = -0.0570273
-                ground_truth_k_vector_n(2,5)%y = 0.0142568
-                ground_truth_k_vector_n(2,5)%z = 0.998271
+                ground_truth_k_vector_n(4,3)%x = 0.0361547
+                ground_truth_k_vector_n(4,3)%y = 0.
+                ground_truth_k_vector_n(4,3)%z = 0.999346
 
-                ground_truth_k_vector_n(2,6)%x = -0.0571025
-                ground_truth_k_vector_n(2,6)%y = 0.
-                ground_truth_k_vector_n(2,6)%z = 0.998368
+                ground_truth_k_vector_n(4,4)%x = 0.0358548
+                ground_truth_k_vector_n(4,4)%y = -0.0358548
+                ground_truth_k_vector_n(4,4)%z = 0.998714
 
-                ground_truth_k_vector_n(2,7)%x = -0.0570273
-                ground_truth_k_vector_n(2,7)%y = -0.0142568
-                ground_truth_k_vector_n(2,7)%z = 0.998271
-
-                ground_truth_k_vector_n(2,8)%x = -0.0568028
-                ground_truth_k_vector_n(2,8)%y = -0.0284014
-                ground_truth_k_vector_n(2,8)%z = 0.997981
-
-                ground_truth_k_vector_n(2,9)%x = -0.0564328
-                ground_truth_k_vector_n(2,9)%y = -0.0423246
-                ground_truth_k_vector_n(2,9)%z = 0.997509
-
-                ground_truth_k_vector_n(2,10)%x = -0.0559234
-                ground_truth_k_vector_n(2,10)%y = -0.0559234
-                ground_truth_k_vector_n(2,10)%z = 0.996868
-
-                ground_truth_k_vector_n(3,1)%x = -0.0418348
-                ground_truth_k_vector_n(3,1)%y = 0.0697246
-                ground_truth_k_vector_n(3,1)%z = 0.996689
-
-                ground_truth_k_vector_n(3,2)%x = -0.0423246
-                ground_truth_k_vector_n(3,2)%y = 0.0564328
-                ground_truth_k_vector_n(3,2)%z = 0.997509
-
-                ground_truth_k_vector_n(3,3)%x = -0.0427142
-                ground_truth_k_vector_n(3,3)%y = 0.0427142
-                ground_truth_k_vector_n(3,3)%z = 0.998174
-
-                ground_truth_k_vector_n(3,4)%x = -0.0429972
-                ground_truth_k_vector_n(3,4)%y = 0.0286648
-                ground_truth_k_vector_n(3,4)%z = 0.998664
-
-                ground_truth_k_vector_n(3,5)%x = -0.0431689
-                ground_truth_k_vector_n(3,5)%y = 0.0143896
-                ground_truth_k_vector_n(3,5)%z = 0.998964
-
-                ground_truth_k_vector_n(3,6)%x = -0.0432265
-                ground_truth_k_vector_n(3,6)%y = 0.
-                ground_truth_k_vector_n(3,6)%z = 0.999065
-
-                ground_truth_k_vector_n(3,7)%x = -0.0431689
-                ground_truth_k_vector_n(3,7)%y = -0.0143896
-                ground_truth_k_vector_n(3,7)%z = 0.998964
-
-                ground_truth_k_vector_n(3,8)%x = -0.0429972
-                ground_truth_k_vector_n(3,8)%y = -0.0286648
-                ground_truth_k_vector_n(3,8)%z = 0.998664
-
-                ground_truth_k_vector_n(3,9)%x = -0.0427142
-                ground_truth_k_vector_n(3,9)%y = -0.0427142
-                ground_truth_k_vector_n(3,9)%z = 0.998174
-
-                ground_truth_k_vector_n(3,10)%x = -0.0423246
-                ground_truth_k_vector_n(3,10)%y = -0.0564328
-                ground_truth_k_vector_n(3,10)%z = 0.997509
-
-                ground_truth_k_vector_n(4,1)%x = -0.0280703
-                ground_truth_k_vector_n(4,1)%y = 0.0701757
-                ground_truth_k_vector_n(4,1)%z = 0.99714
-
-                ground_truth_k_vector_n(4,2)%x = -0.0284014
-                ground_truth_k_vector_n(4,2)%y = 0.0568028
-                ground_truth_k_vector_n(4,2)%z = 0.997981
-
-                ground_truth_k_vector_n(4,3)%x = -0.0286648
-                ground_truth_k_vector_n(4,3)%y = 0.0429972
-                ground_truth_k_vector_n(4,3)%z = 0.998664
-
-                ground_truth_k_vector_n(4,4)%x = -0.0288562
-                ground_truth_k_vector_n(4,4)%y = 0.0288562
-                ground_truth_k_vector_n(4,4)%z = 0.999167
-
-                ground_truth_k_vector_n(4,5)%x = -0.0289723
-                ground_truth_k_vector_n(4,5)%y = 0.0144862
-                ground_truth_k_vector_n(4,5)%z = 0.999475
-
-                ground_truth_k_vector_n(4,6)%x = -0.0290113
-                ground_truth_k_vector_n(4,6)%y = 0.
-                ground_truth_k_vector_n(4,6)%z = 0.999579
-
-                ground_truth_k_vector_n(4,7)%x = -0.0289723
-                ground_truth_k_vector_n(4,7)%y = -0.0144862
-                ground_truth_k_vector_n(4,7)%z = 0.999475
-
-                ground_truth_k_vector_n(4,8)%x = -0.0288562
-                ground_truth_k_vector_n(4,8)%y = -0.0288562
-                ground_truth_k_vector_n(4,8)%z = 0.999167
-
-                ground_truth_k_vector_n(4,9)%x = -0.0286648
-                ground_truth_k_vector_n(4,9)%y = -0.0429972
-                ground_truth_k_vector_n(4,9)%z = 0.998664
-
-                ground_truth_k_vector_n(4,10)%x = -0.0284014
-                ground_truth_k_vector_n(4,10)%y = -0.0568028
-                ground_truth_k_vector_n(4,10)%z = 0.997981
-
-                ground_truth_k_vector_n(5,1)%x = -0.0140899
-                ground_truth_k_vector_n(5,1)%y = 0.0704493
-                ground_truth_k_vector_n(5,1)%z = 0.997416
-
-                ground_truth_k_vector_n(5,2)%x = -0.0142568
-                ground_truth_k_vector_n(5,2)%y = 0.0570273
-                ground_truth_k_vector_n(5,2)%z = 0.998271
-
-                ground_truth_k_vector_n(5,3)%x = -0.0143896
-                ground_truth_k_vector_n(5,3)%y = 0.0431689
-                ground_truth_k_vector_n(5,3)%z = 0.998964
-
-                ground_truth_k_vector_n(5,4)%x = -0.0144862
-                ground_truth_k_vector_n(5,4)%y = 0.0289723
-                ground_truth_k_vector_n(5,4)%z = 0.999475
-
-                ground_truth_k_vector_n(5,5)%x = -0.0145447
-                ground_truth_k_vector_n(5,5)%y = 0.0145447
-                ground_truth_k_vector_n(5,5)%z = 0.999788
-
-                ground_truth_k_vector_n(5,6)%x = -0.0145644
-                ground_truth_k_vector_n(5,6)%y = 0.
-                ground_truth_k_vector_n(5,6)%z = 0.999894
-
-                ground_truth_k_vector_n(5,7)%x = -0.0145447
-                ground_truth_k_vector_n(5,7)%y = -0.0145447
-                ground_truth_k_vector_n(5,7)%z = 0.999788
-
-                ground_truth_k_vector_n(5,8)%x = -0.0144862
-                ground_truth_k_vector_n(5,8)%y = -0.0289723
-                ground_truth_k_vector_n(5,8)%z = 0.999475
-
-                ground_truth_k_vector_n(5,9)%x = -0.0143896
-                ground_truth_k_vector_n(5,9)%y = -0.0431689
-                ground_truth_k_vector_n(5,9)%z = 0.998964
-
-                ground_truth_k_vector_n(5,10)%x = -0.0142568
-                ground_truth_k_vector_n(5,10)%y = -0.0570273
-                ground_truth_k_vector_n(5,10)%z = 0.998271
-
-                ground_truth_k_vector_n(6,1)%x = 0.
-                ground_truth_k_vector_n(6,1)%y = 0.070541
-                ground_truth_k_vector_n(6,1)%z = 0.997509
-
-                ground_truth_k_vector_n(6,2)%x = 0.
-                ground_truth_k_vector_n(6,2)%y = 0.0571025
-                ground_truth_k_vector_n(6,2)%z = 0.998368
-
-                ground_truth_k_vector_n(6,3)%x = 0.
-                ground_truth_k_vector_n(6,3)%y = 0.0432265
-                ground_truth_k_vector_n(6,3)%z = 0.999065
-
-                ground_truth_k_vector_n(6,4)%x = 0.
-                ground_truth_k_vector_n(6,4)%y = 0.0290113
-                ground_truth_k_vector_n(6,4)%z = 0.999579
-
-                ground_truth_k_vector_n(6,5)%x = 0.
-                ground_truth_k_vector_n(6,5)%y = 0.0145644
-                ground_truth_k_vector_n(6,5)%z = 0.999894
-
-                ground_truth_k_vector_n(6,6)%x = 0.
-                ground_truth_k_vector_n(6,6)%y = 0.
-                ground_truth_k_vector_n(6,6)%z = 1.
-
-                ground_truth_k_vector_n(6,7)%x = 0.
-                ground_truth_k_vector_n(6,7)%y = -0.0145644
-                ground_truth_k_vector_n(6,7)%z = 0.999894
-
-                ground_truth_k_vector_n(6,8)%x = 0.
-                ground_truth_k_vector_n(6,8)%y = -0.0290113
-                ground_truth_k_vector_n(6,8)%z = 0.999579
-
-                ground_truth_k_vector_n(6,9)%x = 0.
-                ground_truth_k_vector_n(6,9)%y = -0.0432265
-                ground_truth_k_vector_n(6,9)%z = 0.999065
-
-                ground_truth_k_vector_n(6,10)%x = 0.
-                ground_truth_k_vector_n(6,10)%y = -0.0571025
-                ground_truth_k_vector_n(6,10)%z = 0.998368
-
-                ground_truth_k_vector_n(7,1)%x = 0.0140899
-                ground_truth_k_vector_n(7,1)%y = 0.0704493
-                ground_truth_k_vector_n(7,1)%z = 0.997416
-
-                ground_truth_k_vector_n(7,2)%x = 0.0142568
-                ground_truth_k_vector_n(7,2)%y = 0.0570273
-                ground_truth_k_vector_n(7,2)%z = 0.998271
-
-                ground_truth_k_vector_n(7,3)%x = 0.0143896
-                ground_truth_k_vector_n(7,3)%y = 0.0431689
-                ground_truth_k_vector_n(7,3)%z = 0.998964
-
-                ground_truth_k_vector_n(7,4)%x = 0.0144862
-                ground_truth_k_vector_n(7,4)%y = 0.0289723
-                ground_truth_k_vector_n(7,4)%z = 0.999475
-
-                ground_truth_k_vector_n(7,5)%x = 0.0145447
-                ground_truth_k_vector_n(7,5)%y = 0.0145447
-                ground_truth_k_vector_n(7,5)%z = 0.999788
-
-                ground_truth_k_vector_n(7,6)%x = 0.0145644
-                ground_truth_k_vector_n(7,6)%y = 0.
-                ground_truth_k_vector_n(7,6)%z = 0.999894
-
-                ground_truth_k_vector_n(7,7)%x = 0.0145447
-                ground_truth_k_vector_n(7,7)%y = -0.0145447
-                ground_truth_k_vector_n(7,7)%z = 0.999788
-
-                ground_truth_k_vector_n(7,8)%x = 0.0144862
-                ground_truth_k_vector_n(7,8)%y = -0.0289723
-                ground_truth_k_vector_n(7,8)%z = 0.999475
-
-                ground_truth_k_vector_n(7,9)%x = 0.0143896
-                ground_truth_k_vector_n(7,9)%y = -0.0431689
-                ground_truth_k_vector_n(7,9)%z = 0.998964
-
-                ground_truth_k_vector_n(7,10)%x = 0.0142568
-                ground_truth_k_vector_n(7,10)%y = -0.0570273
-                ground_truth_k_vector_n(7,10)%z = 0.998271
-
-                ground_truth_k_vector_n(8,1)%x = 0.0280703
-                ground_truth_k_vector_n(8,1)%y = 0.0701757
-                ground_truth_k_vector_n(8,1)%z = 0.99714
-
-                ground_truth_k_vector_n(8,2)%x = 0.0284014
-                ground_truth_k_vector_n(8,2)%y = 0.0568028
-                ground_truth_k_vector_n(8,2)%z = 0.997981
-
-                ground_truth_k_vector_n(8,3)%x = 0.0286648
-                ground_truth_k_vector_n(8,3)%y = 0.0429972
-                ground_truth_k_vector_n(8,3)%z = 0.998664
-
-                ground_truth_k_vector_n(8,4)%x = 0.0288562
-                ground_truth_k_vector_n(8,4)%y = 0.0288562
-                ground_truth_k_vector_n(8,4)%z = 0.999167
-
-                ground_truth_k_vector_n(8,5)%x = 0.0289723
-                ground_truth_k_vector_n(8,5)%y = 0.0144862
-                ground_truth_k_vector_n(8,5)%z = 0.999475
-
-                ground_truth_k_vector_n(8,6)%x = 0.0290113
-                ground_truth_k_vector_n(8,6)%y = 0.
-                ground_truth_k_vector_n(8,6)%z = 0.999579
-
-                ground_truth_k_vector_n(8,7)%x = 0.0289723
-                ground_truth_k_vector_n(8,7)%y = -0.0144862
-                ground_truth_k_vector_n(8,7)%z = 0.999475
-
-                ground_truth_k_vector_n(8,8)%x = 0.0288562
-                ground_truth_k_vector_n(8,8)%y = -0.0288562
-                ground_truth_k_vector_n(8,8)%z = 0.999167
-
-                ground_truth_k_vector_n(8,9)%x = 0.0286648
-                ground_truth_k_vector_n(8,9)%y = -0.0429972
-                ground_truth_k_vector_n(8,9)%z = 0.998664
-
-                ground_truth_k_vector_n(8,10)%x = 0.0284014
-                ground_truth_k_vector_n(8,10)%y = -0.0568028
-                ground_truth_k_vector_n(8,10)%z = 0.997981
-
-                ground_truth_k_vector_n(9,1)%x = 0.0418348
-                ground_truth_k_vector_n(9,1)%y = 0.0697246
-                ground_truth_k_vector_n(9,1)%z = 0.996689
-
-                ground_truth_k_vector_n(9,2)%x = 0.0423246
-                ground_truth_k_vector_n(9,2)%y = 0.0564328
-                ground_truth_k_vector_n(9,2)%z = 0.997509
-
-                ground_truth_k_vector_n(9,3)%x = 0.0427142
-                ground_truth_k_vector_n(9,3)%y = 0.0427142
-                ground_truth_k_vector_n(9,3)%z = 0.998174
-
-                ground_truth_k_vector_n(9,4)%x = 0.0429972
-                ground_truth_k_vector_n(9,4)%y = 0.0286648
-                ground_truth_k_vector_n(9,4)%z = 0.998664
-
-                ground_truth_k_vector_n(9,5)%x = 0.0431689
-                ground_truth_k_vector_n(9,5)%y = 0.0143896
-                ground_truth_k_vector_n(9,5)%z = 0.998964
-
-                ground_truth_k_vector_n(9,6)%x = 0.0432265
-                ground_truth_k_vector_n(9,6)%y = 0.
-                ground_truth_k_vector_n(9,6)%z = 0.999065
-
-                ground_truth_k_vector_n(9,7)%x = 0.0431689
-                ground_truth_k_vector_n(9,7)%y = -0.0143896
-                ground_truth_k_vector_n(9,7)%z = 0.998964
-
-                ground_truth_k_vector_n(9,8)%x = 0.0429972
-                ground_truth_k_vector_n(9,8)%y = -0.0286648
-                ground_truth_k_vector_n(9,8)%z = 0.998664
-
-                ground_truth_k_vector_n(9,9)%x = 0.0427142
-                ground_truth_k_vector_n(9,9)%y = -0.0427142
-                ground_truth_k_vector_n(9,9)%z = 0.998174
-
-                ground_truth_k_vector_n(9,10)%x = 0.0423246
-                ground_truth_k_vector_n(9,10)%y = -0.0564328
-                ground_truth_k_vector_n(9,10)%z = 0.997509
-
-                ground_truth_k_vector_n(10,1)%x = 0.0552828
-                ground_truth_k_vector_n(10,1)%y = 0.0691035
-                ground_truth_k_vector_n(10,1)%z = 0.996077
-
-                ground_truth_k_vector_n(10,2)%x = 0.0559234
-                ground_truth_k_vector_n(10,2)%y = 0.0559234
-                ground_truth_k_vector_n(10,2)%z = 0.996868
-
-                ground_truth_k_vector_n(10,3)%x = 0.0564328
-                ground_truth_k_vector_n(10,3)%y = 0.0423246
-                ground_truth_k_vector_n(10,3)%z = 0.997509
-
-                ground_truth_k_vector_n(10,4)%x = 0.0568028
-                ground_truth_k_vector_n(10,4)%y = 0.0284014
-                ground_truth_k_vector_n(10,4)%z = 0.997981
-
-                ground_truth_k_vector_n(10,5)%x = 0.0570273
-                ground_truth_k_vector_n(10,5)%y = 0.0142568
-                ground_truth_k_vector_n(10,5)%z = 0.998271
-
-                ground_truth_k_vector_n(10,6)%x = 0.0571025
-                ground_truth_k_vector_n(10,6)%y = 0.
-                ground_truth_k_vector_n(10,6)%z = 0.998368
-
-                ground_truth_k_vector_n(10,7)%x = 0.0570273
-                ground_truth_k_vector_n(10,7)%y = -0.0142568
-                ground_truth_k_vector_n(10,7)%z = 0.998271
-
-                ground_truth_k_vector_n(10,8)%x = 0.0568028
-                ground_truth_k_vector_n(10,8)%y = -0.0284014
-                ground_truth_k_vector_n(10,8)%z = 0.997981
-
-                ground_truth_k_vector_n(10,9)%x = 0.0564328
-                ground_truth_k_vector_n(10,9)%y = -0.0423246
-                ground_truth_k_vector_n(10,9)%z = 0.997509
-
-                ground_truth_k_vector_n(10,10)%x = 0.0559234
-                ground_truth_k_vector_n(10,10)%y = -0.0559234
-                ground_truth_k_vector_n(10,10)%z = 0.996868
-
-                gauss_parameter%theta = 0d0
-                gauss_parameter%phi = 0d0
 
                 print *, "test_lib_field_gaussian_beam_hermite_get_propagation_direction"
                 rv = .true.
@@ -1543,14 +1507,17 @@ module lib_field_gaussian_beam
                         buffer_k_vector_n = lib_field_gaussian_beam_hermite_get_propagation_direction(gauss_parameter, &
                                                                                                       point_cartesian)
 
-                        k_vector_n(i,ii) = buffer_k_vector_n
+!                        k_vector_n(i,ii) = buffer_k_vector_n
 
                         buffer = ground_truth_k_vector_n(i,ii)%x - buffer_k_vector_n%x
                         if (abs(buffer) .lt. ground_truth_e ) then
                             print *, "  x(", i, ",", ii, "): OK"
                         else
                             print *, "  x(", i, ",", ii, "): FAILED"
-                            print * ,"     diff = ", buffer
+                            print *, "     diff = ", buffer
+                            print *, "       gt = ", ground_truth_k_vector_n(i,ii)%x
+                            print *, "      k_x = ", buffer_k_vector_n%x
+                            rv = .false.
                         end if
 
                         buffer = ground_truth_k_vector_n(i,ii)%y - buffer_k_vector_n%y
@@ -1559,6 +1526,9 @@ module lib_field_gaussian_beam
                         else
                             print *, "  y(" ,i, ",", ii, "): FAILED"
                             print * ,"     diff = ", buffer
+                            print *, "       gt = ", ground_truth_k_vector_n(i,ii)%y
+                            print *, "      k_y = ", buffer_k_vector_n%y
+                            rv = .false.
                         end if
 
                         buffer = ground_truth_k_vector_n(i,ii)%z - buffer_k_vector_n%z
@@ -1567,6 +1537,9 @@ module lib_field_gaussian_beam
                         else
                             print *, "  z(", i, ",", ii, "): FAILED"
                             print * ,"     diff = ", buffer
+                            print *, "       gt = ", ground_truth_k_vector_n(i,ii)%z
+                            print *, "      k_z = ", buffer_k_vector_n%z
+                            rv = .false.
                         end if
 
                     end do
@@ -1602,7 +1575,7 @@ module lib_field_gaussian_beam
                 gauss_parameter%tem_m = 0
                 gauss_parameter%tem_n = 0
                 gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
-                gauss_parameter%theta = PI / 8d0
+                gauss_parameter%theta = 0 !PI / 8d0
                 gauss_parameter%phi = 0
                 gauss_parameter%convention = 1
 
@@ -1752,7 +1725,7 @@ module lib_field_gaussian_beam
                 gauss_parameter%waist_y0 = 2.5 * unit_mu
                 gauss_parameter%wave_length_0 = 0.55 * unit_mu
 
-                gauss_parameter%theta = PI / 8d0
+                gauss_parameter%theta = 0!PI / 8d0
                 gauss_parameter%phi = 0!PI
 
                 gauss_parameter%convention = 1
@@ -1788,6 +1761,109 @@ module lib_field_gaussian_beam
                 rv = lib_field_export(e_field, h_field, "temp/real/gauss_approx_")
 
             end function test_lib_field_gaussian_beam_hermite_get_field_approximation
+
+            function test_lib_field_gaussian_beam_hermite_get_field_approx_full() result(rv)
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! auxiliary
+                integer :: i
+                integer :: ii
+
+                double precision :: x
+                double precision :: y
+                double precision :: z
+                type(lib_field_gaussian_beam_hermite_type) :: gauss_parameter
+
+                double precision, dimension(2) :: x_range
+                double precision, dimension(2) :: y_range
+                real(kind=8) :: step_size
+
+                integer :: no_x_values
+                integer :: no_y_values
+
+                type(cartesian_coordinate_real_type) :: point_cartesian
+
+                type(cartesian_coordinate_real_type) :: evaluation_point_x
+                type(lib_field_plane_wave_type) :: plane_wave_approximation
+
+                type(cartesian_coordinate_cmplx_type) :: buffer_e_field
+                type(cartesian_coordinate_cmplx_type) :: buffer_h_field
+
+                type(cartesian_coordinate_cmplx_type) :: e_field_pw
+                type(cartesian_coordinate_cmplx_type) :: h_field_pw
+
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field
+
+                x_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+                y_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
+!                    step_size = 0.02_8 * unit_mu
+                step_size = 0.05_8 * unit_mu
+
+
+                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_y_values = abs(int(floor((y_range(2)-y_range(1))/step_size)))
+
+                allocate(e_field(no_x_values, no_y_values))
+                allocate(h_field(no_x_values, no_y_values))
+
+                x = 0
+                y = 0
+                z = 10 * unit_mu
+
+                gauss_parameter%e_field_0 = 1
+                gauss_parameter%refractive_index_medium = 1
+                gauss_parameter%tem_m = 0
+                gauss_parameter%tem_n = 0
+!                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_rot(PI/4d0)
+                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
+!                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_circular_plus()
+                gauss_parameter%waist_x0 = 2.5 * unit_mu
+                gauss_parameter%waist_y0 = 2.5 * unit_mu
+                gauss_parameter%wave_length_0 = 0.55 * unit_mu
+
+                gauss_parameter%theta = 0!PI / 8d0
+                gauss_parameter%phi = 0!PI
+
+                gauss_parameter%convention = 1
+
+
+!                !$OMP PARALLEL DO PRIVATE(i, ii) FIRSTPRIVATE x, y, z)
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii= 1, no_y_values
+                        z = y_range(2) - (ii-1) * step_size
+
+                        point_cartesian%x = x
+                        point_cartesian%y = y
+                        point_cartesian%z = z
+
+                        plane_wave_approximation = lib_field_gaussian_beam_hermite_get_plane_wave_approximation(&
+                                                                                                        gauss_parameter, &
+                                                                                                        point_cartesian)
+
+                        call lib_field_gaussian_beam_hermite_get_field(gauss_parameter, &
+                                                                       point_cartesian, &
+                                                                       buffer_e_field, buffer_h_field)
+
+                        call lib_field_plane_wave_get_field(plane_wave_approximation, point_cartesian, &
+                                                    e_field_pw, h_field_pw)
+
+!                        call lib_field_plane_wave_get_field(plane_wave_approximation, &
+!                                                            make_cartesian(0d0, 0d0, 0d0), &
+!                                                            e_field_pw, h_field_pw)
+
+                        e_field(i,ii) = buffer_e_field - e_field_pw
+                        h_field(i,ii) = buffer_h_field - h_field_pw
+                    end do
+                end do
+!                !$OMP END PARALLEL DO
+
+                rv = lib_field_export(e_field, h_field, "temp/real/gauss_approx_full_")
+
+            end function test_lib_field_gaussian_beam_hermite_get_field_approx_full
 
         end function lib_field_gaussian_beam_test_functions
 
