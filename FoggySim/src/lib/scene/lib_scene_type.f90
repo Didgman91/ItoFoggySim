@@ -23,7 +23,7 @@ module lib_scene_type
         type(cartesian_coordinate_real_type) :: d_o_j ! [m]
         integer :: sphere_parameter_index
         double precision :: radius  ! [m]
-    end type lib_scene_object_sphere_type
+    end type
 
 
     !
@@ -35,14 +35,15 @@ module lib_scene_type
     !   K_o: object coordinate system
     !   o: spheres at the hcp_lattice_coordiantes
     !
-    type lib_scene_object_hcp_cuboid
+    type lib_scene_object_hcp_cuboid_type
         type(cartesian_coordinate_real_type) :: d_o_j
         double precision :: sphere_radius
         type(cartesian_coordinate_real_type), dimension(:,:,:), allocatable :: hcp_lattice_coordiantes
     end type
 
-    type lib_scene_object_hcp_sphere
-        type(lib_scene_object_hcp_cuboid) :: hcp_cuboid
+    type lib_scene_object_hcp_sphere_type
+        type(cartesian_coordinate_real_type) :: d_o_j
+        type(lib_scene_object_hcp_cuboid_type) :: hcp_cuboid
         logical, dimension(:,:,:), allocatable :: inside_sphere
     end type
 
@@ -63,7 +64,8 @@ module lib_scene_type
     type lib_scene_opject_type
         type(cartesian_coordinate_real_type) :: d_0_o ! [m]
         type(lib_scene_object_sphere_type), dimension(:), allocatable :: sphere
-        type(lib_scene_object_hcp_cuboid), dimension(:), allocatable :: hcp_cuboid
+        type(lib_scene_object_hcp_cuboid_type), dimension(:), allocatable :: hcp_cuboid
+        type(lib_scene_object_hcp_sphere_type), dimension(:), allocatable :: hcp_sphere
     end type
 
 end module lib_scene_type

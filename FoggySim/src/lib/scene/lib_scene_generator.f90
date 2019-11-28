@@ -5,6 +5,11 @@ module lib_scene_generator
 
     private
 
+    ! public functions
+    public :: lib_scene_gerator_hcp_lattice
+    public ::lib_scene_generator_hcp_lattice_fill_cuboid
+    public ::lib_scene_generator_hcp_lattice_fill_sphere
+
 
     contains
 
@@ -78,7 +83,7 @@ module lib_scene_generator
             double precision, intent(in) :: size_z
             double precision, intent(in) :: sphere_radius
 
-            type(lib_scene_object_hcp_cuboid) :: rv
+            type(lib_scene_object_hcp_cuboid_type) :: rv
 
             ! auxiliary
             integer :: i
@@ -135,42 +140,130 @@ module lib_scene_generator
         !   size_x, size_y, size_z: doubel precision
         !       edge length of the cuboid with a hexagonal close packing scheme
         !   sphere_radius: double precision
+        !       radius of the sphere containing the lattice spheres (long distance order)
+        !   lattice_sphere_radius: double precision
         !       radius of the spheres at the lattice coordinate points
+        !   spherical_cap_point: type(cartesian_coordinate_real_type)
+        !       point on the plane intersecting the sphere
+        !   spherical_cap_normal: type(cartesian_coordinate_real_type)
+        !       plane normal vector, in this direction the lattice spheres are removed
+        !
         !
         ! Returns
         ! ----
         !   rv: type(lib_scene_object_hcp_cuboid)
         !       an arangement of sphers with a hexagonal cloase packing (hcp) in a cuboid
         !
-        !            <- size_x ->
-        !            . . o o . .  ^
-        !             . o o o . . |
-        !          z . o o o o .  | size_z
-        !           ^ . o o o . . |
-        !       K_o |. . o o . .  v
-        !           --> x
+        !   <---      size_x     --->
+        !    x x x x . . . . x x x x  ^
+        !    x x  . . . . . . . x x x |
+        !    x . . . . z . . . . . x  |
+        !   x . . . . . ^ . . . . . x |
+        !    . . . .K_o |. . . . . .  |
+        !   . . . . . . --> x . . . . | size_z
+        !    . . . . . . . . . . . .  |
+        !   x . . . . . . . . . . . x |
+        !    x . . . . . . . . . . x  |
+        !   x x x . . . . . . . x x x |
+        !    x x x x . . . . x x x x  v
         !
         !   K_o: object coordinate system
-        !   o: spheres at the hcp_lattice_coordiantes inside the sphere with the radius "sphere_radius"
-        !   .: spheres at the hcp_lattice_coordiantes outside the sphere with the radius "sphere_radius"
+        !   .: spheres at the hcp_lattice_coordiantes inside the sphere with the radius "sphere_radius"
+        !   x: spheres at the hcp_lattice_coordiantes outside the sphere with the radius "sphere_radius"
         !
-        function lib_scene_generator_hcp_fill_sphere(sphere_radius, lattice_sphere_radius, h) result(rv)
+        !
+        ! with spherical cap
+        !
+        !   <---      size_x     --->
+        !    x x x x . . \ x x x x x  ^
+        !    x x  . . . . \ x x x x x |
+        !    x . . . . z . \ x x x x  |
+        !   x . . . . . ^ . \ x x x x |
+        !    . . . .K_o |. . \ x x x  |
+        !   . . . . . . --> x \ x x x | size_z
+        !    . . . . . . . . . \ x x  |
+        !   x . . . . . . . . . \ x x |
+        !    x . . . . . . . . . \ x  |
+        !   x x x . . . . . . . x \ x |
+        !    x x x x . . . . x x x \  v
+        !
+        !
+        function lib_scene_generator_hcp_lattice_fill_sphere(sphere_radius, lattice_sphere_radius, &
+                                                             cap_plane_point, cap_plane_normal) result(rv)
             implicit none
             ! dummy
             double precision, intent(in) :: sphere_radius
             double precision, intent(in) :: lattice_sphere_radius
 
-            double precision, dimension(6), intent(in), optional :: h
+            type(cartesian_coordinate_real_type), intent(in), optional :: cap_plane_point
+            type(cartesian_coordinate_real_type), intent(in), optional :: cap_plane_normal
 
-            type(lib_scene_object_hcp_sphere) :: rv
+            type(lib_scene_object_hcp_sphere_type) :: rv
 
             ! auxiliary
-            double precision :: size_x
-            double precision :: size_y
-            double precision :: size_z
-            type(lib_scene_object_hcp_cuboid) :: hcp_cuboid
+            integer :: i
+            integer :: j
+            integer :: k
 
-            hcp_cuboid = lib_scene_generator_hcp_lattice_fill_cuboid(size_x, size_y, size_z, sphere_radius)
+            integer, dimension(2):: i_range
+            integer, dimension(2):: j_range
+            integer, dimension(2):: k_range
 
-        end function lib_scene_generator_hcp_fill_sphere
+            type(spherical_coordinate_real_type) :: spherical_coord
+
+
+            logical :: use_spherical_cap
+            type(cartesian_coordinate_real_type) :: m_cap_plane_point
+            type(cartesian_coordinate_real_type) :: m_cap_plane_normal
+            double precision :: distance
+
+            if (present(cap_plane_point)) m_cap_plane_point = cap_plane_point
+            if (present(cap_plane_normal)) m_cap_plane_normal = cap_plane_normal / abs(cap_plane_normal)
+
+            use_spherical_cap = .false.
+            if (present(cap_plane_point) .and. present(cap_plane_normal)) use_spherical_cap = .true.
+
+            rv%hcp_cuboid = lib_scene_generator_hcp_lattice_fill_cuboid(2d0 * sphere_radius, &
+                                                                     2d0 * sphere_radius, &
+                                                                     2d0 * sphere_radius, &
+                                                                     lattice_sphere_radius)
+
+            i_range(1) = lbound(rv%hcp_cuboid%hcp_lattice_coordiantes, 1)
+            i_range(2) = ubound(rv%hcp_cuboid%hcp_lattice_coordiantes, 1)
+
+            j_range(1) = lbound(rv%hcp_cuboid%hcp_lattice_coordiantes, 2)
+            j_range(2) = ubound(rv%hcp_cuboid%hcp_lattice_coordiantes, 2)
+
+            k_range(1) = lbound(rv%hcp_cuboid%hcp_lattice_coordiantes, 3)
+            k_range(2) = ubound(rv%hcp_cuboid%hcp_lattice_coordiantes, 3)
+
+            allocate (rv%inside_sphere(i_range(1):i_range(2), &
+                                       j_range(1):j_range(2), &
+                                       k_range(1):k_range(2)))
+
+            do i = i_range(1), i_range(2)
+                do j = j_range(1), j_range(2)
+                    do k = k_range(1), k_range(2)
+                        spherical_coord = rv%hcp_cuboid%hcp_lattice_coordiantes(i, j, k)
+                        if ( spherical_coord%rho .lt. sphere_radius - lattice_sphere_radius) then
+                            if (use_spherical_cap) then
+                                distance = dot_product(rv%hcp_cuboid%hcp_lattice_coordiantes(i, j, k) - cap_plane_point, &
+                                                       cap_plane_normal)
+                                if (distance .lt. 0d0) then
+                                    rv%inside_sphere(i,j,k) = .true.
+                                else
+                                    rv%inside_sphere(i,j,k) = .false.
+                                end if
+                            else
+                                rv%inside_sphere(i,j,k) = .true.
+                            end if
+                        else
+                            rv%inside_sphere(i,j,k) = .false.
+                        end if
+                    end do
+                end do
+            end do
+
+
+        end function lib_scene_generator_hcp_lattice_fill_sphere
 end module lib_scene_generator
