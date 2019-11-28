@@ -7,6 +7,8 @@ program main
     use lib_hash_function
     use lib_sort
 
+    use lib_scene_generator
+
     use lib_field
 
     use lib_ml_fmm
@@ -63,7 +65,8 @@ program main
     call system_clock(test_count_start, test_count_rate)
     call cpu_time(test_start)
 
-    error_counter = 0
+   error_counter = 0
+   error_counter = error_counter + lib_scene_generator_test_functions()
 !    error_counter = error_counter + test_lib_math()
 !    error_counter = error_counter + lib_sort_test_functions()
 !    error_counter = error_counter + lib_test_hash_function()
@@ -74,7 +77,7 @@ program main
 !    error_counter = error_counter + lib_ml_fmm_test_functions()
 !    error_counter = error_counter + lib_field_test_functions()
 !    error_counter = error_counter + lib_field_polarisation_operator_test_functions()
-    error_counter = error_counter + lib_field_plane_wave_test_functions()
+!    error_counter = error_counter + lib_field_plane_wave_test_functions()
 !    error_counter = error_counter + lib_field_gaussian_beam_test_functions()
 !    error_counter = error_counter + lib_mie_ss_helper_functions_test_functions()
 !    error_counter = error_counter + lib_mie_single_sphere_test_functions()

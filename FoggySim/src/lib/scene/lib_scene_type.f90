@@ -27,9 +27,15 @@ module lib_scene_type
 
 
     !
-    !           z o o o o
-    !           ^  o o o
-    !       K_o | o o o o
+    !         . . . . z . . . .
+    !          . . . .^  . . .
+    !         . . K_j | . . . .
+    !          . . . .-->.x. .
+    !         . . . .^. . . . .
+    !          . . ./. . . . .
+    !         . z ./d_o_j . . .
+    !           ^ /
+    !       K_o |/
     !           --> x
     !
     !   K_o: object coordinate system
@@ -41,6 +47,21 @@ module lib_scene_type
         type(cartesian_coordinate_real_type), dimension(:,:,:), allocatable :: hcp_lattice_coordiantes
     end type
 
+    !
+    !               . z .
+    !            . . .^  . .
+    !           . K_j | . . .
+    !          . . . .-->.x. .
+    !           . . .^. . . .
+    !            . ./. . . .
+    !           z ./d_o_j
+    !           ^ /
+    !       K_o |/
+    !           --> x
+    !
+    !   K_o: object coordinate system
+    !   o: spheres at the hcp_lattice_coordiantes
+    !
     type lib_scene_object_hcp_sphere_type
         type(cartesian_coordinate_real_type) :: d_o_j
         type(lib_scene_object_hcp_cuboid_type) :: hcp_cuboid

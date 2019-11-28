@@ -1,6 +1,7 @@
 module lib_scene_generator
     use libmath
     use lib_scene_type
+    use lib_scene_helper_functions
     implicit none
 
     private
@@ -77,9 +78,10 @@ module lib_scene_generator
         !   K_o: object coordinate system
         !   .: spheres at the hcp_lattice_coordiantes
         !
-        function lib_scene_generator_hcp_lattice_fill_cuboid(size_x, size_y, size_z, sphere_radius) result(rv)
+        function lib_scene_generator_hcp_lattice_fill_cuboid(d_o_j, size_x, size_y, size_z, sphere_radius) result(rv)
             implicit none
             ! dummy
+            type(cartesian_coordinate_real_type) :: d_o_j
             double precision, intent(in) :: size_x
             double precision, intent(in) :: size_y
             double precision, intent(in) :: size_z
@@ -100,30 +102,8 @@ module lib_scene_generator
 
             type(cartesian_coordinate_real_type) :: offset
 
-            offset = make_cartesian(0d0, 0d0, 0d0)
-            ! The sphere with the index (0,0,0) has the coordinate (0,0,0) m
-            ! and the cuboid has a corner at (0,0,0) m. An additional offset brings all spheres
-            ! into the cuboid.
-            !
-            ! Position of the spheres with the first offset:
-            !      . . . . . .
-            !       . . . . . .
-            !    z . . . . . .
-            !     ^ . . . . . .
-            !     |. . . . . .
-            !     --> x
-            !
-!            offset = make_cartesian(sphere_radius / 2d0, &
-!                                    sphere_radius / 2d0, &
-!                                    sphere_radius / 2d0)
+            rv%d_o_j = d_o_j
 
-
-            ! move the coordinate system to the centre of cuboid
-!            offset = offset + make_cartesian(-size_x/ 2d0, &
-!                                             -size_y/ 2d0, &
-!                                             -size_z / 2d0)
-
-!            buffer = (size_z - 2d0 * sphere_radius) / sphere_radius
             buffer = (size_z - 2d0 * sphere_radius) / sphere_radius
             buffer = buffer * 3d0 / ( 2d0 * sqrt(6d0) )
             max_k = max(int(floor(  buffer  )), 0)
@@ -138,6 +118,7 @@ module lib_scene_generator
             buffer = buffer / 2d0
             max_i = max(int(floor(  buffer  )), 0)
 
+            offset = make_cartesian(0d0, 0d0, 0d0)
             offset = offset - lib_scene_gerator_hcp_lattice(max_i, max_j, max_k, sphere_radius) / 2d0
 
             allocate(rv%hcp_lattice_coordiantes(0:max_i, 0:max_j, 0:max_k))
@@ -207,10 +188,11 @@ module lib_scene_generator
         !    x x x x . . . . x x x \  v
         !
         !
-        function lib_scene_generator_hcp_lattice_fill_sphere(sphere_radius, lattice_sphere_radius, &
+        function lib_scene_generator_hcp_lattice_fill_sphere(d_o_j, sphere_radius, lattice_sphere_radius, &
                                                              cap_plane_point, cap_plane_normal) result(rv)
             implicit none
             ! dummy
+            type(cartesian_coordinate_real_type) :: d_o_j
             double precision, intent(in) :: sphere_radius
             double precision, intent(in) :: lattice_sphere_radius
 
@@ -236,13 +218,16 @@ module lib_scene_generator
             type(cartesian_coordinate_real_type) :: m_cap_plane_normal
             double precision :: distance
 
+            rv%d_o_j = d_o_j
+
             if (present(cap_plane_point)) m_cap_plane_point = cap_plane_point
             if (present(cap_plane_normal)) m_cap_plane_normal = cap_plane_normal / abs(cap_plane_normal)
 
             use_spherical_cap = .false.
             if (present(cap_plane_point) .and. present(cap_plane_normal)) use_spherical_cap = .true.
 
-            rv%hcp_cuboid = lib_scene_generator_hcp_lattice_fill_cuboid(2d0 * sphere_radius, &
+            rv%hcp_cuboid = lib_scene_generator_hcp_lattice_fill_cuboid(d_o_j, &
+                                                                        2d0 * sphere_radius, &
                                                                         2d0 * sphere_radius, &
                                                                         2d0 * sphere_radius, &
                                                                         lattice_sphere_radius)
@@ -287,71 +272,6 @@ module lib_scene_generator
 
         end function lib_scene_generator_hcp_lattice_fill_sphere
 
-        function make_coordinate_list_1d(list, use_point) result(rv)
-            implicit none
-            ! dummy
-            type(cartesian_coordinate_real_type), dimension(:,:,:), allocatable, intent(in) :: list
-            logical, dimension(lbound(list, 1):ubound(list, 1), &
-                               lbound(list, 2):ubound(list, 2), &
-                               lbound(list, 3):ubound(list, 3)), intent(in), optional :: use_point
-
-            type(cartesian_coordinate_real_type), dimension(:), allocatable :: rv
-
-            ! auxiliary
-            integer :: i
-            integer :: j
-            integer :: k
-            integer :: x
-
-            integer, dimension(2):: i_range
-            integer, dimension(2):: j_range
-            integer, dimension(2):: k_range
-
-            i_range(1) = lbound(list, 1)
-            i_range(2) = ubound(list, 1)
-
-            j_range(1) = lbound(list, 2)
-            j_range(2) = ubound(list, 2)
-
-            k_range(1) = lbound(list, 3)
-            k_range(2) = ubound(list, 3)
-
-            if (present(use_point)) then
-
-                x = count(use_point)
-                allocate(rv(x))
-
-                x = 0
-                do i = i_range(1), i_range(2)
-                    do j = j_range(1), j_range(2)
-                        do k = k_range(1), k_range(2)
-                            if (use_point(i, j, k)) then
-                                x = x + 1
-                                rv(x) = list(i, j, k)
-                            end if
-                        end do
-                    end do
-                end do
-
-            else
-                allocate(rv((i_range(2) - i_range(1) + 1) &
-                            * (j_range(2) - j_range(1) + 1) &
-                            * (k_range(2) - k_range(1) + 1)))
-
-                x = 0
-                do i = i_range(1), i_range(2)
-                    do j = j_range(1), j_range(2)
-                        do k = k_range(1), k_range(2)
-                            x = x + 1
-                            rv(x) = list(i, j, k)
-                        end do
-                    end do
-                end do
-
-            end if
-
-        end function make_coordinate_list_1d
-
         function lib_scene_generator_test_functions() result(rv)
             implicit none
             ! dummy
@@ -384,6 +304,8 @@ module lib_scene_generator
                     double precision, dimension(:,:), allocatable :: data_list
                     type(cartesian_coordinate_real_type), dimension(:), allocatable :: coordinates
 
+                    type(cartesian_coordinate_real_type) :: d_o_j
+
                     double precision :: size_x
                     double precision :: size_y
                     double precision :: size_z
@@ -400,11 +322,12 @@ module lib_scene_generator
                     size_z = 8
 
                     sphere_radius = 0.5
+                    d_o_j = make_cartesian(0d0, 0d0, 0d0)
+                    hcp_cuboid = lib_scene_generator_hcp_lattice_fill_cuboid(d_o_j, size_x, size_y, size_z, sphere_radius)
 
-                    hcp_cuboid = lib_scene_generator_hcp_lattice_fill_cuboid(size_x, size_y, size_z, sphere_radius)
 
-
-                    coordinates = make_coordinate_list_1d(hcp_cuboid%hcp_lattice_coordiantes)
+                    coordinates = make_coordinate_list_1d(reshape(hcp_cuboid%hcp_lattice_coordiantes, &
+                                                          (/ size(hcp_cuboid%hcp_lattice_coordiantes) /)))
 
                     allocate(data_list(size(coordinates), 3))
 
@@ -434,6 +357,8 @@ module lib_scene_generator
                     double precision, dimension(:,:), allocatable :: data_list
                     type(cartesian_coordinate_real_type), dimension(:), allocatable :: coordinates
 
+                    type(cartesian_coordinate_real_type) :: d_o_j
+
                     double precision :: sphere_radius
                     double precision :: lattice_sphere_radius
 
@@ -447,15 +372,18 @@ module lib_scene_generator
 
                     sphere_radius = 10 !* unit_mu
                     lattice_sphere_radius = 1! * unit_mu
+                    d_o_j = make_cartesian(0d0, 0d0, 0d0)
 
                     cap_plane_point = make_cartesian(0d0, 0d0, 5d0)
                     cap_plane_normal = make_cartesian(1d0, 0d0, 1d0)
 
-                    hcp_sphere = lib_scene_generator_hcp_lattice_fill_sphere(sphere_radius, lattice_sphere_radius, &
+                    hcp_sphere = lib_scene_generator_hcp_lattice_fill_sphere(d_o_j, sphere_radius, lattice_sphere_radius, &
                                                                              cap_plane_point, cap_plane_normal)
 
-                    coordinates = make_coordinate_list_1d(hcp_sphere%hcp_cuboid%hcp_lattice_coordiantes, &
-                                                          hcp_sphere%inside_sphere)
+                    coordinates = make_coordinate_list_1d(reshape(hcp_sphere%hcp_cuboid%hcp_lattice_coordiantes, &
+                                                                  (/ size(hcp_sphere%hcp_cuboid%hcp_lattice_coordiantes) /)), &
+                                                          reshape(hcp_sphere%inside_sphere, &
+                                                                  (/ size(hcp_sphere%inside_sphere) /)))
 
                     allocate(data_list(size(coordinates), 3))
 
