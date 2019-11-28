@@ -42,7 +42,8 @@ module lib_scene_type
     end type
 
     type lib_scene_object_hcp_sphere
-
+        type(lib_scene_object_hcp_cuboid) :: hcp_cuboid
+        logical, dimension(:,:,:), allocatable :: inside_sphere
     end type
 
     !                 z

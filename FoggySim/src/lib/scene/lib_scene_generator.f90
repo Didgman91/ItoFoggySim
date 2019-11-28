@@ -45,6 +45,31 @@ module lib_scene_generator
         ! ----
         !   size_x, size_y, size_z: doubel precision
         !       edge length of the cuboid with a hexagonal close packing scheme
+        !   sphere_radius: double precision
+        !       radius of the spheres at the lattice coordinate points
+        !
+        ! Returns
+        ! ----
+        !   rv: type(lib_scene_object_hcp_cuboid)
+        !       an arangement of sphers with a hexagonal cloase packing (hcp) in a cuboid
+        !
+        !   <---      size_x     --->
+        !    . . . . . . . . . . . .  ^
+        !   . . . . . . . . . . . . . |
+        !    . . . . . z . . . . . .  |
+        !   . . . . . . ^ . . . . . . |
+        !    . . . .K_o |. . . . . .  |
+        !   . . . . . . --> x . . . . | size_z
+        !    . . . . . . . . . . . .  |
+        !   . . . . . . . . . . . . . |
+        !    . . . . . . . . . . . .  |
+        !   . . . . . . . . . . . . . |
+        !    . . . . . . . . . . . .  v
+        !
+        !
+        !   K_o: object coordinate system
+        !   .: spheres at the hcp_lattice_coordiantes
+        !
         function lib_scene_generator_hcp_lattice_fill_cuboid(size_x, size_y, size_z, sphere_radius) result(rv)
             implicit none
             ! dummy
@@ -66,9 +91,26 @@ module lib_scene_generator
 
             type(cartesian_coordinate_real_type) :: offset
 
+            ! The sphere with the index (0,0,0) has the coordinate (0,0,0) m
+            ! and the cuboid has a corner at (0,0,0) m. An additional offset brings all spheres
+            ! into the cuboid.
+            !
+            ! Position of the spheres with the first offset:
+            !      . . . . . .
+            !       . . . . . .
+            !    z . . . . . .
+            !     ^ . . . . . .
+            !     |. . . . . .
+            !     --> x
+            !
             offset = make_cartesian(sphere_radius / 2d0, &
                                     sphere_radius / 2d0, &
                                     sphere_radius / 2d0)
+
+            ! move the coordinate system to the centre of cuboid
+            offset = offset - make_cartesian(size_x/ 2d0, &
+                                             size_y/ 2d0, &
+                                             size_z/ 2d0)
 
             max_k = int(floor((size_z - 2d0 * sphere_radius) / sphere_radius * 3d0 / (2d0 * sqrt(6d0))))
             max_j = int(floor((size_y - 2d0 * sphere_radius) / (sphere_radius * sqrt(3d0) - mod(dble(max_k), 2d0)/3d0)))
@@ -88,7 +130,47 @@ module lib_scene_generator
         end function lib_scene_generator_hcp_lattice_fill_cuboid
 
 
-!        function lib_scene_generator_hcp_fill_sphere
-!
-!        end function lib_scene_generator_hcp_fill_sphere
+        ! Argument
+        ! ----
+        !   size_x, size_y, size_z: doubel precision
+        !       edge length of the cuboid with a hexagonal close packing scheme
+        !   sphere_radius: double precision
+        !       radius of the spheres at the lattice coordinate points
+        !
+        ! Returns
+        ! ----
+        !   rv: type(lib_scene_object_hcp_cuboid)
+        !       an arangement of sphers with a hexagonal cloase packing (hcp) in a cuboid
+        !
+        !            <- size_x ->
+        !            . . o o . .  ^
+        !             . o o o . . |
+        !          z . o o o o .  | size_z
+        !           ^ . o o o . . |
+        !       K_o |. . o o . .  v
+        !           --> x
+        !
+        !   K_o: object coordinate system
+        !   o: spheres at the hcp_lattice_coordiantes inside the sphere with the radius "sphere_radius"
+        !   .: spheres at the hcp_lattice_coordiantes outside the sphere with the radius "sphere_radius"
+        !
+        function lib_scene_generator_hcp_fill_sphere(sphere_radius, lattice_sphere_radius, h) result(rv)
+            implicit none
+            ! dummy
+            double precision, intent(in) :: sphere_radius
+            double precision, intent(in) :: lattice_sphere_radius
+
+            double precision, dimension(6), intent(in), optional :: h
+
+            type(lib_scene_object_hcp_sphere) :: rv
+
+            ! auxiliary
+            double precision :: size_x
+            double precision :: size_y
+            double precision :: size_z
+            type(lib_scene_object_hcp_cuboid) :: hcp_cuboid
+
+            hcp_cuboid = lib_scene_generator_hcp_lattice_fill_cuboid(size_x, size_y, size_z, sphere_radius)
+
+        end function lib_scene_generator_hcp_fill_sphere
 end module lib_scene_generator
