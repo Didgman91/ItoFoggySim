@@ -35,10 +35,14 @@ module lib_math_type_operator
     public :: lib_math_get_matrix_rot_z
     public :: lib_math_get_matrix_rot
 
+    public :: list_filter
+
     ! ---- operator ----
     interface operator (+)
         ! real coordinates
         module procedure lib_math_cartesian_operator_real_add
+        module procedure lib_math_cartesian_operator_real_0d_add_array
+        module procedure lib_math_cartesian_operator_real_array_add_0d
 
         ! cmplx coordinates
         module procedure lib_math_cartesian_operator_add
@@ -65,6 +69,7 @@ module lib_math_type_operator
     interface operator (-)
         ! real coordinates
         module procedure lib_math_cartesian_operator_real_sub
+        module procedure lib_math_cartesian_operator_real_array_sub_0d
 
         ! cmplx coordinates
         module procedure lib_math_cartesian_operator_sub
@@ -90,6 +95,11 @@ module lib_math_type_operator
         module procedure lib_math_cartesian_operator_real_scalar_cmplx_mul
         module procedure lib_math_cartesian_operator_real_mul_scalar_real
         module procedure lib_math_cartesian_operator_real_mul_scalar_cmplx
+
+        module procedure lib_math_cartesian_operator_real_array_real_mul_array
+        module procedure lib_math_cartesian_operator_real_array_cmplx_mul_array
+        module procedure lib_math_cartesian_operator_real_0d_real_mul_array
+        module procedure lib_math_cartesian_operator_real_0d_cmplx_mul_array
 
         module procedure lib_math_cartesian_operator_matrix_mul_real
 
@@ -255,6 +265,13 @@ module lib_math_type_operator
         module procedure lib_math_cartesian_dot_product_real_list
         module procedure lib_math_cartesian_dot_product_cmplx
         module procedure lib_math_cartesian_dot_product_cmplx_list
+    end interface
+
+    interface list_filter
+        module procedure list_filter_cartesian_coordiante_real
+        module procedure list_filter_cartesian_coordiante_cmplx
+        module procedure list_filter_spherical_coordiante_real
+        module procedure list_filter_spherical_coordiante_cmplx
     end interface
 
     contains
@@ -1017,6 +1034,42 @@ module lib_math_type_operator
 
         end function
 
+                function lib_math_cartesian_operator_real_0d_add_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_real_type), intent(in) :: lhs
+            type (cartesian_coordinate_real_type), dimension(:), intent(in) :: rhs
+            type (cartesian_coordinate_real_type), dimension(lbound(rhs,1):ubound(rhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            !$OMP PARALLEL DO PRIVATE(i)
+            do i=lbound(rhs,1), ubound(rhs,1)
+                rv(i) = lhs + rhs(i)
+            end do
+            !$OMP END PARALLEL DO
+
+        end function
+
+        function lib_math_cartesian_operator_real_array_add_0d(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_real_type), dimension(:), intent(in) :: lhs
+            type (cartesian_coordinate_real_type), intent(in) :: rhs
+            type (cartesian_coordinate_real_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            !$OMP PARALLEL DO PRIVATE(i)
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) + rhs
+            end do
+            !$OMP END PARALLEL DO
+
+        end function
+
         function lib_math_cartesian_operator_real_sub(lhs, rhs) result(rv)
             implicit none
             ! dummy
@@ -1027,6 +1080,24 @@ module lib_math_type_operator
             rv%x = lhs%x - rhs%x
             rv%y = lhs%y - rhs%y
             rv%z = lhs%z - rhs%z
+
+        end function
+
+        function lib_math_cartesian_operator_real_array_sub_0d(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            type (cartesian_coordinate_real_type), dimension(:), intent(in) :: lhs
+            type (cartesian_coordinate_real_type), intent(in) :: rhs
+            type (cartesian_coordinate_real_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            !$OMP PARALLEL DO PRIVATE(i)
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) - rhs
+            end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -1079,6 +1150,78 @@ module lib_math_type_operator
             rv%x = lhs%x * rhs
             rv%y = lhs%y * rhs
             rv%z = lhs%z * rhs
+
+        end function
+
+        function lib_math_cartesian_operator_real_array_real_mul_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            real(kind=lib_math_type_kind), dimension(:), intent(in) :: lhs
+            type (cartesian_coordinate_real_type), dimension(lbound(lhs,1):ubound(lhs,1)), intent(in) :: rhs
+            type (cartesian_coordinate_real_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            !$OMP PARALLEL DO PRIVATE(i)
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) * rhs(i)
+            end do
+            !$OMP END PARALLEL DO
+
+        end function
+
+        function lib_math_cartesian_operator_real_array_cmplx_mul_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            complex(kind=lib_math_type_kind), dimension(:), intent(in) :: lhs
+            type (cartesian_coordinate_real_type), dimension(lbound(lhs,1):ubound(lhs,1)), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(lhs,1):ubound(lhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            !$OMP PARALLEL DO PRIVATE(i)
+            do i=lbound(lhs,1), ubound(lhs,1)
+                rv(i) = lhs(i) * rhs(i)
+            end do
+            !$OMP END PARALLEL DO
+
+        end function
+
+        function lib_math_cartesian_operator_real_0d_real_mul_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            real(kind=lib_math_type_kind), intent(in) :: lhs
+            type (cartesian_coordinate_real_type), dimension(:), intent(in) :: rhs
+            type (cartesian_coordinate_real_type), dimension(lbound(rhs,1):ubound(rhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            !$OMP PARALLEL DO PRIVATE(i)
+            do i=lbound(rhs,1), ubound(rhs,1)
+                rv(i) = lhs * rhs(i)
+            end do
+            !$OMP END PARALLEL DO
+
+        end function
+
+        function lib_math_cartesian_operator_real_0d_cmplx_mul_array(lhs, rhs) result(rv)
+            implicit none
+            ! dummy
+            complex(kind=lib_math_type_kind), intent(in) :: lhs
+            type (cartesian_coordinate_real_type), dimension(:), intent(in) :: rhs
+            type (cartesian_coordinate_cmplx_type), dimension(lbound(rhs,1):ubound(rhs,1)) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            !$OMP PARALLEL DO PRIVATE(i)
+            do i=lbound(rhs,1), ubound(rhs,1)
+                rv(i) = lhs * rhs(i)
+            end do
+            !$OMP END PARALLEL DO
 
         end function
 
@@ -3717,6 +3860,126 @@ module lib_math_type_operator
             !$OMP END PARALLEL DO
 
         end function
+
+        function list_filter_cartesian_coordiante_real(list, use_point) result(rv)
+            implicit none
+            ! dummy
+            type(cartesian_coordinate_real_type), dimension(:), intent(in) :: list
+            logical, dimension(lbound(list, 1):ubound(list, 1)), intent(in) :: use_point
+
+            type(cartesian_coordinate_real_type), dimension(:), allocatable :: rv
+
+            ! auxiliary
+            integer :: i
+            integer :: x
+
+            integer, dimension(2):: i_range
+
+            i_range(1) = lbound(list, 1)
+            i_range(2) = ubound(list, 1)
+
+            x = count(use_point)
+            allocate(rv(x))
+
+            x = 0
+            do i = i_range(1), i_range(2)
+                if (use_point(i)) then
+                    x = x + 1
+                    rv(x) = list(i)
+                end if
+            end do
+
+        end function list_filter_cartesian_coordiante_real
+
+        function list_filter_cartesian_coordiante_cmplx(list, use_point) result(rv)
+            implicit none
+            ! dummy
+            type(cartesian_coordinate_cmplx_type), dimension(:), intent(in) :: list
+            logical, dimension(lbound(list, 1):ubound(list, 1)), intent(in) :: use_point
+
+            type(cartesian_coordinate_cmplx_type), dimension(:), allocatable :: rv
+
+            ! auxiliary
+            integer :: i
+            integer :: x
+
+            integer, dimension(2):: i_range
+
+            i_range(1) = lbound(list, 1)
+            i_range(2) = ubound(list, 1)
+
+            x = count(use_point)
+            allocate(rv(x))
+
+            x = 0
+            do i = i_range(1), i_range(2)
+                if (use_point(i)) then
+                    x = x + 1
+                    rv(x) = list(i)
+                end if
+            end do
+
+        end function list_filter_cartesian_coordiante_cmplx
+
+        function list_filter_spherical_coordiante_real(list, use_point) result(rv)
+            implicit none
+            ! dummy
+            type(spherical_coordinate_real_type), dimension(:), intent(in) :: list
+            logical, dimension(lbound(list, 1):ubound(list, 1)), intent(in) :: use_point
+
+            type(spherical_coordinate_real_type), dimension(:), allocatable :: rv
+
+            ! auxiliary
+            integer :: i
+            integer :: x
+
+            integer, dimension(2):: i_range
+
+            i_range(1) = lbound(list, 1)
+            i_range(2) = ubound(list, 1)
+
+            x = count(use_point)
+            allocate(rv(x))
+
+            x = 0
+            do i = i_range(1), i_range(2)
+                if (use_point(i)) then
+                    x = x + 1
+                    rv(x) = list(i)
+                end if
+            end do
+
+        end function list_filter_spherical_coordiante_real
+
+        function list_filter_spherical_coordiante_cmplx(list, use_point) result(rv)
+            implicit none
+            ! dummy
+            type(spherical_coordinate_cmplx_type), dimension(:), intent(in) :: list
+            logical, dimension(lbound(list, 1):ubound(list, 1)), intent(in) :: use_point
+
+            type(spherical_coordinate_cmplx_type), dimension(:), allocatable :: rv
+
+            ! auxiliary
+            integer :: i
+            integer :: x
+
+            integer, dimension(2):: i_range
+
+            i_range(1) = lbound(list, 1)
+            i_range(2) = ubound(list, 1)
+
+            x = count(use_point)
+            allocate(rv(x))
+
+            x = 0
+            do i = i_range(1), i_range(2)
+                if (use_point(i)) then
+                    x = x + 1
+                    rv(x) = list(i)
+                end if
+            end do
+
+        end function list_filter_spherical_coordiante_cmplx
 
         function lib_math_type_operator_test_functions() result (rv)
             implicit none
