@@ -66,7 +66,7 @@ program main
     call cpu_time(test_start)
 
    error_counter = 0
-   error_counter = error_counter + lib_scene_generator_test_functions()
+!   error_counter = error_counter + lib_scene_generator_test_functions()
 !    error_counter = error_counter + test_lib_math()
 !    error_counter = error_counter + lib_sort_test_functions()
 !    error_counter = error_counter + lib_test_hash_function()
@@ -83,7 +83,7 @@ program main
 !    error_counter = error_counter + lib_mie_single_sphere_test_functions()
 !    error_counter = error_counter + lib_mie_ms_solver_interface_hf_helper_functions()
 !    error_counter = error_counter + lib_mie_ms_solver_interface_test_functions()
-!    error_counter = error_counter + lib_mie_multi_sphere_test_functions()
+    error_counter = error_counter + lib_mie_multi_sphere_test_functions()
 
     call cpu_time(test_finish)
     call system_clock(test_count_finish, test_count_rate)

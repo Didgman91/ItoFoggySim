@@ -36,12 +36,25 @@ module lib_mie_ms_ml_fmm_interface
             type(lib_ml_fmm_procedure_handles) :: ml_fmm_procedures
             type(lib_ml_fmm_data) :: data_elements
 
+            allocate(data_elements%Y(size(simulation_data%evaluation_points)))
+
+            do i = lbound(simulation_data%evaluation_points, 1), ubound(simulation_data%evaluation_points, 1)
+                no = i - lbound(simulation_data%evaluation_points, 1) + 1
+
+                data_elements%Y(no)%element_type = 1 ! value .ne. -1
+                data_elements%Y(no)%hierarchy = HIERARCHY_Y
+
+                data_elements%Y(no)%point_x%x(1) = simulation_data%evaluation_points(i)%coordinate%x
+                data_elements%Y(no)%point_x%x(2) = simulation_data%evaluation_points(i)%coordinate%y
+                data_elements%Y(no)%point_x%x(3) = simulation_data%evaluation_points(i)%coordinate%z
+            end do
+
             allocate(data_elements%XY(size(simulation_data%sphere_list)))
 
             do i = lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
                 no = i - lbound(simulation_data%sphere_list, 1) + 1
 
-                data_elements%XY(no)%element_type = 1 ! todo: is this important for the ML FMM?
+                data_elements%XY(no)%element_type = 1 ! value .ne. -1
                 data_elements%XY(no)%hierarchy = HIERARCHY_XY
 
                 data_elements%XY(no)%point_x%x(1) = simulation_data%sphere_list(i)%d_0_j%x

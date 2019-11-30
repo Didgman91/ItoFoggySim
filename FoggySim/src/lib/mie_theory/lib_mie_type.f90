@@ -62,6 +62,12 @@ module lib_mie_type
         integer, dimension(2) :: n_range
     end type lib_mie_vector_spherical_harmonics_type
 
+    type lib_mie_evaluation_point_type
+        type(cartesian_coordinate_real_type) :: coordinate
+        type(cartesian_coordinate_cmplx_type) :: e_field
+        type(cartesian_coordinate_cmplx_type) :: h_field
+    end type
+
     ! simulation parameter
     type lib_mie_simulation_parameter_type
         double precision :: refractive_index_medium
@@ -69,6 +75,7 @@ module lib_mie_type
         type(lib_mie_sphere_type), dimension(:), allocatable :: sphere_list
         type(lib_mie_sphere_parameter_type), dimension(:), allocatable :: sphere_parameter_list
         type(lib_mie_vector_spherical_harmonics_type) :: spherical_harmonics
+        type(lib_mie_evaluation_point_type), dimension(:), allocatable :: evaluation_points
     end type lib_mie_simulation_parameter_type
 
 end module lib_mie_type
