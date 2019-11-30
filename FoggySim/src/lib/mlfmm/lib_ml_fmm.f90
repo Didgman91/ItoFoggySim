@@ -20,6 +20,7 @@ module lib_ml_fmm
     public :: lib_ml_fmm_constructor
     public :: lib_ml_fmm_destructor
     public :: lib_ml_fmm_run
+    public :: lib_ml_fmm_final_summation
 
     public :: lib_ml_fmm_test_functions
 
@@ -36,6 +37,9 @@ module lib_ml_fmm
     integer(kind=1) :: m_tree_l_min
     integer(kind=1) :: m_tree_l_max
 
+    logical :: m_final_sum_calc_y_hierarchy
+    logical :: m_final_sum_calc_xy_hierarchy
+
 
     contains
 
@@ -46,7 +50,8 @@ module lib_ml_fmm
     ! 2. create ml fmm data set
     !       - C per box and per level (l_max up to l_min)
     !       - D per box and per level (l_min down to l_max)
-    subroutine lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures, tree_s_opt)
+    subroutine lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures, tree_s_opt, &
+                                      final_sum_calc_y_hierarchy, final_sum_calc_xy_hierarchy)
         implicit none
         ! dummy
         type(lib_ml_fmm_data), intent(inout) :: data_elements
@@ -54,11 +59,19 @@ module lib_ml_fmm
         type(lib_ml_fmm_procedure_handles), intent(in) :: ml_fmm_procedures
         integer(kind=4), intent(in), optional :: tree_s_opt
 
+        logical, intent(in), optional :: final_sum_calc_y_hierarchy
+        logical, intent(in), optional :: final_sum_calc_xy_hierarchy
 
         ! auxiliaray
         type(lib_tree_data_element), dimension(:), allocatable :: data_concatenated
         type(lib_tree_correspondece_vector_element), dimension(:), allocatable :: correspondence_vector
         integer(kind=UINDEX_BYTES), dimension(3) :: length
+
+        m_final_sum_calc_y_hierarchy = .true.
+        if (present(final_sum_calc_y_hierarchy)) m_final_sum_calc_y_hierarchy = final_sum_calc_y_hierarchy
+
+        m_final_sum_calc_xy_hierarchy = .true.
+        if (present(final_sum_calc_xy_hierarchy)) m_final_sum_calc_xy_hierarchy = final_sum_calc_xy_hierarchy
 
         ! concatenate X-, Y- and XY-hierarchy data
         !   length(1) = size(data_elements%X)
@@ -138,9 +151,9 @@ module lib_ml_fmm
 !            deallocate (m_ml_fmm_C)
 !            ! example for an indiviual deallocation
 !!            do i=1, size(m_ml_fmm_C)
-!!                do ii=1, size(m_ml_fmm_C(i)%dummy)
-!!                    if (allocated (m_ml_fmm_C(i)%dummy))
-!!                        deallocate (m_ml_fmm_C(i)%dummy)
+!!                do ii=1, size(m_ml_fmm_C(i)%r)
+!!                    if (allocated (m_ml_fmm_C(i)%r))
+!!                        deallocate (m_ml_fmm_C(i)%r)
 !!                    end if
 !!                end do
 !!            end do
@@ -209,7 +222,7 @@ module lib_ml_fmm
 
         call lib_ml_fmm_calculate_upward_pass()
         call lib_ml_fmm_calculate_downward_pass()
-        call lib_ml_fmm_final_summation()
+        call lib_ml_fmm_final_summation(m_final_sum_calc_y_hierarchy, m_final_sum_calc_xy_hierarchy)
 
         allocate(vector_v, source=m_ml_fmm_v)
 !        call move_alloc(m_ml_fmm_v, vector_v)
@@ -864,8 +877,10 @@ module lib_ml_fmm
     !          at the E2 domain of the evaluation element (Y-hierarchy)
     !
     ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(38)
-    subroutine lib_ml_fmm_final_summation()
+    subroutine lib_ml_fmm_final_summation(calculate_y_hierarchy, calculate_xy_hierarchy)
         implicit none
+        logical, intent(in), optional :: calculate_y_hierarchy
+        logical, intent(in), optional :: calculate_xy_hierarchy
 
         ! auxiliary
         type(lib_tree_universal_index) :: uindex
@@ -873,6 +888,15 @@ module lib_ml_fmm
         integer(kind=UINDEX_BYTES) :: number_of_boxes
         integer(kind=UINDEX_BYTES) :: list_index
         integer(kind=1) :: hierarchy_type
+
+        logical :: m_calculate_y_hierarchy
+        logical :: m_calculate_xy_hierarchy
+
+        m_calculate_y_hierarchy = .true.
+        if (present(calculate_y_hierarchy)) m_calculate_y_hierarchy = calculate_y_hierarchy
+
+        m_calculate_xy_hierarchy = .true.
+        if (present(calculate_xy_hierarchy)) m_calculate_xy_hierarchy = calculate_xy_hierarchy
 
         uindex%l = m_tree_l_max
         number_of_boxes = size(m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index)
@@ -884,8 +908,8 @@ module lib_ml_fmm
                 uindex%n = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
                 if (uindex%n .ge. 0) then
                     hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(i)
-                    if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
-                         (hierarchy_type .eq. HIERARCHY_XY))) then
+                    if (((hierarchy_type .eq. HIERARCHY_Y .and. m_calculate_y_hierarchy) .or. &
+                         (hierarchy_type .eq. HIERARCHY_XY .and. m_calculate_xy_hierarchy))) then
 
                         call lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
                     end if
@@ -900,8 +924,8 @@ module lib_ml_fmm
                 list_index = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
                 if (list_index .gt. 0) then
                     hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(list_index)
-                    if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
-                         (hierarchy_type .eq. HIERARCHY_XY))) then
+                    if (((hierarchy_type .eq. HIERARCHY_Y .and. m_calculate_y_hierarchy) .or. &
+                         (hierarchy_type .eq. HIERARCHY_XY .and. m_calculate_xy_hierarchy))) then
 
                         call lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
                     end if
@@ -1258,34 +1282,34 @@ module lib_ml_fmm
 
             ground_truth_uindex_list_l_3(:)%l = 3
 
-            allocate(ground_truth_coefficient_list_l_3(1)%dummy, source = (/0.0D0/))
+            allocate(ground_truth_coefficient_list_l_3(1)%r, source = (/0.0D0/))
             ground_truth_uindex_list_l_3(1)%n = 0
 
-            allocate(ground_truth_coefficient_list_l_3(2)%dummy, source = (/13D0/))
+            allocate(ground_truth_coefficient_list_l_3(2)%r, source = (/13D0/))
             ground_truth_uindex_list_l_3(2)%n = 13
 
-            allocate(ground_truth_coefficient_list_l_3(3)%dummy, source = (/49D0/))
+            allocate(ground_truth_coefficient_list_l_3(3)%r, source = (/49D0/))
             ground_truth_uindex_list_l_3(3)%n = 49
 
-            allocate(ground_truth_coefficient_list_l_3(4)%dummy, source = (/6D0/))
+            allocate(ground_truth_coefficient_list_l_3(4)%r, source = (/6D0/))
             ground_truth_uindex_list_l_3(4)%n = 6
 
-            allocate(ground_truth_coefficient_list_l_3(5)%dummy, source = (/63D0/))
+            allocate(ground_truth_coefficient_list_l_3(5)%r, source = (/63D0/))
             ground_truth_uindex_list_l_3(5)%n = 63
 
-            allocate(ground_truth_coefficient_list_l_3(6)%dummy, source = (/48D0/))
+            allocate(ground_truth_coefficient_list_l_3(6)%r, source = (/48D0/))
             ground_truth_uindex_list_l_3(6)%n = 48
 
-            allocate(ground_truth_coefficient_list_l_3(7)%dummy, source = (/61D0/))
+            allocate(ground_truth_coefficient_list_l_3(7)%r, source = (/61D0/))
             ground_truth_uindex_list_l_3(7)%n = 61
 
-            allocate(ground_truth_coefficient_list_l_3(8)%dummy, source = (/1D0/))
+            allocate(ground_truth_coefficient_list_l_3(8)%r, source = (/1D0/))
             ground_truth_uindex_list_l_3(8)%n = 1
 
-            allocate(ground_truth_coefficient_list_l_3(9)%dummy, source = (/54D0/))
+            allocate(ground_truth_coefficient_list_l_3(9)%r, source = (/54D0/))
             ground_truth_uindex_list_l_3(9)%n = 54
 
-            allocate(ground_truth_coefficient_list_l_3(10)%dummy, source = (/15D0/))
+            allocate(ground_truth_coefficient_list_l_3(10)%r, source = (/15D0/))
             ground_truth_uindex_list_l_3(10)%n = 15
 
 
@@ -1293,22 +1317,22 @@ module lib_ml_fmm
             allocate(ground_truth_uindex_list_l_2(6))
             ground_truth_uindex_list_l_2(:)%l = 2
 
-            allocate(ground_truth_coefficient_list_l_2(1)%dummy, source = (/1D0/))
+            allocate(ground_truth_coefficient_list_l_2(1)%r, source = (/1D0/))
             ground_truth_uindex_list_l_2(1)%n = 0
 
-            allocate(ground_truth_coefficient_list_l_2(2)%dummy, source = (/6D0/))
+            allocate(ground_truth_coefficient_list_l_2(2)%r, source = (/6D0/))
             ground_truth_uindex_list_l_2(2)%n = 1
 
-            allocate(ground_truth_coefficient_list_l_2(3)%dummy, source = (/28D0/))
+            allocate(ground_truth_coefficient_list_l_2(3)%r, source = (/28D0/))
             ground_truth_uindex_list_l_2(3)%n = 3
 
-            allocate(ground_truth_coefficient_list_l_2(4)%dummy, source = (/97D0/))
+            allocate(ground_truth_coefficient_list_l_2(4)%r, source = (/97D0/))
             ground_truth_uindex_list_l_2(4)%n = 12
 
-            allocate(ground_truth_coefficient_list_l_2(5)%dummy, source = (/54D0/))
+            allocate(ground_truth_coefficient_list_l_2(5)%r, source = (/54D0/))
             ground_truth_uindex_list_l_2(5)%n = 13
 
-            allocate(ground_truth_coefficient_list_l_2(6)%dummy, source = (/124D0/))
+            allocate(ground_truth_coefficient_list_l_2(6)%r, source = (/124D0/))
             ground_truth_uindex_list_l_2(6)%n = 15
 
         end subroutine setup_ground_truth_C_coefficient_list_2D
@@ -1332,16 +1356,16 @@ module lib_ml_fmm
 
             ground_truth_uindex_list_l_3(:)%l = 3
 
-            allocate(ground_truth_coefficient_list_l_3(1)%dummy, source = (/34D0/))
+            allocate(ground_truth_coefficient_list_l_3(1)%r, source = (/34D0/))
             ground_truth_uindex_list_l_3(1)%n = 2
 
-            allocate(ground_truth_coefficient_list_l_3(2)%dummy, source = (/35D0/))
+            allocate(ground_truth_coefficient_list_l_3(2)%r, source = (/35D0/))
             ground_truth_uindex_list_l_3(2)%n = 10
 
-            allocate(ground_truth_coefficient_list_l_3(3)%dummy, source = (/28D0/))
+            allocate(ground_truth_coefficient_list_l_3(3)%r, source = (/28D0/))
             ground_truth_uindex_list_l_3(3)%n = 34
 
-            allocate(ground_truth_coefficient_list_l_3(4)%dummy, source = (/0D0/))
+            allocate(ground_truth_coefficient_list_l_3(4)%r, source = (/0D0/))
             ground_truth_uindex_list_l_3(4)%n = 42
 
 
@@ -1349,16 +1373,16 @@ module lib_ml_fmm
             allocate(ground_truth_uindex_list_l_2(4))
             ground_truth_uindex_list_l_2(:)%l = 2
 
-            allocate(ground_truth_coefficient_list_l_2(1)%dummy, source = (/275D0/))
+            allocate(ground_truth_coefficient_list_l_2(1)%r, source = (/275D0/))
             ground_truth_uindex_list_l_2(1)%n = 0
 
-            allocate(ground_truth_coefficient_list_l_2(2)%dummy, source = (/275D0/))
+            allocate(ground_truth_coefficient_list_l_2(2)%r, source = (/275D0/))
             ground_truth_uindex_list_l_2(2)%n = 2
 
-            allocate(ground_truth_coefficient_list_l_2(3)%dummy, source = (/282D0/))
+            allocate(ground_truth_coefficient_list_l_2(3)%r, source = (/282D0/))
             ground_truth_uindex_list_l_2(3)%n = 8
 
-            allocate(ground_truth_coefficient_list_l_2(4)%dummy, source = (/310D0/))
+            allocate(ground_truth_coefficient_list_l_2(4)%r, source = (/310D0/))
             ground_truth_uindex_list_l_2(4)%n = 10
 
         end subroutine setup_ground_truth_D_tilde_coefficient_list_2D
@@ -1382,16 +1406,16 @@ module lib_ml_fmm
 
             ground_truth_uindex_list_l_3(:)%l = 3
 
-            allocate(ground_truth_coefficient_list_l_3(1)%dummy, source = (/309D0/))
+            allocate(ground_truth_coefficient_list_l_3(1)%r, source = (/309D0/))
             ground_truth_uindex_list_l_3(1)%n = 2
 
-            allocate(ground_truth_coefficient_list_l_3(2)%dummy, source = (/310D0/))
+            allocate(ground_truth_coefficient_list_l_3(2)%r, source = (/310D0/))
             ground_truth_uindex_list_l_3(2)%n = 10
 
-            allocate(ground_truth_coefficient_list_l_3(3)%dummy, source = (/310D0/))
+            allocate(ground_truth_coefficient_list_l_3(3)%r, source = (/310D0/))
             ground_truth_uindex_list_l_3(3)%n = 34
 
-            allocate(ground_truth_coefficient_list_l_3(4)%dummy, source = (/310D0/))
+            allocate(ground_truth_coefficient_list_l_3(4)%r, source = (/310D0/))
             ground_truth_uindex_list_l_3(4)%n = 42
 
 
@@ -1399,16 +1423,16 @@ module lib_ml_fmm
             allocate(ground_truth_uindex_list_l_2(4))
             ground_truth_uindex_list_l_2(:)%l = 2
 
-            allocate(ground_truth_coefficient_list_l_2(1)%dummy, source = (/275D0/))
+            allocate(ground_truth_coefficient_list_l_2(1)%r, source = (/275D0/))
             ground_truth_uindex_list_l_2(1)%n = 0
 
-            allocate(ground_truth_coefficient_list_l_2(2)%dummy, source = (/275D0/))
+            allocate(ground_truth_coefficient_list_l_2(2)%r, source = (/275D0/))
             ground_truth_uindex_list_l_2(2)%n = 2
 
-            allocate(ground_truth_coefficient_list_l_2(3)%dummy, source = (/282D0/))
+            allocate(ground_truth_coefficient_list_l_2(3)%r, source = (/282D0/))
             ground_truth_uindex_list_l_2(3)%n = 8
 
-            allocate(ground_truth_coefficient_list_l_2(4)%dummy, source = (/310D0/))
+            allocate(ground_truth_coefficient_list_l_2(4)%r, source = (/310D0/))
             ground_truth_uindex_list_l_2(4)%n = 10
 
         end subroutine setup_ground_truth_D_coefficient_list_2D
@@ -1423,13 +1447,13 @@ module lib_ml_fmm
 
             allocate(vector_v(14))
             do i=11, 14
-                allocate(vector_v(i)%dummy(1))
+                allocate(vector_v(i)%r(1))
             end do
 
-            vector_v(11)%dummy(1) = 619
-            vector_v(12)%dummy(1) = 620
-            vector_v(13)%dummy(1) = 620
-            vector_v(14)%dummy(1) = 620
+            vector_v(11)%r(1) = 619
+            vector_v(12)%r(1) = 620
+            vector_v(13)%r(1) = 620
+            vector_v(14)%r(1) = 620
 
 
         end subroutine setup_ground_truth_final_summation_2D
@@ -1633,37 +1657,37 @@ module lib_ml_fmm
 
             ground_truth_uindex_list_l_3(:)%l = 3
 
-            allocate(ground_truth_coefficient_list_l_3(1)%dummy, source = (/0.0D0/))
+            allocate(ground_truth_coefficient_list_l_3(1)%r, source = (/0.0D0/))
             ground_truth_uindex_list_l_3(1)%n = 0
 
-            allocate(ground_truth_coefficient_list_l_3(2)%dummy, source = (/13D0/))
+            allocate(ground_truth_coefficient_list_l_3(2)%r, source = (/13D0/))
             ground_truth_uindex_list_l_3(2)%n = 13
 
-            allocate(ground_truth_coefficient_list_l_3(3)%dummy, source = (/49D0/))
+            allocate(ground_truth_coefficient_list_l_3(3)%r, source = (/49D0/))
             ground_truth_uindex_list_l_3(3)%n = 49
 
-            allocate(ground_truth_coefficient_list_l_3(4)%dummy, source = (/6D0/))
+            allocate(ground_truth_coefficient_list_l_3(4)%r, source = (/6D0/))
             ground_truth_uindex_list_l_3(4)%n = 6
 
-            allocate(ground_truth_coefficient_list_l_3(5)%dummy, source = (/63D0/))
+            allocate(ground_truth_coefficient_list_l_3(5)%r, source = (/63D0/))
             ground_truth_uindex_list_l_3(5)%n = 63
 
-            allocate(ground_truth_coefficient_list_l_3(6)%dummy, source = (/48D0/))
+            allocate(ground_truth_coefficient_list_l_3(6)%r, source = (/48D0/))
             ground_truth_uindex_list_l_3(6)%n = 48
 
-            allocate(ground_truth_coefficient_list_l_3(7)%dummy, source = (/61D0/))
+            allocate(ground_truth_coefficient_list_l_3(7)%r, source = (/61D0/))
             ground_truth_uindex_list_l_3(7)%n = 61
 
-            allocate(ground_truth_coefficient_list_l_3(8)%dummy, source = (/1D0/))
+            allocate(ground_truth_coefficient_list_l_3(8)%r, source = (/1D0/))
             ground_truth_uindex_list_l_3(8)%n = 1
 
-            allocate(ground_truth_coefficient_list_l_3(9)%dummy, source = (/54D0/))
+            allocate(ground_truth_coefficient_list_l_3(9)%r, source = (/54D0/))
             ground_truth_uindex_list_l_3(9)%n = 54
 
-            allocate(ground_truth_coefficient_list_l_3(10)%dummy, source = (/15D0/))
+            allocate(ground_truth_coefficient_list_l_3(10)%r, source = (/15D0/))
             ground_truth_uindex_list_l_3(10)%n = 15
 
-            allocate(ground_truth_coefficient_list_l_3(11)%dummy, source = (/42D0/))
+            allocate(ground_truth_coefficient_list_l_3(11)%r, source = (/42D0/))
             ground_truth_uindex_list_l_3(11)%n = 42
 
 
@@ -1671,25 +1695,25 @@ module lib_ml_fmm
             allocate(ground_truth_uindex_list_l_2(7))
             ground_truth_uindex_list_l_2(:)%l = 2
 
-            allocate(ground_truth_coefficient_list_l_2(1)%dummy, source = (/1D0/))
+            allocate(ground_truth_coefficient_list_l_2(1)%r, source = (/1D0/))
             ground_truth_uindex_list_l_2(1)%n = 0
 
-            allocate(ground_truth_coefficient_list_l_2(2)%dummy, source = (/6D0/))
+            allocate(ground_truth_coefficient_list_l_2(2)%r, source = (/6D0/))
             ground_truth_uindex_list_l_2(2)%n = 1
 
-            allocate(ground_truth_coefficient_list_l_2(3)%dummy, source = (/28D0/))
+            allocate(ground_truth_coefficient_list_l_2(3)%r, source = (/28D0/))
             ground_truth_uindex_list_l_2(3)%n = 3
 
-            allocate(ground_truth_coefficient_list_l_2(4)%dummy, source = (/97D0/))
+            allocate(ground_truth_coefficient_list_l_2(4)%r, source = (/97D0/))
             ground_truth_uindex_list_l_2(4)%n = 12
 
-            allocate(ground_truth_coefficient_list_l_2(5)%dummy, source = (/54D0/))
+            allocate(ground_truth_coefficient_list_l_2(5)%r, source = (/54D0/))
             ground_truth_uindex_list_l_2(5)%n = 13
 
-            allocate(ground_truth_coefficient_list_l_2(6)%dummy, source = (/124D0/))
+            allocate(ground_truth_coefficient_list_l_2(6)%r, source = (/124D0/))
             ground_truth_uindex_list_l_2(6)%n = 15
 
-            allocate(ground_truth_coefficient_list_l_2(7)%dummy, source = (/42D0/))
+            allocate(ground_truth_coefficient_list_l_2(7)%r, source = (/42D0/))
             ground_truth_uindex_list_l_2(7)%n = 10
 
         end subroutine setup_ground_truth_C_coefficient_list_2D_2
@@ -1713,22 +1737,22 @@ module lib_ml_fmm
 
             ground_truth_uindex_list_l_3(:)%l = 3
 
-            allocate(ground_truth_coefficient_list_l_3(1)%dummy, source = (/34D0/))
+            allocate(ground_truth_coefficient_list_l_3(1)%r, source = (/34D0/))
             ground_truth_uindex_list_l_3(1)%n = 2
 
-            allocate(ground_truth_coefficient_list_l_3(2)%dummy, source = (/35D0/))
+            allocate(ground_truth_coefficient_list_l_3(2)%r, source = (/35D0/))
             ground_truth_uindex_list_l_3(2)%n = 10
 
-            allocate(ground_truth_coefficient_list_l_3(3)%dummy, source = (/70D0/))
+            allocate(ground_truth_coefficient_list_l_3(3)%r, source = (/70D0/))
             ground_truth_uindex_list_l_3(3)%n = 34
 
-            allocate(ground_truth_coefficient_list_l_3(4)%dummy, source = (/0D0/))
+            allocate(ground_truth_coefficient_list_l_3(4)%r, source = (/0D0/))
             ground_truth_uindex_list_l_3(4)%n = 42
 
-            allocate(ground_truth_coefficient_list_l_3(5)%dummy, source = (/28D0/))
+            allocate(ground_truth_coefficient_list_l_3(5)%r, source = (/28D0/))
             ground_truth_uindex_list_l_3(5)%n = 1
 
-            allocate(ground_truth_coefficient_list_l_3(6)%dummy, source = (/272D0/))
+            allocate(ground_truth_coefficient_list_l_3(6)%r, source = (/272D0/))
             ground_truth_uindex_list_l_3(6)%n = 54
 
 
@@ -1736,19 +1760,19 @@ module lib_ml_fmm
             allocate(ground_truth_uindex_list_l_2(5))
             ground_truth_uindex_list_l_2(:)%l = 2
 
-            allocate(ground_truth_coefficient_list_l_2(1)%dummy, source = (/317D0/))
+            allocate(ground_truth_coefficient_list_l_2(1)%r, source = (/317D0/))
             ground_truth_uindex_list_l_2(1)%n = 0
 
-            allocate(ground_truth_coefficient_list_l_2(2)%dummy, source = (/317D0/))
+            allocate(ground_truth_coefficient_list_l_2(2)%r, source = (/317D0/))
             ground_truth_uindex_list_l_2(2)%n = 2
 
-            allocate(ground_truth_coefficient_list_l_2(3)%dummy, source = (/324D0/))
+            allocate(ground_truth_coefficient_list_l_2(3)%r, source = (/324D0/))
             ground_truth_uindex_list_l_2(3)%n = 8
 
-            allocate(ground_truth_coefficient_list_l_2(4)%dummy, source = (/352D0/))
+            allocate(ground_truth_coefficient_list_l_2(4)%r, source = (/352D0/))
             ground_truth_uindex_list_l_2(4)%n = 10
 
-            allocate(ground_truth_coefficient_list_l_2(5)%dummy, source = (/77D0/))
+            allocate(ground_truth_coefficient_list_l_2(5)%r, source = (/77D0/))
             ground_truth_uindex_list_l_2(5)%n = 13
 
         end subroutine setup_ground_truth_D_tilde_coefficient_list_2D_2
@@ -1772,22 +1796,22 @@ module lib_ml_fmm
 
             ground_truth_uindex_list_l_3(:)%l = 3
 
-            allocate(ground_truth_coefficient_list_l_3(1)%dummy, source = (/351D0/))
+            allocate(ground_truth_coefficient_list_l_3(1)%r, source = (/351D0/))
             ground_truth_uindex_list_l_3(1)%n = 2
 
-            allocate(ground_truth_coefficient_list_l_3(2)%dummy, source = (/352D0/))
+            allocate(ground_truth_coefficient_list_l_3(2)%r, source = (/352D0/))
             ground_truth_uindex_list_l_3(2)%n = 10
 
-            allocate(ground_truth_coefficient_list_l_3(3)%dummy, source = (/394D0/))
+            allocate(ground_truth_coefficient_list_l_3(3)%r, source = (/394D0/))
             ground_truth_uindex_list_l_3(3)%n = 34
 
-            allocate(ground_truth_coefficient_list_l_3(4)%dummy, source = (/352D0/))
+            allocate(ground_truth_coefficient_list_l_3(4)%r, source = (/352D0/))
             ground_truth_uindex_list_l_3(4)%n = 42
 
-            allocate(ground_truth_coefficient_list_l_3(5)%dummy, source = (/345D0/))
+            allocate(ground_truth_coefficient_list_l_3(5)%r, source = (/345D0/))
             ground_truth_uindex_list_l_3(5)%n = 1
 
-            allocate(ground_truth_coefficient_list_l_3(6)%dummy, source = (/349D0/))
+            allocate(ground_truth_coefficient_list_l_3(6)%r, source = (/349D0/))
             ground_truth_uindex_list_l_3(6)%n = 54
 
 
@@ -1795,19 +1819,19 @@ module lib_ml_fmm
             allocate(ground_truth_uindex_list_l_2(5))
             ground_truth_uindex_list_l_2(:)%l = 2
 
-            allocate(ground_truth_coefficient_list_l_2(1)%dummy, source = (/317D0/))
+            allocate(ground_truth_coefficient_list_l_2(1)%r, source = (/317D0/))
             ground_truth_uindex_list_l_2(1)%n = 0
 
-            allocate(ground_truth_coefficient_list_l_2(2)%dummy, source = (/317D0/))
+            allocate(ground_truth_coefficient_list_l_2(2)%r, source = (/317D0/))
             ground_truth_uindex_list_l_2(2)%n = 2
 
-            allocate(ground_truth_coefficient_list_l_2(3)%dummy, source = (/324D0/))
+            allocate(ground_truth_coefficient_list_l_2(3)%r, source = (/324D0/))
             ground_truth_uindex_list_l_2(3)%n = 8
 
-            allocate(ground_truth_coefficient_list_l_2(4)%dummy, source = (/352D0/))
+            allocate(ground_truth_coefficient_list_l_2(4)%r, source = (/352D0/))
             ground_truth_uindex_list_l_2(4)%n = 10
 
-            allocate(ground_truth_coefficient_list_l_2(5)%dummy, source = (/77D0/))
+            allocate(ground_truth_coefficient_list_l_2(5)%r, source = (/77D0/))
             ground_truth_uindex_list_l_2(5)%n = 13
 
         end subroutine setup_ground_truth_D_coefficient_list_2D_2
@@ -1822,15 +1846,15 @@ module lib_ml_fmm
 
             allocate(vector_v(14))
             do i=11, 14
-                allocate(vector_v(i)%dummy(1))
+                allocate(vector_v(i)%r(1))
             end do
 
-            vector_v(11)%dummy(1) = 703
-            vector_v(12)%dummy(1) = 704
-            vector_v(13)%dummy(1) = 788
-            vector_v(14)%dummy(1) = 696
-            vector_v(15)%dummy(1) = 704
-            vector_v(16)%dummy(1) = 808
+            vector_v(11)%r(1) = 703
+            vector_v(12)%r(1) = 704
+            vector_v(13)%r(1) = 788
+            vector_v(14)%r(1) = 696
+            vector_v(15)%r(1) = 704
+            vector_v(16)%r(1) = 808
 
 
         end subroutine setup_ground_truth_final_summation_2D_2
@@ -1984,7 +2008,7 @@ module lib_ml_fmm
 !            allocate(dummy(1))
 !            dummy(1) = 1.0
 !            do i=1, size(vector_u)
-!                vector_u(i)%dummy = dummy
+!                vector_u(i)%r = dummy
 !            end do
 !
 !            allocate(vector_v, source = lib_ml_fmm_run(vector_u))
@@ -2023,7 +2047,7 @@ module lib_ml_fmm
             allocate(dummy(1))
             dummy(1) = 1.0
             do i=1, size(vector_u)
-                vector_u(i)%dummy = dummy
+                vector_u(i)%r = dummy
             end do
 
             if (allocated(m_ml_fmm_u)) then
@@ -2109,7 +2133,7 @@ module lib_ml_fmm
             allocate(dummy(1))
             dummy(1) = 1.0
             do i=1, size(vector_u)
-                vector_u(i)%dummy = dummy
+                vector_u(i)%r = dummy
             end do
 
             if (allocated(m_ml_fmm_u)) then
@@ -2195,7 +2219,7 @@ module lib_ml_fmm
             allocate(dummy(1))
             dummy(1) = 1.0
             do i=1, size(vector_u)
-                vector_u(i)%dummy = dummy
+                vector_u(i)%r = dummy
             end do
 
             if (allocated(m_ml_fmm_u)) then
@@ -2275,7 +2299,7 @@ module lib_ml_fmm
             allocate(dummy(1))
             dummy(1) = 1.0
             do i=1, size(vector_u)
-                vector_u(i)%dummy = dummy
+                vector_u(i)%r = dummy
             end do
 
             if (allocated(m_ml_fmm_u)) then
@@ -2300,15 +2324,15 @@ module lib_ml_fmm
 
             print *, "test_lib_ml_fmm_final_summation"
             do i=1, size(ground_truth_vector_v)
-                if (allocated(m_ml_fmm_v(i)%dummy)) then
-                    diff = m_ml_fmm_v(i)%dummy(1) - ground_truth_vector_v(i)%dummy(1)
+                if (allocated(m_ml_fmm_v(i)%r)) then
+                    diff = m_ml_fmm_v(i)%r(1) - ground_truth_vector_v(i)%r(1)
                     if ( diff .lt. 1D-14 ) then
                         print *, "  m_ml_fmm_v(i=", i, "):  OK"
                     else
                         rv = .false.
                         print *, "  m_ml_fmm_v(i=", i, "):  FAILED"
-                        print *, "    m_ml_fmm_v: ", m_ml_fmm_v(i)%dummy(1)
-                        print *, "    GT        : ", ground_truth_vector_v(i)%dummy(1)
+                        print *, "    m_ml_fmm_v: ", m_ml_fmm_v(i)%r(1)
+                        print *, "    GT        : ", ground_truth_vector_v(i)%r(1)
                     end if
                 end if
             end do
@@ -2351,7 +2375,7 @@ module lib_ml_fmm
             allocate(dummy(1))
             dummy(1) = 1.0
             do i=1, size(vector_u)
-                vector_u(i)%dummy = dummy
+                vector_u(i)%r = dummy
             end do
 
             if (allocated(m_ml_fmm_u)) then
@@ -2437,7 +2461,7 @@ module lib_ml_fmm
             allocate(dummy(1))
             dummy(1) = 1.0
             do i=1, size(vector_u)
-                vector_u(i)%dummy = dummy
+                vector_u(i)%r = dummy
             end do
 
             if (allocated(m_ml_fmm_u)) then
@@ -2523,7 +2547,7 @@ module lib_ml_fmm
             allocate(dummy(1))
             dummy(1) = 1.0
             do i=1, size(vector_u)
-                vector_u(i)%dummy = dummy
+                vector_u(i)%r = dummy
             end do
 
             if (allocated(m_ml_fmm_u)) then
@@ -2603,7 +2627,7 @@ module lib_ml_fmm
             allocate(dummy(1))
             dummy(1) = 1.0
             do i=1, size(vector_u)
-                vector_u(i)%dummy = dummy
+                vector_u(i)%r = dummy
             end do
 
             if (allocated(m_ml_fmm_u)) then
@@ -2628,15 +2652,15 @@ module lib_ml_fmm
 
             print *, "test_lib_ml_fmm_final_summation_v2"
             do i=1, size(ground_truth_vector_v)
-                if (allocated(m_ml_fmm_v(i)%dummy)) then
-                    diff = m_ml_fmm_v(i)%dummy(1) - ground_truth_vector_v(i)%dummy(1)
+                if (allocated(m_ml_fmm_v(i)%r)) then
+                    diff = m_ml_fmm_v(i)%r(1) - ground_truth_vector_v(i)%r(1)
                     if ( diff .lt. 1D-14 ) then
                         print *, "  m_ml_fmm_v(i=", i, "):  OK"
                     else
                         rv = .false.
                         print *, "  m_ml_fmm_v(i=", i, "):  FAILED"
-                        print *, "    m_ml_fmm_v: ", m_ml_fmm_v(i)%dummy(1)
-                        print *, "    GT        : ", ground_truth_vector_v(i)%dummy(1)
+                        print *, "    m_ml_fmm_v: ", m_ml_fmm_v(i)%r(1)
+                        print *, "    GT        : ", ground_truth_vector_v(i)%r(1)
                     end if
                 end if
             end do

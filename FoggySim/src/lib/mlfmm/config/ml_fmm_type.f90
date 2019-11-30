@@ -20,7 +20,8 @@ module ml_fmm_type
     type lib_ml_fmm_v
         type(list_list_cmplx) :: a_nm
         type(list_list_cmplx) :: b_nm
-        real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
+        real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: r
+        complex(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: c
     end type
 
     ! e.g. A, B, C or D coefficient
@@ -44,60 +45,9 @@ module ml_fmm_type
     type lib_ml_fmm_coefficient
         type(list_list_cmplx) :: a_nm
         type(list_list_cmplx) :: b_nm
-        real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
+        real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: r
+        complex(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: c
     end type
-
-!    ! e.g. A, B, C or D coefficient
-!    ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, p. 6
-!    !
-!    !                   -----
-!    !                   | 0 |                 l = 0
-!    !                   -----
-!    !         -----               -----
-!    !         | 0 |               | 1 |       l = 1
-!    !         -----               -----
-!    !    -----     -----     -----     -----
-!    !    | 0 |     | 1 |     | 2 |     | 3 |  l = 2    <--
-!    !    -----     -----     -----     -----
-!    !
-!    ! list of coefficients of the boxes at a specific level
-!    !   e.g. ([0,3], 2): C_list = ( C(0,2), C(1,2), C(2,2), C(3,2) )
-!    type lib_ml_fmm_coefficient_list
-!        type(lib_ml_fmm_coefficient), dimension(:), allocatable :: dummy
-!    end type
-!
-!    ! e.g. A, B, C or D coefficient
-!    ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, p. 6
-!    !
-!    !                   -----
-!    !                   | 0 |                 l = 0    <--
-!    !                   -----
-!    !         -----               -----
-!    !         | 0 |               | 1 |       l = 1    <--
-!    !         -----               -----
-!    !    -----     -----     -----     -----
-!    !    | 0 |     | 1 |     | 2 |     | 3 |  l = 2    <--
-!    !    -----     -----     -----     -----
-!    !
-!    ! list of coefficients of all boxes at a level gathered in a list
-!    !   e.g. (n, [2,0]): C_list_list = ( C([0,3],2), C([0,1],1), C(0,0) )
-!    type lib_ml_fmm_coefficient_list_list
-!        type(lib_ml_fmm_coefficient_list), dimension(:), allocatable :: dummy
-!    end type
-
-    ! values of the local (regular) basis function
-    type lib_ml_fmm_R
-        real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
-    end type
-
-!    ! values of the multipole (singular) basis function
-!    type lib_ml_fmm_S
-!        real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: dummy
-!    end type
-
-!    type lib_ml_fmm_uindex_list
-!        type(lib_tree_universal_index), dimension(:), allocatable :: uindex
-!    end type
 
     type lib_ml_fmm_hashed_coeffcient_index
         integer(kind=UINDEX_BYTES) :: array_position
