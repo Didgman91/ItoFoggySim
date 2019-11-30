@@ -1,7 +1,6 @@
 module lib_scene_generator
     use libmath
     use lib_scene_type
-    use lib_scene_helper_functions
     implicit none
 
     private
@@ -90,6 +89,7 @@ module lib_scene_generator
             type(lib_scene_object_hcp_cuboid_type) :: rv
 
             ! auxiliary
+            integer :: x
             integer :: i
             integer :: j
             integer :: k
@@ -121,13 +121,15 @@ module lib_scene_generator
             offset = make_cartesian(0d0, 0d0, 0d0)
             offset = offset - lib_scene_gerator_hcp_lattice(max_i, max_j, max_k, sphere_radius) / 2d0
 
-            allocate(rv%hcp_lattice_coordiantes(0:max_i, 0:max_j, 0:max_k))
+            allocate(rv%hcp_lattice_coordiantes((max_i+1) * (max_j+1) * (max_k+1)))
 
+            x = 0
             do i = 0, max_i
                 do j = 0, max_j
                     do k = 0, max_k
-                        rv%hcp_lattice_coordiantes(i, j, k) = lib_scene_gerator_hcp_lattice(i, j, k, sphere_radius) &
-                                                              + offset
+                        x = x + 1
+                        rv%hcp_lattice_coordiantes(x) = lib_scene_gerator_hcp_lattice(i, j, k, sphere_radius) &
+                                                        + offset
                     end do
                 end do
             end do
@@ -203,12 +205,8 @@ module lib_scene_generator
 
             ! auxiliary
             integer :: i
-            integer :: j
-            integer :: k
 
             integer, dimension(2):: i_range
-            integer, dimension(2):: j_range
-            integer, dimension(2):: k_range
 
             type(spherical_coordinate_real_type) :: spherical_coord
 
@@ -235,38 +233,27 @@ module lib_scene_generator
             i_range(1) = lbound(rv%hcp_cuboid%hcp_lattice_coordiantes, 1)
             i_range(2) = ubound(rv%hcp_cuboid%hcp_lattice_coordiantes, 1)
 
-            j_range(1) = lbound(rv%hcp_cuboid%hcp_lattice_coordiantes, 2)
-            j_range(2) = ubound(rv%hcp_cuboid%hcp_lattice_coordiantes, 2)
 
-            k_range(1) = lbound(rv%hcp_cuboid%hcp_lattice_coordiantes, 3)
-            k_range(2) = ubound(rv%hcp_cuboid%hcp_lattice_coordiantes, 3)
+            allocate (rv%inside_sphere(i_range(1):i_range(2)))
 
-            allocate (rv%inside_sphere(i_range(1):i_range(2), &
-                                       j_range(1):j_range(2), &
-                                       k_range(1):k_range(2)))
-
-            !$OMP PARALLEL DO PRIVATE(i, j, k, spherical_coord, distance)
+            !$OMP PARALLEL DO PRIVATE(i, spherical_coord, distance)
             do i = i_range(1), i_range(2)
-                do j = j_range(1), j_range(2)
-                    do k = k_range(1), k_range(2)
-                        spherical_coord = rv%hcp_cuboid%hcp_lattice_coordiantes(i, j, k)
-                        if ( spherical_coord%rho .lt. sphere_radius - lattice_sphere_radius / 2d0) then
-                            if (use_spherical_cap) then
-                                distance = dot_product(rv%hcp_cuboid%hcp_lattice_coordiantes(i, j, k) - cap_plane_point, &
-                                                       cap_plane_normal)
-                                if (distance .lt. 0d0) then
-                                    rv%inside_sphere(i,j,k) = .true.
-                                else
-                                    rv%inside_sphere(i,j,k) = .false.
-                                end if
-                            else
-                                rv%inside_sphere(i,j,k) = .true.
-                            end if
+                spherical_coord = rv%hcp_cuboid%hcp_lattice_coordiantes(i)
+                if ( spherical_coord%rho .lt. sphere_radius - lattice_sphere_radius / 2d0) then
+                    if (use_spherical_cap) then
+                        distance = dot_product(rv%hcp_cuboid%hcp_lattice_coordiantes(i) - cap_plane_point, &
+                                               cap_plane_normal)
+                        if (distance .lt. 0d0) then
+                            rv%inside_sphere(i) = .true.
                         else
-                            rv%inside_sphere(i,j,k) = .false.
+                            rv%inside_sphere(i) = .false.
                         end if
-                    end do
-                end do
+                    else
+                        rv%inside_sphere(i) = .true.
+                    end if
+                else
+                    rv%inside_sphere(i) = .false.
+                end if
             end do
             !$OMP END PARALLEL DO
 
@@ -300,6 +287,7 @@ module lib_scene_generator
 
                     ! auxiliary
                     integer :: i
+                    integer, dimension(2) :: range_i
 
                     double precision, dimension(:,:), allocatable :: data_list
                     type(cartesian_coordinate_real_type), dimension(:), allocatable :: coordinates
@@ -325,16 +313,15 @@ module lib_scene_generator
                     d_o_j = make_cartesian(0d0, 0d0, 0d0)
                     hcp_cuboid = lib_scene_generator_hcp_lattice_fill_cuboid(d_o_j, size_x, size_y, size_z, sphere_radius)
 
+                    range_i(1) = lbound(hcp_cuboid%hcp_lattice_coordiantes, 1)
+                    range_i(2) = ubound(hcp_cuboid%hcp_lattice_coordiantes, 1)
 
-                    coordinates = make_coordinate_list_1d(reshape(hcp_cuboid%hcp_lattice_coordiantes, &
-                                                          (/ size(hcp_cuboid%hcp_lattice_coordiantes) /)))
+                    allocate(data_list(range_i(1):range_i(2), 3))
 
-                    allocate(data_list(size(coordinates), 3))
-
-                    do i = 1, size(coordinates)
-                        data_list(i, 1) = coordinates(i)%x
-                        data_list(i, 2) = coordinates(i)%y
-                        data_list(i, 3) = coordinates(i)%z
+                    do i = range_i(1), range_i(2)
+                        data_list(i, 1) = hcp_cuboid%hcp_lattice_coordiantes(i)%x
+                        data_list(i, 2) = hcp_cuboid%hcp_lattice_coordiantes(i)%y
+                        data_list(i, 3) = hcp_cuboid%hcp_lattice_coordiantes(i)%z
                     end do
 
                     u = 99
@@ -353,6 +340,7 @@ module lib_scene_generator
 
                     ! auxiliary
                     integer :: i
+                    integer, dimension(2) :: range_i
 
                     double precision, dimension(:,:), allocatable :: data_list
                     type(cartesian_coordinate_real_type), dimension(:), allocatable :: coordinates
@@ -370,24 +358,25 @@ module lib_scene_generator
                     integer :: u
                     character(len=50) :: filename
 
-                    sphere_radius = 10 !* unit_mu
-                    lattice_sphere_radius = 1! * unit_mu
+                    sphere_radius = 0.5 * unit_mu
+                    lattice_sphere_radius = 15.5 * unit_nm
                     d_o_j = make_cartesian(0d0, 0d0, 0d0)
 
-                    cap_plane_point = make_cartesian(0d0, 0d0, 5d0)
-                    cap_plane_normal = make_cartesian(1d0, 0d0, 1d0)
+                    cap_plane_point = make_cartesian(0d0, 0d0, 0d0)
+                    cap_plane_normal = make_cartesian(0d0, 0d0, -1d0)
 
                     hcp_sphere = lib_scene_generator_hcp_lattice_fill_sphere(d_o_j, sphere_radius, lattice_sphere_radius, &
                                                                              cap_plane_point, cap_plane_normal)
 
-                    coordinates = make_coordinate_list_1d(reshape(hcp_sphere%hcp_cuboid%hcp_lattice_coordiantes, &
-                                                                  (/ size(hcp_sphere%hcp_cuboid%hcp_lattice_coordiantes) /)), &
-                                                          reshape(hcp_sphere%inside_sphere, &
-                                                                  (/ size(hcp_sphere%inside_sphere) /)))
+                    coordinates = list_filter(hcp_sphere%hcp_cuboid%hcp_lattice_coordiantes, &
+                                              hcp_sphere%inside_sphere)
 
-                    allocate(data_list(size(coordinates), 3))
+                    range_i(1) = lbound(coordinates, 1)
+                    range_i(2) = ubound(coordinates, 1)
 
-                    do i = 1, size(coordinates)
+                    allocate(data_list(range_i(1):range_i(2), 3))
+
+                    do i = range_i(1), range_i(2)
                         data_list(i, 1) = coordinates(i)%x
                         data_list(i, 2) = coordinates(i)%y
                         data_list(i, 3) = coordinates(i)%z

@@ -44,7 +44,7 @@ module lib_scene_type
     type lib_scene_object_hcp_cuboid_type
         type(cartesian_coordinate_real_type) :: d_o_j
         double precision :: sphere_radius
-        type(cartesian_coordinate_real_type), dimension(:,:,:), allocatable :: hcp_lattice_coordiantes
+        type(cartesian_coordinate_real_type), dimension(:), allocatable :: hcp_lattice_coordiantes
     end type
 
     !
@@ -65,7 +65,7 @@ module lib_scene_type
     type lib_scene_object_hcp_sphere_type
         type(cartesian_coordinate_real_type) :: d_o_j
         type(lib_scene_object_hcp_cuboid_type) :: hcp_cuboid
-        logical, dimension(:,:,:), allocatable :: inside_sphere
+        logical, dimension(:), allocatable :: inside_sphere
     end type
 
     !                 z
