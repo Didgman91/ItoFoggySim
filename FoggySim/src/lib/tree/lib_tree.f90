@@ -183,7 +183,7 @@ module lib_tree
 #ifdef _DEBUG_
             call cpu_time(start)
 #endif
-            call lib_tree_create_correspondece_vector_sorted_data_elements()
+            call lib_tree_create_correspondece_vector_sorted_data_elements(.true.)
 #ifdef _DEBUG_
             call cpu_time(finish)
             cpu_time_delta(3) = finish - start
@@ -194,6 +194,7 @@ module lib_tree
             length = 3
 #endif
             l_max = lib_tree_get_level_max(s)
+            call lib_tree_create_correspondece_vector_sorted_data_elements()
             if ( l_max .lt. threshold_level ) then
 #ifdef _DEBUG_
                 call cpu_time(finish)
@@ -1180,7 +1181,7 @@ module lib_tree
         integer(kind=CORRESPONDENCE_VECTOR_KIND) :: buffer_index
 
         if (allocated(lib_tree_correspondence_vector_sorted_data_elements)) then
-            N = size(lib_tree_data_element_list)
+            N = size(lib_tree_correspondence_vector_sorted_data_elements)
             l_max = 1
             Bit_max = lib_tree_l_th
 
@@ -1278,32 +1279,68 @@ module lib_tree
 
     ! This routine stores references (list entries) of the lib_tree_data_element_list array.
     ! These references are sorted into ascending numerical order of the universal index.
-    subroutine lib_tree_create_correspondece_vector_sorted_data_elements()
+    subroutine lib_tree_create_correspondece_vector_sorted_data_elements(ignore_hierarchy_y)
         implicit none
+        ! dummy
+        logical, intent(in), optional :: ignore_hierarchy_y
 
         ! auxiliray
         integer(kind=UINDEX_BYTES), dimension(:), allocatable :: uindex_list
         integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: uindex_old_position_list
         integer(kind=CORRESPONDENCE_VECTOR_KIND) :: i
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: x
 
         if (allocated(lib_tree_data_element_list) .and. allocated(lib_tree_correspondence_vector)) then
-            i = size(lib_tree_data_element_list)
-            if (allocated(lib_tree_correspondence_vector_sorted_data_elements)) then
-                deallocate(lib_tree_correspondence_vector_sorted_data_elements)
+            if (present(ignore_hierarchy_y)) then
+
+                i = 0
+                do x = 1, size(lib_tree_data_element_list)
+                    if (lib_tree_data_element_list(x)%hierarchy .ne. HIERARCHY_Y) then
+                        i = i + 1
+                    end if
+                end do
+
+                if (allocated(lib_tree_correspondence_vector_sorted_data_elements)) then
+                    deallocate(lib_tree_correspondence_vector_sorted_data_elements)
+                end if
+                allocate (lib_tree_correspondence_vector_sorted_data_elements(i))
+
+                allocate (uindex_list(i))
+                allocate (uindex_old_position_list(i))
+
+                ! get uindex list
+                i = 0
+                do x = 1, size(lib_tree_data_element_list)
+                    if (lib_tree_data_element_list(x)%hierarchy .ne. HIERARCHY_Y) then
+                        i = i + 1
+                        uindex_list(i) = lib_tree_data_element_list(x)%uindex%n
+                    end if
+                end do
+
+                call lib_sort_hpsort_integer(size(uindex_list), uindex_list, uindex_old_position_list)
+
+                call move_alloc(uindex_old_position_list, lib_tree_correspondence_vector_sorted_data_elements)
+                ! clean up
+                deallocate (uindex_list)
+            else
+                i = size(lib_tree_data_element_list)
+                if (allocated(lib_tree_correspondence_vector_sorted_data_elements)) then
+                    deallocate(lib_tree_correspondence_vector_sorted_data_elements)
+                end if
+                allocate (lib_tree_correspondence_vector_sorted_data_elements(i))
+
+                allocate (uindex_list(i))
+                allocate (uindex_old_position_list(i))
+
+                ! get uindex list
+                uindex_list(:) = lib_tree_data_element_list(:)%uindex%n
+
+                call lib_sort_hpsort_integer(i, uindex_list, uindex_old_position_list)
+
+                call move_alloc(uindex_old_position_list, lib_tree_correspondence_vector_sorted_data_elements)
+                ! clean up
+                deallocate (uindex_list)
             end if
-            allocate (lib_tree_correspondence_vector_sorted_data_elements(i))
-
-            allocate (uindex_list(i))
-            allocate (uindex_old_position_list(i))
-
-            ! get uindex list
-            uindex_list(:) = lib_tree_data_element_list(:)%uindex%n
-
-            call lib_sort_hpsort_integer(i, uindex_list, uindex_old_position_list)
-
-            call move_alloc(uindex_old_position_list, lib_tree_correspondence_vector_sorted_data_elements)
-            ! clean up
-            deallocate (uindex_list)
         end if
 
     end subroutine lib_tree_create_correspondece_vector_sorted_data_elements

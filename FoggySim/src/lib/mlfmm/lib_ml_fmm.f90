@@ -1,4 +1,4 @@
-!#define _TRACE_
+#define _TRACE_
 
 #define _FMM_DIMENSION_ 3
 
@@ -21,6 +21,7 @@ module lib_ml_fmm
     public :: lib_ml_fmm_destructor
     public :: lib_ml_fmm_run
     public :: lib_ml_fmm_final_summation
+    public :: lib_ml_fmm_get_vector_v
 
     public :: lib_ml_fmm_test_functions
 
@@ -36,6 +37,8 @@ module lib_ml_fmm
     integer(kind=4) :: m_tree_s_opt
     integer(kind=1) :: m_tree_l_min
     integer(kind=1) :: m_tree_l_max
+
+    integer(kind=UINDEX_BYTES), dimension(3) :: m_data_element_hierarchy_type_length
 
     logical :: m_final_sum_calc_y_hierarchy
     logical :: m_final_sum_calc_xy_hierarchy
@@ -79,6 +82,7 @@ module lib_ml_fmm
         !   length(3) = size(data_elements%XY)
         allocate(data_concatenated, source=lib_ml_fmm_concatenate_data_array(data_elements, length))
 
+        m_data_element_hierarchy_type_length = length
 
         m_tree_s_opt = 1
         if (present(tree_s_opt)) m_tree_s_opt = tree_s_opt
@@ -229,6 +233,15 @@ module lib_ml_fmm
 
     end subroutine lib_ml_fmm_run
 
+    function lib_ml_fmm_get_vector_v() result(rv)
+        implicit none
+        ! dummy
+        type(lib_ml_fmm_v), dimension(:), allocatable :: rv
+
+        allocate(rv, source=m_ml_fmm_v)
+
+    end function
+
     ! Concatenates the arrays at the data_elements to one array of the type lib_tree_data_element
     !
     ! Argument
@@ -295,15 +308,39 @@ module lib_ml_fmm
 
     subroutine lib_ml_fmm_calculate_upward_pass()
         implicit none
+#ifdef _TRACE_
+        ! CPU-time
+        real :: test_start_sub, test_finish_sub
+        ! WALL-time
+        INTEGER :: test_count_start_sub, test_count_finish_sub, test_count_rate_sub
+
+        call system_clock(test_count_start_sub, test_count_rate_sub)
+        call cpu_time(test_start_sub)
+#endif
 
         call lib_ml_fmm_calculate_upward_pass_step_1()
 #ifdef _TRACE_
+        call cpu_time(test_finish_sub)
+        call system_clock(test_count_finish_sub, test_count_rate_sub)
+
         print *, "TRACE: lib_ml_fmm_calculate_upward_pass_step_1 ..done"
+        print '("    CPU-Time = ",f10.3," seconds.")', test_finish_sub-test_start_sub
+        print '("    WALL-Time = ",f10.3," seconds.")', (test_count_finish_sub-test_count_start_sub) &
+                                                       / real(test_count_rate_sub)
+
+        call system_clock(test_count_start_sub, test_count_rate_sub)
+        call cpu_time(test_start_sub)
 #endif
 
         call lib_ml_fmm_calculate_upward_pass_step_2()
 #ifdef _TRACE_
+        call cpu_time(test_finish_sub)
+        call system_clock(test_count_finish_sub, test_count_rate_sub)
+
         print *, "TRACE: lib_ml_fmm_calculate_upward_pass_step_2 ..done"
+        print '("    CPU-Time = ",f10.3," seconds.")', test_finish_sub-test_start_sub
+        print '("    WALL-Time = ",f10.3," seconds.")', (test_count_finish_sub-test_count_start_sub) &
+                                                       / real(test_count_rate_sub)
 #endif
     end subroutine
 
@@ -402,6 +439,7 @@ module lib_ml_fmm
 
         type(lib_tree_data_element), dimension(:), allocatable :: data_element
         integer(kind=4), dimension(:), allocatable :: element_number
+        integer(kind=4) :: m_element_number
 
         type(lib_tree_spatial_point) :: x_c
 
@@ -415,8 +453,20 @@ module lib_ml_fmm
             ignore_box = .false.
             x_c = lib_tree_get_centre_of_box(uindex)
             do i=1, size(data_element)
-!                buffer_C_i = m_ml_fmm_u(element_number(i)) * m_ml_fmm_handles%get_B_i(x_c, data_element(i))
-                buffer_C_i = m_ml_fmm_handles%get_u_B_i(x_c, data_element(i), element_number(i))
+
+                if (data_element(i)%hierarchy .eq. HIERARCHY_X) then
+                    m_element_number = element_number(i)
+                else if (data_element(i)%hierarchy .eq. HIERARCHY_XY) then
+                    m_element_number = element_number(i) &
+                                       - int(sum(m_data_element_hierarchy_type_length(HIERARCHY_X:HIERARCHY_Y)), &
+                                             CORRESPONDENCE_VECTOR_KIND)
+                else
+                    exit
+!                    print *, "lib_ml_fmm_get_C_i_from_elements_at_box: ERROR"
+!                    print *, "  Wrong hierarchy of data element", i, " :", data_element(i)%hierarchy
+                end if
+
+                buffer_C_i = m_ml_fmm_handles%get_u_B_i(x_c, data_element(i), m_element_number)
                 C_i = C_i + buffer_C_i
             end do
         else
@@ -556,15 +606,40 @@ module lib_ml_fmm
 
     subroutine lib_ml_fmm_calculate_downward_pass
         implicit none
+#ifdef _TRACE_
+        ! CPU-time
+        real :: test_start_sub, test_finish_sub
+        ! WALL-time
+        INTEGER :: test_count_start_sub, test_count_finish_sub, test_count_rate_sub
+
+        call system_clock(test_count_start_sub, test_count_rate_sub)
+        call cpu_time(test_start_sub)
+#endif
 
         call lib_ml_fmm_calculate_downward_pass_step_1()
 #ifdef _TRACE_
+        call cpu_time(test_finish_sub)
+        call system_clock(test_count_finish_sub, test_count_rate_sub)
+
         print *, "TRACE: lib_ml_fmm_calculate_downward_pass_step_1 ..done"
+        print '("    CPU-Time = ",f10.3," seconds.")', test_finish_sub-test_start_sub
+        print '("    WALL-Time = ",f10.3," seconds.")', (test_count_finish_sub-test_count_start_sub) &
+                                                       / real(test_count_rate_sub)
+
+        call system_clock(test_count_start_sub, test_count_rate_sub)
+        call cpu_time(test_start_sub)
+
 #endif
 
         call lib_ml_fmm_calculate_downward_pass_step_2()
 #ifdef _TRACE_
+        call cpu_time(test_finish_sub)
+        call system_clock(test_count_finish_sub, test_count_rate_sub)
+
         print *, "TRACE: lib_ml_fmm_calculate_downward_pass_step_2 ..done"
+        print '("    CPU-Time = ",f10.3," seconds.")', test_finish_sub-test_start_sub
+        print '("    WALL-Time = ",f10.3," seconds.")', (test_count_finish_sub-test_count_start_sub) &
+                                                       / real(test_count_rate_sub)
 #endif
 
     end subroutine
@@ -891,6 +966,15 @@ module lib_ml_fmm
 
         logical :: m_calculate_y_hierarchy
         logical :: m_calculate_xy_hierarchy
+#ifdef _TRACE_
+        ! CPU-time
+        real :: test_start_sub, test_finish_sub
+        ! WALL-time
+        INTEGER :: test_count_start_sub, test_count_finish_sub, test_count_rate_sub
+
+        call system_clock(test_count_start_sub, test_count_rate_sub)
+        call cpu_time(test_start_sub)
+#endif
 
         m_calculate_y_hierarchy = .true.
         if (present(calculate_y_hierarchy)) m_calculate_y_hierarchy = calculate_y_hierarchy
@@ -908,10 +992,11 @@ module lib_ml_fmm
                 uindex%n = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
                 if (uindex%n .ge. 0) then
                     hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(i)
-                    if (((hierarchy_type .eq. HIERARCHY_Y .and. m_calculate_y_hierarchy) .or. &
-                         (hierarchy_type .eq. HIERARCHY_XY .and. m_calculate_xy_hierarchy))) then
+                    if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
+                         (hierarchy_type .eq. HIERARCHY_XY))) then
 
-                        call lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
+                        call lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex, &
+                                    m_calculate_y_hierarchy, m_calculate_xy_hierarchy)
                     end if
                 end if
             end do
@@ -924,17 +1009,24 @@ module lib_ml_fmm
                 list_index = m_ml_fmm_hierarchy(uindex%l)%coefficient_list_index(i)
                 if (list_index .gt. 0) then
                     hierarchy_type = m_ml_fmm_hierarchy(uindex%l)%hierarchy_type(list_index)
-                    if (((hierarchy_type .eq. HIERARCHY_Y .and. m_calculate_y_hierarchy) .or. &
-                         (hierarchy_type .eq. HIERARCHY_XY .and. m_calculate_xy_hierarchy))) then
+                    if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
+                         (hierarchy_type .eq. HIERARCHY_XY))) then
 
-                        call lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
+                        call lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex, &
+                                    m_calculate_y_hierarchy, m_calculate_xy_hierarchy)
                     end if
                 end if
             end do
             !$OMP END PARALLEL DO
         end if
 #ifdef _TRACE_
+        call cpu_time(test_finish_sub)
+        call system_clock(test_count_finish_sub, test_count_rate_sub)
+
         print *, "TRACE: lib_ml_fmm_final_summation ..done"
+        print '("    CPU-Time = ",f10.3," seconds.")', test_finish_sub-test_start_sub
+        print '("    WALL-Time = ",f10.3," seconds.")', (test_count_finish_sub-test_count_start_sub) &
+                                                       / real(test_count_rate_sub)
 #endif
 
     end subroutine lib_ml_fmm_final_summation
@@ -952,10 +1044,12 @@ module lib_ml_fmm
     !          at the E2 domain of the evaluation element (Y-hierarchy)
     !
     ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(38)
-    subroutine lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex)
+    subroutine lib_ml_fmm_calculate_all_v_y_j_at_uindex(uindex, calculate_y_hierarchy, calculate_xy_hierarchy)
         implicit none
         ! dummy
         type(lib_tree_universal_index), intent(inout) :: uindex
+        logical, intent(in), optional :: calculate_y_hierarchy
+        logical, intent(in), optional :: calculate_xy_hierarchy
 
         ! auxiliary
         type(lib_ml_fmm_coefficient) :: D
@@ -968,6 +1062,15 @@ module lib_ml_fmm
 
         integer(kind=UINDEX_BYTES) :: v_counter
 
+        logical :: m_calculate_y_hierarchy
+        logical :: m_calculate_xy_hierarchy
+
+        m_calculate_y_hierarchy = .true.
+        if (present(calculate_y_hierarchy)) m_calculate_y_hierarchy = calculate_y_hierarchy
+
+        m_calculate_xy_hierarchy = .true.
+        if (present(calculate_xy_hierarchy)) m_calculate_xy_hierarchy = calculate_xy_hierarchy
+
 
         allocate(data_element_e1, source = lib_tree_get_domain_e1(uindex, &
                                                                   element_number_e1))
@@ -978,8 +1081,8 @@ module lib_ml_fmm
         D = lib_ml_fmm_hf_get_hierarchy_coefficient(m_ml_fmm_hierarchy, uindex, coefficient_type)
         !$OMP PARALLEL DO PRIVATE(i, v_counter)
         do i=1, size(data_element_e1)
-            if ((data_element_e1(i)%hierarchy .eq. HIERARCHY_Y) .or. &
-                (data_element_e1(i)%hierarchy .eq. HIERARCHY_XY)) then
+            if ((data_element_e1(i)%hierarchy .eq. HIERARCHY_Y .and. m_calculate_y_hierarchy) .or. &
+                (data_element_e1(i)%hierarchy .eq. HIERARCHY_XY .and. m_calculate_xy_hierarchy)) then
                 v_counter = element_number_e1(i)
                 m_ml_fmm_v(v_counter) = lib_ml_fmm_calculate_v_y_j(data_element_e1(i), element_number_e1(i), &
                                                                    data_element_e2, element_number_e2, D)
@@ -1005,6 +1108,8 @@ module lib_ml_fmm
     !          at the E2 domain of the evaluation element (Y-hierarchy)
     !
     ! Reference: Data_Structures_Optimal_Choice_of_Parameters_and_C, eq.(38)
+    !
+    ! todo: re-calculate the element number: should be correspondence with the x-, y-, or, xy-hierarchy lsit
     function lib_ml_fmm_calculate_v_y_j(data_element_y_j, element_number_j, data_element_e2, element_number_e2, D) result(rv)
         implicit none
         ! dummy
@@ -1018,21 +1123,36 @@ module lib_ml_fmm
         ! auxiliary
         integer(kind=UINDEX_BYTES) :: i
         type(lib_tree_spatial_point) :: x_c
-        type(lib_tree_spatial_point) :: y_j
+
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: m_element_number_j
+        integer(kind=CORRESPONDENCE_VECTOR_KIND) :: m_element_number_i
 
         x_c = lib_tree_get_centre_of_box(data_element_y_j%uindex)
-        y_j = data_element_y_j%point_x
 
-!        rv = D .dor. (y_j - x_c)
+        if (data_element_y_j%hierarchy .eq. HIERARCHY_Y) then
+            m_element_number_j = element_number_j - int(m_data_element_hierarchy_type_length(HIERARCHY_X), &
+                                                        CORRESPONDENCE_VECTOR_KIND)
+        else if (data_element_y_j%hierarchy .eq. HIERARCHY_XY) then
+            m_element_number_j = element_number_j - int(sum(m_data_element_hierarchy_type_length(HIERARCHY_X:HIERARCHY_Y)), &
+                                                        CORRESPONDENCE_VECTOR_KIND)
+        end if
 
-        rv = m_ml_fmm_handles%dor(D, x_c, y_j, element_number_j)
+        rv = m_ml_fmm_handles%dor(D, x_c, data_element_y_j, m_element_number_j)
 
-!        i=1
-!        rv = m_ml_fmm_handles%get_u_phi_i_j(data_element_e2(i), element_number_e2(i), y_j, element_number_j)
         do i=1, size(data_element_e2)
             if (data_element_e2(i)%hierarchy .eq. HIERARCHY_X &
                 .or. data_element_e2(i)%hierarchy .eq. HIERARCHY_XY) then
-                rv = rv + m_ml_fmm_handles%get_u_phi_i_j(data_element_e2(i), element_number_e2(i), y_j, element_number_j)
+
+                if (data_element_e2(i)%hierarchy .eq. HIERARCHY_X) then
+                    m_element_number_i = element_number_e2(i)
+                else if (data_element_e2(i)%hierarchy .eq. HIERARCHY_XY) then
+                    m_element_number_i = element_number_e2(i) &
+                                         - int(sum(m_data_element_hierarchy_type_length(HIERARCHY_X:HIERARCHY_Y)), &
+                                               CORRESPONDENCE_VECTOR_KIND)
+                end if
+
+                rv = rv + m_ml_fmm_handles%get_u_phi_i_j(data_element_e2(i), m_element_number_i, &
+                                                         data_element_y_j, m_element_number_j)
             end if
         end do
 

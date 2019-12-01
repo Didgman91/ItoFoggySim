@@ -114,13 +114,13 @@ module lib_ml_fmm_type_operator
         !       R expansion around y_j
         !
         ! Reference:  Data_Structures_Optimal_Choice_of_Parameters_and_C, eq. 38
-        function lib_ml_fmm_dor_operator(D, x_c, y_j, element_number_j) result(rv)
+        function lib_ml_fmm_dor_operator(D, x_c, data_element_j, element_number_j) result(rv)
             use ml_fmm_type
             implicit none
             ! dummy
             type(lib_ml_fmm_coefficient), intent(in) :: D
             type(lib_tree_spatial_point), intent(in) :: x_c
-            type(lib_tree_spatial_point), intent(in) :: y_j
+            type(lib_tree_data_element), intent(in) :: data_element_j
             integer(kind=4), intent(in) :: element_number_j
             type(lib_ml_fmm_v) :: rv
         end function lib_ml_fmm_dor_operator
@@ -407,14 +407,14 @@ module lib_ml_fmm_type_operator
         !       the result of calculation of u_i * phi_i(y_j)
         !
         ! Reference:  Data_Structures_Optimal_Choice_of_Parameters_and_C, eq. 38
-        function lib_ml_fmm_get_u_phi_i_j(data_element_i, element_number_i, y_j, element_number_j) result(rv)
+        function lib_ml_fmm_get_u_phi_i_j(data_element_i, element_number_i, data_element_j, element_number_j) result(rv)
             use lib_tree_public
             use ml_fmm_type
             implicit none
             ! dummy
             type(lib_tree_data_element), intent(in) :: data_element_i
             integer(kind=4), intent(in) :: element_number_i
-            type(lib_tree_spatial_point), intent(in) :: y_j
+            type(lib_tree_data_element), intent(in) :: data_element_j
             integer(kind=4), intent(in) :: element_number_j
             type(lib_ml_fmm_v) :: rv
 

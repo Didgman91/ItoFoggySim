@@ -310,12 +310,12 @@ module ml_fmm_math
         end if
     end function test_u_dot_coefficient
 
-    function test_dor(D, x_c, y_j, element_number_j)  result (rv)
+    function test_dor(D, x_c, data_element_j, element_number_j)  result (rv)
         implicit none
         ! dummy
         type(lib_ml_fmm_coefficient), intent(in) :: D
         type(lib_tree_spatial_point), intent(in) :: x_c
-        type(lib_tree_spatial_point), intent(in) :: y_j
+        type(lib_tree_data_element), intent(in) :: data_element_j
         integer(kind=4), intent(in) :: element_number_j
         type(lib_ml_fmm_v) :: rv
 
@@ -513,14 +513,14 @@ module ml_fmm_math
         allocate(u_B_i%r, source = (/real(data_element%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)/))
     end function
 
-    function test_get_u_phi_i_j(data_element_i, element_number_i, y_j, element_number_j) result(rv)
+    function test_get_u_phi_i_j(data_element_i, element_number_i, data_element_j, element_number_j) result(rv)
         use lib_tree_public
         use ml_fmm_type
         implicit none
         ! dummy
         type(lib_tree_data_element), intent(in) :: data_element_i
         integer(kind=4), intent(in) :: element_number_i
-        type(lib_tree_spatial_point), intent(in) :: y_j
+        type(lib_tree_data_element), intent(in) :: data_element_j
         integer(kind=4), intent(in) :: element_number_j
         type(lib_ml_fmm_v) :: rv
 

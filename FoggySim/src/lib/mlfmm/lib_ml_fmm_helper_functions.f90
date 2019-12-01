@@ -31,7 +31,7 @@ module lib_ml_fmm_helper_functions
     public :: lib_ml_fmm_hf_test_functions
 
     ! --- parameter ---
-    integer(kind=2), public, parameter :: LIB_ML_FMM_HF_HIERARCHY_MARGIN = 200
+    integer(kind=2), public, parameter :: LIB_ML_FMM_HF_HIERARCHY_MARGIN = 220
 
     integer(kind=1), parameter :: IGNORE_ENTRY = -1
     integer(kind=2), parameter :: MAXIMUM_NUMBER_OF_HASH_RUNS = 200
@@ -470,7 +470,7 @@ module lib_ml_fmm_helper_functions
             else
                 no_hash = .false.
             end if
-            no_hash = .false.
+!            no_hash = .false.
 
             ! calculates whether hash access or direct access via the universal index requires less memory
             !

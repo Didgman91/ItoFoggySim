@@ -2603,6 +2603,7 @@ module lib_mie_multi_sphere
 
             function test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene() result(rv)
                 use file_io
+                use lib_mie_ms_ml_fmm_interface
                 implicit none
                 ! dummy
                 logical :: rv
@@ -2622,7 +2623,6 @@ module lib_mie_multi_sphere
 
                 double precision :: n_medium
 
-                type(cartesian_coordinate_real_type) :: sphere_d_0_j
                 double precision :: r_particle
                 double complex :: n_particle
                 integer, dimension(2) :: n_range
@@ -2634,14 +2634,6 @@ module lib_mie_multi_sphere
                 integer :: i
                 integer, dimension(2) :: range_i
                 integer :: ii
-                integer :: no
-
-                integer :: n
-                integer :: m
-
-                integer :: no_spheres_x
-                integer :: no_spheres_z
-                double precision :: distance_sphere
 
                 type(list_list_cmplx), dimension(:), allocatable :: a_nm_ml_fmm
                 type(list_list_cmplx), dimension(:), allocatable :: b_nm_ml_fmm
@@ -2649,10 +2641,6 @@ module lib_mie_multi_sphere
                 type(list_list_cmplx), dimension(:), allocatable :: a_nm_t_matrix
                 type(list_list_cmplx), dimension(:), allocatable :: b_nm_t_matrix
 
-                type(list_list_cmplx) :: list_list_diff
-                double precision :: buffer
-
-                character(len=15) :: path
 
                 ! plot
                 double precision :: x
@@ -2731,8 +2719,8 @@ module lib_mie_multi_sphere
 
                 scene%d_0_o = make_cartesian(0d0,0d0,0d0)
                 d_o_j = make_cartesian(0d0,0d0,0d0)
-                sphere_radius = 200 * unit_nm
-                lattice_sphere_radius = 15.5 * unit_nm
+                sphere_radius = 5 * unit_mu
+                lattice_sphere_radius = 1.1 * unit_mu
                 cap_plane_point = make_cartesian(0d0, 0d0, 0d0)
                 cap_plane_normal = make_cartesian(0d0, 0d0, -1d0)
 
@@ -2784,7 +2772,8 @@ module lib_mie_multi_sphere
                 allocate(simulation_data%sphere_parameter_list(1))
 
                 ! set 1
-                r_particle = 7.5 * unit_nm
+                r_particle = 1 * unit_mu
+!                r_particle = 7.5 * unit_nm
                 n_particle = dcmplx(2.5287_8, 0)
 
                 n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
@@ -2798,30 +2787,43 @@ module lib_mie_multi_sphere
                     print *, "  rv(2): ", n_range(2)
                 end if
 
+                if (n_range(2) .gt. 8) then
+                    n_range(2) = 8
+                    print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene: NOTE"
+                    print *, "  n_range is limited to 8"
+                end if
+
                 simulation_data%spherical_harmonics%n_range = n_range
 
                 simulation_data%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
                                                                                           r_particle, n_particle, &
                                                                                           n_range)
 
+                ! set evaluation points
+                x_range = (/ -15 * unit_mu, 15 * unit_mu /)
+                z_range = (/ -15 * unit_mu, 20 * unit_mu /)
+                step_size = (x_range(2) - x_range(1)) / 200
 
-!                call lib_mie_ms_constructor(n_range, use_ml_fmm = .false., init_with_single_sphere = .true.)
-!
-!                call system_clock(test_count_start_sub, test_count_rate_sub)
-!                call cpu_time(test_start_sub)
-!
-!!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(10, 1)
-!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
-!                a_nm_t_matrix(:) = simulation_data%sphere_list(:)%a_nm
-!                b_nm_t_matrix(:) = simulation_data%sphere_list(:)%b_nm
-!
-!                call cpu_time(test_finish_sub)
-!                call system_clock(test_count_finish_sub, test_count_rate_sub)
-!
-!                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene (T-Matrix): "
-!                print '("  CPU-Time = ",f10.3," seconds.")', test_finish_sub-test_start_sub
-!                print '("  WALL-Time = ",f10.3," seconds.")', (test_count_finish_sub-test_count_start_sub) &
-!                                                               / real(test_count_rate_sub)
+                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
+
+                allocate(simulation_data%evaluation_points(no_x_values * no_z_values))
+
+                x = 0
+                y = 0
+                z = 0
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii=1, no_z_values
+                        z = z_range(1) + (ii-1) * step_size
+
+                        x_0%x = x
+                        x_0%y = y
+                        x_0%z = z
+
+                        simulation_data%evaluation_points(no_z_values * (i - 1) + ii)%coordinate = x_0
+                    end do
+                 end do
 
                 call system_clock(test_count_start_sub, test_count_rate_sub)
                 call cpu_time(test_start_sub)
@@ -2848,12 +2850,8 @@ module lib_mie_multi_sphere
                 print *, ""
 
                 ! evaluate and export
-                x_range = (/ -60 * unit_nm, 60 * unit_nm /)
-                z_range = (/ -60 * unit_nm, 100 * unit_nm /)
-                step_size = (x_range(2) - x_range(1)) / 200
 
-                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
-                no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
+                call lib_mie_ms_ml_fmm_calculate_evaluation_points()
 
                 allocate(e_field_s(no_x_values, no_z_values))
                 allocate(h_field_s(no_x_values, no_z_values))
@@ -2872,6 +2870,7 @@ module lib_mie_multi_sphere
                         x_0%z = z
 
                         field = lib_mie_ms_get_field(x_0)
+                        simulation_data%evaluation_points(no_z_values * (i - 1) + ii)%coordinate = x_0
                         e_field_s(i,ii) = field(1)
                         h_field_s(i,ii) = field(2)
                     end do
