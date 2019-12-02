@@ -116,7 +116,7 @@ module lib_mie_multi_sphere
             end if
 
             solver_parameter%use_initial_guess = m_init_with_single_sphere
-            solver_parameter%convergence_tolerance = 1D-6
+            solver_parameter%convergence_tolerance = 1D-7
             solver_parameter%use_ml_fmm = use_ml_fmm
 
             call lib_mie_ms_solver_constructor(solver_parameter)
@@ -3025,15 +3025,15 @@ module lib_mie_multi_sphere
 
 
                 use_ml_fmm = .true.
-                plot_result = .false.
+                plot_result = .true.
 
-                sphere_radius_start = 1 * unit_mu
-                sphere_radius_stop = 16 * unit_mu
+                sphere_radius_start = 20 * unit_nm
+                sphere_radius_stop = 64 * unit_nm
 
-                lattice_sphere_radius = 0.51 * unit_mu
-                particle_radius = 0.5 * unit_mu
+                lattice_sphere_radius = 7.6 * unit_nm
+                particle_radius = 7.5 * unit_nm
 
-                no_of_steps = 15
+                no_of_steps = 12
 
                 allocate(csv_data(no_of_steps, 5))
                 csv_data = 0
