@@ -120,7 +120,11 @@ module lib_mie_ms_ml_fmm_interface
 
             n_range = simulation_data%spherical_harmonics%n_range
 
-            offset = size(simulation_data%evaluation_points)
+            if (allocated(simulation_data%evaluation_points)) then
+                offset = size(simulation_data%evaluation_points)
+            else
+                offset = 0
+            end if
 
             allocate ( x(offset + size(simulation_data%sphere_list)) )
 
