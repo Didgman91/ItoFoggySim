@@ -3027,13 +3027,13 @@ module lib_mie_multi_sphere
                 use_ml_fmm = .true.
                 plot_result = .false.
 
-                sphere_radius_start = 2 * unit_mu
+                sphere_radius_start = 1 * unit_mu
                 sphere_radius_stop = 16 * unit_mu
 
                 lattice_sphere_radius = 0.51 * unit_mu
                 particle_radius = 0.5 * unit_mu
 
-                no_of_steps = 14
+                no_of_steps = 15
 
                 allocate(csv_data(no_of_steps, 5))
                 csv_data = 0
