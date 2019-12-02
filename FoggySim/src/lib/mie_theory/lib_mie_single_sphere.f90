@@ -2170,7 +2170,8 @@ module lib_mie_single_sphere
                     buffer_car%z = 0
                     plane_wave(:)%d_0_i = buffer_car
 
-                    illumination = lib_mie_type_func_get_plane_wave_illumination(lambda, e_field_0, &
+                    illumination = lib_mie_type_func_get_plane_wave_illumination(lambda, n_medium, &
+                                                                                 e_field_0, &
                                                                                  plane_wave(:)%g, &
                                                                                  (/ make_cartesian(1d0, 0d0, 1d0), &
                                                                                     make_cartesian(-1d0, 0d0, 1d0)/), &

@@ -918,7 +918,7 @@ module lib_mie_illumination
         ! Reference: Generalized Lorenz-MieTheories, Gérard Gouesbet Gérard Gréhan, program GNMF
         subroutine lib_mie_illumination_get_p_q_single_gaussian_beam_la(wave_length, n_medium, w0, d, n_range, &
                                                                         p_nm, q_nm, esj)
-            use gnm_mod
+!            use gnm_mod
             implicit none
             ! dummy
             double precision, intent(in) :: wave_length
@@ -933,69 +933,69 @@ module lib_mie_illumination
             type(list_list_cmplx), intent(inout) :: q_nm
 
             ! auxiliary
-            integer :: n
-            integer :: m
-            integer :: nmax
-            REAL(KIND=DBL)::s,l,x0ad,y0ad,z0ad,m_esj
-
-            m_esj=1.0d-30
-            if (present(esj)) m_esj = esj
-
-            nmax = n_range(2)
-
-
-            s=wave_length/(w0*2.0_DBL*PI * n_medium)
-            l=w0/s
-            x0ad=d%x/w0
-            y0ad=d%y/w0
-            z0ad=d%z/l
-
-            CALL gnmf(nmax,s,x0ad,y0ad,z0ad,m_esj)
-
-            call init_list(p_nm, n_range(1), n_range(2) - n_range(1) + 1, dcmplx(0,0))
-            call init_list(q_nm, n_range(1), n_range(2) - n_range(1) + 1, dcmplx(0,0))
-
-            do n = n_range(1), n_range(2)
-                if (n .le. MAX_M) then
-                    m = n
-                else
-                    m = MAX_M
-                end if
-                p_nm%item(n)%item(-m:m) = gte(n, -m:m)
-                q_nm%item(n)%item(-m:m) = gtm(n, -m:m)
-            end do
-
-            do n = n_range(1), n_range(2)
-                do m = -n, n
-                    if (isnan(real(p_nm%item(n)%item(m)))) then
-                        print *, "lib_mie_illumination_get_p_q_single_gaussian_beam_la: ERROR"
-                        print *, "  Re(p_nm) is NaN"
-                        print * , "  n = ", n
-                        print * , "  m = ", m
-                    end if
-
-                    if (isnan(aimag(p_nm%item(n)%item(m)))) then
-                        print *, "lib_mie_illumination_get_p_q_single_gaussian_beam_la: ERROR"
-                        print *, "  Im(p_nm) is NaN"
-                        print * , "  n = ", n
-                        print * , "  m = ", m
-                    end if
-
-                    if (isnan(real(q_nm%item(n)%item(m)))) then
-                        print *, "lib_mie_illumination_get_p_q_single_gaussian_beam_la: ERROR"
-                        print *, "  Re(q_nm) is NaN"
-                        print * , "  n = ", n
-                        print * , "  m = ", m
-                    end if
-
-                    if (isnan(aimag(q_nm%item(n)%item(m)))) then
-                        print *, "lib_mie_illumination_get_p_q_single_gaussian_beam_la: ERROR"
-                        print *, "  Im(q_nm) is NaN"
-                        print * , "  n = ", n
-                        print * , "  m = ", m
-                    end if
-                end do
-            end do
+!            integer :: n
+!            integer :: m
+!            integer :: nmax
+!            REAL(KIND=DBL)::s,l,x0ad,y0ad,z0ad,m_esj
+!
+!            m_esj=1.0d-30
+!            if (present(esj)) m_esj = esj
+!
+!            nmax = n_range(2)
+!
+!
+!            s=wave_length/(w0*2.0_DBL*PI * n_medium)
+!            l=w0/s
+!            x0ad=d%x/w0
+!            y0ad=d%y/w0
+!            z0ad=d%z/l
+!
+!            CALL gnmf(nmax,s,x0ad,y0ad,z0ad,m_esj)
+!
+!            call init_list(p_nm, n_range(1), n_range(2) - n_range(1) + 1, dcmplx(0,0))
+!            call init_list(q_nm, n_range(1), n_range(2) - n_range(1) + 1, dcmplx(0,0))
+!
+!            do n = n_range(1), n_range(2)
+!                if (n .le. MAX_M) then
+!                    m = n
+!                else
+!                    m = MAX_M
+!                end if
+!                p_nm%item(n)%item(-m:m) = gte(n, -m:m)
+!                q_nm%item(n)%item(-m:m) = gtm(n, -m:m)
+!            end do
+!
+!            do n = n_range(1), n_range(2)
+!                do m = -n, n
+!                    if (isnan(real(p_nm%item(n)%item(m)))) then
+!                        print *, "lib_mie_illumination_get_p_q_single_gaussian_beam_la: ERROR"
+!                        print *, "  Re(p_nm) is NaN"
+!                        print * , "  n = ", n
+!                        print * , "  m = ", m
+!                    end if
+!
+!                    if (isnan(aimag(p_nm%item(n)%item(m)))) then
+!                        print *, "lib_mie_illumination_get_p_q_single_gaussian_beam_la: ERROR"
+!                        print *, "  Im(p_nm) is NaN"
+!                        print * , "  n = ", n
+!                        print * , "  m = ", m
+!                    end if
+!
+!                    if (isnan(real(q_nm%item(n)%item(m)))) then
+!                        print *, "lib_mie_illumination_get_p_q_single_gaussian_beam_la: ERROR"
+!                        print *, "  Re(q_nm) is NaN"
+!                        print * , "  n = ", n
+!                        print * , "  m = ", m
+!                    end if
+!
+!                    if (isnan(aimag(q_nm%item(n)%item(m)))) then
+!                        print *, "lib_mie_illumination_get_p_q_single_gaussian_beam_la: ERROR"
+!                        print *, "  Im(q_nm) is NaN"
+!                        print * , "  n = ", n
+!                        print * , "  m = ", m
+!                    end if
+!                end do
+!            end do
 
         end subroutine lib_mie_illumination_get_p_q_single_gaussian_beam_la
 

@@ -885,24 +885,25 @@ module lib_mie_ms_ml_fmm_interface
             type(lib_ml_fmm_v), dimension(:), allocatable :: vector_v
             type(cartesian_coordinate_cmplx_type), dimension(2) :: field
 
+            if (allocated(simulation_data%evaluation_points)) then
+                call lib_ml_fmm_final_summation(calculate_y_hierarchy = .true., &
+                                                calculate_xy_hierarchy = .false.)
 
-            call lib_ml_fmm_final_summation(calculate_y_hierarchy = .true., &
-                                            calculate_xy_hierarchy = .false.)
+                vector_v = lib_ml_fmm_get_vector_v()
 
-            vector_v = lib_ml_fmm_get_vector_v()
+                do i = 1, size(simulation_data%evaluation_points)
+                    field(1)%x = vector_v(i)%c(1)
+                    field(1)%y = vector_v(i)%c(2)
+                    field(1)%z = vector_v(i)%c(3)
 
-            do i = 1, size(simulation_data%evaluation_points)
-                field(1)%x = vector_v(i)%c(1)
-                field(1)%y = vector_v(i)%c(2)
-                field(1)%z = vector_v(i)%c(3)
+                    field(2)%x = vector_v(i)%c(4)
+                    field(2)%y = vector_v(i)%c(5)
+                    field(2)%z = vector_v(i)%c(6)
 
-                field(2)%x = vector_v(i)%c(4)
-                field(2)%y = vector_v(i)%c(5)
-                field(2)%z = vector_v(i)%c(6)
-
-                simulation_data%evaluation_points(i)%e_field = field(1)
-                simulation_data%evaluation_points(i)%h_field = field(2)
-            end do
+                    simulation_data%evaluation_points(i)%e_field = field(1)
+                    simulation_data%evaluation_points(i)%h_field = field(2)
+                end do
+            end if
 
         end subroutine lib_mie_ms_ml_fmm_calculate_evaluation_points
 

@@ -1565,9 +1565,10 @@ module lib_mie_ms_solver_interface
                     k(1) = make_cartesian(0d0,0d0,1d0)
                     d_0_i(1) = make_cartesian(0d0,0d0,0d0) * unit_mu
 
-                    simulation_data%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, e_field_0, &
-                                                                                            g, k, &
-                                                                                            d_0_i)
+                    simulation_data%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, n_medium, &
+                                                                                                 e_field_0, &
+                                                                                                 g, k, &
+                                                                                                 d_0_i)
 
                     simulation_data%refractive_index_medium = n_medium
 
@@ -1791,9 +1792,10 @@ module lib_mie_ms_solver_interface
                     k(1) = make_cartesian(0d0,0d0,1d0)
                     d_0_i(1) = make_cartesian(0d0,0d0,0d0) * unit_mu
 
-                    simulation_data%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, e_field_0, &
-                                                                                            g, k, &
-                                                                                            d_0_i)
+                    simulation_data%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, n_medium, &
+                                                                                                 e_field_0, &
+                                                                                                 g, k, &
+                                                                                                 d_0_i)
 
                     simulation_data%refractive_index_medium = n_medium
 
@@ -2076,9 +2078,10 @@ module lib_mie_ms_solver_interface
                     k(1) = make_cartesian(0d0,0d0,1d0)
                     d_0_i(1) = make_cartesian(0d0,0d0,0d0) * unit_mu
 
-                    simulation_data%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, e_field_0, &
-                                                                                            g, k, &
-                                                                                            d_0_i)
+                    simulation_data%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, n_medium, &
+                                                                                                 e_field_0, &
+                                                                                                 g, k, &
+                                                                                                 d_0_i)
 
                     simulation_data%refractive_index_medium = n_medium
 

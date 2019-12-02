@@ -99,11 +99,12 @@ module lib_mie_type_functions
         ! ----
         !   illumination: lib_mie_illumination_parameter
         !
-        function lib_mie_type_func_get_plane_wave_illumination(lambda_0, e_field_0, &
+        function lib_mie_type_func_get_plane_wave_illumination(lambda_0, refractive_index_medium, e_field_0, &
                                                                g, k, d_0_i) result(illumination)
             implicit none
             ! dummy
             double precision, intent(in) :: lambda_0
+            double precision, intent(in) :: refractive_index_medium
             double precision, intent(in) :: e_field_0
             double precision, dimension(:), intent(in) :: g
             type(cartesian_coordinate_real_type), dimension(lbound(g, 1):ubound(g, 1)), intent(in) :: k
@@ -135,6 +136,8 @@ module lib_mie_type_functions
                     illumination%plane_wave(i)%beam_parameter%polarisation%x = 1
                     illumination%plane_wave(i)%beam_parameter%polarisation%y = 0
                     illumination%plane_wave(i)%beam_parameter%convention = 2
+
+                    illumination%plane_wave(i)%beam_parameter%refractive_index_medium = refractive_index_medium
                 else
                     print *, "lib_mie_type_func_get_illumination: ERROR"
                     print *, "  abs(k(i=", i, ")) = 0"
