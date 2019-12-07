@@ -240,11 +240,15 @@ module lib_mie_ms_ml_fmm_interface
 
                 return
 
+            ! Xu - 1998 - Efficient Evaluation of Vector Translation Coeffic
             else if (abs(d_j_l) .gt. simulation_data%sphere_parameter_list(no)%radius) then
                 z_selector = simulation_data%spherical_harmonics%z_selector_translation_gt_r
             else
                 z_selector = simulation_data%spherical_harmonics%z_selector_translation_le_r
             end if
+
+            ! Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu
+            z_selector = simulation_data%spherical_harmonics%z_selector_incident_wave
 
             call lib_math_vector_spherical_harmonics_translation_coefficient(k_d_j_l, &
                     n_range, n_range_j, z_selector, &
@@ -316,7 +320,10 @@ module lib_mie_ms_ml_fmm_interface
             type(list_4_cmplx) :: a_nmnumu
             type(list_4_cmplx) :: b_nmnumu
 
-            z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
+!            z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
+
+            ! Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu
+            z_selector = simulation_data%spherical_harmonics%z_selector_incident_wave
             n_range = simulation_data%spherical_harmonics%n_range
 
 
@@ -385,6 +392,9 @@ module lib_mie_ms_ml_fmm_interface
             type(list_4_cmplx) :: a_nmnumu
             type(list_4_cmplx) :: b_nmnumu
 
+            !z_selector = simulation_data%spherical_harmonics%z_selector_incident_wave
+
+            ! Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu
             z_selector = simulation_data%spherical_harmonics%z_selector_incident_wave
             n_range = simulation_data%spherical_harmonics%n_range
 
@@ -454,6 +464,7 @@ module lib_mie_ms_ml_fmm_interface
             type(list_4_cmplx) :: a_nmnumu
             type(list_4_cmplx) :: b_nmnumu
 
+            ! Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu
             z_selector = simulation_data%spherical_harmonics%z_selector_incident_wave
             n_range = simulation_data%spherical_harmonics%n_range
 
@@ -593,7 +604,10 @@ module lib_mie_ms_ml_fmm_interface
 
                     d_0_l = simulation_data%sphere_list(l)%d_0_j
 
-                    z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
+                    !z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
+
+                    ! Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu
+                    z_selector = simulation_data%spherical_harmonics%z_selector_incident_wave
 
                     d_j_l = d_0_l - d_0_j
                     d_j_l_spherical = d_j_l
@@ -774,7 +788,10 @@ module lib_mie_ms_ml_fmm_interface
 
                 j = element_number_j - lbound(simulation_data%evaluation_points, 1) + 1
 
-                z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
+                !z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
+
+                ! Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu
+                z_selector = simulation_data%spherical_harmonics%z_selector_incident_wave
 
                 d_j_l_spherical = d_j_l
 
