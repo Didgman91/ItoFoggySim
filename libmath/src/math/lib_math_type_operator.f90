@@ -16,6 +16,7 @@ module lib_math_type_operator
     public :: cartesian_abs
 
     public :: init_list
+    public :: deallocate_list
     public :: make_list
     public :: make_array
     public :: get_structure
@@ -176,6 +177,12 @@ module lib_math_type_operator
     end interface
 
     interface assignment (=)
+        module procedure lib_math_list_real_assignment
+        module procedure lib_math_list_cmplx_assignment
+
+        module procedure lib_math_list_list_real_assignment
+        module procedure lib_math_list_list_cmplx_assignment
+
         module procedure lib_math_spherical_point_to_cartesian_point
         module procedure lib_math_cartesian_point_to_spherical_point
     end interface
@@ -211,6 +218,14 @@ module lib_math_type_operator
         module procedure lib_math_list_4_cmplx_init
         module procedure lib_math_list_cmplx_init
         module procedure lib_math_list_spherical_coordinate_cmplx_type_init
+    end interface
+
+    interface deallocate_list
+        module procedure lib_math_list_real_deallocate
+        module procedure lib_math_list_cmplx_deallocate
+
+        module procedure lib_math_list_list_real_deallocate
+        module procedure lib_math_list_list_cmplx_deallocateÅ
     end interface
 
     interface make_list
@@ -2061,6 +2076,110 @@ module lib_math_type_operator
         end function
 
 ! ---- list_list ----
+
+        subroutine lib_math_list_real_deallocate(list)
+            ! dummy
+            type(list_real), intent(inout) :: list
+
+            if (allocated(lhs%item)) then
+                deallocate(lhs%item)
+            end if
+        end subroutine
+
+        subroutine lib_math_list_cmplx_deallocate(list)
+            ! dummy
+            type(list_cmplx), intent(inout) :: list
+
+            if (allocated(lhs%item)) then
+                deallocate(lhs%item)
+            end if
+        end subroutine
+
+        subroutine lib_math_list_real_assignment(lhs, rhs)
+            implicit none
+            ! dummy
+            type(list_real), intent(in) :: rhs
+
+            type(list_real), intent(inout) :: lhs
+
+            call lib_math_list_real_deallocate(lhs)
+
+            lhs%itme = rhs%item
+        end subroutine
+
+        subroutine lib_math_list_list_cmplx_assignment(lhs, rhs)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: rhs
+
+            type(list_list_cmplx), intent(inout) :: lhs
+
+            call lib_math_list_list_cmplx_deallocate(lhs)
+
+            lhs%itme = rhs%item
+        end subroutine
+
+        subroutine lib_math_list_list_real_deallocate(list)
+            ! dummy
+            type(list_list_real), intent(inout) :: list
+
+            ! auxiliary
+            integer :: i
+
+            if (allocated(lhs%item)) then
+                !$OMP PARALLEL DO PRIVATE(i)
+                do i = lbound(lhs%item), ubound(lhs%item)
+                    if (allocated(lhs%item(i)%item) then
+                        deallocate(lhs%item(i)%item)
+                    end if
+                end do
+                !$OMP END PARALLEL DO
+                deallocate(lhs%item)
+            end if
+        end subroutine lib_math_list_list_real_deallocate
+
+        subroutine lib_math_list_list_cmplx_deallocate(list)
+            ! dummy
+            type(list_list_cmplx), intent(inout) :: list
+
+            ! auxiliary
+            integer :: i
+
+            if (allocated(lhs%item)) then
+                !$OMP PARALLEL DO PRIVATE(i)
+                do i = lbound(lhs%item), ubound(lhs%item)
+                    if (allocated(lhs%item(i)%item) then
+                        deallocate(lhs%item(i)%item)
+                    end if
+                end do
+                !$OMP END PARALLEL DO
+                deallocate(lhs%item)
+            end if
+        end subroutine lib_math_list_list_cmplx_deallocate
+
+        subroutine lib_math_list_list_real_assignment(lhs, rhs)
+            implicit none
+            ! dummy
+            type(list_list_real), intent(in) :: rhs
+
+            type(list_list_real), intent(inout) :: lhs
+
+            call lib_math_list_list_real_deallocate(lhs)
+
+            lhs%itme = rhs%item
+        end subroutine
+
+        subroutine lib_math_list_list_cmplx_assignment(lhs, rhs)
+            implicit none
+            ! dummy
+            type(list_list_cmplx), intent(in) :: rhs
+
+            type(list_list_cmplx), intent(inout) :: lhs
+
+            call lib_math_list_list_cmplx_deallocate(lhs)
+
+            lhs%itme = rhs%item
+        end subroutine
 
         ! Arguments
         ! ----
