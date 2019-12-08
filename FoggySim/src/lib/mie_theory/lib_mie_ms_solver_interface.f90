@@ -16,6 +16,7 @@ module lib_mie_ms_solver_interface
     private
 
     public :: lib_mie_ms_solver_constructor
+    public :: lib_mie_ms_solver_destructor
     public :: lib_mie_ms_solver_run
     public :: lib_mie_ms_solver_use_ml_fmm
     public :: lib_mie_ms_solver_set_n_range
@@ -105,6 +106,14 @@ module lib_mie_ms_solver_interface
                 call lib_mie_ms_ml_fmm_constructor()
             end if
 
+        end subroutine
+
+        subroutine lib_mie_ms_solver_destructor()
+            implicit none
+
+            if (m_solver_parameter%use_ml_fmm) then
+                call lib_mie_ms_ml_fmm_destructor
+            end if
         end subroutine
 
         ! Argument
@@ -831,7 +840,8 @@ module lib_mie_ms_solver_interface
             first_sphere = lbound(simulation_data%sphere_list, 1)
             last_sphere = ubound(simulation_data%sphere_list, 1)
 
-            z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
+!            z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
+            z_selector = simulation_data%spherical_harmonics%z_selector_incident_wave
 
             n_range = simulation_data%spherical_harmonics%n_range
 

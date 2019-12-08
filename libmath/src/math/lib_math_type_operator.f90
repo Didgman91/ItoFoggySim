@@ -225,7 +225,7 @@ module lib_math_type_operator
         module procedure lib_math_list_cmplx_deallocate
 
         module procedure lib_math_list_list_real_deallocate
-        module procedure lib_math_list_list_cmplx_deallocateÅ
+        module procedure lib_math_list_list_cmplx_deallocate
     end interface
 
     interface make_list
@@ -2081,8 +2081,8 @@ module lib_math_type_operator
             ! dummy
             type(list_real), intent(inout) :: list
 
-            if (allocated(lhs%item)) then
-                deallocate(lhs%item)
+            if (allocated(list%item)) then
+                deallocate(list%item)
             end if
         end subroutine
 
@@ -2090,8 +2090,8 @@ module lib_math_type_operator
             ! dummy
             type(list_cmplx), intent(inout) :: list
 
-            if (allocated(lhs%item)) then
-                deallocate(lhs%item)
+            if (allocated(list%item)) then
+                deallocate(list%item)
             end if
         end subroutine
 
@@ -2104,19 +2104,19 @@ module lib_math_type_operator
 
             call lib_math_list_real_deallocate(lhs)
 
-            lhs%itme = rhs%item
+            lhs%item = rhs%item
         end subroutine
 
-        subroutine lib_math_list_list_cmplx_assignment(lhs, rhs)
+        subroutine lib_math_list_cmplx_assignment(lhs, rhs)
             implicit none
             ! dummy
-            type(list_list_cmplx), intent(in) :: rhs
+            type(list_cmplx), intent(in) :: rhs
 
-            type(list_list_cmplx), intent(inout) :: lhs
+            type(list_cmplx), intent(inout) :: lhs
 
-            call lib_math_list_list_cmplx_deallocate(lhs)
+            call lib_math_list_cmplx_deallocate(lhs)
 
-            lhs%itme = rhs%item
+            lhs%item = rhs%item
         end subroutine
 
         subroutine lib_math_list_list_real_deallocate(list)
@@ -2126,15 +2126,15 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
-            if (allocated(lhs%item)) then
+            if (allocated(list%item)) then
                 !$OMP PARALLEL DO PRIVATE(i)
-                do i = lbound(lhs%item), ubound(lhs%item)
-                    if (allocated(lhs%item(i)%item) then
-                        deallocate(lhs%item(i)%item)
+                do i = lbound(list%item, 1), ubound(list%item, 1)
+                    if (allocated(list%item(i)%item)) then
+                        deallocate(list%item(i)%item)
                     end if
                 end do
                 !$OMP END PARALLEL DO
-                deallocate(lhs%item)
+                deallocate(list%item)
             end if
         end subroutine lib_math_list_list_real_deallocate
 
@@ -2145,15 +2145,15 @@ module lib_math_type_operator
             ! auxiliary
             integer :: i
 
-            if (allocated(lhs%item)) then
+            if (allocated(list%item)) then
                 !$OMP PARALLEL DO PRIVATE(i)
-                do i = lbound(lhs%item), ubound(lhs%item)
-                    if (allocated(lhs%item(i)%item) then
-                        deallocate(lhs%item(i)%item)
+                do i = lbound(list%item, 1), ubound(list%item, 1)
+                    if (allocated(list%item(i)%item)) then
+                        deallocate(list%item(i)%item)
                     end if
                 end do
                 !$OMP END PARALLEL DO
-                deallocate(lhs%item)
+                deallocate(list%item)
             end if
         end subroutine lib_math_list_list_cmplx_deallocate
 
@@ -2166,7 +2166,7 @@ module lib_math_type_operator
 
             call lib_math_list_list_real_deallocate(lhs)
 
-            lhs%itme = rhs%item
+            lhs%item = rhs%item
         end subroutine
 
         subroutine lib_math_list_list_cmplx_assignment(lhs, rhs)
@@ -2178,7 +2178,7 @@ module lib_math_type_operator
 
             call lib_math_list_list_cmplx_deallocate(lhs)
 
-            lhs%itme = rhs%item
+            lhs%item = rhs%item
         end subroutine
 
         ! Arguments

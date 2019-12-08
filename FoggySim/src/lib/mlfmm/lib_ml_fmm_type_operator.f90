@@ -1,4 +1,5 @@
 module lib_ml_fmm_type_operator
+    use ml_fmm_type
     implicit none
 
     private
@@ -12,6 +13,8 @@ module lib_ml_fmm_type_operator
 !
     public :: operator (.eq.)
 !    public :: operator (.ne.)
+
+    public :: assignment (=)
 
     public :: lib_ml_fmm_type_operator_set_coefficient_zero
 !    public :: lib_ml_fmm_type_operator_allocate_coefficient_list
@@ -60,6 +63,10 @@ module lib_ml_fmm_type_operator
 !    interface operator (.DoR.)
 !        module procedure lib_ml_fmm_dor_operator
 !    end interface
+
+    interface assignment (=)
+        module procedure lib_ml_fmm_coefficient_assignment
+    end interface
 
     ! ----- interfaces -----
     interface
@@ -616,6 +623,34 @@ module lib_ml_fmm_type_operator
 !        m_coefficient_ne => operator_procedures%coefficient_ne
 
     end subroutine lib_ml_fmm_type_operator_constructor
+
+    subroutine lib_ml_fmm_coefficient_assignment(lhs, rhs)
+        implicit none
+        ! dummy
+        type(lib_ml_fmm_coefficient), intent(in) :: rhs
+
+        type(lib_ml_fmm_coefficient), intent(inout) :: lhs
+
+        lhs%a_nm = rhs%a_nm
+        lhs%b_nm = rhs%b_nm
+
+        if (allocated(lhs%r)) then
+            deallocate(lhs%r)
+        end if
+
+        if (allocated(rhs%r)) then
+            lhs%r = rhs%r
+        end if
+
+        if (allocated(lhs%c)) then
+            deallocate(lhs%c)
+        end if
+
+        if (allocated(rhs%c)) then
+            lhs%c = rhs%c
+        end if
+
+    end subroutine
 
     subroutine lib_ml_fmm_type_operator_set_coefficient_zero(coefficient)
         use ml_fmm_type
