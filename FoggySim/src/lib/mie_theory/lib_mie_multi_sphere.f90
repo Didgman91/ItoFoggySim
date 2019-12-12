@@ -414,6 +414,7 @@ module lib_mie_multi_sphere
         end function
 
         function lib_mie_multi_sphere_test_functions() result(rv)
+            use file_io
             implicit none
             ! dummy
             integer :: rv
@@ -430,11 +431,12 @@ module lib_mie_multi_sphere
             call system_clock(test_count_start, test_count_rate)
             call cpu_time(test_start)
 
-!            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1()) rv = rv + 1
-!            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3()) rv = rv + 1
-!            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4()) rv = rv + 1
+            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1()) rv = rv + 1
+            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2()) rv = rv + 1
+            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3()) rv = rv + 1
+            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_gauss()) rv = rv + 1
-            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene()) rv = rv + 1
+!            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_parallel_sphere_assemply()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_sphere_grid_assemply()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_serial_sphere_assemply()) rv = rv + 1
@@ -897,7 +899,7 @@ module lib_mie_multi_sphere
                 ! evaluate and export
                 x_range = (/ 0_8 * unit_mu, (no_spheres_x+1) * distance_sphere /)
                 z_range = (/ 0_8 * unit_mu, (no_spheres_z+1) * distance_sphere /)
-                step_size = (x_range(2) - x_range(1)) / 150
+                step_size = (x_range(2) - x_range(1)) / 600
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                 no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -1167,6 +1169,9 @@ module lib_mie_multi_sphere
                 type(list_list_cmplx) :: list_list_diff
                 double precision :: buffer
 
+                double complex, dimension(:), allocatable :: buffer_list_mie
+                double complex, dimension(:), allocatable :: buffer_list_t_matrix
+
                 ! CPU-time
                 real :: test_start_sub, test_finish_sub
                 ! WALL-time
@@ -1194,7 +1199,7 @@ module lib_mie_multi_sphere
                 buffer_car%z = -10 * unit_mu
                 plane_wave_d_0_i(:) = buffer_car
 
-                buffer_car%x = 0
+                buffer_car%x = 1
                 buffer_car%y = 0
                 buffer_car%z = 1
                 buffer_car = buffer_car / abs(buffer_car) / lambda_0
@@ -1316,9 +1321,26 @@ module lib_mie_multi_sphere
                                                                / real(test_count_rate_sub)
                 print *, ""
 
+                call make_array((/a_nm_mie, b_nm_mie/), buffer_list_mie)
+                call make_array((/a_nm_t_matrix, b_nm_t_matrix/), buffer_list_t_matrix)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1_mie.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_mie)
+                close(99)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1_t_matrix.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_t_matrix)
+                close(99)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1_diff.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_mie - buffer_list_t_matrix)
+                close(99)
 
                 rv = .true.
-!                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1:"
+                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1:"
                     do i=lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
                         print *, "  i = ", i
 
@@ -1433,6 +1455,9 @@ module lib_mie_multi_sphere
                 real(kind=8) :: step_size
                 integer :: no_x_values
                 integer :: no_z_values
+
+                double complex, dimension(:), allocatable :: buffer_list_t_matrix
+                double complex, dimension(:), allocatable :: buffer_list_ml_fmm
 
                 ! CPU-time
                 real :: test_start_sub, test_finish_sub
@@ -1604,7 +1629,7 @@ module lib_mie_multi_sphere
                 ! evaluate and export
                 x_range = (/ 0_8 * unit_mu, (no_spheres_x+1) * distance_sphere /)
                 z_range = (/ 0_8 * unit_mu, (no_spheres_z+1) * distance_sphere /)
-                step_size = (x_range(2) - x_range(1)) / 150
+                step_size = (x_range(2) - x_range(1)) / 600
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                 no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -1631,10 +1656,28 @@ module lib_mie_multi_sphere
                     end do
                  end do
 
-                rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
+                rv = lib_field_export(e_field_s, h_field_s, "temp/real_v2/")
+
+                call make_array((/a_nm_ml_fmm, a_nm_ml_fmm/), buffer_list_ml_fmm)
+                call make_array((/a_nm_t_matrix, b_nm_t_matrix/), buffer_list_t_matrix)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2_ml_fmm.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_ml_fmm)
+                close(99)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2_t_matrix.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_t_matrix)
+                close(99)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2_diff.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_ml_fmm - buffer_list_t_matrix)
+                close(99)
 
                 rv = .true.
-!                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2:"
+                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2:"
                     do i=lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
                         print *, "  i = ", i
 
@@ -1745,6 +1788,9 @@ module lib_mie_multi_sphere
                 real(kind=8) :: step_size
                 integer :: no_x_values
                 integer :: no_z_values
+
+                double complex, dimension(:), allocatable :: buffer_list_t_matrix
+                double complex, dimension(:), allocatable :: buffer_list_ml_fmm
 
                 ! CPU-time
                 real :: test_start_sub, test_finish_sub
@@ -1872,8 +1918,8 @@ module lib_mie_multi_sphere
                                                                                           r_particle, n_particle, &
                                                                                           n_range)
 
-                n_range = simulation_data%spherical_harmonics%n_range
-                n_range(2) = 12 !int(ceiling(real(n_range(2)) * 1.2))
+!                n_range = simulation_data%spherical_harmonics%n_range
+!                n_range(2) = 12 !int(ceiling(real(n_range(2)) * 1.2))
                 simulation_data%spherical_harmonics%n_range = n_range
 
                 call lib_mie_ms_constructor(n_range, use_ml_fmm = .false., init_with_single_sphere = .true.)
@@ -1918,7 +1964,7 @@ module lib_mie_multi_sphere
                 ! evaluate and export
                 x_range = (/ 0_8 * unit_mu, (no_spheres_x+1) * distance_sphere /)
                 z_range = (/ 0_8 * unit_mu, (no_spheres_z+1) * distance_sphere /)
-                step_size = (x_range(2) - x_range(1)) / 150
+                step_size = (x_range(2) - x_range(1)) / 600
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                 no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -1945,7 +1991,25 @@ module lib_mie_multi_sphere
                     end do
                  end do
 
-                rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
+                rv = lib_field_export(e_field_s, h_field_s, "temp/real_v3/")
+
+                call make_array((/a_nm_ml_fmm, a_nm_ml_fmm/), buffer_list_ml_fmm)
+                call make_array((/a_nm_t_matrix, b_nm_t_matrix/), buffer_list_t_matrix)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3_ml_fmm.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_ml_fmm)
+                close(99)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3_t_matrix.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_t_matrix)
+                close(99)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3_diff.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_ml_fmm - buffer_list_t_matrix)
+                close(99)
 
                 rv = .true.
                 print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3:"
@@ -2060,6 +2124,9 @@ module lib_mie_multi_sphere
                 integer :: no_x_values
                 integer :: no_z_values
 
+                double complex, dimension(:), allocatable :: buffer_list_t_matrix
+                double complex, dimension(:), allocatable :: buffer_list_ml_fmm
+
                 ! CPU-time
                 real :: test_start_sub, test_finish_sub
                 ! WALL-time
@@ -2135,7 +2202,7 @@ module lib_mie_multi_sphere
                         end if
                         sphere_d_0_j%z = ii * distance_sphere
 
-                        sphere_d_0_j%y = 2*(ii-1) * unit_mu
+!                        sphere_d_0_j%y = 2*(ii-1) * unit_mu
 
                         simulation_data%sphere_list(no)%d_0_j = sphere_d_0_j
 
@@ -2159,6 +2226,8 @@ module lib_mie_multi_sphere
                     print *, "  rv(1): ", n_range(1)
                     print *, "  rv(2): ", n_range(2)
                 end if
+
+                n_range(2) = int(ceiling(real(n_range(2)) * 1.2))
 
                 simulation_data%spherical_harmonics%n_range = n_range
 
@@ -2188,8 +2257,8 @@ module lib_mie_multi_sphere
                 call system_clock(test_count_start_sub, test_count_rate_sub)
                 call cpu_time(test_start_sub)
 
-                n_range(2) = int(ceiling(real(n_range(2)) * 1.2))
-                simulation_data%spherical_harmonics%n_range = n_range
+!                n_range(2) = int(ceiling(real(n_range(2)) * 1.2))
+!                simulation_data%spherical_harmonics%n_range = n_range
 
                 call lib_mie_ms_constructor(n_range, use_ml_fmm = .true., init_with_single_sphere = .true.)
 
@@ -2212,7 +2281,7 @@ module lib_mie_multi_sphere
                 ! evaluate and export
                 x_range = (/ 0_8 * unit_mu, (no_spheres_x) * distance_sphere * 1.2d0 /)
                 z_range = (/ 0_8 * unit_mu, (no_spheres_z) * distance_sphere * 1.2d0 /)
-                step_size = (x_range(2) - x_range(1)) / 200
+                step_size = (x_range(2) - x_range(1)) / 600
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                 no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -2239,7 +2308,25 @@ module lib_mie_multi_sphere
                     end do
                  end do
 
-                rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
+                rv = lib_field_export(e_field_s, h_field_s, "temp/real_v4/")
+
+                call make_array((/a_nm_ml_fmm, a_nm_ml_fmm/), buffer_list_ml_fmm)
+                call make_array((/a_nm_t_matrix, b_nm_t_matrix/), buffer_list_t_matrix)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4_ml_fmm.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_ml_fmm)
+                close(99)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4_t_matrix.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_t_matrix)
+                close(99)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4_diff.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_ml_fmm - buffer_list_t_matrix)
+                close(99)
 
                 rv = .true.
                 print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4:"
