@@ -651,6 +651,8 @@
                                     								
                                 </option>
                                 								
+                                <option id="gnu.fortran.compiler.exe.release.option.debugging.level.1165109157" name="Debug Level" superClass="gnu.fortran.compiler.exe.release.option.debugging.level" useByScannerDiscovery="false" value="gnu.fortran.debugging.level.none" valueType="enumerated"/>
+                                								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.1365623149" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
                                 							
                             </tool>

@@ -116,7 +116,7 @@ module lib_mie_multi_sphere
             end if
 
             solver_parameter%use_initial_guess = m_init_with_single_sphere
-            solver_parameter%convergence_tolerance = 1D-7
+            solver_parameter%convergence_tolerance = 1D-6
             solver_parameter%use_ml_fmm = use_ml_fmm
 
             call lib_mie_ms_solver_constructor(solver_parameter)
@@ -1491,7 +1491,7 @@ module lib_mie_multi_sphere
                 allocate (a_nm_ml_fmm(no_spheres_x * no_spheres_z))
                 allocate (b_nm_ml_fmm(no_spheres_x * no_spheres_z))
 
-                distance_sphere = 100 * unit_mu
+                distance_sphere = 5 * unit_mu
                 allocate(simulation_data%sphere_list(no_spheres_x * no_spheres_z))
 
                 sphere_d_0_j%y = 0
@@ -1803,7 +1803,7 @@ module lib_mie_multi_sphere
                 allocate (a_nm_ml_fmm(no_spheres_x * no_spheres_z))
                 allocate (b_nm_ml_fmm(no_spheres_x * no_spheres_z))
 
-                distance_sphere = 20 * unit_mu
+                distance_sphere = 10 * unit_mu
                 allocate(simulation_data%sphere_list(no_spheres_x * no_spheres_z))
 
                 sphere_d_0_j%y = 0

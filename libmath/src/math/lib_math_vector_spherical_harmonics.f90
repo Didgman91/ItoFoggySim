@@ -1,4 +1,4 @@
-!#define _DEBUG_
+#define _DEBUG_
 
 
 module lib_math_vector_spherical_harmonics
