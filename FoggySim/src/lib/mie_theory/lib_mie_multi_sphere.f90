@@ -433,8 +433,8 @@ module lib_mie_multi_sphere
 
             if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1()) rv = rv + 1
             if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2()) rv = rv + 1
-            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3()) rv = rv + 1
-            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4()) rv = rv + 1
+!            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3()) rv = rv + 1
+!            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_gauss()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_parallel_sphere_assemply()) rv = rv + 1
@@ -530,7 +530,7 @@ module lib_mie_multi_sphere
                 buffer_car%z = 0
                 plane_wave_d_0_i(:) = buffer_car
 
-                buffer_car%x = 0
+                buffer_car%x = 1
                 buffer_car%y = 0
                 buffer_car%z = 1
                 buffer_car = buffer_car / abs(buffer_car) / lambda_0
@@ -1179,7 +1179,7 @@ module lib_mie_multi_sphere
 
                 simulation_data%spherical_harmonics%z_selector_incident_wave = 1
                 simulation_data%spherical_harmonics%z_selector_scatterd_wave = 3
-                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 1
+                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 3
                 simulation_data%spherical_harmonics%z_selector_translation_le_r = 1
 
                 ! set illumination parameter
@@ -1466,7 +1466,7 @@ module lib_mie_multi_sphere
 
                 simulation_data%spherical_harmonics%z_selector_incident_wave = 1
                 simulation_data%spherical_harmonics%z_selector_scatterd_wave = 3
-                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 1
+                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 3
                 simulation_data%spherical_harmonics%z_selector_translation_le_r = 1
 
                 ! set illumination parameter
@@ -1627,6 +1627,89 @@ module lib_mie_multi_sphere
                 print *, ""
 
                 ! evaluate and export
+
+                call make_array((/a_nm_ml_fmm, b_nm_ml_fmm/), buffer_list_ml_fmm)
+                call make_array((/a_nm_t_matrix, b_nm_t_matrix/), buffer_list_t_matrix)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2_ml_fmm.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_ml_fmm)
+                close(99)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2_t_matrix.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_t_matrix)
+                close(99)
+
+                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2_diff.csv"), &
+                     status='unknown')
+                rv = write_csv_cmplx_array_1d(99, buffer_list_ml_fmm - buffer_list_t_matrix)
+                close(99)
+
+                rv = .true.
+                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2:"
+                do i=lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
+                    print *, "  i = ", i
+
+                    print *, "  a_nm"
+                    list_list_diff = a_nm_ml_fmm(i) - a_nm_t_matrix(i)
+
+                    do n = lbound(list_list_diff%item, 1), &
+                           ubound(list_list_diff%item, 1)
+                        print *, "  n = ", n
+                        do m = -n, n
+                            buffer = real(list_list_diff%item(n)%item(m))
+                            if (buffer .gt. ground_truth_e) then
+                                print *, "    m: ", m , "difference (real): ", buffer, " : FAILED"
+                                print *, "         ML-FMM: ", a_nm_ml_fmm(i)%item(n)%item(m)
+                                print *, "       T-Matrix: ", a_nm_t_matrix(i)%item(n)%item(m)
+                                rv = .false.
+                            else
+                                print *, "    m: ", m, " (real): OK"
+                            end if
+
+                            buffer = aimag(list_list_diff%item(n)%item(m))
+                            if (buffer .gt. ground_truth_e) then
+                                print *, "    m: ", m , "difference (imag): ", buffer, " : FAILED"
+                                print *, "         ML-FMM: ", a_nm_ml_fmm(i)%item(n)%item(m)
+                                print *, "       T-Matrix: ", a_nm_t_matrix(i)%item(n)%item(m)
+                                rv = .false.
+                            else
+                                print *, "    m: ", m, " (imag): OK"
+                            end if
+                        end do
+                    end do
+
+                    print *, "  b_nm"
+                    list_list_diff = b_nm_ml_fmm(i) - b_nm_t_matrix(i)
+
+                    do n = lbound(list_list_diff%item, 1), &
+                           ubound(list_list_diff%item, 1)
+                        print *, "  n = ", n
+                        do m = -n, n
+                            buffer = real(list_list_diff%item(n)%item(m))
+                            if (buffer .gt. ground_truth_e) then
+                                print *, "    m: ", m , "difference (real): ", buffer, " : FAILED"
+                                print *, "         ML-FMM: ", b_nm_ml_fmm(i)%item(n)%item(m)
+                                print *, "       T-Matrix: ", b_nm_t_matrix(i)%item(n)%item(m)
+                                rv = .false.
+                            else
+                                print *, "    m: ", m, " (real): OK"
+                            end if
+
+                            buffer = aimag(list_list_diff%item(n)%item(m))
+                            if (buffer .gt. ground_truth_e) then
+                                print *, "    m: ", m , "difference (imag): ", buffer, " : FAILED"
+                                print *, "         ML-FMM: ", b_nm_ml_fmm(i)%item(n)%item(m)
+                                print *, "       T-Matrix: ", b_nm_t_matrix(i)%item(n)%item(m)
+                                rv = .false.
+                            else
+                                print *, "    m: ", m, " (imag): OK"
+                            end if
+                        end do
+                    end do
+                end do
+
                 x_range = (/ 0_8 * unit_mu, (no_spheres_x+1) * distance_sphere /)
                 z_range = (/ 0_8 * unit_mu, (no_spheres_z+1) * distance_sphere /)
                 step_size = (x_range(2) - x_range(1)) / 600
@@ -1658,69 +1741,7 @@ module lib_mie_multi_sphere
 
                 rv = lib_field_export(e_field_s, h_field_s, "temp/real_v2/")
 
-                call make_array((/a_nm_ml_fmm, a_nm_ml_fmm/), buffer_list_ml_fmm)
-                call make_array((/a_nm_t_matrix, b_nm_t_matrix/), buffer_list_t_matrix)
-
-                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2_ml_fmm.csv"), &
-                     status='unknown')
-                rv = write_csv_cmplx_array_1d(99, buffer_list_ml_fmm)
-                close(99)
-
-                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2_t_matrix.csv"), &
-                     status='unknown')
-                rv = write_csv_cmplx_array_1d(99, buffer_list_t_matrix)
-                close(99)
-
-                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2_diff.csv"), &
-                     status='unknown')
-                rv = write_csv_cmplx_array_1d(99, buffer_list_ml_fmm - buffer_list_t_matrix)
-                close(99)
-
-                rv = .true.
-                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2:"
-                    do i=lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
-                        print *, "  i = ", i
-
-                        print *, "  a_nm"
-                        list_list_diff = a_nm_ml_fmm(i) - a_nm_t_matrix(i)
-
-                        do n = lbound(list_list_diff%item, 1), &
-                               ubound(list_list_diff%item, 1)
-                            print *, "  n = ", n
-                            do m = -n, n
-                                buffer = abs(list_list_diff%item(n)%item(m))
-                                if (buffer .gt. ground_truth_e) then
-                                    print *, "    m: ", m , "difference: ", buffer, " : FAILED"
-                                    print *, "         ML-FMM: ", a_nm_ml_fmm(i)%item(n)%item(m)
-                                    print *, "       T-Matrix: ", a_nm_t_matrix(i)%item(n)%item(m)
-                                    rv = .false.
-                                else
-                                    print *, "    m: ", m, ": OK"
-                                end if
-                            end do
-                        end do
-
-                        print *, "  b_nm"
-                        list_list_diff = b_nm_ml_fmm(i) - b_nm_t_matrix(i)
-
-                        do n = lbound(list_list_diff%item, 1), &
-                               ubound(list_list_diff%item, 1)
-                            print *, "  n = ", n
-                            do m = -n, n
-                                buffer = abs(list_list_diff%item(n)%item(m))
-                                if (buffer .gt. ground_truth_e) then
-                                    print *, "    m: ", m , "difference: ", buffer, " : FAILED"
-                                    print *, "         ML-FMM: ", b_nm_ml_fmm(i)%item(n)%item(m)
-                                    print *, "       T-Matrix: ", b_nm_t_matrix(i)%item(n)%item(m)
-                                    rv = .false.
-                                else
-                                    print *, "    m: ", m, ": OK"
-                                end if
-                            end do
-                        end do
-                    end do
-
-                    call lib_mie_ms_data_container_destructor()
+                call lib_mie_ms_data_container_destructor()
 
             end function test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2
 
@@ -1993,7 +2014,7 @@ module lib_mie_multi_sphere
 
                 rv = lib_field_export(e_field_s, h_field_s, "temp/real_v3/")
 
-                call make_array((/a_nm_ml_fmm, a_nm_ml_fmm/), buffer_list_ml_fmm)
+                call make_array((/a_nm_ml_fmm, b_nm_ml_fmm/), buffer_list_ml_fmm)
                 call make_array((/a_nm_t_matrix, b_nm_t_matrix/), buffer_list_t_matrix)
 
                 open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3_ml_fmm.csv"), &
@@ -2310,7 +2331,7 @@ module lib_mie_multi_sphere
 
                 rv = lib_field_export(e_field_s, h_field_s, "temp/real_v4/")
 
-                call make_array((/a_nm_ml_fmm, a_nm_ml_fmm/), buffer_list_ml_fmm)
+                call make_array((/a_nm_ml_fmm, b_nm_ml_fmm/), buffer_list_ml_fmm)
                 call make_array((/a_nm_t_matrix, b_nm_t_matrix/), buffer_list_t_matrix)
 
                 open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4_ml_fmm.csv"), &
