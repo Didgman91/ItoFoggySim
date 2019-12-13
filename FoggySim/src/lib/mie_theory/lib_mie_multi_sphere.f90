@@ -1940,7 +1940,7 @@ module lib_mie_multi_sphere
                                                                                           n_range)
 
 !                n_range = simulation_data%spherical_harmonics%n_range
-!                n_range(2) = 12 !int(ceiling(real(n_range(2)) * 1.2))
+                n_range(2) = 12 !int(ceiling(real(n_range(2)) * 1.2))
                 simulation_data%spherical_harmonics%n_range = n_range
 
                 call lib_mie_ms_constructor(n_range, use_ml_fmm = .false., init_with_single_sphere = .true.)
@@ -2248,7 +2248,9 @@ module lib_mie_multi_sphere
                     print *, "  rv(2): ", n_range(2)
                 end if
 
-                n_range(2) = int(ceiling(real(n_range(2)) * 1.2))
+                print *, " old: n_max = ", n_range(2)
+                n_range(2) = int(ceiling(real(n_range(2)) * 1.5))
+                print *, " new: n_max = ", n_range(2)
 
                 simulation_data%spherical_harmonics%n_range = n_range
 
