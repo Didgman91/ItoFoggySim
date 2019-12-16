@@ -2166,7 +2166,11 @@ module lib_math_type_operator
 
             call lib_math_list_list_real_deallocate(lhs)
 
-            lhs%item = rhs%item
+            if (allocated(rhs%item)) then
+                lhs%item = rhs%item
+            else
+                if (allocated(lhs%item)) deallocate(lhs%item)
+            end if
         end subroutine
 
         subroutine lib_math_list_list_cmplx_assignment(lhs, rhs)
@@ -2178,7 +2182,11 @@ module lib_math_type_operator
 
             call lib_math_list_list_cmplx_deallocate(lhs)
 
-            lhs%item = rhs%item
+            if (allocated(rhs%item)) then
+                lhs%item = rhs%item
+            else
+                if (allocated(lhs%item)) deallocate(lhs%item)
+            end if
         end subroutine
 
         ! Arguments
