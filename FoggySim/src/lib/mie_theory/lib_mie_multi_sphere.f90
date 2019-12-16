@@ -431,12 +431,12 @@ module lib_mie_multi_sphere
             call system_clock(test_count_start, test_count_rate)
             call cpu_time(test_start)
 
-            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1()) rv = rv + 1
-            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2()) rv = rv + 1
+!            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1()) rv = rv + 1
+!            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v2()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_gauss()) rv = rv + 1
-!            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene()) rv = rv + 1
+            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_parallel_sphere_assemply()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_sphere_grid_assemply()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_serial_sphere_assemply()) rv = rv + 1
@@ -2845,7 +2845,7 @@ module lib_mie_multi_sphere
 
                 scene%d_0_o = make_cartesian(0d0,0d0,0d0)
                 d_o_j = make_cartesian(0d0,0d0,0d0)
-                sphere_radius = 9 * unit_mu
+                sphere_radius = 6 * unit_mu
                 lattice_sphere_radius = 1.1 * unit_mu
                 cap_plane_point = make_cartesian(0d0, 0d0, 0d0)
                 cap_plane_normal = make_cartesian(0d0, 0d0, 1d0)
@@ -2898,7 +2898,7 @@ module lib_mie_multi_sphere
                 allocate(simulation_data%sphere_parameter_list(1))
 
                 ! set 1
-                r_particle = 1 * unit_mu
+                r_particle = 0.8 * unit_mu
 !                r_particle = 7.5 * unit_nm
                 n_particle = dcmplx(2.5287_8, 0)
 
@@ -2913,10 +2913,10 @@ module lib_mie_multi_sphere
                     print *, "  rv(2): ", n_range(2)
                 end if
 
-                if (n_range(2) .gt. 8) then
-                    n_range(2) = 8
+                if (n_range(2) .gt. 12) then
+                    n_range(2) = 12
                     print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene: NOTE"
-                    print *, "  n_range is limited to 8"
+                    print *, "  n_range is limited to ", n_range(2)
                 end if
 
                 simulation_data%spherical_harmonics%n_range = n_range
@@ -2954,8 +2954,8 @@ module lib_mie_multi_sphere
                 call system_clock(test_count_start_sub, test_count_rate_sub)
                 call cpu_time(test_start_sub)
 
-                n_range(2) = int(ceiling(real(n_range(2)) * 1.2))
-                simulation_data%spherical_harmonics%n_range = n_range
+!                n_range(2) = int(ceiling(real(n_range(2)) * 1.2))
+!                simulation_data%spherical_harmonics%n_range = n_range
 
                 call lib_mie_ms_constructor(n_range, use_ml_fmm = .true., init_with_single_sphere = .true.)
 

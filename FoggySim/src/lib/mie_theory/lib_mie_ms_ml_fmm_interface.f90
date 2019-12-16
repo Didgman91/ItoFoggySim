@@ -264,8 +264,9 @@ module lib_mie_ms_ml_fmm_interface
             call init_list(buffer_1_nm, n_range(1), n_range(2) - n_range(1) + 1)
             call init_list(buffer_2_nm, n_range(1), n_range(2) - n_range(1) + 1)
 
-            !$OMP PARALLEL DO PRIVATE(n, m)
+            !$OMP PARALLEL DO PRIVATE(n)
             do n = n_range(1), n_range(2)
+                !$OMP PARALLEL DO PRIVATE(m)
                 do m = -n, n
                     if (n_range(2) .le. n_range_j(2) &
                         .and. n_range(1) .ge. n_range_j(1)) then
@@ -279,6 +280,7 @@ module lib_mie_ms_ml_fmm_interface
                         buffer_2_nm%item(n)%item(m) = dcmplx(0,0)
                     end if
                 end do
+                !$OMP END PARALLEL DO
             end do
             !$OMP END PARALLEL DO
 
@@ -323,7 +325,7 @@ module lib_mie_ms_ml_fmm_interface
 !            z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
 
             ! Electromagnetic scattering by an aggregate of spheres, Yu-lin Xu
-            z_selector = simulation_data%spherical_harmonics%z_selector_scatterd_wave
+            z_selector = simulation_data%spherical_harmonics%z_selector_incident_wave
             n_range = simulation_data%spherical_harmonics%n_range
 
 
@@ -420,8 +422,9 @@ module lib_mie_ms_ml_fmm_interface
             call init_list(A_i_2%a_nm, n_range(1), n_range(2) - n_range(1) +1)
             call init_list(A_i_2%b_nm, n_range(1), n_range(2) - n_range(1) +1)
 
-            !$OMP PARALLEL DO PRIVATE(n, m)
+            !$OMP PARALLEL DO PRIVATE(n)
             do n = n_range(1), n_range(2)
+                !$OMP PARALLEL DO PRIVATE(m)
                 do m = -n, n
                     A_i_2%a_nm%item(n)%item(m) = sum(a_nmnumu%item(n)%item(m) * B_i_1%a_nm &
                                                      + b_nmnumu%item(n)%item(m) * B_i_1%b_nm)
@@ -429,6 +432,7 @@ module lib_mie_ms_ml_fmm_interface
                     A_i_2%b_nm%item(n)%item(m) = sum(b_nmnumu%item(n)%item(m) * B_i_1%a_nm &
                                                      + a_nmnumu%item(n)%item(m) * B_i_1%b_nm)
                 end do
+                !$OMP END PARALLEL DO
             end do
             !$OMP END PARALLEL DO
 
@@ -687,6 +691,8 @@ module lib_mie_ms_ml_fmm_interface
                     !$OMP PARALLEL DO PRIVATE(n, m) &
                     !$OMP  PRIVATE(buffer_1_nm, buffer_2_nm)
                     do n = n_range(1), n_range(2)
+                        !$OMP PARALLEL DO PRIVATE(m) &
+                        !$OMP  PRIVATE(buffer_1_nm, buffer_2_nm)
                         do m = -n, n
                             if (n_range(2) .le. n_range_j(2) &
                                 .and. n_range(1) .ge. n_range_j(1)) then
@@ -703,6 +709,7 @@ module lib_mie_ms_ml_fmm_interface
                                 buffer_b_2_nm%item(n)%item(m) = dcmplx(0,0)
                             end if
                         end do
+                        !$OMP END PARALLEL DO
                     end do
                     !$OMP END PARALLEL DO
                 end if
