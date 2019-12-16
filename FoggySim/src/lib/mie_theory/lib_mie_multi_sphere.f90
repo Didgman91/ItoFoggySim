@@ -2845,8 +2845,8 @@ module lib_mie_multi_sphere
 
                 scene%d_0_o = make_cartesian(0d0,0d0,0d0)
                 d_o_j = make_cartesian(0d0,0d0,0d0)
-                sphere_radius = 6 * unit_mu
-                lattice_sphere_radius = 1.1 * unit_mu
+                sphere_radius = 50 * unit_nm
+                lattice_sphere_radius = 8 * unit_nm
                 cap_plane_point = make_cartesian(0d0, 0d0, 0d0)
                 cap_plane_normal = make_cartesian(0d0, 0d0, 1d0)
 
@@ -2898,8 +2898,8 @@ module lib_mie_multi_sphere
                 allocate(simulation_data%sphere_parameter_list(1))
 
                 ! set 1
-                r_particle = 0.8 * unit_mu
-!                r_particle = 7.5 * unit_nm
+!                r_particle = 0.8 * unit_mu
+                r_particle = 7.5 * unit_nm
                 n_particle = dcmplx(2.5287_8, 0)
 
                 n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
@@ -2913,12 +2913,13 @@ module lib_mie_multi_sphere
                     print *, "  rv(2): ", n_range(2)
                 end if
 
-                if (n_range(2) .gt. 12) then
-                    n_range(2) = 12
-                    print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene: NOTE"
-                    print *, "  n_range is limited to ", n_range(2)
-                end if
+!                if (n_range(2) .gt. 12) then
+!                    n_range(2) = 12
+!                    print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene: NOTE"
+!                    print *, "  n_range is limited to ", n_range(2)
+!                end if
 
+                n_range(2) = 6
                 simulation_data%spherical_harmonics%n_range = n_range
 
                 simulation_data%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
