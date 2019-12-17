@@ -292,6 +292,36 @@ module lib_ml_fmm_type_operator
             type(lib_ml_fmm_coefficient) :: B_i
         end function
 
+
+        ! Argument
+        ! ----
+        !   x: type(lib_tree_spatial_point)
+        !       centre of the box
+        !   data_element: type(lib_tree_data_element), dimension(:)
+        !       data element list of the box
+        !   element_number: integer(kind=4), dimension(:)
+        !       number of the element
+        !       HINT: X, Y, and XY lists are concatenated
+        !
+        ! Returns
+        ! ----
+        !   C: type(lib_ml_fmm_coefficient)
+        !       coefficient of the box
+        !
+        !
+        !
+        function lib_ml_fmm_get_C(x, data_element, element_number) result(C)
+            use lib_tree_public
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type(lib_tree_spatial_point), intent(in) :: x
+            type(lib_tree_data_element), dimension(:), intent(in) :: data_element
+            integer(kind=4), dimension(:), intent(in) :: element_number
+
+            type(lib_ml_fmm_coefficient) :: C
+        end function
+
 !        ! Basis function: S
 !        function lib_ml_fmm_get_S(x) result(S)
 !            use lib_tree_type
@@ -427,6 +457,54 @@ module lib_ml_fmm_type_operator
 
         end function
 
+        ! Argument
+        ! ----
+        !   data_element: type(lib_tree_data_element), dimension(:)
+        !       data element
+        !   element_number_i: integer
+        !       number of the i-th data element at the concatenated element data list.
+        !       CONVENTION:
+        !           Internal representation of the element data list
+        !           from the 1-st to the N-th element.
+        !           ------------------------------------
+        !           |1    X    |     Y    |     XY    N|
+        !           ------------------------------------
+        !           X-, Y-, XY- hierarchy
+        !   y_j: type(lib_tree_spatial_point), dimension(:)
+        !       scaled point of the j-th data element
+        !       HINT: unscale with lib_tree_get_unscaled_point
+        !   element_number_j: integer
+        !       number of the j-th data element at the concatenated element data list.
+        !       CONVENTION:
+        !           Internal representation of the element data list
+        !           from the 1-st to the N-th element.
+        !           ------------------------------------
+        !           |1    X    |     Y    |     XY    N|
+        !           ------------------------------------
+        !           X-, Y-, XY- hierarchy
+        !
+        ! Returns
+        ! ----
+        !   rv: type(lib_ml_fmm_v)
+        !       the result of calculation of u_i * phi_i(y_j)
+        !
+        ! Reference:  Data_Structures_Optimal_Choice_of_Parameters_and_C, eq. 38
+
+        function lib_ml_fmm_get_v_y_j(data_element_y_j, element_number_j, data_element_e2, element_number_e2, D) result(rv)
+            use lib_tree_public
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type(lib_tree_data_element), dimension(:), allocatable, intent(inout) :: data_element_y_j
+            integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number_j
+            type(lib_tree_data_element), dimension(:), allocatable, intent(inout) :: data_element_e2
+            integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number_e2
+            type(lib_ml_fmm_coefficient), intent(inout) :: D
+
+            type(lib_ml_fmm_v) :: rv
+
+        end function
+
         ! Translation: local-to-local (Regular-to-Regular)
         !
         ! Arguments
@@ -517,6 +595,9 @@ module lib_ml_fmm_type_operator
         procedure(lib_ml_fmm_translation_RR), pointer, nopass :: get_translation_RR => null()
         procedure(lib_ml_fmm_translation_SR), pointer, nopass :: get_translation_SR => null()
         procedure(lib_ml_fmm_translation_SS), pointer, nopass :: get_translation_SS => null()
+
+        procedure(lib_ml_fmm_get_C), pointer, nopass :: get_c => null()
+        procedure(lib_ml_fmm_get_v_y_j), pointer, nopass :: get_v_y_j => null()
     end type lib_ml_fmm_procedure_handles
 
     type ml_fmm_type_operator_procedures

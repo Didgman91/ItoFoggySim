@@ -899,7 +899,7 @@ module lib_mie_multi_sphere
                 ! evaluate and export
                 x_range = (/ 0_8 * unit_mu, (no_spheres_x+1) * distance_sphere /)
                 z_range = (/ 0_8 * unit_mu, (no_spheres_z+1) * distance_sphere /)
-                step_size = (x_range(2) - x_range(1)) / 600
+                step_size = (x_range(2) - x_range(1)) / 200
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                 no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -1712,7 +1712,7 @@ module lib_mie_multi_sphere
 
                 x_range = (/ 0_8 * unit_mu, (no_spheres_x+1) * distance_sphere /)
                 z_range = (/ 0_8 * unit_mu, (no_spheres_z+1) * distance_sphere /)
-                step_size = (x_range(2) - x_range(1)) / 600
+                step_size = (x_range(2) - x_range(1)) / 200
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                 no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -1985,7 +1985,7 @@ module lib_mie_multi_sphere
                 ! evaluate and export
                 x_range = (/ 0_8 * unit_mu, (no_spheres_x+1) * distance_sphere /)
                 z_range = (/ 0_8 * unit_mu, (no_spheres_z+1) * distance_sphere /)
-                step_size = (x_range(2) - x_range(1)) / 600
+                step_size = (x_range(2) - x_range(1)) / 200
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                 no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -2249,7 +2249,7 @@ module lib_mie_multi_sphere
                 end if
 
                 print *, " old: n_max = ", n_range(2)
-                n_range(2) = int(ceiling(real(n_range(2)) * 1.5))
+                n_range(2) = int(ceiling(real(n_range(2)) * 1.2))
                 print *, " new: n_max = ", n_range(2)
 
                 simulation_data%spherical_harmonics%n_range = n_range
@@ -2259,23 +2259,23 @@ module lib_mie_multi_sphere
                                                                                           n_range)
 
 
-                call lib_mie_ms_constructor(n_range, use_ml_fmm = .false., init_with_single_sphere = .true.)
-
-                call system_clock(test_count_start_sub, test_count_rate_sub)
-                call cpu_time(test_start_sub)
-
-!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(10, 1)
-                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
-                a_nm_t_matrix(:) = simulation_data%sphere_list(:)%a_nm
-                b_nm_t_matrix(:) = simulation_data%sphere_list(:)%b_nm
-
-                call cpu_time(test_finish_sub)
-                call system_clock(test_count_finish_sub, test_count_rate_sub)
-
-                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4 (T-Matrix): "
-                print '("  CPU-Time = ",f10.3," seconds.")', test_finish_sub-test_start_sub
-                print '("  WALL-Time = ",f10.3," seconds.")', (test_count_finish_sub-test_count_start_sub) &
-                                                               / real(test_count_rate_sub)
+!                call lib_mie_ms_constructor(n_range, use_ml_fmm = .false., init_with_single_sphere = .true.)
+!
+!                call system_clock(test_count_start_sub, test_count_rate_sub)
+!                call cpu_time(test_start_sub)
+!
+!!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(10, 1)
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
+!                a_nm_t_matrix(:) = simulation_data%sphere_list(:)%a_nm
+!                b_nm_t_matrix(:) = simulation_data%sphere_list(:)%b_nm
+!
+!                call cpu_time(test_finish_sub)
+!                call system_clock(test_count_finish_sub, test_count_rate_sub)
+!
+!                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4 (T-Matrix): "
+!                print '("  CPU-Time = ",f10.3," seconds.")', test_finish_sub-test_start_sub
+!                print '("  WALL-Time = ",f10.3," seconds.")', (test_count_finish_sub-test_count_start_sub) &
+!                                                               / real(test_count_rate_sub)
 
                 call system_clock(test_count_start_sub, test_count_rate_sub)
                 call cpu_time(test_start_sub)
@@ -2304,7 +2304,7 @@ module lib_mie_multi_sphere
                 ! evaluate and export
                 x_range = (/ 0_8 * unit_mu, (no_spheres_x) * distance_sphere * 1.2d0 /)
                 z_range = (/ 0_8 * unit_mu, (no_spheres_z) * distance_sphere * 1.2d0 /)
-                step_size = (x_range(2) - x_range(1)) / 600
+                step_size = (x_range(2) - x_range(1)) / 200
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                 no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))

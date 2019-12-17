@@ -1,9 +1,8 @@
 module lib_mie_ms_ml_fmm_interface
     use libmath
 
-    use lib_tree_public
-    use ml_fmm_type
-    use lib_ml_fmm
+    use libtree
+    use libmlfmm
 
     use lib_mie_type
     use lib_mie_type_functions

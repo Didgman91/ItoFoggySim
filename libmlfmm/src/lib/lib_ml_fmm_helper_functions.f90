@@ -4,7 +4,7 @@
 !
 module lib_ml_fmm_helper_functions
     use lib_hash_function
-    use lib_tree_public
+    use libtree
     use ml_fmm_type
     implicit none
 

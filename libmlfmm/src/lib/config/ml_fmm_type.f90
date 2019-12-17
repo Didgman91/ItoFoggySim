@@ -2,7 +2,7 @@
 !
 module ml_fmm_type
     use libmath
-    use lib_tree_type
+    use libtree
     implicit none
 
     integer(kind=1), parameter, public :: LIB_ML_FMM_COEFFICIENT_KIND = 8

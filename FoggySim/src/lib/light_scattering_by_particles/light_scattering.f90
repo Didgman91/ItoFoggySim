@@ -275,6 +275,7 @@
           f(n) = -f(n)                                                  !eq 4.8a
           g(n) = g(n)                                                   !eq 4.8b
         end if
+!        print *, "f n", n,
 !     ........................................
 !     .  calculate the normalization factor  .
 !     .    (used in main program)            .

@@ -5,8 +5,7 @@
 ! LIB: Mulitlevel Fast Multipole Method
 !
 module lib_ml_fmm
-    use lib_tree
-    use lib_tree_type
+    use libtree
     use ml_fmm_type
     use ml_fmm_math
     use lib_ml_fmm_type_operator
@@ -42,7 +41,7 @@ module lib_ml_fmm
 
     logical :: m_final_sum_calc_y_hierarchy
     logical :: m_final_sum_calc_xy_hierarchy
-
+    logical :: m_use_own_sum
 
     contains
 
@@ -53,17 +52,21 @@ module lib_ml_fmm
     ! 2. create ml fmm data set
     !       - C per box and per level (l_max up to l_min)
     !       - D per box and per level (l_min down to l_max)
-    subroutine lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures, tree_s_opt, &
-                                      final_sum_calc_y_hierarchy, final_sum_calc_xy_hierarchy)
+    subroutine lib_ml_fmm_constructor(data_elements, operator_procedures, ml_fmm_procedures, &
+                                      tree_s_opt, &
+                                      final_sum_calc_y_hierarchy, final_sum_calc_xy_hierarchy, &
+                                      use_own_sum)
         implicit none
         ! dummy
         type(lib_ml_fmm_data), intent(inout) :: data_elements
         type(ml_fmm_type_operator_procedures), intent(in) :: operator_procedures
         type(lib_ml_fmm_procedure_handles), intent(in) :: ml_fmm_procedures
-        integer(kind=4), intent(in), optional :: tree_s_opt
+
+        integer, intent(in), optional :: tree_s_opt
 
         logical, intent(in), optional :: final_sum_calc_y_hierarchy
         logical, intent(in), optional :: final_sum_calc_xy_hierarchy
+        logical, intent(in), optional :: use_own_sum
 
         ! auxiliaray
         type(lib_tree_data_element), dimension(:), allocatable :: data_concatenated
@@ -76,6 +79,9 @@ module lib_ml_fmm
         m_final_sum_calc_xy_hierarchy = .true.
         if (present(final_sum_calc_xy_hierarchy)) m_final_sum_calc_xy_hierarchy = final_sum_calc_xy_hierarchy
 
+        m_use_own_sum = .false.
+        if (present(use_own_sum)) m_use_own_sum = use_own_sum
+
         ! concatenate X-, Y- and XY-hierarchy data
         !   length(1) = size(data_elements%X)
         !   length(2) = size(data_elements%Y)
@@ -85,7 +91,7 @@ module lib_ml_fmm
         m_data_element_hierarchy_type_length = length
 
         m_tree_s_opt = 1
-        if (present(tree_s_opt)) m_tree_s_opt = tree_s_opt
+        if (present(tree_s_opt)) m_tree_s_opt = int(tree_s_opt, 4)
 
         ! initiate the Tree
         call lib_tree_constructor(data_concatenated, m_tree_s_opt)
@@ -452,23 +458,27 @@ module lib_ml_fmm
             .and. (size(data_element) .gt. 0)) then
             ignore_box = .false.
             x_c = lib_tree_get_centre_of_box(uindex)
-            do i=1, size(data_element)
+            if (m_use_own_sum) then
+                C_i = m_ml_fmm_handles%get_c(x_c, data_element, element_number)
+            else
+                do i=1, size(data_element)
 
-                if (data_element(i)%hierarchy .eq. HIERARCHY_X) then
-                    m_element_number = element_number(i)
-                else if (data_element(i)%hierarchy .eq. HIERARCHY_XY) then
-                    m_element_number = element_number(i) &
-                                       - int(sum(m_data_element_hierarchy_type_length(HIERARCHY_X:HIERARCHY_Y)), &
-                                             CORRESPONDENCE_VECTOR_KIND)
-                else
-                    exit
-!                    print *, "lib_ml_fmm_get_C_i_from_elements_at_box: ERROR"
-!                    print *, "  Wrong hierarchy of data element", i, " :", data_element(i)%hierarchy
-                end if
+                    if (data_element(i)%hierarchy .eq. HIERARCHY_X) then
+                        m_element_number = element_number(i)
+                    else if (data_element(i)%hierarchy .eq. HIERARCHY_XY) then
+                        m_element_number = element_number(i) &
+                                           - int(sum(m_data_element_hierarchy_type_length(HIERARCHY_X:HIERARCHY_Y)), &
+                                                 CORRESPONDENCE_VECTOR_KIND)
+                    else
+                        exit
+    !                    print *, "lib_ml_fmm_get_C_i_from_elements_at_box: ERROR"
+    !                    print *, "  Wrong hierarchy of data element", i, " :", data_element(i)%hierarchy
+                    end if
 
-                buffer_C_i = m_ml_fmm_handles%get_u_B_i(x_c, data_element(i), m_element_number)
-                C_i = C_i + buffer_C_i
-            end do
+                    buffer_C_i = m_ml_fmm_handles%get_u_B_i(x_c, data_element(i), m_element_number)
+                    C_i = C_i + buffer_C_i
+                end do
+            end if
         else
             ignore_box = .true.
         end if
@@ -1084,8 +1094,14 @@ module lib_ml_fmm
             if ((data_element_e1(i)%hierarchy .eq. HIERARCHY_Y .and. m_calculate_y_hierarchy) .or. &
                 (data_element_e1(i)%hierarchy .eq. HIERARCHY_XY .and. m_calculate_xy_hierarchy)) then
                 v_counter = element_number_e1(i)
-                m_ml_fmm_v(v_counter) = lib_ml_fmm_calculate_v_y_j(data_element_e1(i), element_number_e1(i), &
-                                                                   data_element_e2, element_number_e2, D)
+
+                if (m_use_own_sum) then
+                    m_ml_fmm_v(v_counter) = m_ml_fmm_handles%get_v_y_j(data_element_e1, element_number_e1, &
+                                                                       data_element_e2, element_number_e2, D)
+                else
+                    m_ml_fmm_v(v_counter) = lib_ml_fmm_calculate_v_y_j(data_element_e1(i), element_number_e1(i), &
+                                                                       data_element_e2, element_number_e2, D)
+                end if
             end if
         end do
         !$OMP END PARALLEL DO
