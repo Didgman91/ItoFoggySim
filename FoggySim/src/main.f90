@@ -18,12 +18,12 @@ program main
     use lib_field_plane_wave
     use lib_field_gaussian_beam
 
-    use lib_mie_single_sphere
-    use lib_mie_ss_helper_functions
+    !use lib_mie_single_sphere
+    !use lib_mie_ss_helper_functions
 
-    use lib_mie_ms_solver_interface_helper_functions
-    use lib_mie_multi_sphere
-    use lib_mie_ms_solver_interface
+    !use lib_mie_ms_solver_interface_helper_functions
+    !use lib_mie_multi_sphere
+    !use lib_mie_ms_solver_interface
 
     use light_scattering
     implicit none
@@ -63,7 +63,7 @@ program main
 
 !    call OMP_set_num_threads(16)
 !    call OMP_set_nested(.true.)
-    call OMP_set_dynamic(.true.)
+!    call OMP_set_dynamic(.true.)
 
     call system_clock(test_count_start, test_count_rate)
     call cpu_time(test_start)

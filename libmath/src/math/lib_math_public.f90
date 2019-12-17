@@ -8,8 +8,10 @@ module lib_math_public
     use lib_math_solver
     use lib_math_type
     use lib_math_type_operator
+#ifdef __GFORTRAN__
     use lib_math_wigner
     use lib_math_vector_spherical_harmonics
+#endif
     use lib_math_constants
     implicit none
 
