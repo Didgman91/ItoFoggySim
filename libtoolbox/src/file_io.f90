@@ -417,7 +417,7 @@ module file_io
             write(u, *) trim(dummy_str)
 
             do i = lbound(c, 1), ubound(c, 1)
-                write(u, '(A, ES25.16, A, ES25.16)') i, delimiter, real(c(i)), delimiter, aimag(c(i))
+                write(u, '(I6, A, ES25.16, A, ES25.16)') i, delimiter, real(c(i)), delimiter, aimag(c(i))
             end do
         else
             dummy_str = trim(m_header(1))
