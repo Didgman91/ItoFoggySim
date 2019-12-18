@@ -1,4 +1,5 @@
   module light_scattering
+      use file_io
       implicit none
 
       contains
@@ -214,9 +215,12 @@
       real x, cnrm, xc, bj, bjm
       integer ip, nc, nmx
       complex b,z,cm,ci,hkl(226),an,amat(225),f(225),g(225)
+      logical rv
       common /cfcom/ f,g,cnrm
       complex test_a(255)
       complex test_b(255)
+      double complex a_bh(255)
+      double complex b_bh(255)
       dimension cnrm(225)
       ci = (0.0,1.0)
 !     ......................................................
@@ -264,9 +268,11 @@
         b = cm*amat(n)+rn/x
         test_b(n) = (b*bj-bjm)/(b*hkl(n+1)-hkl(n))
         f(n) = -ci**n*rf*(b*bj-bjm)/(b*hkl(n+1)-hkl(n))                 !eq 4.18a
+        b_bh(n) = (b*bj-bjm)/(b*hkl(n+1)-hkl(n))
         b = amat(n)/cm+rn/x
         test_a(n) = (b*bj-bjm)/(b*hkl(n+1)-hkl(n))
         g(n) = ci**(n+1)*rf*(b*bj-bjm)/(b*hkl(n+1)-hkl(n))              !eq 4.18b
+        a_bh(n) = (b*bj-bjm)/(b*hkl(n+1)-hkl(n))
         if(ip.eq.2) then
 !     ...............................................
 !     .  scattering coefficients for phi            .
@@ -282,6 +288,11 @@
 !     ........................................
         cnrm(n) = (2.0*rn+1.0)/(rf*rn*(rn+1.0))
 30    continue
+
+      open(unit=99, file="temp/test_get_coefficients_a_b_barberh_gt.csv", status='unknown')
+      rv = write_csv(99, (/ a_bh, b_bh /), (/ "n_", "ab" /))
+      close(99)
+
       return
       end subroutine
       subroutine besh(x,hankel,nc)
