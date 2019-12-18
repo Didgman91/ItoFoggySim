@@ -9,7 +9,7 @@ module lib_mie_ss_helper_functions
     private
 
     ! public parameter
-    integer, parameter, public :: N_MAX = 45
+    integer, parameter, public :: SINGLE_SPHERE_N_MAX = 45
 
     ! public functions
 !    public :: lib_mie_ss_hf_contructor
@@ -20,6 +20,7 @@ module lib_mie_ss_helper_functions
     public :: lib_mie_ss_hf_test_convergence_core
 
     public :: lib_mie_ss_helper_functions_test_functions
+    public :: lib_mie_ss_helper_functions_benchmark
 
     ! public interfaces
     public :: lib_mie_ss_hf_init_coeff_a_n_b_n
@@ -1397,8 +1398,8 @@ module lib_mie_ss_helper_functions
                 c_ext = c_ext + buffer_ext
             end do
 
-            c_sca = c_sca * 2D0 * PI / (k**2)
-            c_ext = c_ext * 2D0 * PI / (k**2)
+            c_sca = c_sca * 4D0 * PI / (k**2)
+            c_ext = c_ext * 4D0 * PI / (k**2)
             c_abs = c_ext - c_sca
 
             c(1) = c_sca
@@ -1439,16 +1440,14 @@ module lib_mie_ss_helper_functions
             do n = lbound(a_nm%item, 1), ubound(a_nm%item, 1)
                 buffer_n = dble(n * (n + 1) * (2 * n + 1))
                 do m = -n, n
-                    summand_sca%item(n)%item(m) = buffer_n &
-                                                  * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m)
-                    summand_sca%item(n)%item(m) = summand_sca%item(n)%item(m) &
+                    buffer_real = buffer_n * lib_math_factorial_get_n_minus_m_divided_by_n_plus_m(n,m)
+                    summand_sca%item(n)%item(m) = buffer_real &
                                                   * ( abs(a_nm%item(n)%item(m))**2 &
                                                       + abs(b_nm%item(n)%item(m))**2 )
 
-                    buffer_real = real( conjg(p_0_nm%item(n)%item(m)) * a_nm%item(n)%item(m)  &
-                                        + conjg(q_0_nm%item(n)%item(m)) * b_nm%item(n)%item(m) )
-                    summand_ext%item(n)%item(m) = summand_sca%item(n)%item(m) &
-                                                  * buffer_real
+                    summand_ext%item(n)%item(m) = buffer_real &
+                                                  * real( conjg(p_0_nm%item(n)%item(m)) * a_nm%item(n)%item(m)  &
+                                                          + conjg(q_0_nm%item(n)%item(m)) * b_nm%item(n)%item(m) )
                 end do
             end do
             !$OMP END PARALLEL DO
@@ -1618,6 +1617,7 @@ module lib_mie_ss_helper_functions
                 end function test_get_coefficients_a_b_cmplx_bohrenh
 
                 function test_get_coefficients_a_b_real_barberh() result (rv)
+                    use file_io
                     implicit none
                     ! dummy
                     logical :: rv
@@ -1655,8 +1655,12 @@ module lib_mie_ss_helper_functions
 
                     call get_coefficients_a_b_real_barberh(x, m, n, a_n, b_n)
 
+                    open(unit=99, file="temp/test_get_coefficients_a_b_real_barberh.csv", status='unknown')
+                    rv = write_csv(99, (/ a_n, b_n /), (/ "n_", "ab" /))
+                    close(99)
+
                     rv = .true.
-                    print *, "test_get_coefficients_a_b_real_barberh:"
+                     print *, "test_get_coefficients_a_b_real_barberh:"
                     do i=n(1), n(2)
                         buffer = abs(a_n(i) - ground_truth_a_n(i))
                         if (buffer .gt. ground_truth_e) then
@@ -1715,6 +1719,10 @@ module lib_mie_ss_helper_functions
 
                     call get_coefficients_a_b_cmplx_barberh(x, m, n, a_n, b_n)
 
+                    open(unit=99, file="temp/test_get_coefficients_a_b_cmplx_barberh.csv", status='unknown')
+                    rv = write_csv(99, (/ a_n, b_n /), (/ "n_", "ab" /))
+                    close(99)
+
                     rv = .true.
                     print *, "test_get_coefficients_a_b_cmplx_barberh:"
                     do i=n(1), n(2)
@@ -1738,6 +1746,7 @@ module lib_mie_ss_helper_functions
                 end function test_get_coefficients_a_b_cmplx_barberh
 
                 function test_get_cross_section() result (rv)
+                    use lib_field_polarisation
                     use toolbox
                     implicit none
                     ! dummy
@@ -1749,13 +1758,13 @@ module lib_mie_ss_helper_functions
                                                 "refractive_index/H2O_Hale_Querry_1973_25_degree_Celsius.csv"
 
 
-                    character(len=*), parameter :: particle_str = "Ag"
-                    character(len=*), parameter :: file_name_refractive_index_particle = &
-                                                "refractive_index/Ag_Johnson_Christy_1972_thick_film.csv"
-
-!                    character(len=*), parameter :: particle_str = "Au"
+!                    character(len=*), parameter :: particle_str = "Ag"
 !                    character(len=*), parameter :: file_name_refractive_index_particle = &
-!                                                "refractive_index/Au_Johnson_Christy_1972_thick_film.csv"
+!                                                "refractive_index/Ag_Johnson_Christy_1972_thick_film.csv"
+
+                    character(len=*), parameter :: particle_str = "Au"
+                    character(len=*), parameter :: file_name_refractive_index_particle = &
+                                                "refractive_index/Au_Johnson_Christy_1972_thick_film.csv"
 
                     ! auxiliary
                     integer :: i
@@ -1796,7 +1805,7 @@ module lib_mie_ss_helper_functions
                     type(cartesian_coordinate_real_type) :: k_cartesian
                     type(spherical_coordinate_real_type) :: k_spherical
 
-                    character(len=50) :: file_name_output
+                    character(len=150) :: file_name_output
                     integer :: u
                     character(len=25), dimension(4) :: header
                     character(len=25) :: str
@@ -1811,7 +1820,7 @@ module lib_mie_ss_helper_functions
 
                     lambda_start = 350 * unit_nm
                     lambda_stop = 800 * unit_nm
-                    lambda_step = 10 * unit_nm
+                    lambda_step = 5 * unit_nm
 
 !                    r_particle = 25 * unit_nm
 !                    file_name_output = "temp/c_sca_ag_r_25nm.csv"
@@ -1838,6 +1847,9 @@ module lib_mie_ss_helper_functions
 
                     allocate(illumination%plane_wave(1))
 
+                    illumination%plane_wave(1)%beam_parameter%polarisation = &
+                                            lib_field_polarisation_jones_vector_get_linear_h()
+
                     print *, "test_get_cross_section"
                     do r=10, 100, 20
 !                    do r=100, 400, 100
@@ -1863,6 +1875,7 @@ module lib_mie_ss_helper_functions
 
                             illumination%plane_wave(1)%g = 1d0
                             illumination%plane_wave(1)%beam_parameter%wave_length_0 = lambda
+                            illumination%plane_wave(1)%beam_parameter%e_field_0 = 1d0
 
                             call data_interpolation(data_refractive_index_particle, 1, lambda / unit_mu, &
                                                     data_refractive_index_particle_interpolation)
@@ -1874,6 +1887,8 @@ module lib_mie_ss_helper_functions
                             n_medium = real(dcmplx(data_refractive_index_medium_interpolation(2), &
                                                 data_refractive_index_medium_interpolation(3)))
 
+                            illumination%plane_wave(1)%beam_parameter%refractive_index_medium = n_medium
+
                             d_0_j%x = 0
                             d_0_j%y = 0
                             d_0_j%z = 0
@@ -1884,15 +1899,15 @@ module lib_mie_ss_helper_functions
 
                             n_range(1) = 1
                             n_range(2) = lib_mie_ss_hf_get_n_c(x)
-                            if (n_range(2) .gt. N_MAX) then
-                               print *, "WARNING: max degree (", N_MAX, ") reached: ", n_range(2)
-                               n_range(2) = N_MAX
+                            if (n_range(2) .gt. SINGLE_SPHERE_N_MAX) then
+                               print *, "WARNING: max degree (", SINGLE_SPHERE_N_MAX, ") reached: ", n_range(2)
+                               n_range(2) = SINGLE_SPHERE_N_MAX
 #ifdef _PRINT_NOTE_
                             else
                                 print *, "NOTE: max degree = ", n_range(2)
 #endif
                             end if
-                            n_range(2) = N_MAX
+!                            n_range(2) = SINGLE_SPHERE_N_MAX
 
                             call lib_mie_illumination_init_plane_wave((/ 0D0 /), (/ 0D0 /), (/ n_range(2) /))
                             call lib_mie_ss_hf_init_coeff_a_n_b_n_cmplx((/ x /), (/ n_particle / n_medium /), (/ n_range(2) /))
@@ -1937,4 +1952,126 @@ module lib_mie_ss_helper_functions
                     rv = .true.
                 end function test_get_cross_section
         end function lib_mie_ss_helper_functions_test_functions
+
+        subroutine lib_mie_ss_helper_functions_benchmark()
+            implicit none
+
+            integer :: iterations
+
+            iterations = 10**7
+
+            call benchmark_get_coefficients_a_b_real_barberh(iterations, .false.)
+            call benchmark_get_coefficients_a_b_real_barberh(iterations, .true.)
+
+            call benchmark_get_coefficients_a_b_cmplx_barberh(iterations, .false.)
+            call benchmark_get_coefficients_a_b_cmplx_barberh(iterations, .true.)
+
+            contains
+
+                subroutine benchmark_get_coefficients_a_b_real_barberh(iterations, use_caching)
+                    implicit none
+                    ! dummy
+                    integer :: iterations
+                    logical :: use_caching
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+
+                    double precision :: x
+                    double precision :: m
+!                    double precision :: mu
+!                    double precision :: mu1
+                    integer(kind=4), dimension(2), parameter :: n = (/1, 32/)
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+                    ! CPU-time
+                    real :: test_start, test_finish
+                    ! WALL-time
+                    INTEGER :: test_count_start, test_count_finish, test_count_rate
+
+                    m = 1.5d0
+                    x= 20.0_8
+
+                    call system_clock(test_count_start, test_count_rate)
+                    call cpu_time(test_start)
+
+                    if (use_caching) then
+                        call lib_mie_ss_hf_init_coeff_a_n_b_n_real((/ x /), (/ m /), n)
+                    end if
+
+                    do i=1, iterations
+                        call get_coefficients_a_b_real_barberh(x, m, n, a_n, b_n, use_caching)
+                    end do
+
+                    call cpu_time(test_finish)
+                    call system_clock(test_count_finish, test_count_rate)
+
+                    print *, ""
+                    print *, "------benchmark_get_coefficients_a_b_real_barberh------"
+                    print '("  CPU-Time = ",f10.3," seconds.")',test_finish-test_start
+                    print '("  WALL-Time = ",f10.3," seconds.")',(test_count_finish-test_count_start) / real(test_count_rate)
+                    print *, "  Caching: ", use_caching
+                    print *, ""
+                    print *, "------------------------------------------------------------"
+                    print *, ""
+
+                end subroutine
+
+                subroutine benchmark_get_coefficients_a_b_cmplx_barberh(iterations, use_caching)
+                    implicit none
+                    ! dummy
+                    integer :: iterations
+                    logical :: use_caching
+
+                    ! auxiliary
+                    integer(kind=4) :: i
+                    real(kind=8) :: buffer
+
+                    double precision :: x
+                    complex(kind=8) :: m
+!                    double precision :: mu
+!                    double precision :: mu1
+                    integer(kind=4), dimension(2), parameter :: n = (/ 1, 32 /)
+
+
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: a_n
+                    complex(kind=8), dimension(n(2)-n(1)+1) :: b_n
+
+                    ! CPU-time
+                    real :: test_start, test_finish
+                    ! WALL-time
+                    INTEGER :: test_count_start, test_count_finish, test_count_rate
+
+                    m = cmplx(1.28, -1.37, kind=8)
+                    x= 20.0_8
+
+                    call system_clock(test_count_start, test_count_rate)
+                    call cpu_time(test_start)
+
+                    if (use_caching) then
+                        call lib_mie_ss_hf_init_coeff_a_n_b_n_cmplx( (/ x /), (/ m /), n)
+                    end if
+
+                    do i=1, iterations
+                        call get_coefficients_a_b_cmplx_barberh(x, m, n, a_n, b_n, use_caching)
+                    end do
+
+                    call cpu_time(test_finish)
+                    call system_clock(test_count_finish, test_count_rate)
+
+                    print *, ""
+                    print *, "------benchmark_get_coefficients_a_b_cmplx_barberh------"
+                    print '("  CPU-Time = ",f10.3," seconds.")',test_finish-test_start
+                    print '("  WALL-Time = ",f10.3," seconds.")',(test_count_finish-test_count_start) / real(test_count_rate)
+                    print *, "  Caching: ", use_caching
+                    print *, ""
+                    print *, "------------------------------------------------------------"
+                    print *, ""
+
+                end subroutine
+
+        end subroutine
 end module lib_mie_ss_helper_functions

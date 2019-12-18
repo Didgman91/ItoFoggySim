@@ -83,7 +83,7 @@ module lib_mie_single_sphere
                     m_n_range_max = n_range_max
                 else
                     allocate(m_n_range_max(size(illumination%plane_wave)))
-                    m_n_range_max = N_MAX
+                    m_n_range_max = SINGLE_SPHERE_N_MAX
                 end if
 
                 i = ubound(illumination%plane_wave, 1) - lbound(illumination%plane_wave, 1)
@@ -1634,11 +1634,11 @@ module lib_mie_single_sphere
             x = abs(k * r_particle)
 
             n_range(1) = 1
-            n_range(2) = N_MAX
+            n_range(2) = SINGLE_SPHERE_N_MAX
             n_c = lib_mie_ss_hf_get_n_c(x)
             if (n_c .gt. 45) then
-               print *, "WARNING: max degree (",N_MAX,") reached: ", n_c
-               n_c = N_MAX
+               print *, "WARNING: max degree (",SINGLE_SPHERE_N_MAX,") reached: ", n_c
+               n_c = SINGLE_SPHERE_N_MAX
 #ifdef _PRINT_NOTE_
             else
                 print *, "NOTE: max degree = ", n_c
@@ -1679,16 +1679,16 @@ module lib_mie_single_sphere
 !            if (.not. test_get_field_initial_incident_multi_wave_real()) then
 !                rv = rv + 1
 !            end if
-            if (.not. test_get_field_initial_incident_gaussian_beam()) rv = rv + 1
+!            if (.not. test_get_field_initial_incident_gaussian_beam()) rv = rv + 1
 !            if (.not. test_get_field_scattered_plane_section_real()) then
 !                rv = rv + 1
 !            end if
-!            if (.not. test_get_field_scattered_plane_section_cmplx()) then
-!                rv = rv + 1
-!            end if
-            if (.not. test_lib_mie_ss_test_convergence_plane_wave()) then
+            if (.not. test_get_field_scattered_plane_section_cmplx()) then
                 rv = rv + 1
             end if
+!            if (.not. test_lib_mie_ss_test_convergence_plane_wave()) then
+!                rv = rv + 1
+!            end if
 
             call cpu_time(test_finish)
             call system_clock(test_count_finish, test_count_rate)
@@ -1913,7 +1913,7 @@ module lib_mie_single_sphere
                     k0 = 2 * PI / lambda
 
                     n_range(1) = 1
-                    n_range(2) = N_MAX
+                    n_range(2) = SINGLE_SPHERE_N_MAX
                     print *, "NOTE: max degree = ", n_range(2)
 
                     call lib_math_factorial_initialise_caching(n_range(2))
@@ -2716,9 +2716,9 @@ module lib_mie_single_sphere
 
                     n_range(1) = 1
                     n_range(2) = lib_mie_ss_hf_get_n_c(r_particle * k0)! * n_particle)
-                    if (n_range(2) .gt. N_MAX) then
-                        print *, "WARNING: max degree (", N_MAX, ") reached: ", n_range(2)
-                        n_range(2) = N_MAX
+                    if (n_range(2) .gt. SINGLE_SPHERE_N_MAX) then
+                        print *, "WARNING: max degree (", SINGLE_SPHERE_N_MAX, ") reached: ", n_range(2)
+                        n_range(2) = SINGLE_SPHERE_N_MAX
                     else
                         print *, "NOTE: max degree = ", n_range(2)
                     end if
@@ -2983,9 +2983,9 @@ module lib_mie_single_sphere
                     n_range(1) = 1
 !                    n_range(2) = min(45, lib_mie_ss_hf_get_n_c(r_particle * k0 * abs(n_particle))) ! todo: abs??
                     n_range(2) = lib_mie_ss_hf_get_n_c(r_particle * k0)
-                    if (n_range(2) .gt. N_MAX) then
-                        print *, "WARNING: max degree (", N_MAX, ") reached: ", n_range(2)
-                        n_range(2) = N_MAX
+                    if (n_range(2) .gt. SINGLE_SPHERE_N_MAX) then
+                        print *, "WARNING: max degree (", SINGLE_SPHERE_N_MAX, ") reached: ", n_range(2)
+                        n_range(2) = SINGLE_SPHERE_N_MAX
                     else
                         print *, "NOTE: max degree = ", n_range(2)
                     end if
