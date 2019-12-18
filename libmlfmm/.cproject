@@ -89,7 +89,7 @@
                                 								
                                 <option id="gnu.fortran.link.option.ldflags.1562513927" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-fopenmp -Wl,-rpath=&quot;${workspace_loc:/libtoolbox/Debug}&quot; -Wl,-rpath=&quot;${workspace_loc:/libmath/Debug}&quot; -Wl,-rpath=&quot;${workspace_loc:/libtree/Debug}&quot;" valueType="string"/>
                                 								
-                                <option id="gnu.fortran.link.option.shared.1000420536" superClass="gnu.fortran.link.option.shared" useByScannerDiscovery="false" value="true" valueType="boolean"/>
+                                <option id="gnu.fortran.link.option.shared.1000420536" name="Shared (-shared)" superClass="gnu.fortran.link.option.shared" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.linker.input.1053409462" superClass="photran.managedbuild.tool.gnu.fortran.linker.input">
                                     									
@@ -216,5 +216,21 @@
     <storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
     	
     <storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
+    	
+    <storageModule moduleId="refreshScope" versionNumber="2">
+        		
+        <configuration configurationName="Debug">
+            			
+            <resource resourceType="PROJECT" workspacePath="/libmlfmm"/>
+            		
+        </configuration>
+        		
+        <configuration configurationName="Release">
+            			
+            <resource resourceType="PROJECT" workspacePath="/libmlfmm"/>
+            		
+        </configuration>
+        	
+    </storageModule>
     
 </cproject>

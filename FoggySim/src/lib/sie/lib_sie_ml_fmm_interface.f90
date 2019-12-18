@@ -91,7 +91,7 @@ module lib_sie_ml_fmm_interface
 
             ! Upward Pass
             ! Step 1
-            handle%get_c => null() ! todo: replace null() with own function
+            handle%get_c => lib_sie_ml_fmm_get_C ! todo: replace null() with own function
             ! Step 2
             handle%get_translation_SS => null() ! todo: replace null() with own function
 
@@ -112,4 +112,33 @@ module lib_sie_ml_fmm_interface
         ! - get_translation_SR
         ! - get_translation_RR
         ! - get_v_y_j
+
+        ! Argument
+        ! ----
+        !   x: type(lib_tree_spatial_point)
+        !       centre of the box
+        !   data_element: type(lib_tree_data_element), dimension(:)
+        !       data element list of the box
+        !   element_number: integer(kind=4), dimension(:)
+        !       number of the element
+        !       HINT: X, Y, and XY lists are concatenated
+        !
+        ! Returns
+        ! ----
+        !   C: type(lib_ml_fmm_coefficient)
+        !       coefficient of the box
+        !
+        !
+        !
+        function lib_sie_ml_fmm_get_C(x, data_element, element_number) result(C)
+            use lib_tree_public
+            use ml_fmm_type
+            implicit none
+            ! dummy
+            type(lib_tree_spatial_point), intent(in) :: x
+            type(lib_tree_data_element), dimension(:), intent(in) :: data_element
+            integer(kind=4), dimension(:), intent(in) :: element_number
+
+            type(lib_ml_fmm_coefficient) :: C
+        end function
 end module lib_sie_ml_fmm_interface

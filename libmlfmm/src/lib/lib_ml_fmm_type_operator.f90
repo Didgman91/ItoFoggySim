@@ -22,8 +22,12 @@ module lib_ml_fmm_type_operator
 !    public :: lib_ml_fmm_type_operator_set_coefficient
 !    public :: lib_ml_fmm_type_operator_get_coefficient
 
+    public :: lib_ml_fmm_get_C
+    public :: lib_ml_fmm_get_v_y_j
+
     public :: lib_ml_fmm_get_u_B_i
     public :: lib_ml_fmm_get_u_phi_i_j
+
     public :: lib_ml_fmm_translation_RR
     public :: lib_ml_fmm_translation_SR
     public :: lib_ml_fmm_translation_SS
