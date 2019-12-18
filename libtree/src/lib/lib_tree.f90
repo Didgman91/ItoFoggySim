@@ -60,6 +60,8 @@ module lib_tree
     public :: lib_tree_get_number_of_boxes
     public :: lib_tree_get_centre_of_box
     public :: lib_tree_get_unscaled_point
+    public :: lib_tree_get_box_edge_length
+    public :: lib_tree_get_box_diagonal
 
     public :: lib_tree_test_functions
     public :: lib_tree_benchmark
@@ -1276,6 +1278,55 @@ module lib_tree
         rv = lib_tree_hf_get_centre_of_box(uindex%n, uindex%l)
 
     end function lib_tree_get_centre_of_box
+
+    ! Argument
+    ! ----
+    !   l: integer
+    !       number of the level
+    !
+    ! Result
+    ! ----
+    !   rv: double precision
+    !       edge length
+    !
+    ! HINT
+    ! ----
+    !   cube edge length
+    !     l     length
+    !   ----------------
+    !     0      1
+    !     1      0.5
+    !     2      0.25
+    function lib_tree_get_box_edge_length(l) result(rv)
+        implicit none
+        ! dummy
+        integer, intent(in) :: l
+        double precision :: rv
+
+        rv = 1d0**(-dble(l))
+
+    end function
+
+    ! Argument
+    ! ----
+    !   l: integer
+    !       number of the level
+    !
+    ! Result
+    ! ----
+    !   rv: double precision
+    !       diagonal of a cube at level l
+    function lib_tree_get_box_diagonal(l) result(rv)
+        implicit none
+        ! dummy
+        integer, intent(in) :: l
+        double precision :: rv
+
+        rv = 1d0**(-dble(l)) * sqrt(3d0)
+
+    end function
+
+
 
     ! This routine stores references (list entries) of the lib_tree_data_element_list array.
     ! These references are sorted into ascending numerical order of the universal index.
