@@ -436,7 +436,8 @@ module lib_mie_multi_sphere
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v3()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_gauss()) rv = rv + 1
-            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene()) rv = rv + 1
+!            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene()) rv = rv + 1
+            if (.not. test_lib_mie_ms_calculate_scattering_coeff_ab_nm_scene_eval()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_parallel_sphere_assemply()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_sphere_grid_assemply()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_serial_sphere_assemply()) rv = rv + 1
@@ -3095,6 +3096,480 @@ module lib_mie_multi_sphere
                 call lib_mie_ms_data_container_destructor()
 
             end function test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene
+
+            function test_lib_mie_ms_calculate_scattering_coeff_ab_nm_scene_eval() result(rv)
+                use file_io
+                use lib_mie_ms_ml_fmm_interface
+                implicit none
+                ! dummy
+                logical :: rv
+
+                ! parameter
+                integer, parameter :: number_of_waves = 1
+                ! auxiliaray
+
+                ! illumination parameter
+                double precision :: lambda_0
+                double precision :: k_0
+                double precision :: e_field_0
+
+                double precision, dimension(number_of_waves) :: plane_wave_g
+                type(cartesian_coordinate_real_type), dimension(number_of_waves) :: plane_wave_k
+                type(cartesian_coordinate_real_type), dimension(number_of_waves) :: plane_wave_d_0_i
+
+                double precision :: n_medium
+
+                double precision :: r_particle
+                double complex :: n_particle
+                integer, dimension(2) :: n_range
+
+                double precision :: buffer
+                type(cartesian_coordinate_real_type) :: buffer_car
+
+                type(cartesian_coordinate_cmplx_type), dimension(2) :: field
+
+                integer :: i
+                integer, dimension(2) :: range_i
+                integer :: ii
+                integer :: n
+                integer :: m
+
+                type(list_list_cmplx), dimension(:), allocatable :: a_nm_ml_fmm
+                type(list_list_cmplx), dimension(:), allocatable :: b_nm_ml_fmm
+
+                type(list_list_cmplx), dimension(:), allocatable :: a_nm_t_matrix
+                type(list_list_cmplx), dimension(:), allocatable :: b_nm_t_matrix
+
+                type(list_list_cmplx) :: list_list_diff
+
+
+                ! plot
+                double precision :: x
+                double precision :: y
+                double precision :: z
+                type(cartesian_coordinate_real_type) :: x_0
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field_s
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field_s
+                double precision, dimension(2) :: x_range
+                double precision, dimension(2) :: z_range
+                real(kind=8) :: step_size
+                integer :: no_x_values
+                integer :: no_z_values
+
+                type(lib_scene_opject_type) :: scene
+                type(cartesian_coordinate_real_type) :: d_o_j
+                type(cartesian_coordinate_real_type) :: cap_plane_point
+                type(cartesian_coordinate_real_type) :: cap_plane_normal
+                double precision :: sphere_radius
+                double precision :: lattice_sphere_radius
+
+                type(cartesian_coordinate_real_type), dimension(:), allocatable :: sphere_coordinates
+                double precision, dimension(:,:), allocatable :: data_list
+
+                integer :: u
+                character(len=50) :: filename
+                character(len=50), dimension(:), allocatable :: header
+
+
+                ! CPU-time
+                real :: test_start_sub, test_finish_sub
+                ! WALL-time
+                INTEGER :: test_count_start_sub, test_count_finish_sub, test_count_rate_sub
+
+                simulation_data%spherical_harmonics%z_selector_incident_wave = 1
+                simulation_data%spherical_harmonics%z_selector_scatterd_wave = 3
+                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 3
+                simulation_data%spherical_harmonics%z_selector_translation_le_r = 1
+
+                ! set illumination parameter
+                e_field_0 = 1
+                lambda_0 = 550 * unit_nm
+
+                n_medium = 1
+
+                k_0 = 2 * PI / lambda_0
+
+                simulation_data%illumination%lambda_0 = lambda_0
+
+                plane_wave_g(:) = 1
+
+                buffer_car%x = 0 * unit_mu
+                buffer_car%y = 0
+                buffer_car%z = -10 * unit_mu
+                plane_wave_d_0_i(:) = buffer_car
+
+                buffer_car%x = 0
+                buffer_car%y = 0
+                buffer_car%z = 1
+                buffer_car = buffer_car / abs(buffer_car) / lambda_0
+                plane_wave_k(1) = buffer_car
+
+!                buffer_car%x = -1
+!                buffer_car%y = 0
+!                buffer_car%z = 1
+!                buffer_car = buffer_car / abs(buffer_car) / lambda
+!                plane_wave_k(2) = buffer_car
+
+                simulation_data%illumination = lib_mie_type_func_get_plane_wave_illumination(lambda_0, &
+                                                                                        n_medium, &
+                                                                                        e_field_0, &
+                                                                                        plane_wave_g, &
+                                                                                        plane_wave_k, &
+                                                                                        plane_wave_d_0_i)
+
+                simulation_data%refractive_index_medium = n_medium
+
+                ! set spheres
+
+                scene%d_0_o = make_cartesian(0d0,0d0,0d0)
+                d_o_j = make_cartesian(0d0,0d0,0d0)
+                sphere_radius = 40 * unit_nm
+                lattice_sphere_radius = 8 * unit_nm
+                cap_plane_point = make_cartesian(0d0, 0d0, 0d0)
+                cap_plane_normal = make_cartesian(0d0, 0d0, 1d0)
+
+                allocate(scene%hcp_sphere(1))
+                scene%hcp_sphere(1) = lib_scene_generator_hcp_lattice_fill_sphere(d_o_j, &
+                                                sphere_radius, lattice_sphere_radius, &
+                                                cap_plane_point=cap_plane_point, &
+                                                cap_plane_normal=cap_plane_normal)
+
+                sphere_coordinates = list_filter(scene%hcp_sphere(1)%hcp_cuboid%hcp_lattice_coordiantes, &
+                                                 scene%hcp_sphere(1)%inside_sphere)
+                sphere_coordinates = scene%d_0_o + scene%hcp_sphere(1)%d_o_j + sphere_coordinates
+
+                range_i(1) = lbound(sphere_coordinates, 1)
+                range_i(2) = ubound(sphere_coordinates, 1)
+
+                allocate(data_list(range_i(1):range_i(2), 3))
+
+                do i = range_i(1), range_i(2)
+                    data_list(i, 1) = sphere_coordinates(i)%x
+                    data_list(i, 2) = sphere_coordinates(i)%y
+                    data_list(i, 3) = sphere_coordinates(i)%z
+                end do
+
+                u = 99
+                filename = "temp/hcp_sphere.csv"
+                open(unit=u, file=trim(filename), status='unknown')
+                rv = write_csv(u, data_list)
+                close(u)
+
+                allocate (a_nm_t_matrix(size(sphere_coordinates)))
+                allocate (b_nm_t_matrix(size(sphere_coordinates)))
+
+                allocate (a_nm_ml_fmm(size(sphere_coordinates)))
+                allocate (b_nm_ml_fmm(size(sphere_coordinates)))
+
+                allocate (simulation_data%sphere_list(size(sphere_coordinates)))
+
+                simulation_data%sphere_list(:)%sphere_parameter_index = 1
+
+                simulation_data%sphere_list(:)%d_0_j = sphere_coordinates(:)
+
+!                do i = 1, size(sphere_coordinates)
+!
+!                    simulation_data%sphere_list(i)%d_0_j = sphere_coordinates(i)
+!                end do
+
+                ! set sphere parameter
+                allocate(simulation_data%sphere_parameter_list(1))
+
+                ! set 1
+!                r_particle = 0.8 * unit_mu
+                r_particle = 7.5 * unit_nm
+                n_particle = dcmplx(2.5287_8, 0)
+
+                n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
+                if (n_range(1) .gt. 0) then
+                    n_range(2) = n_range(1)
+                    n_range(1) = 1
+                else
+                    print *, "test_lib_mie_ms_get_field: ERROR"
+                    print *, "  lib_mie_ss_test_convergence_plane_wave"
+                    print *, "  rv(1): ", n_range(1)
+                    print *, "  rv(2): ", n_range(2)
+                end if
+
+!                if (n_range(2) .gt. 12) then
+!                    n_range(2) = 12
+!                    print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene: NOTE"
+!                    print *, "  n_range is limited to ", n_range(2)
+!                end if
+
+                n_range(2) = 6
+                simulation_data%spherical_harmonics%n_range = n_range
+
+                simulation_data%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
+                                                                                          r_particle, n_particle, &
+                                                                                          n_range)
+
+                ! set evaluation points
+                x_range = (/ -sphere_radius * 1.5d0, sphere_radius * 1.5d0 /)
+                z_range = (/ -sphere_radius * 1.5d0, sphere_radius * 2d0 /)
+                step_size = (x_range(2) - x_range(1)) / 200
+
+                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
+
+
+                call system_clock(test_count_start_sub, test_count_rate_sub)
+                call cpu_time(test_start_sub)
+
+!                n_range(2) = int(ceiling(real(n_range(2)) * 1.2))
+!                simulation_data%spherical_harmonics%n_range = n_range
+
+                call lib_mie_ms_constructor(n_range, use_ml_fmm = .false., init_with_single_sphere = .true.)
+
+                call fwig_table_init(4 * (n_range(2)+1), 3)
+!                call fwig_temp_init(4 * (n_range(2)+1))
+                call fwig_thread_temp_init(4 * (n_range(2)+1))
+
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(8, 2)
+                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
+                a_nm_t_matrix(:) = simulation_data%sphere_list(:)%a_nm
+                b_nm_t_matrix(:) = simulation_data%sphere_list(:)%b_nm
+
+                call cpu_time(test_finish_sub)
+                call system_clock(test_count_finish_sub, test_count_rate_sub)
+
+
+                print *, ""
+                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene (T-Matrix): "
+                print '("  CPU-Time = ",f10.3," seconds.")', test_finish_sub-test_start_sub
+                print '("  WALL-Time = ",f10.3," seconds.")', (test_count_finish_sub-test_count_start_sub) &
+                                                               / real(test_count_rate_sub)
+                print *, ""
+
+                call system_clock(test_count_start_sub, test_count_rate_sub)
+                call cpu_time(test_start_sub)
+
+!                n_range(2) = int(ceiling(real(n_range(2)) * 1.2))
+!                simulation_data%spherical_harmonics%n_range = n_range
+
+                call lib_mie_ms_constructor(n_range, use_ml_fmm = .true., init_with_single_sphere = .true.)
+
+                call fwig_table_init(4 * (n_range(2)+1), 3)
+!                call fwig_temp_init(4 * (n_range(2)+1))
+                call fwig_thread_temp_init(4 * (n_range(2)+1))
+
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(8, 2)
+                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
+                a_nm_ml_fmm(:) = simulation_data%sphere_list(:)%a_nm
+                b_nm_ml_fmm(:) = simulation_data%sphere_list(:)%b_nm
+
+                call cpu_time(test_finish_sub)
+                call system_clock(test_count_finish_sub, test_count_rate_sub)
+
+
+                print *, ""
+                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene (ML-FMM): "
+                print '("  CPU-Time = ",f10.3," seconds.")', test_finish_sub-test_start_sub
+                print '("  WALL-Time = ",f10.3," seconds.")', (test_count_finish_sub-test_count_start_sub) &
+                                                               / real(test_count_rate_sub)
+                print *, ""
+
+                ! evaluate and export
+
+
+
+!                call lib_mie_ms_ml_fmm_calculate_evaluation_points()
+
+!                allocate(e_field_s(no_x_values, no_z_values))
+!                allocate(h_field_s(no_x_values, no_z_values))
+!
+!                x = 0
+!                y = 0
+!                z = 0
+!
+!                do i=1, no_x_values
+!                    x = x_range(1) + (i-1) * step_size
+!                    do ii=1, no_z_values
+!                        z = z_range(1) + (ii-1) * step_size
+!
+!                        x_0%x = x
+!                        x_0%y = y
+!                        x_0%z = z
+!
+!                        field = lib_mie_ms_get_field(x_0)
+!                        e_field_s(i,ii) = field(1)
+!                        h_field_s(i,ii) = field(2)
+!                    end do
+!                 end do
+
+!                do i=1, no_x_values
+!                    x = x_range(1) + (i-1) * step_size
+!                    do ii=1, no_z_values
+!                        z = z_range(1) + (ii-1) * step_size
+!
+!                        x_0%x = x
+!                        x_0%y = y
+!                        x_0%z = z
+!
+!                        field = lib_mie_ms_get_field(x_0)
+!                        simulation_data%evaluation_points(no_z_values * (i - 1) + ii)%coordinate = x_0
+!                        e_field_s(i,ii) = field(1)
+!                        h_field_s(i,ii) = field(2)
+!                    end do
+!                 end do
+
+!                rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
+!
+!                x = 0
+!                y = 0
+!                z = 0
+!
+!                do i=1, no_x_values
+!                    x = x_range(1) + (i-1) * step_size
+!                    do ii=1, no_z_values
+!                        z = z_range(1) + (ii-1) * step_size
+!
+!                        x_0%x = x
+!                        x_0%y = y
+!                        x_0%z = z
+!
+!                        call lib_field_plane_wave_get_field(simulation_data%illumination%plane_wave(1)%beam_parameter, &
+!                                                            x_0, &
+!                                                            field(1), field(2))
+!
+!                        e_field_s(i,ii) = e_field_s(i,ii) + field(1)
+!                        h_field_s(i,ii) = h_field_s(i,ii) + field(2)
+!                    end do
+!                 end do
+!
+!                rv = lib_field_export(e_field_s, h_field_s, "temp/realTotal/")
+
+                !      1   , 2, 3,
+                ! sphere_no, n, m,
+                !     4           ,     5            ,     6           ,     7            ,
+                ! a_nm_real_ml_fmm, a_nm_cmplx_ml_fmm, b_nm_real_ml_fmm, b_nm_cmplx_ml_fmm,
+                !     8             ,       9            ,       10          ,       11           ,
+                ! a_nm_real_t_matrix, a_nm_cmplx_t_matrix, b_nm_real_t_matrix, b_nm_cmplx_t_matrix,
+                !     12        ,       13       ,     14        ,    15
+                ! diff_a_nm_real, diff_a_nm_cmplx, diff_b_nm_real, diff_b_nm_cmplx
+                if (allocated(header)) deallocate(header)
+                allocate(header(15))
+                header(1) = "sphere_no"
+                header(2) = "n"
+                header(3) = "m"
+                header(4) = "a_nm_real_ml_fmm"
+                header(5) = "a_nm_cmplx_ml_fmm"
+                header(6) = "b_nm_real_ml_fmm"
+                header(7) = "b_nm_cmplx_ml_fmm"
+                header(8) =  "a_nm_real_t_matrix"
+                header(9) =  "a_nm_cmplx_t_matrix"
+                header(10) = "b_nm_real_t_matrix"
+                header(11) = "b_nm_cmplx_t_matrix"
+                header(12) = "diff_a_nm_real_ml_fmm"
+                header(13) = "diff_a_nm_cmplx_ml_fmm"
+                header(14) = "diff_b_nm_real_ml_fmm"
+                header(15) = "diff_b_nm_cmplx_ml_fmm"
+
+                range_i(1) = lbound(sphere_coordinates, 1)
+                range_i(2) = ubound(sphere_coordinates, 1)
+                i = (range_i(2) - range_i(1) + 1) * ( (n_range(2) + 1)**2 - n_range(1)**2 )
+
+                if (allocated(data_list)) deallocate(data_list)
+                allocate(data_list(i, size(header)))
+
+                rv = .true.
+                print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene:"
+                ii = 0
+                do i=lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
+                    print *, "  i = ", i
+
+                    print *, "  a_nm"
+                    list_list_diff = a_nm_ml_fmm(i) - a_nm_t_matrix(i)
+
+                    do n = lbound(list_list_diff%item, 1), &
+                           ubound(list_list_diff%item, 1)
+                        print *, "  n = ", n
+                        do m = -n, n
+
+                            ii = ii + 1
+                            data_list(ii, 1) = i  ! sphere no
+                            data_list(ii, 2) = n  ! n
+                            data_list(ii, 3) = m  ! m
+
+                            data_list(ii, 4) =   real(a_nm_ml_fmm(i)%item(n)%item(m))
+                            data_list(ii, 5) =  aimag(a_nm_ml_fmm(i)%item(n)%item(m))
+                            data_list(ii, 6) =   real(b_nm_ml_fmm(i)%item(n)%item(m))
+                            data_list(ii, 7) =  aimag(b_nm_ml_fmm(i)%item(n)%item(m))
+
+                            data_list(ii, 8) =   real(a_nm_t_matrix(i)%item(n)%item(m))
+                            data_list(ii, 9) =  aimag(a_nm_t_matrix(i)%item(n)%item(m))
+                            data_list(ii, 10) =  real(b_nm_t_matrix(i)%item(n)%item(m))
+                            data_list(ii, 11) = aimag(b_nm_t_matrix(i)%item(n)%item(m))
+
+                            data_list(ii, 12) =  real(list_list_diff%item(n)%item(m))
+                            data_list(ii, 13) = aimag(list_list_diff%item(n)%item(m))
+                            data_list(ii, 14) =  real(list_list_diff%item(n)%item(m))
+                            data_list(ii, 15) = aimag(list_list_diff%item(n)%item(m))
+
+                            buffer = real(list_list_diff%item(n)%item(m))
+                            if (buffer .gt. ground_truth_e) then
+                                print *, "    m: ", m , "difference (real): ", buffer, " : FAILED"
+                                print *, "         ML-FMM: ", a_nm_ml_fmm(i)%item(n)%item(m)
+                                print *, "       T-Matrix: ", a_nm_t_matrix(i)%item(n)%item(m)
+                                rv = .false.
+                            else
+                                print *, "    m: ", m, ": (real) OK"
+                            end if
+
+                            buffer = aimag(list_list_diff%item(n)%item(m))
+                            if (buffer .gt. ground_truth_e) then
+                                print *, "    m: ", m , "difference (imag): ", buffer, " : FAILED"
+                                print *, "         ML-FMM: ", a_nm_ml_fmm(i)%item(n)%item(m)
+                                print *, "       T-Matrix: ", a_nm_t_matrix(i)%item(n)%item(m)
+                                rv = .false.
+                            else
+                                print *, "    m: ", m, ": (imag) OK"
+                            end if
+                        end do
+                    end do
+
+                    print *, "  b_nm"
+                    list_list_diff = b_nm_ml_fmm(i) - b_nm_t_matrix(i)
+
+                    do n = lbound(list_list_diff%item, 1), &
+                           ubound(list_list_diff%item, 1)
+                        print *, "  n = ", n
+                        do m = -n, n
+                            buffer = real(list_list_diff%item(n)%item(m))
+                            if (buffer .gt. ground_truth_e) then
+                                print *, "    m: ", m , "difference (real): ", buffer, " : FAILED"
+                                print *, "         ML-FMM: ", b_nm_ml_fmm(i)%item(n)%item(m)
+                                print *, "       T-Matrix: ", b_nm_t_matrix(i)%item(n)%item(m)
+                                rv = .false.
+                            else
+                                print *, "    m: ", m, ": (real) OK"
+                            end if
+                        end do
+
+                        do m = -n, n
+                            buffer = aimag(list_list_diff%item(n)%item(m))
+                            if (buffer .gt. ground_truth_e) then
+                                print *, "    m: ", m , "difference (imag): ", buffer, " : FAILED"
+                                print *, "         ML-FMM: ", b_nm_ml_fmm(i)%item(n)%item(m)
+                                print *, "       T-Matrix: ", b_nm_t_matrix(i)%item(n)%item(m)
+                                rv = .false.
+                            else
+                                print *, "    m: ", m, ": (imag) OK"
+                            end if
+                        end do
+                    end do
+                end do
+
+                u = 99
+                filename = "temp/coefficient_error.csv"
+                open(unit=u, file=trim(filename), status='unknown')
+                rv = write_csv(u, data_list, header)
+                close(u)
+
+                call lib_mie_ms_data_container_destructor()
+
+            end function test_lib_mie_ms_calculate_scattering_coeff_ab_nm_scene_eval
+
         end function
 
         subroutine lib_mie_ms_benchmark()
