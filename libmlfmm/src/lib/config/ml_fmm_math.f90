@@ -440,7 +440,7 @@ module ml_fmm_math
     !   data_element: type(lib_tree_data_element)
     !       internal "Tree" data element
     !   element_number: integer
-    !       number of the element
+    !       number of the element: m_ml_fmm_u(element_number)
     !
     ! dummyesult
     ! ----
@@ -501,6 +501,7 @@ module ml_fmm_math
     function test_get_u_B_i(x, data_element, element_number) result(u_B_i)
         use lib_tree_public
         use ml_fmm_type
+        use lib_ml_fmm_data_container
         implicit none
         ! dummy
         type(lib_tree_spatial_point), intent(in) :: x
@@ -516,6 +517,7 @@ module ml_fmm_math
     function test_get_u_phi_i_j(data_element_i, element_number_i, data_element_j, element_number_j) result(rv)
         use lib_tree_public
         use ml_fmm_type
+        use lib_ml_fmm_data_container
         implicit none
         ! dummy
         type(lib_tree_data_element), intent(in) :: data_element_i

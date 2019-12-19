@@ -171,7 +171,71 @@ module lib_mie_ms_ml_fmm_interface
 
         end function lib_mie_ms_ml_fmm_get_procedures
 
+        ! Argument
+        ! ----
+        !   x: type(lib_tree_spatial_point)
+        !       normalised point of the box centre
+        !   data_element: type(lib_tree_data_element)
+        !       internal "Tree" data element
+        !   element_number: integer
+        !       number of the element: m_ml_fmm_u(element_number)
         !
+        ! dummyesult
+        ! ----
+        !   u_B_i: type(lib_ml_fmm_coefficient)
+        !       calculation of one summand of the sum eq. 32
+        !
+        ! Visualisation
+        ! ----
+        !
+        !  own data structure with informaion of each element:
+        !       - position x
+        !       - e.g. radius r
+        !       - ...
+        !
+        !   -------------------------------------------------
+        !   | x, r, ... | x, r, ... | x, r, ... | x, r, ... |
+        !   -------------------------------------------------
+        !         1           2          ...          N
+        !
+        !   tree data structure
+        !       - normalised position ^x
+        !       - hierarchy type h
+        !
+        !   -------------------------------------------------
+        !   | ^x, h     | ^x, h     | ^x, h     | ^x, h     |
+        !   -------------------------------------------------
+        !      ^  1           2          ...          N     <-- element number
+        !      |
+        !      "data_element" with the number "element_number" (aka no)
+        !
+        !   Matrix Vector representation:
+        !       asdf
+        !         -       -   -  -     -  -
+        !        |         | |    |   |    |
+        !        | _______ | |    |   |    |
+        !        | __XXO__ | | no | = |    | ;
+        !        |         | |    |   |    |
+        !        |         | |    |   |    |
+        !         -       -   -  -     -  -
+        !
+        !   Alternative representation:
+        !
+        !       transformation of element "no"
+        !         ---------
+        !         |     no|
+        !         |  ^x   |
+        !         |       |
+        !         ---------
+        !
+        ! HINT
+        ! ----
+        !   unscale position with: x_unscaled = lib_tree_get_unscaled_point(x)
+        !
+        !
+        !
+        ! dummyreference: Data_Structures_Optimal_Choice_of_Parameters_and_C, Gumerov, Duraiswami, Borovikov
+        !            e.q. 32
         function lib_mie_ms_ml_fmm_get_u_B_i(x, data_element, element_number) result(u_B_i)
             use libmath
             use lib_tree_public
