@@ -181,6 +181,54 @@ module lib_field
             rv = write_ppm_p3(u, poynting_abs, logarithmic = .true.)
             close(u)
 
+            ! --- wirte to CSV ---
+            ! e field
+            u = 99
+            open(unit=u, file= trim(path) // "e_field_x.csv", status='unknown')
+            rv = write_csv(u, e_field_real_x)
+            close(u)
+
+            open(unit=u, file=trim(path) // "e_field_y.csv", status='unknown')
+            rv = write_csv(u, e_field_real_y)
+            close(u)
+
+            open(unit=u, file= trim(path) // "e_field_z.csv", status='unknown')
+            rv = write_csv(u, e_field_real_z)
+            close(u)
+
+            ! h field
+            u = 99
+            open(unit=u, file= trim(path) // "h_field_x.csv", status='unknown')
+            rv = write_csv(u, h_field_real_x)
+            close(u)
+
+            open(unit=u, file= trim(path) // "h_field_y.csv", status='unknown')
+            rv = write_csv(u, h_field_real_y)
+            close(u)
+
+            open(unit=u, file= trim(path) // "h_field_z.csv", status='unknown')
+            rv = write_csv(u, h_field_real_z)
+            close(u)
+
+            ! Poynting
+            u = 99
+            open(unit=u, file= trim(path) // "poynting_x.csv", status='unknown')
+            rv = write_csv(u, poynting(:,:)%x)
+            close(u)
+
+            open(unit=u, file= trim(path) // "poynting_y.csv", status='unknown')
+            rv = write_csv(u, poynting(:,:)%y)
+            close(u)
+
+            open(unit=u, file= trim(path) // "poynting_z.csv", status='unknown')
+            rv = write_csv(u, poynting(:,:)%z)
+            close(u)
+
+            ! Poynting abs
+            open(unit=u, file= trim(path) // "poynting_abs.csv", status='unknown')
+            rv = write_csv(u, poynting_abs)
+            close(u)
+
         end function lib_field_export
 
         function lib_field_test_functions() result(rv)
