@@ -2334,7 +2334,7 @@ module lib_math_vector_spherical_harmonics
             integer :: rv
 
             ! auxiliaray
-            double precision, parameter :: ground_truth_e = 10.0_8**(-6.0_8)
+            double precision, parameter :: ground_truth_e = 10.0_8**(-13.0_8)
             ! CPU-time
             real :: test_start, test_finish
             ! WALL-time
@@ -2892,15 +2892,19 @@ module lib_math_vector_spherical_harmonics
                 double precision :: erg_mantissa
 
                 double precision, dimension(:,:), allocatable :: csv_data
+                double precision, dimension(:,:), allocatable :: csv_data_calc
                 integer :: csv_columns
+
+                character(len=50), dimension(8) :: header
 
                 z_selector = 3
                 x = 2.0
                 theta = 0.5
                 phi = 0.5
 
-                n_range  = (/ 1, 11 /)
-                nu_range = (/ 1, 12 /)
+                n_range  = (/ 1, 5 /)
+                nu_range = (/ 1, 5 /)
+
 
                 call init_list(ground_truth_A, n_range(1), n_range(2)-n_range(1)+1, &
                                                nu_range(1), nu_range(2)-nu_range(1)+1)
@@ -2908,6 +2912,9 @@ module lib_math_vector_spherical_harmonics
                                                nu_range(1), nu_range(2)-nu_range(1)+1)
                 n_range  = (/ 1, 5 /)
                 nu_range = (/ 1, 5 /)
+
+                call lib_math_factorial_initialise_caching(90)
+
                 ! load ground truth
                 if (file_exists(file_name)) then
                     csv_columns = 8
@@ -2950,6 +2957,44 @@ module lib_math_vector_spherical_harmonics
                 call lib_math_vector_spherical_harmonics_translation_coeff_r(x, theta, phi, &
                                                                              n_range, nu_range, z_selector, &
                                                                              A_mnkl, B_mnkl)
+
+                allocate(csv_data_calc, mold=csv_data)
+                i = lbound(csv_data_calc, 1) - 1
+                do n = n_range(1), n_range(2)
+                do m = -n, n
+                do nu = nu_range(1), nu_range(2)
+                do mu = -nu, nu
+                    i = i + 1
+                    csv_data_calc(i, 1) = m
+                    csv_data_calc(i, 2) = n
+                    csv_data_calc(i, 3) = mu
+                    csv_data_calc(i, 4) = nu
+
+                    buffer_cmplx = A_mnkl%item(n)%item(m)%item(nu)%item(mu)
+                    csv_data_calc(i, 5) = real(buffer_cmplx)
+                    csv_data_calc(i, 6) = aimag(buffer_cmplx)
+
+                    buffer_cmplx = B_mnkl%item(n)%item(m)%item(nu)%item(mu)
+                    csv_data_calc(i, 7) = real(buffer_cmplx)
+                    csv_data_calc(i, 8) = aimag(buffer_cmplx)
+                end do
+                end do
+                end do
+                end do
+
+!                m,n,mu,nu,Re[A],Im[A],Re[B],Im[B]
+                header(1) = "m"
+                header(2) = "n"
+                header(3) = "mu"
+                header(4) = "nu"
+                header(5) = "Re[A]"
+                header(6) = "Im[A]"
+                header(7) = "Re[B]"
+                header(8) = "Im[B]"
+
+                open(unit=99, file= "temp/Translation_Coefficient.csv", status='unknown')
+                rv = write_csv(99, csv_data_calc, header)
+                close(99)
 
                 rv = .true.
                 print *, "test_lib_math_vector_spherical_harmonics_translation_coeff_r:"
