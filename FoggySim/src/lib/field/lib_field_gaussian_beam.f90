@@ -1221,7 +1221,7 @@ module lib_field_gaussian_beam
                 x_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
                 y_range = (/ -10_8 * unit_mu, 10.0_8 * unit_mu /)
 !                    step_size = 0.02_8 * unit_mu
-                step_size = 0.075_8 * unit_mu
+                step_size = 0.05_8 * unit_mu
 
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
@@ -1241,11 +1241,11 @@ module lib_field_gaussian_beam
 !                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_rot(PI/4d0)
                 gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
 !                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_circular_plus()
-                gauss_parameter%waist_x0 = 1 * unit_mu
-                gauss_parameter%waist_y0 = 1 * unit_mu
+                gauss_parameter%waist_x0 = 1.5 * unit_mu
+                gauss_parameter%waist_y0 = 1.5 * unit_mu
                 gauss_parameter%wave_length_0 = 0.55 * unit_mu
 
-                gauss_parameter%theta = 0!PI / 8d0
+                gauss_parameter%theta = PI / 8d0
                 gauss_parameter%phi = 0!PI
 
                 gauss_parameter%convention = 1
@@ -1254,7 +1254,7 @@ module lib_field_gaussian_beam
                 do i=1, no_x_values
                     x = x_range(1) + (i-1) * step_size
                     do ii= 1, no_y_values
-                        z = y_range(2) - (ii-1) * step_size
+                        z = y_range(1) + (ii-1) * step_size
 
                         point_cartesian%x = x
                         point_cartesian%y = y
@@ -1721,11 +1721,11 @@ module lib_field_gaussian_beam
 !                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_rot(PI/4d0)
                 gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_linear_h()
 !                gauss_parameter%polarisation = lib_field_polarisation_jones_vector_get_circular_plus()
-                gauss_parameter%waist_x0 = 2.5 * unit_mu
-                gauss_parameter%waist_y0 = 2.5 * unit_mu
+                gauss_parameter%waist_x0 = 1.5 * unit_mu
+                gauss_parameter%waist_y0 = 1.5 * unit_mu
                 gauss_parameter%wave_length_0 = 0.55 * unit_mu
 
-                gauss_parameter%theta = 0!PI / 8d0
+                gauss_parameter%theta = PI / 8d0
                 gauss_parameter%phi = 0!PI
 
                 gauss_parameter%convention = 1
@@ -1739,7 +1739,7 @@ module lib_field_gaussian_beam
                 do i=1, no_x_values
                     x = x_range(1) + (i-1) * step_size
                     do ii= 1, no_y_values
-                        z = y_range(2) - (ii-1) * step_size
+                        z = y_range(1) + (ii-1) * step_size
 
                         point_cartesian%x = x
                         point_cartesian%y = y
