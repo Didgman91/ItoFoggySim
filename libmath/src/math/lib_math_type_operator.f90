@@ -4292,7 +4292,7 @@ module lib_math_type_operator
                     logical :: rv
 
                     ! auxiliary
-                    double precision, parameter :: ground_truth_e = 10.0_8**(-6.0_8)
+                    double precision, parameter :: ground_truth_e = 10.0_8**(-15.0_8)
 
                     if (error .gt. ground_truth_e) then
                         if (present(str)) then
