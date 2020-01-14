@@ -3180,35 +3180,44 @@ module lib_math_type_operator
                 n_range_full(2) = max( ubound(lhs%item, 1), ubound(rhs%item, 1) )
 
                 call init_list(rv, n_range_full(1), n_range_full(2) - n_range_full(1) + 1)
-
+                !$OMP PARALLEL DO PRIVATE(i)
                 do i = n_range_mutual(1), n_range_mutual(2)
-                    rv%item(i)%item = lhs%item(i)%item + rhs%item(i)%item
+                    rv%item(i) = lhs%item(i) + rhs%item(i)
                 end do
+                !$OMP END PARALLEL DO
 
                 ! fill entries with i < n_range_mutual(1)
                 if (lbound(lhs%item, 1) .lt. lbound(rhs%item, 1)) then
+                    !$OMP PARALLEL DO PRIVATE(i)
                     do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
                         rv%item(i) = lhs%item(i)
                     end do
+                    !$OMP END PARALLEL DO
                 end if
 
                 if (lbound(rhs%item, 1) .lt. lbound(lhs%item, 1)) then
+                    !$OMP PARALLEL DO PRIVATE(i)
                     do i = lbound(rhs%item, 1), lbound(lhs%item, 1) - 1
-                        rv%item(i)%item = rhs%item(i)%item
+                        rv%item(i) = rhs%item(i)
                     end do
+                    !$OMP END PARALLEL DO
                 end if
 
                 ! fill entries with i > n_range_mutual(2)
                 if (ubound(lhs%item, 1) .gt. ubound(rhs%item, 1)) then
+                    !$OMP PARALLEL DO PRIVATE(i)
                     do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
-                        rv%item(i)%item = lhs%item(i)%item
+                        rv%item(i) = lhs%item(i)
                     end do
+                    !$OMP END PARALLEL DO
                 end if
 
                 if (ubound(rhs%item, 1) .gt. ubound(lhs%item, 1)) then
+                    !$OMP PARALLEL DO PRIVATE(i)
                     do i = ubound(rhs%item, 1), ubound(lhs%item, 1) - 1
-                        rv%item(i)%item = rhs%item(i)%item
+                        rv%item(i) = rhs%item(i)
                     end do
+                    !$OMP END PARALLEL DO
                 end if
 
             else if (allocated(lhs%item)) then
