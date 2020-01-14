@@ -62,6 +62,9 @@ module lib_math_type_operator
         module procedure lib_math_list_spherical_operator_0d_add_array_cmplx
         module procedure lib_math_list_spherical_operator_array_add_0d_cmplx
 
+        ! list
+        module procedure lib_math_list_cmplx_add
+
         ! list list
         module procedure lib_math_list_list_real_add
         module procedure lib_math_list_list_cmplx_add
@@ -3084,6 +3087,77 @@ module lib_math_type_operator
         ! Retruns
         ! ----
         !   rv: type(list_list_cmplx)
+        function lib_math_list_cmplx_add(lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            type(list_cmplx), intent(in) :: lhs
+            type(list_cmplx), intent(in) :: rhs
+
+            type(list_cmplx) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            integer, dimension(2) :: n_range_mutual
+            integer, dimension(2) :: n_range_full
+
+            if (allocated(lhs%item) .and. allocated(rhs%item)) then
+                n_range_mutual(1) = max( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+                n_range_mutual(2) = min( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+
+                n_range_full(1) = min( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+                n_range_full(2) = max( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+
+                call init_list(rv, n_range_full(1), n_range_full(2) - n_range_full(1) + 1)
+
+                do i = n_range_mutual(1), n_range_mutual(2)
+                    rv%item(i) = lhs%item(i) + rhs%item(i)
+                end do
+
+                ! fill entries with i < n_range_mutual(1)
+                if (lbound(lhs%item, 1) .lt. lbound(rhs%item, 1)) then
+                    do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
+                        rv%item(i) = lhs%item(i)
+                    end do
+                end if
+
+                if (lbound(rhs%item, 1) .lt. lbound(lhs%item, 1)) then
+                    do i = lbound(rhs%item, 1), lbound(lhs%item, 1) - 1
+                        rv%item(i) = rhs%item(i)
+                    end do
+                end if
+
+                ! fill entries with i > n_range_mutual(2)
+                if (ubound(lhs%item, 1) .gt. ubound(rhs%item, 1)) then
+                    do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
+                        rv%item(i) = lhs%item(i)
+                    end do
+                end if
+
+                if (ubound(rhs%item, 1) .gt. ubound(lhs%item, 1)) then
+                    do i = ubound(rhs%item, 1), ubound(lhs%item, 1) - 1
+                        rv%item(i) = rhs%item(i)
+                    end do
+                end if
+
+            else if (allocated(lhs%item)) then
+                rv = lhs
+            else if (allocated(rhs%item)) then
+                rv = rhs
+            end if
+
+        end function
+
+        ! Elementwise addition
+        !
+        ! Arguments
+        ! ----
+        !   lhs: type(list_list_cmplx)
+        !   rhs: type(list_list_cmplx)
+        !
+        ! Retruns
+        ! ----
+        !   rv: type(list_list_cmplx)
         function lib_math_list_list_cmplx_add(lhs, rhs) result (rv)
             implicit none
             ! dummy
@@ -3093,24 +3167,12 @@ module lib_math_type_operator
             type(list_list_cmplx) :: rv
 
             ! auxiliary
-            integer :: n
-            integer :: m
+            integer :: i
 
             integer, dimension(2) :: n_range_mutual
             integer, dimension(2) :: n_range_full
 
-            if (lbound(lhs%item, 1) .eq. lbound(rhs%item, 1) .and. &
-                ubound(lhs%item, 1) .eq. ubound(rhs%item, 1) ) then
-                call init_list(rv, lbound(lhs%item, 1), ubound(lhs%item, 1) - lbound(lhs%item, 1) + 1)
-
-                !$OMP PARALLEL DO PRIVATE(n, m)
-                do n=lbound(lhs%item, 1), ubound(lhs%item, 1)
-                    do m=lbound(lhs%item(n)%item, 1), ubound(lhs%item(n)%item, 1)
-                        rv%item(n)%item(m) = lhs%item(n)%item(m) + rhs%item(n)%item(m)
-                    end do
-                end do
-                !$OMP END PARALLEL DO
-            else if(allocated(lhs%item) .and. (allocated(rhs%item))) then
+            if (allocated(lhs%item) .and. allocated(rhs%item)) then
                 n_range_mutual(1) = max( lbound(lhs%item, 1), lbound(rhs%item, 1) )
                 n_range_mutual(2) = min( ubound(lhs%item, 1), ubound(rhs%item, 1) )
 
@@ -3119,55 +3181,40 @@ module lib_math_type_operator
 
                 call init_list(rv, n_range_full(1), n_range_full(2) - n_range_full(1) + 1)
 
-                !$OMP PARALLEL DO PRIVATE(n, m)
-                do n=n_range_mutual(1), n_range_mutual(2)
-                    do m=lbound(lhs%item(n)%item, 1), ubound(lhs%item(n)%item, 1)
-                        rv%item(n)%item(m) = lhs%item(n)%item(m) + rhs%item(n)%item(m)
-                    end do
+                do i = n_range_mutual(1), n_range_mutual(2)
+                    rv%item(i)%item = lhs%item(i)%item + rhs%item(i)%item
                 end do
-                !$OMP END PARALLEL DO
 
-                if (lbound(lhs%item, 1) .lt. n_range_mutual(1)) then
-                    !$OMP PARALLEL DO PRIVATE(n, m)
-                    do n=lbound(lhs%item, 1), n_range_mutual(1)-1
-                        do m=lbound(lhs%item(n)%item, 1), ubound(lhs%item(n)%item, 1)
-                            rv%item(n)%item(m) = lhs%item(n)%item(m)
-                        end do
+                ! fill entries with i < n_range_mutual(1)
+                if (lbound(lhs%item, 1) .lt. lbound(rhs%item, 1)) then
+                    do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
+                        rv%item(i) = lhs%item(i)
                     end do
-                    !$OMP END PARALLEL DO
-                else if (lbound(rhs%item, 1) .lt. n_range_mutual(1)) then
-                    !$OMP PARALLEL DO PRIVATE(n, m)
-                    do n=lbound(rhs%item, 1), n_range_mutual(1)-1
-                        do m=lbound(lhs%item(n)%item, 1), ubound(lhs%item(n)%item, 1)
-                            rv%item(n)%item(m) = rhs%item(n)%item(m)
-                        end do
-                    end do
-                    !$OMP END PARALLEL DO
                 end if
 
-                if (ubound(lhs%item, 1) .gt. n_range_mutual(2)) then
-                    !$OMP PARALLEL DO PRIVATE(n, m)
-                    do n=n_range_mutual(2)+1, ubound(lhs%item, 1)
-                        do m=lbound(lhs%item(n)%item, 1), ubound(lhs%item(n)%item, 1)
-                            rv%item(n)%item(m) = lhs%item(n)%item(m)
-                        end do
+                if (lbound(rhs%item, 1) .lt. lbound(lhs%item, 1)) then
+                    do i = lbound(rhs%item, 1), lbound(lhs%item, 1) - 1
+                        rv%item(i)%item = rhs%item(i)%item
                     end do
-                    !$OMP END PARALLEL DO
-                else if (ubound(rhs%item, 1) .gt. n_range_mutual(1)) then
-                    !$OMP PARALLEL DO PRIVATE(n, m)
-                    do n=n_range_mutual(2)+1, ubound(rhs%item, 1)
-                        do m=lbound(lhs%item(n)%item, 1), ubound(lhs%item(n)%item, 1)
-                            rv%item(n)%item(m) = rhs%item(n)%item(m)
-                        end do
-                    end do
-                    !$OMP END PARALLEL DO
                 end if
+
+                ! fill entries with i > n_range_mutual(2)
+                if (ubound(lhs%item, 1) .gt. ubound(rhs%item, 1)) then
+                    do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
+                        rv%item(i)%item = lhs%item(i)%item
+                    end do
+                end if
+
+                if (ubound(rhs%item, 1) .gt. ubound(lhs%item, 1)) then
+                    do i = ubound(rhs%item, 1), ubound(lhs%item, 1) - 1
+                        rv%item(i)%item = rhs%item(i)%item
+                    end do
+                end if
+
             else if (allocated(lhs%item)) then
                 rv = lhs
             else if (allocated(rhs%item)) then
                 rv = rhs
-!                print *, "lib_math_list_list_cmplx_add: ERROR"
-!                print *, "  size of lhs and rhs are not equal"
             end if
 
         end function lib_math_list_list_cmplx_add
