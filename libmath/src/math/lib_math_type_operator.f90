@@ -3105,7 +3105,7 @@ module lib_math_type_operator
 
                 !$OMP PARALLEL DO PRIVATE(n, m)
                 do n=lbound(lhs%item, 1), ubound(lhs%item, 1)
-                    do m=-n, n
+                    do m=-lbound(lhs%item(n)%item, 1), ubound(lhs%item(n)%item, 1)
                         rv%item(n)%item(m) = lhs%item(n)%item(m) + rhs%item(n)%item(m)
                     end do
                 end do
@@ -3121,7 +3121,7 @@ module lib_math_type_operator
 
                 !$OMP PARALLEL DO PRIVATE(n, m)
                 do n=n_range_mutual(1), n_range_mutual(2)
-                    do m=-n, n
+                    do m=-lbound(lhs%item(n)%item, 1), ubound(lhs%item(n)%item, 1)
                         rv%item(n)%item(m) = lhs%item(n)%item(m) + rhs%item(n)%item(m)
                     end do
                 end do
@@ -3130,7 +3130,7 @@ module lib_math_type_operator
                 if (lbound(lhs%item, 1) .lt. n_range_mutual(1)) then
                     !$OMP PARALLEL DO PRIVATE(n, m)
                     do n=lbound(lhs%item, 1), n_range_mutual(1)-1
-                        do m=-n, n
+                        do m=-lbound(lhs%item(n)%item, 1), ubound(lhs%item(n)%item, 1)
                             rv%item(n)%item(m) = lhs%item(n)%item(m)
                         end do
                     end do
@@ -3138,7 +3138,7 @@ module lib_math_type_operator
                 else if (lbound(rhs%item, 1) .lt. n_range_mutual(1)) then
                     !$OMP PARALLEL DO PRIVATE(n, m)
                     do n=lbound(rhs%item, 1), n_range_mutual(1)-1
-                        do m=-n, n
+                        do m=-lbound(lhs%item(n)%item, 1), ubound(lhs%item(n)%item, 1)
                             rv%item(n)%item(m) = rhs%item(n)%item(m)
                         end do
                     end do
@@ -3148,7 +3148,7 @@ module lib_math_type_operator
                 if (ubound(lhs%item, 1) .gt. n_range_mutual(2)) then
                     !$OMP PARALLEL DO PRIVATE(n, m)
                     do n=n_range_mutual(2)+1, ubound(lhs%item, 1)
-                        do m=-n, n
+                        do m=-lbound(lhs%item(n)%item, 1), ubound(lhs%item(n)%item, 1)
                             rv%item(n)%item(m) = lhs%item(n)%item(m)
                         end do
                     end do
@@ -3156,7 +3156,7 @@ module lib_math_type_operator
                 else if (ubound(rhs%item, 1) .gt. n_range_mutual(1)) then
                     !$OMP PARALLEL DO PRIVATE(n, m)
                     do n=n_range_mutual(2)+1, ubound(rhs%item, 1)
-                        do m=-n, n
+                        do m=-lbound(lhs%item(n)%item, 1), ubound(lhs%item(n)%item, 1)
                             rv%item(n)%item(m) = rhs%item(n)%item(m)
                         end do
                     end do
