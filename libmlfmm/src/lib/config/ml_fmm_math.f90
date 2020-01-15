@@ -43,10 +43,12 @@ module ml_fmm_math
 !            operator_procedures%v_sub => test_v_operator_sub
 !            operator_procedures%v_sub_0D => test_v_operator_sub_0D
         else if (m_procedure_type .eq. 1) then
+            ! load FoggySim specialised procedure functions
             operator_procedures%coefficient_add => ml_fmm_coefficient_add_operator_list_2_cmplx
             operator_procedures%v_add_0D => ml_fmm_type_operator_v_add_0d_list_2_cmplx
             operator_procedures%coefficient_set_zero => lib_ml_fmm_type_operator_set_coefficient_zero_list_2_cmplx
         else if (m_procedure_type .eq. 2) then
+            ! load SpeckleSim specialised procedure functions
             operator_procedures%coefficient_add => ml_fmm_coefficient_add_operator_list_2_cmplx
             operator_procedures%v_add_0D => ml_fmm_type_operator_v_add_0d_list_2_cmplx
             operator_procedures%coefficient_set_zero => lib_ml_fmm_type_operator_set_coefficient_zero_list_2_c_alt
