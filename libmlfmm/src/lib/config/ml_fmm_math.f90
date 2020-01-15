@@ -46,7 +46,13 @@ module ml_fmm_math
             operator_procedures%coefficient_add => ml_fmm_coefficient_add_operator_list_2_cmplx
             operator_procedures%v_add_0D => ml_fmm_type_operator_v_add_0d_list_2_cmplx
             operator_procedures%coefficient_set_zero => lib_ml_fmm_type_operator_set_coefficient_zero_list_2_cmplx
+        else if (m_procedure_type .eq. 2) then
+            operator_procedures%coefficient_add => ml_fmm_coefficient_add_operator_list_2_cmplx
+            operator_procedures%v_add_0D => ml_fmm_type_operator_v_add_0d_list_2_cmplx
+            operator_procedures%coefficient_set_zero => lib_ml_fmm_type_operator_set_coefficient_zero_list_2_c_alt
         end if
+
+
 
     end function ml_fmm_type_operator_get_procedures
 
@@ -156,6 +162,24 @@ module ml_fmm_math
         call init_list(coefficient%b_nm, 1 ,1, dcmplx(0,0))
 
     end subroutine lib_ml_fmm_type_operator_set_coefficient_zero_list_2_cmplx
+
+    subroutine lib_ml_fmm_type_operator_set_coefficient_zero_list_2_c_alt(coefficient)
+        use ml_fmm_type
+        implicit none
+        ! dummy
+        type(lib_ml_fmm_coefficient), intent(inout) :: coefficient
+
+        call deallocate_list(coefficient%a_nm)
+
+        allocate(coefficient%a_nm%item(1))
+        allocate(coefficient%a_nm%item(1)%item(1))
+        coefficient%a_nm%item(1)%item(1) = 0d0
+
+        allocate(coefficient%b_nm%item(1))
+        allocate(coefficient%b_nm%item(1)%item(1))
+        coefficient%b_nm%item(1)%item(1) = 0d0
+
+    end subroutine lib_ml_fmm_type_operator_set_coefficient_zero_list_2_c_alt
 
 !    function lib_ml_fmm_type_operator_coefficient_eq_list_2_cmplx(lhs, rhs) result (rv)
 !        implicit none
