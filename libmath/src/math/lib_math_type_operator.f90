@@ -3180,7 +3180,7 @@ module lib_math_type_operator
                 n_range_full(2) = max( ubound(lhs%item, 1), ubound(rhs%item, 1) )
 
                 !call init_list(rv, n_range_full(1), n_range_full(2) - n_range_full(1) + 1)
-                allocate(rv%item(n_range_mutual(1):n_range_mutual(2)))
+                allocate(rv%item(n_range_full(1):n_range_full(2)))
                 !$OMP PARALLEL DO PRIVATE(i)
                 do i = n_range_mutual(1), n_range_mutual(2)
                     rv%item(i) = lhs%item(i) + rhs%item(i)
@@ -3207,7 +3207,7 @@ module lib_math_type_operator
                 ! fill entries with i > n_range_mutual(2)
                 if (ubound(lhs%item, 1) .gt. ubound(rhs%item, 1)) then
                     !$OMP PARALLEL DO PRIVATE(i)
-                    do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
+                    do i = lbound(rhs%item, 1) + 1, lbound(lhs%item, 1)
                         rv%item(i) = lhs%item(i)
                     end do
                     !$OMP END PARALLEL DO
@@ -3215,7 +3215,7 @@ module lib_math_type_operator
 
                 if (ubound(rhs%item, 1) .gt. ubound(lhs%item, 1)) then
                     !$OMP PARALLEL DO PRIVATE(i)
-                    do i = ubound(rhs%item, 1), ubound(lhs%item, 1) - 1
+                    do i = ubound(lhs%item, 1) + 1, ubound(rhs%item, 1)
                         rv%item(i) = rhs%item(i)
                     end do
                     !$OMP END PARALLEL DO
@@ -3225,10 +3225,6 @@ module lib_math_type_operator
                 rv = lhs
             else if (allocated(rhs%item)) then
                 rv = rhs
-            end if
-
-            if (allocated(rv%item)) then
-                call remove_zeros(rv)
             end if
 
         end function lib_math_list_list_cmplx_add
