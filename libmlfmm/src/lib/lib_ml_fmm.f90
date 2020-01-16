@@ -1096,7 +1096,7 @@ module lib_ml_fmm
                 v_counter = element_number_e1(i)
 
                 if (m_use_own_sum) then
-                    m_ml_fmm_v(v_counter) = m_ml_fmm_handles%get_v_y_j(data_element_e1, element_number_e1, &
+                    m_ml_fmm_v(v_counter) = m_ml_fmm_handles%get_v_y_j(data_element_e1(i), element_number_e1(i), &
                                                                        data_element_e2, element_number_e2, D)
                 else
                     m_ml_fmm_v(v_counter) = lib_ml_fmm_calculate_v_y_j(data_element_e1(i), element_number_e1(i), &
