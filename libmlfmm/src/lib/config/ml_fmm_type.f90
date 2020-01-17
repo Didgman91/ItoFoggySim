@@ -47,6 +47,7 @@ module ml_fmm_type
         type(list_list_cmplx) :: b_nm
         real(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: r
         complex(kind=LIB_ML_FMM_COEFFICIENT_KIND), dimension(:), allocatable :: c
+        type(lib_tree_universal_index) :: uindex
     end type
 
     type lib_ml_fmm_hashed_coeffcient_index

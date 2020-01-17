@@ -735,6 +735,8 @@ module lib_ml_fmm_type_operator
             lhs%c = rhs%c
         end if
 
+        lhs%uindex = rhs%uindex
+
     end subroutine
 
     subroutine lib_ml_fmm_type_operator_set_coefficient_zero(coefficient)

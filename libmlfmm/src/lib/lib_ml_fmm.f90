@@ -390,6 +390,7 @@ module lib_ml_fmm
                     ((hierarchy_type .eq. HIERARCHY_X) .or. &
                      (hierarchy_type .eq. HIERARCHY_XY))) then
                     C = lib_ml_fmm_get_C_i_from_elements_at_box(uindex, ignore_box)
+                    C%uindex = uindex
                     if (.not. ignore_box) then
                         m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_list(i) = C
                         m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_C
@@ -409,8 +410,8 @@ module lib_ml_fmm
                     if ((hierarchy_type .eq. HIERARCHY_X) .or. &
                         (hierarchy_type .eq. HIERARCHY_XY)) then
 
-
                         C = lib_ml_fmm_get_C_i_from_elements_at_box(uindex, ignore_box)
+                        C%uindex = uindex
                         if (.not. ignore_box) then
                             m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_list(list_index) = C
                             m_ml_fmm_hierarchy(m_tree_l_max)%coefficient_type(list_index) = LIB_ML_FMM_COEFFICIENT_TYPE_C
@@ -522,6 +523,7 @@ module lib_ml_fmm
                         if (((hierarchy_type .eq. HIERARCHY_X) .or. &
                              (hierarchy_type .eq. HIERARCHY_XY))) then
                             C = lib_ml_fmm_get_C_of_box(uindex)
+                            C%uindex = uindex
                             m_ml_fmm_hierarchy(l)%coefficient_list(i) = C
                             m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_C
                         end if
@@ -539,6 +541,7 @@ module lib_ml_fmm
                         if (((hierarchy_type .eq. HIERARCHY_X) .or. &
                              (hierarchy_type .eq. HIERARCHY_XY))) then
                             C = lib_ml_fmm_get_C_of_box(uindex)
+                            C%uindex = uindex
                             m_ml_fmm_hierarchy(l)%coefficient_list(list_index) = C
                             m_ml_fmm_hierarchy(l)%coefficient_type(list_index) = LIB_ML_FMM_COEFFICIENT_TYPE_C
                         end if
@@ -698,6 +701,7 @@ module lib_ml_fmm
                         if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
                              (hierarchy_type .eq. HIERARCHY_XY))) then
                             D_tilde = lib_ml_fmm_get_D_tilde_of_box(uindex)
+                            D_tilde%uindex = uindex
                             list_index_list(i) = i
                             coefficient_list(i) = D_tilde
                         end if
@@ -715,6 +719,7 @@ module lib_ml_fmm
                         if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
                              (hierarchy_type .eq. HIERARCHY_XY))) then
                             D_tilde = lib_ml_fmm_get_D_tilde_of_box(uindex)
+                            D_tilde%uindex = uindex
                             list_index_list(i) = list_index
                             coefficient_list(i) = D_tilde
                         end if
@@ -866,6 +871,7 @@ module lib_ml_fmm
                         if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
                              (hierarchy_type .eq. HIERARCHY_XY))) then
                             D = lib_ml_fmm_get_D_of_box(uindex)
+                            D%uindex = uindex
                             m_ml_fmm_hierarchy(l)%coefficient_list(i) = D
                             m_ml_fmm_hierarchy(l)%coefficient_type(i) = LIB_ML_FMM_COEFFICIENT_TYPE_D
                         end if
@@ -883,6 +889,7 @@ module lib_ml_fmm
                         if (((hierarchy_type .eq. HIERARCHY_Y) .or. &
                              (hierarchy_type .eq. HIERARCHY_XY))) then
                             D = lib_ml_fmm_get_D_of_box(uindex)
+                            D%uindex = uindex
                             m_ml_fmm_hierarchy(l)%coefficient_list(list_index) = D
                             m_ml_fmm_hierarchy(l)%coefficient_type(list_index) = LIB_ML_FMM_COEFFICIENT_TYPE_D
                         end if
