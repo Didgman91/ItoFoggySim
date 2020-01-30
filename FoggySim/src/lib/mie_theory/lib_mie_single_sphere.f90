@@ -1673,9 +1673,9 @@ module lib_mie_single_sphere
 !            if (.not. test_get_e_field_scattered_real()) then
 !                rv = rv + 1
 !            end if
-!            if (.not. test_get_field_initial_incident_xu_real()) then
-!                rv = rv + 1
-!            end if
+            if (.not. test_get_field_initial_incident_xu_real()) then
+                rv = rv + 1
+            end if
 !            if (.not. test_get_field_initial_incident_multi_wave_real()) then
 !                rv = rv + 1
 !            end if
@@ -1683,9 +1683,9 @@ module lib_mie_single_sphere
 !            if (.not. test_get_field_scattered_plane_section_real()) then
 !                rv = rv + 1
 !            end if
-            if (.not. test_get_field_scattered_plane_section_cmplx()) then
-                rv = rv + 1
-            end if
+!            if (.not. test_get_field_scattered_plane_section_cmplx()) then
+!                rv = rv + 1
+!            end if
 !            if (.not. test_lib_mie_ss_test_convergence_plane_wave()) then
 !                rv = rv + 1
 !            end if
@@ -1881,7 +1881,7 @@ module lib_mie_single_sphere
                     x_range = (/ -5_8 * unit_mu, 5.0_8 * unit_mu /)
                     z_range = (/ -5_8 * unit_mu, 10.0_8 * unit_mu /)
 !                    step_size = 0.02_8 * unit_mu
-                    step_size = 0.05_8 * unit_mu
+                    step_size = 0.051_8 * unit_mu
 
                     no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                     no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -1904,8 +1904,8 @@ module lib_mie_single_sphere
                     z = 0
 
                     e_field_0 = 1
-                    lambda = 0.7 * unit_mu
-                    alpha = PI / 4D0
+                    lambda = 0.55 * unit_mu
+                    alpha = 0 !PI / 4D0
                     beta = 0
 
                     n_medium = 1
@@ -1913,7 +1913,7 @@ module lib_mie_single_sphere
                     k0 = 2 * PI / lambda
 
                     n_range(1) = 1
-                    n_range(2) = SINGLE_SPHERE_N_MAX
+                    n_range(2) = 1
                     print *, "NOTE: max degree = ", n_range(2)
 
                     call lib_math_factorial_initialise_caching(n_range(2))
@@ -1941,27 +1941,6 @@ module lib_mie_single_sphere
                             e_field_s(i, ii) = make_cartesian(buffer_field(1), point_spherical%theta, point_spherical%phi)
                             h_field_s(i, ii) = make_cartesian(buffer_field(2), point_spherical%theta, point_spherical%phi)
 
-                            e_field_s_real_x(i, ii) = real(e_field_s(i, ii)%x)
-                            e_field_s_real_y(i, ii) = real(e_field_s(i, ii)%y)
-                            e_field_s_real_z(i, ii) = real(e_field_s(i, ii)%z)
-
-                            h_field_s_real_x(i, ii) = real(h_field_s(i, ii)%x)
-                            h_field_s_real_y(i, ii) = real(h_field_s(i, ii)%y)
-                            h_field_s_real_z(i, ii) = real(h_field_s(i, ii)%z)
-
-                            ! calculate the Poynting vector: S = E x H*
-                            ! eq. 43
-                            h_field_s(i, ii)%x = conjg(h_field_s(i, ii)%x)
-                            h_field_s(i, ii)%y = conjg(h_field_s(i, ii)%y)
-                            h_field_s(i, ii)%z = conjg(h_field_s(i, ii)%z)
-
-                            buffer_cartesian_cmplx = cross_product(e_field_s(i, ii), h_field_s(i, ii))
-
-                            poynting_s(i, ii)%x = real(buffer_cartesian_cmplx%x) / 2.0_8
-                            poynting_s(i, ii)%y = real(buffer_cartesian_cmplx%y) / 2.0_8
-                            poynting_s(i, ii)%z = real(buffer_cartesian_cmplx%z) / 2.0_8
-
-                            poynting_s_abs(i, ii) = abs(poynting_s(i, ii))
                         end do
                         print *, "  x-Value: ", x
                     end do
@@ -1973,95 +1952,7 @@ module lib_mie_single_sphere
 
                     print '("  WALL-Time = ",f10.3," seconds.")',(count_finish-count_start) / real(count_rate)
 
-                    ! --- wirte to PPM ---
-                    ! e field
-                    u = 99
-                    open(unit=u, file="temp/real/e_field_0_x.ppm", status='unknown')
-                    rv = write_ppm_p3(u, e_field_s_real_x)
-                    close(u)
-
-                    open(unit=u, file="temp/real/e_field_0_y.ppm", status='unknown')
-                    rv = write_ppm_p3(u, e_field_s_real_y)
-                    close(u)
-
-                    open(unit=u, file="temp/real/e_field_0_z.ppm", status='unknown')
-                    rv = write_ppm_p3(u, e_field_s_real_z)
-                    close(u)
-
-                    u = 99
-                    open(unit=u, file="temp/real/e_field_0_x_log.ppm", status='unknown')
-                    rv = write_ppm_p3(u, e_field_s_real_x, logarithmic = .true.)
-                    close(u)
-
-                    open(unit=u, file="temp/real/e_field_0_y_log.ppm", status='unknown')
-                    rv = write_ppm_p3(u, e_field_s_real_y, logarithmic = .true.)
-                    close(u)
-
-                    open(unit=u, file="temp/real/e_field_0_z_log.ppm", status='unknown')
-                    rv = write_ppm_p3(u, e_field_s_real_z, logarithmic = .true.)
-                    close(u)
-
-                    ! h field
-                    u = 99
-                    open(unit=u, file="temp/real/h_field_0_x.ppm", status='unknown')
-                    rv = write_ppm_p3(u, h_field_s_real_x)
-                    close(u)
-
-                    open(unit=u, file="temp/real/h_field_0_y.ppm", status='unknown')
-                    rv = write_ppm_p3(u, h_field_s_real_y)
-                    close(u)
-
-                    open(unit=u, file="temp/real/h_field_0_z.ppm", status='unknown')
-                    rv = write_ppm_p3(u, h_field_s_real_z)
-                    close(u)
-
-                    u = 99
-                    open(unit=u, file="temp/real/h_field_0_x_log.ppm", status='unknown')
-                    rv = write_ppm_p3(u, h_field_s_real_x, logarithmic = .true.)
-                    close(u)
-
-                    open(unit=u, file="temp/real/h_field_0_y_log.ppm", status='unknown')
-                    rv = write_ppm_p3(u, h_field_s_real_y, logarithmic = .true.)
-                    close(u)
-
-                    open(unit=u, file="temp/real/h_field_0_z_log.ppm", status='unknown')
-                    rv = write_ppm_p3(u, h_field_s_real_z, logarithmic = .true.)
-                    close(u)
-
-                    ! Poynting
-                    u = 99
-                    open(unit=u, file="temp/real/poynting_0_x.ppm", status='unknown')
-                    rv = write_ppm_p3(u, poynting_s(:,:)%x)
-                    close(u)
-
-                    open(unit=u, file="temp/real/poynting_0_y.ppm", status='unknown')
-                    rv = write_ppm_p3(u, poynting_s(:,:)%y)
-                    close(u)
-
-                    open(unit=u, file="temp/real/poynting_0_z.ppm", status='unknown')
-                    rv = write_ppm_p3(u, poynting_s(:,:)%z)
-                    close(u)
-
-                    u = 99
-                    open(unit=u, file="temp/real/poynting_0_x_log.ppm", status='unknown')
-                    rv = write_ppm_p3(u, poynting_s(:,:)%x, logarithmic = .true.)
-                    close(u)
-
-                    open(unit=u, file="temp/real/poynting_0_y_log.ppm", status='unknown')
-                    rv = write_ppm_p3(u, poynting_s(:,:)%y, logarithmic = .true.)
-                    close(u)
-
-                    open(unit=u, file="temp/real/poynting_0_z_log.ppm", status='unknown')
-                    rv = write_ppm_p3(u, poynting_s(:,:)%z, logarithmic = .true.)
-                    close(u)
-
-                    ! Poynting abs
-                    open(unit=u, file="temp/real/poynting_0_abs.ppm", status='unknown')
-                    rv = write_ppm_p3(u, poynting_s_abs)
-                    close(u)
-                    open(unit=u, file="temp/real/poynting_0_abs_log.ppm", status='unknown')
-                    rv = write_ppm_p3(u, poynting_s_abs, logarithmic = .true.)
-                    close(u)
+                    rv = lib_field_export(e_field_s, h_field_s, "temp/real/n_max_01_")
 
                 end function test_get_field_initial_incident_xu_real
 
@@ -2679,10 +2570,11 @@ module lib_mie_single_sphere
                     ! WALL-time
                     INTEGER :: count_start, count_finish, count_rate
 
-                    x_range = (/ -5.0_8 * unit_mu, 5.0_8 * unit_mu /)
-                    z_range = (/ -5_8 * unit_mu, 10.0_8 * unit_mu /)
+                    x_range = (/ -2.0_8 * unit_mm, 2.0_8 * unit_mm /)
+                    z_range = (/ -2_8 * unit_mm, 5.0_8 * unit_mm /)
 !                    step_size = 0.02_8 * unit_mu
-                    step_size = 0.05_8 * unit_mu
+                    step_size = 0.5_8 * unit_mm
+
 
                     no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                     no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -2704,10 +2596,10 @@ module lib_mie_single_sphere
                     y = 0
                     z = 0
 
-                    r_particle = 1 * unit_mu
+                    r_particle = 0.25 * unit_mm
 
                     e_field_0 = 1
-                    lambda = 0.7 * unit_mu
+                    lambda = 0.55 * unit_mu
 
                     n_particle = 1.5
                     n_medium = 1
@@ -2715,7 +2607,7 @@ module lib_mie_single_sphere
                     k0 = 2 * PI / lambda
 
                     n_range(1) = 1
-                    n_range(2) = lib_mie_ss_hf_get_n_c(r_particle * k0)! * n_particle)
+                    n_range(2) = 12 ! lib_mie_ss_hf_get_n_c(r_particle * k0)! * n_particle)
                     if (n_range(2) .gt. SINGLE_SPHERE_N_MAX) then
                         print *, "WARNING: max degree (", SINGLE_SPHERE_N_MAX, ") reached: ", n_range(2)
                         n_range(2) = SINGLE_SPHERE_N_MAX

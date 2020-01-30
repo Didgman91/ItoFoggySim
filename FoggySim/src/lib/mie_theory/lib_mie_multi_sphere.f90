@@ -437,9 +437,9 @@ module lib_mie_multi_sphere
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v4()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_gauss()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene()) rv = rv + 1
-            if (.not. test_lib_mie_ms_calculate_scattering_coeff_ab_nm_scene_eval()) rv = rv + 1
+!            if (.not. test_lib_mie_ms_calculate_scattering_coeff_ab_nm_scene_eval()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_parallel_sphere_assemply()) rv = rv + 1
-!            if (.not. test_lib_mie_ms_get_field_sphere_grid_assemply()) rv = rv + 1
+            if (.not. test_lib_mie_ms_get_field_sphere_grid_assemply()) rv = rv + 1
 !            if (.not. test_lib_mie_ms_get_field_serial_sphere_assemply()) rv = rv + 1
 
             call cpu_time(test_finish)
@@ -516,7 +516,7 @@ module lib_mie_multi_sphere
 
                 ! set illumination parameter
                 e_field_0 = 1
-                lambda_0 = 1 * unit_mu
+                lambda_0 = 0.55 * unit_mu
 
                 n_medium = 1
 
@@ -639,21 +639,21 @@ module lib_mie_multi_sphere
                                                                                           n_range)
 
                 n_range = simulation_data%spherical_harmonics%n_range
-!                n_range(2) = 12
-!                simulation_data%spherical_harmonics%n_range = n_range
+                n_range(2) = 6
+                simulation_data%spherical_harmonics%n_range = n_range
 
-                call lib_mie_ms_constructor(n_range, use_ml_fmm = .true., init_with_single_sphere = .true.)
+                call lib_mie_ms_constructor(n_range, use_ml_fmm = .false., init_with_single_sphere = .true.)
 
 
                 call system_clock(test_count_start_sub, test_count_rate_sub)
                 call cpu_time(test_start_sub)
 
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(5), 6)
-                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(n_range(2) / 2), 4)
-!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(n_range(2) / 2), 2)
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(n_range(2) / 2), 4)
+                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(n_range(2) / 2), 2)
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(, int(n_range(2) / 2))
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
-!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(10)
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(8)
 
                 call cpu_time(test_finish_sub)
                 call system_clock(test_count_finish_sub, test_count_rate_sub)
@@ -696,6 +696,30 @@ module lib_mie_multi_sphere
                  end do
 
                 rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
+
+                x = 0
+                y = 0
+                z = 0
+
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii=1, no_z_values
+                        z = z_range(1) + (ii-1) * step_size
+
+                        x_0%x = x
+                        x_0%y = y
+                        x_0%z = z
+
+                        call lib_field_plane_wave_get_field(simulation_data%illumination%plane_wave(1)%beam_parameter, &
+                                                            x_0, &
+                                                            field(1), field(2))
+
+                        e_field_s(i,ii) = e_field_s(i,ii) + field(1)
+                        h_field_s(i,ii) = h_field_s(i,ii) + field(2)
+                    end do
+                 end do
+
+                rv = lib_field_export(e_field_s, h_field_s, "temp/realTotal/")
 
                 call fwig_temp_free()
                 call fwig_table_free()
@@ -760,12 +784,12 @@ module lib_mie_multi_sphere
 
                 simulation_data%spherical_harmonics%z_selector_incident_wave = 1
                 simulation_data%spherical_harmonics%z_selector_scatterd_wave = 3
-                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 1
+                simulation_data%spherical_harmonics%z_selector_translation_gt_r = 3
                 simulation_data%spherical_harmonics%z_selector_translation_le_r = 1
 
                 ! set illumination parameter
                 e_field_0 = 1
-                lambda_0 = 1 * unit_mu
+                lambda_0 = 0.55 * unit_mu
 
                 n_medium = 1
 
@@ -801,8 +825,8 @@ module lib_mie_multi_sphere
                 simulation_data%refractive_index_medium = n_medium
 
                 ! set spheres
-                no_spheres_x = 6
-                no_spheres_z = 9
+                no_spheres_x = 1
+                no_spheres_z = 1
                 distance_sphere = 5 * unit_mu
                 allocate(simulation_data%sphere_list(no_spheres_x * no_spheres_z))
 
@@ -852,7 +876,7 @@ module lib_mie_multi_sphere
                                                                                           n_range)
 
                 ! set 2
-                r_particle = 0.5 * unit_mu
+                r_particle = 1 * unit_mu
                 n_particle = dcmplx(1.33_8, 0)
 
                 n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
@@ -872,9 +896,9 @@ module lib_mie_multi_sphere
 
                 n_range = simulation_data%spherical_harmonics%n_range
 
-                simulation_data%spherical_harmonics%n_range(2) = n_range(2) / 4
+                simulation_data%spherical_harmonics%n_range(2) = 15 !n_range(2) / 4
 
-                call lib_mie_ms_constructor(n_range, use_ml_fmm = .true., init_with_single_sphere = .true.)
+                call lib_mie_ms_constructor(n_range, use_ml_fmm = .false., init_with_single_sphere = .true.)
 
 
                 call system_clock(test_count_start_sub, test_count_rate_sub)
@@ -900,7 +924,7 @@ module lib_mie_multi_sphere
                 ! evaluate and export
                 x_range = (/ 0_8 * unit_mu, (no_spheres_x+1) * distance_sphere /)
                 z_range = (/ 0_8 * unit_mu, (no_spheres_z+1) * distance_sphere /)
-                step_size = (x_range(2) - x_range(1)) / 200
+                step_size = (x_range(2) - x_range(1)) / 201
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
                 no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
@@ -1173,6 +1197,19 @@ module lib_mie_multi_sphere
                 double complex, dimension(:), allocatable :: buffer_list_mie
                 double complex, dimension(:), allocatable :: buffer_list_t_matrix
 
+                ! plot
+                double precision :: x
+                double precision :: y
+                double precision :: z
+                type(cartesian_coordinate_real_type) :: x_0
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field_s
+                type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field_s
+                double precision, dimension(2) :: x_range
+                double precision, dimension(2) :: z_range
+                real(kind=8) :: step_size
+                integer :: no_x_values
+                integer :: no_z_values
+
                 ! CPU-time
                 real :: test_start_sub, test_finish_sub
                 ! WALL-time
@@ -1185,7 +1222,7 @@ module lib_mie_multi_sphere
 
                 ! set illumination parameter
                 e_field_0 = 1
-                lambda_0 = 1 * unit_mu
+                lambda_0 = 0.55 * unit_mu
 
                 n_medium = 1
 
@@ -1200,7 +1237,7 @@ module lib_mie_multi_sphere
                 buffer_car%z = -10 * unit_mu
                 plane_wave_d_0_i(:) = buffer_car
 
-                buffer_car%x = 1
+                buffer_car%x = 0
                 buffer_car%y = 0
                 buffer_car%z = 1
                 buffer_car = buffer_car / abs(buffer_car) / lambda_0
@@ -1233,11 +1270,11 @@ module lib_mie_multi_sphere
                     do ii = 1, no_spheres_z
                         no = no + 1
 
-                        if (mod(no, 2) .eq. 0) then
+!                        if (mod(no, 2) .eq. 0) then
                             simulation_data%sphere_list(no)%sphere_parameter_index = 1
-                        else
-                            simulation_data%sphere_list(no)%sphere_parameter_index = 2
-                        end if
+!                        else
+!                            simulation_data%sphere_list(no)%sphere_parameter_index = 2
+!                        end if
 
                         sphere_d_0_j%x = -i * distance_sphere
                         sphere_d_0_j%z = ii * distance_sphere
@@ -1251,19 +1288,22 @@ module lib_mie_multi_sphere
                 allocate(simulation_data%sphere_parameter_list(2))
 
                 ! set 1
-                r_particle = 1 * unit_mu
-                n_particle = dcmplx(1.33_8, 0)
+                r_particle = 1000 * unit_mu
+                n_particle = dcmplx(1.5_8, 0)
 
-                n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
-                if (n_range(1) .gt. 0) then
-                    n_range(2) = n_range(1)
-                    n_range(1) = 1
-                else
-                    print *, "test_lib_mie_ms_get_field: ERROR"
-                    print *, "  lib_mie_ss_test_convergence_plane_wave"
-                    print *, "  rv(1): ", n_range(1)
-                    print *, "  rv(2): ", n_range(2)
-                end if
+!                n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
+!                if (n_range(1) .gt. 0) then
+!                    n_range(2) = n_range(1)
+!                    n_range(1) = 1
+!                else
+!                    print *, "test_lib_mie_ms_get_field: ERROR"
+!                    print *, "  lib_mie_ss_test_convergence_plane_wave"
+!                    print *, "  rv(1): ", n_range(1)
+!                    print *, "  rv(2): ", n_range(2)
+!                end if
+
+                n_range(1) = 1
+                n_range(2) = 45
 
                 simulation_data%spherical_harmonics%n_range = n_range
 
@@ -1272,27 +1312,27 @@ module lib_mie_multi_sphere
                                                                                           n_range)
 
                 ! set 2
-                r_particle = 0.5 * unit_mu
-                n_particle = dcmplx(1.33_8, 0)
+!                r_particle = 5 * unit_mu
+!                n_particle = dcmplx(1.33_8, 0)
+!
+!                n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
+!                if (n_range(1) .gt. 0) then
+!                    n_range(2) = n_range(1)
+!                    n_range(1) = 1
+!                else
+!                    print *, "test_lib_mie_ms_get_field: ERROR"
+!                    print *, "  lib_mie_ss_test_convergence_plane_wave"
+!                    print *, "  rv(1): ", n_range(1)
+!                    print *, "  rv(2): ", n_range(2)
+!                end if
+!
+!                simulation_data%sphere_parameter_list(2) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
+!                                                                                          r_particle, n_particle, &
+!                                                                                          n_range)
+!
+!                n_range = simulation_data%spherical_harmonics%n_range
 
-                n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
-                if (n_range(1) .gt. 0) then
-                    n_range(2) = n_range(1)
-                    n_range(1) = 1
-                else
-                    print *, "test_lib_mie_ms_get_field: ERROR"
-                    print *, "  lib_mie_ss_test_convergence_plane_wave"
-                    print *, "  rv(1): ", n_range(1)
-                    print *, "  rv(2): ", n_range(2)
-                end if
-
-                simulation_data%sphere_parameter_list(2) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
-                                                                                          r_particle, n_particle, &
-                                                                                          n_range)
-
-                n_range = simulation_data%spherical_harmonics%n_range
-
-                call lib_mie_ms_constructor(n_range, use_ml_fmm = .false., init_with_single_sphere = .false.)
+                call lib_mie_ms_constructor(n_range, use_ml_fmm = .false., init_with_single_sphere = .true.)
 
                 call system_clock(test_count_start_sub, test_count_rate_sub)
                 call cpu_time(test_start_sub)
@@ -1301,12 +1341,10 @@ module lib_mie_multi_sphere
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(int(n_range(2) / 2))
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(, int(n_range(2) / 2), 2)
 !                call lib_mie_ms_calculate_scattering_coefficients_ab_nm(, int(n_range(2) / 2))
-                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
+!                call lib_mie_ms_calculate_scattering_coefficients_ab_nm()
 
-                a_nm_t_matrix = simulation_data%sphere_list(1)%a_nm
-                b_nm_t_matrix = simulation_data%sphere_list(1)%b_nm
-
-                call lib_mie_ss_calculate_scattering_coefficients_ab_nm()
+!                a_nm_t_matrix = simulation_data%sphere_list(1)%a_nm
+!                b_nm_t_matrix = simulation_data%sphere_list(1)%b_nm
 
                 a_nm_mie = simulation_data%sphere_list(1)%a_nm
                 b_nm_mie = simulation_data%sphere_list(1)%b_nm
@@ -1323,72 +1361,103 @@ module lib_mie_multi_sphere
                 print *, ""
 
                 call make_array((/a_nm_mie, b_nm_mie/), buffer_list_mie)
-                call make_array((/a_nm_t_matrix, b_nm_t_matrix/), buffer_list_t_matrix)
+!                call make_array((/a_nm_t_matrix, b_nm_t_matrix/), buffer_list_t_matrix)
 
                 open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1_mie.csv"), &
                      status='unknown')
                 rv = write_csv_cmplx_array_1d(99, buffer_list_mie)
                 close(99)
 
-                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1_t_matrix.csv"), &
-                     status='unknown')
-                rv = write_csv_cmplx_array_1d(99, buffer_list_t_matrix)
-                close(99)
-
-                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1_diff.csv"), &
-                     status='unknown')
-                rv = write_csv_cmplx_array_1d(99, buffer_list_mie - buffer_list_t_matrix)
-                close(99)
+!                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1_t_matrix.csv"), &
+!                     status='unknown')
+!                rv = write_csv_cmplx_array_1d(99, buffer_list_t_matrix)
+!                close(99)
+!
+!                open(unit=99, file=trim("temp/test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1_diff.csv"), &
+!                     status='unknown')
+!                rv = write_csv_cmplx_array_1d(99, buffer_list_mie - buffer_list_t_matrix)
+!                close(99)
 
                 rv = .true.
                 print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1:"
-                    do i=lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
-                        print *, "  i = ", i
+!                do i=lbound(simulation_data%sphere_list, 1), ubound(simulation_data%sphere_list, 1)
+!                    print *, "  i = ", i
+!
+!                    print *, "  a_nm"
+!                    list_list_diff = a_nm_mie - a_nm_t_matrix
+!
+!                    do n = lbound(list_list_diff%item, 1), &
+!                           ubound(list_list_diff%item, 1)
+!                        print *, "  n = ", n
+!                        do m = -n, n
+!                            buffer = abs(list_list_diff%item(n)%item(m))
+!                            if (buffer .gt. ground_truth_e) then
+!                                print *, "    m: ", m , "difference: ", buffer, " : FAILED"
+!!                                    print *, "            Mie: ", a_nm_mie%item(n)%item(m)
+!!                                    print *, "       T-Matrix: ", a_nm_t_matrix%item(n)%item(m)
+!                                rv = .false.
+!                            else
+!                                print *, "    m: ", m, ": OK"
+!!                                    print *, "            Mie: ", a_nm_mie%item(n)%item(m)
+!!                                    print *, "       T-Matrix: ", a_nm_t_matrix%item(n)%item(m)
+!                            end if
+!                        end do
+!                    end do
+!
+!                    print *, "  b_nm"
+!                    list_list_diff = b_nm_mie - b_nm_t_matrix
+!
+!                    do n = lbound(list_list_diff%item, 1), &
+!                           ubound(list_list_diff%item, 1)
+!                        print *, "  n = ", n
+!                        do m = -n, n
+!                            buffer = abs(list_list_diff%item(n)%item(m))
+!                            if (buffer .gt. ground_truth_e) then
+!                                print *, "    m: ", m , "difference: ", buffer, " : FAILED"
+!!                                    print *, "            Mie: ", b_nm_mie%item(n)%item(m)
+!!                                    print *, "       T-Matrix: ", b_nm_t_matrix%item(n)%item(m)
+!                                rv = .false.
+!                            else
+!                                print *, "    m: ", m, ": OK"
+!!                                    print *, "            Mie: ", a_nm_mie%item(n)%item(m)
+!!                                    print *, "       T-Matrix: ", a_nm_t_matrix%item(n)%item(m)
+!                            end if
+!                        end do
+!                    end do
+!                end do
 
-                        print *, "  a_nm"
-                        list_list_diff = a_nm_mie - a_nm_t_matrix
+                x_range = (/ 0_8 * unit_mu, (no_spheres_x+1) * distance_sphere /)
+                z_range = (/ 0_8 * unit_mu, (no_spheres_z+1) * distance_sphere /)
+                step_size = (x_range(2) - x_range(1)) / 200
 
-                        do n = lbound(list_list_diff%item, 1), &
-                               ubound(list_list_diff%item, 1)
-                            print *, "  n = ", n
-                            do m = -n, n
-                                buffer = abs(list_list_diff%item(n)%item(m))
-                                if (buffer .gt. ground_truth_e) then
-                                    print *, "    m: ", m , "difference: ", buffer, " : FAILED"
-!                                    print *, "            Mie: ", a_nm_mie%item(n)%item(m)
-!                                    print *, "       T-Matrix: ", a_nm_t_matrix%item(n)%item(m)
-                                    rv = .false.
-                                else
-                                    print *, "    m: ", m, ": OK"
-!                                    print *, "            Mie: ", a_nm_mie%item(n)%item(m)
-!                                    print *, "       T-Matrix: ", a_nm_t_matrix%item(n)%item(m)
-                                end if
-                            end do
-                        end do
+                no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
 
-                        print *, "  b_nm"
-                        list_list_diff = b_nm_mie - b_nm_t_matrix
+                allocate(e_field_s(no_x_values, no_z_values))
+                allocate(h_field_s(no_x_values, no_z_values))
 
-                        do n = lbound(list_list_diff%item, 1), &
-                               ubound(list_list_diff%item, 1)
-                            print *, "  n = ", n
-                            do m = -n, n
-                                buffer = abs(list_list_diff%item(n)%item(m))
-                                if (buffer .gt. ground_truth_e) then
-                                    print *, "    m: ", m , "difference: ", buffer, " : FAILED"
-!                                    print *, "            Mie: ", b_nm_mie%item(n)%item(m)
-!                                    print *, "       T-Matrix: ", b_nm_t_matrix%item(n)%item(m)
-                                    rv = .false.
-                                else
-                                    print *, "    m: ", m, ": OK"
-!                                    print *, "            Mie: ", a_nm_mie%item(n)%item(m)
-!                                    print *, "       T-Matrix: ", a_nm_t_matrix%item(n)%item(m)
-                                end if
-                            end do
-                        end do
+                x = 0
+                y = 0
+                z = 0
+
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii=1, no_z_values
+                        z = z_range(1) + (ii-1) * step_size
+
+                        x_0%x = x
+                        x_0%y = y
+                        x_0%z = z
+
+                        field = lib_mie_ms_get_field(x_0)
+                        e_field_s(i,ii) = field(1)
+                        h_field_s(i,ii) = field(2)
                     end do
+                 end do
 
-                    call lib_mie_ms_data_container_destructor()
+                rv = lib_field_export(e_field_s, h_field_s, "temp/real_v1/")
+
+                call lib_mie_ms_data_container_destructor()
 
             end function test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_v1
 
@@ -2775,9 +2844,11 @@ module lib_mie_multi_sphere
                 type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: e_field_s
                 type(cartesian_coordinate_cmplx_type), dimension(:, :), allocatable :: h_field_s
                 double precision, dimension(2) :: x_range
+                double precision, dimension(2) :: y_range
                 double precision, dimension(2) :: z_range
                 real(kind=8) :: step_size
                 integer :: no_x_values
+                integer :: no_y_values
                 integer :: no_z_values
 
                 type(lib_scene_opject_type) :: scene
@@ -2788,6 +2859,7 @@ module lib_mie_multi_sphere
                 double precision :: lattice_sphere_radius
 
                 type(cartesian_coordinate_real_type), dimension(:), allocatable :: sphere_coordinates
+                type(cartesian_coordinate_real_type) :: buffer_coordinate
                 double precision, dimension(:,:), allocatable :: data_list
 
                 integer :: u
@@ -2806,7 +2878,7 @@ module lib_mie_multi_sphere
 
                 ! set illumination parameter
                 e_field_0 = 1
-                lambda_0 = 550 * unit_nm
+                lambda_0 = 1550 * unit_nm
 
                 n_medium = 1
 
@@ -2846,8 +2918,8 @@ module lib_mie_multi_sphere
 
                 scene%d_0_o = make_cartesian(0d0,0d0,0d0)
                 d_o_j = make_cartesian(0d0,0d0,0d0)
-                sphere_radius = 50 * unit_nm
-                lattice_sphere_radius = 8 * unit_nm
+                sphere_radius = 15 * unit_mu
+                lattice_sphere_radius = 2.75 / 2.0 * unit_mu
                 cap_plane_point = make_cartesian(0d0, 0d0, 0d0)
                 cap_plane_normal = make_cartesian(0d0, 0d0, 1d0)
 
@@ -2867,9 +2939,13 @@ module lib_mie_multi_sphere
                 allocate(data_list(range_i(1):range_i(2), 3))
 
                 do i = range_i(1), range_i(2)
-                    data_list(i, 1) = sphere_coordinates(i)%x
-                    data_list(i, 2) = sphere_coordinates(i)%y
-                    data_list(i, 3) = sphere_coordinates(i)%z
+                    buffer_coordinate = lib_math_get_matrix_rot_z(PI/2) * sphere_coordinates(i)
+                    data_list(i, 1) = buffer_coordinate%x
+                    data_list(i, 2) = buffer_coordinate%y
+                    data_list(i, 3) = buffer_coordinate%z
+!                    data_list(i, 1) = sphere_coordinates(i)%x
+!                    data_list(i, 2) = sphere_coordinates(i)%y
+!                    data_list(i, 3) = sphere_coordinates(i)%z
                 end do
 
                 u = 99
@@ -2900,8 +2976,8 @@ module lib_mie_multi_sphere
 
                 ! set 1
 !                r_particle = 0.8 * unit_mu
-                r_particle = 7.5 * unit_nm
-                n_particle = dcmplx(2.5287_8, 0)
+                r_particle = 1 * unit_mu
+                n_particle = dcmplx(1.33_8, 0)
 
                 n_range = lib_mie_ss_test_convergence_plane_wave(lambda_0, n_medium, r_particle, n_particle)
                 if (n_range(1) .gt. 0) then
@@ -2920,7 +2996,7 @@ module lib_mie_multi_sphere
 !                    print *, "  n_range is limited to ", n_range(2)
 !                end if
 
-                n_range(2) = 6
+                n_range(2) = 5
                 simulation_data%spherical_harmonics%n_range = n_range
 
                 simulation_data%sphere_parameter_list(1) = lib_mie_type_func_get_sphere_parameter(lambda_0, n_medium, &
@@ -2929,10 +3005,12 @@ module lib_mie_multi_sphere
 
                 ! set evaluation points
                 x_range = (/ -sphere_radius * 1.5d0, sphere_radius * 1.5d0 /)
+                y_range = (/ -sphere_radius * 1.5d0, sphere_radius * 1.5d0 /)
                 z_range = (/ -sphere_radius * 1.5d0, sphere_radius * 2d0 /)
                 step_size = (x_range(2) - x_range(1)) / 200
 
                 no_x_values = abs(int(floor((x_range(2)-x_range(1))/step_size)))
+                no_y_values = abs(int(floor((y_range(2)-y_range(1))/step_size)))
                 no_z_values = abs(int(floor((z_range(2)-z_range(1))/step_size)))
 
 !                allocate(simulation_data%evaluation_points(no_x_values * no_z_values))
@@ -3007,23 +3085,7 @@ module lib_mie_multi_sphere
                     end do
                  end do
 
-!                do i=1, no_x_values
-!                    x = x_range(1) + (i-1) * step_size
-!                    do ii=1, no_z_values
-!                        z = z_range(1) + (ii-1) * step_size
-!
-!                        x_0%x = x
-!                        x_0%y = y
-!                        x_0%z = z
-!
-!                        field = lib_mie_ms_get_field(x_0)
-!                        simulation_data%evaluation_points(no_z_values * (i - 1) + ii)%coordinate = x_0
-!                        e_field_s(i,ii) = field(1)
-!                        h_field_s(i,ii) = field(2)
-!                    end do
-!                 end do
-
-                rv = lib_field_export(e_field_s, h_field_s, "temp/real/")
+                rv = lib_field_export(e_field_s, h_field_s, "temp/real/xz_")
 
                 x = 0
                 y = 0
@@ -3047,7 +3109,67 @@ module lib_mie_multi_sphere
                     end do
                  end do
 
-                rv = lib_field_export(e_field_s, h_field_s, "temp/realTotal/")
+                rv = lib_field_export(e_field_s, h_field_s, "temp/realTotal/xz_")
+
+                ! xy plane
+
+                range_i(1) = lbound(sphere_coordinates, 1)
+                range_i(2) = ubound(sphere_coordinates, 1)
+
+                z = sphere_coordinates(range_i(1))%z
+                do i = range_i(1)+1, range_i(2)
+                    if (z .lt. sphere_coordinates(i)%z) then
+                        z = sphere_coordinates(i)%z
+                    end if
+                end do
+                z = z + lattice_sphere_radius
+
+                if (allocated(e_field_s)) deallocate(e_field_s)
+                allocate(e_field_s(no_x_values, no_y_values))
+
+                if (allocated(h_field_s)) deallocate(h_field_s)
+                allocate(h_field_s(no_x_values, no_y_values))
+
+                x = 0
+                y = 0
+!                z = -lattice_sphere_radius
+
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii=1, no_y_values
+                        y = y_range(1) + (ii-1) * step_size
+
+                        x_0%x = x
+                        x_0%y = y
+                        x_0%z = z
+
+                        field = lib_mie_ms_get_field(x_0)
+                        e_field_s(i,ii) = field(1)
+                        h_field_s(i,ii) = field(2)
+                    end do
+                 end do
+
+                rv = lib_field_export(e_field_s, h_field_s, "temp/real/xy_")
+
+                do i=1, no_x_values
+                    x = x_range(1) + (i-1) * step_size
+                    do ii=1, no_y_values
+                        y = y_range(1) + (ii-1) * step_size
+
+                        x_0%x = x
+                        x_0%y = y
+                        x_0%z = z
+
+                        call lib_field_plane_wave_get_field(simulation_data%illumination%plane_wave(1)%beam_parameter, &
+                                                            x_0, &
+                                                            field(1), field(2))
+
+                        e_field_s(i,ii) = e_field_s(i,ii) + field(1)
+                        h_field_s(i,ii) = h_field_s(i,ii) + field(2)
+                    end do
+                 end do
+
+                rv = lib_field_export(e_field_s, h_field_s, "temp/realTotal/xy_")
 
                 rv = .true.
                 print *, "test_lib_mie_ms_calculate_scattering_coefficients_ab_nm_scene:"
@@ -3223,7 +3345,7 @@ module lib_mie_multi_sphere
 
                 scene%d_0_o = make_cartesian(0d0,0d0,0d0)
                 d_o_j = make_cartesian(0d0,0d0,0d0)
-                sphere_radius = 40 * unit_nm
+                sphere_radius = 50 * unit_nm
                 lattice_sphere_radius = 8 * unit_nm
                 cap_plane_point = make_cartesian(0d0, 0d0, 0d0)
                 cap_plane_normal = make_cartesian(0d0, 0d0, 1d0)

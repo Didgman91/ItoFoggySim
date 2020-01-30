@@ -89,6 +89,7 @@ program main
 !    error_counter = error_counter + lib_mie_ms_solver_interface_test_functions()
     error_counter = error_counter + lib_mie_multi_sphere_test_functions()
 
+!    call lib_tree_benchmark
 !    call lib_mie_ss_helper_functions_benchmark
 !    call lib_mie_ms_benchmark
 
