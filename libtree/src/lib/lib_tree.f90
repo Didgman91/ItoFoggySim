@@ -1323,7 +1323,7 @@ module lib_tree
         integer, intent(in) :: l
         double precision :: rv
 
-        rv = 1d0 / (dble(l))
+        rv = 1d0 / (dble(2**l))
 
     end function
 
@@ -1342,7 +1342,7 @@ module lib_tree
         integer, intent(in) :: l
         double precision :: rv
 
-        rv = 1d0/(dble(l)) * sqrt(3d0)
+        rv = 1d0/(dble(2**l)) * sqrt(3d0)
 
     end function
 
