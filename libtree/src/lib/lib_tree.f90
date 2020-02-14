@@ -1787,6 +1787,8 @@ module lib_tree
 
         integer :: error_counter
 
+        double precision, parameter :: ground_truth_error = 1d-14
+
         !$  print *, "number of threads: ", omp_get_num_threads()
         !$  print *, "max number of threads: ", omp_get_max_threads()
 
@@ -1842,6 +1844,9 @@ module lib_tree
             error_counter = error_counter + 1
         end if
         call lib_tree_destructor()
+        if (.not. test_lib_tree_get_box_edge_length()) then
+            error_counter = error_counter + 1
+        end if
 !        if (.not. test_lib_tree_constructor()) then
 !            error_counter = error_counter + 1
 !        end if
@@ -2874,6 +2879,44 @@ module lib_tree
             end if
 
         end function test_lib_tree_get_element_from_correspondence_vector
+
+        function test_lib_tree_get_box_edge_length() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            ! auxiliary
+            integer :: i
+            integer, dimension(4) :: level
+            double precision :: l
+            double precision, dimension(4) :: ground_truth_l
+
+            double precision buffer
+
+            level(1) = 0
+            level(2) = 1
+            level(3) = 2
+            level(4) = 3
+
+            ground_truth_l(1) = 1
+            ground_truth_l(2) = 0.5
+            ground_truth_l(3) = 0.25
+            ground_truth_l(4) = 0.125
+
+            rv = .true.
+            print *, "lib_tree_test_functions"
+            do i = 1, size(level)
+                l = lib_tree_get_box_edge_length(level(i))
+                buffer = l - ground_truth_l(i)
+                if (abs(buffer) .lt. ground_truth_error) then
+                    print *, "  ", i, "  : OK"
+                else
+                    print *, "  ", i, "  : FAILED"
+                    print *, "  diff = ", buffer
+                end if
+            end do
+
+        end function
 
     end function lib_tree_test_functions
 
