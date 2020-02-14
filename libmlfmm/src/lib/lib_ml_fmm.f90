@@ -42,6 +42,8 @@ module lib_ml_fmm
     public :: lib_ml_fmm_final_summation
     public :: lib_ml_fmm_get_vector_v
 
+    public :: lib_ml_fmm_get_neighbourhood_size_k
+
     public :: lib_ml_fmm_test_functions
 
     public :: lib_ml_fmm_hf_test_functions
@@ -1200,6 +1202,19 @@ module lib_ml_fmm
         end do
 
     end function lib_ml_fmm_calculate_v_y_j
+
+    ! Returns
+    ! ----
+    !   rv: integer
+    !       neighbourhood size
+    function lib_ml_fmm_get_neighbourhood_size_k() result(rv)
+        implicit none
+        ! dummy
+        integer :: rv
+
+        rv = m_tree_neighbourhood_size_k
+
+    end function lib_ml_fmm_get_neighbourhood_size_k
 
     ! ----- test functions -----
     function lib_ml_fmm_test_functions() result(error_counter)
