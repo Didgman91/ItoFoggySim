@@ -2503,7 +2503,7 @@ module lib_math_bessel
             rv = .true.
             print *, "test_lib_math_bessel_spherical_first_kind_real:"
             do i=1, n
-                buffer = j(i) - ground_truth_j(i)
+                buffer = (j(i) - ground_truth_j(i)) / ground_truth_j(i)
                 if (abs(buffer) .gt. ground_truth_e) then
                     print *, "  ", i , "difference: ", buffer, " : FAILED"
                     rv = .false.

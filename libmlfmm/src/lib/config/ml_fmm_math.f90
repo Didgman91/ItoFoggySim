@@ -192,6 +192,7 @@ module ml_fmm_math
         type(lib_ml_fmm_coefficient), intent(inout) :: coefficient
 
         call deallocate_list(coefficient%a_nm)
+        call deallocate_list(coefficient%b_nm)
 
         allocate(coefficient%a_nm%item(1))
         allocate(coefficient%a_nm%item(1)%item(1))

@@ -1682,7 +1682,7 @@ module lib_mie_ss_helper_functions
                     rv = .true.
                      print *, "test_get_coefficients_a_b_real_barberh:"
                     do i=n(1), n(2)
-                        buffer = abs(a_n(i) - ground_truth_a_n(i))
+                        buffer = abs(a_n(i) / ground_truth_a_n(i) - 1d0)
                         if (buffer .gt. ground_truth_e) then
                             print *, "  a_n: ", i , "difference: ", buffer, " : FAILED"
                             rv = .false.
@@ -1690,7 +1690,7 @@ module lib_mie_ss_helper_functions
                             print *, "  a_n: ", i, ": OK"
                         end if
 
-                        buffer = abs(b_n(i) - ground_truth_b_n(i))
+                        buffer = abs(b_n(i) / ground_truth_b_n(i) - 1d0)
                         if (buffer .gt. ground_truth_e) then
                             print *, "  b_n: ", i , "difference: ", buffer, " : FAILED"
                             rv = .false.
@@ -1838,9 +1838,9 @@ module lib_mie_ss_helper_functions
 
                     type(lib_mie_illumination_parameter) :: illumination
 
-                    lambda_start = 350 * unit_nm
+                    lambda_start = 400 * unit_nm
                     lambda_stop = 800 * unit_nm
-                    lambda_step = 5 * unit_nm
+                    lambda_step = 4 * unit_nm
 
 !                    r_particle = 25 * unit_nm
 !                    file_name_output = "temp/c_sca_ag_r_25nm.csv"
