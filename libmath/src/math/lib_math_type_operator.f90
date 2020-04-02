@@ -3149,13 +3149,13 @@ module lib_math_type_operator
 
                 ! fill entries with i > n_range_mutual(2)
                 if (ubound(lhs%item, 1) .gt. ubound(rhs%item, 1)) then
-                    do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
+                    do i = ubound(rhs%item, 1) + 1, ubound(rhs%item, 1)
                         rv%item(i) = lhs%item(i)
                     end do
                 end if
 
                 if (ubound(rhs%item, 1) .gt. ubound(lhs%item, 1)) then
-                    do i = ubound(rhs%item, 1), ubound(lhs%item, 1) - 1
+                    do i = ubound(lhs%item, 1) + 1, ubound(rhs%item, 1)
                         rv%item(i) = rhs%item(i)
                     end do
                 end if
@@ -3227,7 +3227,7 @@ module lib_math_type_operator
                 ! fill entries with i > n_range_mutual(2)
                 if (ubound(lhs%item, 1) .gt. ubound(rhs%item, 1)) then
                     !$OMP PARALLEL DO PRIVATE(i)
-                    do i = lbound(rhs%item, 1) + 1, lbound(lhs%item, 1)
+                    do i = ubound(rhs%item, 1) + 1, ubound(lhs%item, 1)
                         rv%item(i) = lhs%item(i)
                     end do
                     !$OMP END PARALLEL DO
@@ -4297,6 +4297,10 @@ module lib_math_type_operator
                 rv = rv + 1
             end if
             if (.not. test_lib_math_cartesian_dot_product_cmplx_list()) then
+                rv = rv + 1
+            end if
+
+            if (.not. test_lib_math_list_list_cmplx_add()) then
                 rv = rv + 1
             end if
 
@@ -6393,6 +6397,44 @@ module lib_math_type_operator
                     end do
 
                 end function test_lib_math_array_make_list_of_list_list_cmplx
+
+                function test_lib_math_list_list_cmplx_add() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer :: i
+                    integer :: ii
+                    type(list_list_cmplx) :: lhs
+                    type(list_list_cmplx) :: rhs
+                    type(list_list_cmplx) :: res
+
+                    allocate(lhs%item(2:2))
+                    allocate(lhs%item(2)%item, source = (/dcmplx(0,0)/))
+
+                    allocate(rhs%item(3))
+                    allocate(rhs%item(1)%item, source = (/dcmplx(1, 0), dcmplx(2,0)/))
+                    allocate(rhs%item(2)%item, source = (/dcmplx(2, 0), dcmplx(3,0)/))
+                    allocate(rhs%item(3)%item, source = (/dcmplx(4, 0), dcmplx(5,0)/))
+
+                    res = lhs + rhs
+
+
+                    rv = .true.
+                    print *, "test_lib_math_list_list_cmplx_add:"
+                    do i = 1, 3
+                        do ii = 1, 2
+                            if (res%item(i)%item(ii) .ne. rhs%item(i)%item(ii)) then
+                                write(*, '(4X, A, 1X, I2, 2X, A, 1X, I2, 3X, A, 1X)') "i =", i, "ii = ", ii, "FAILED"
+                                rv = .false.
+                            else
+                                write(*, '(4X, A, 1X, I2, 2X, A, 1X, I2, 3X, A, 1X)') "i =", i, "ii = ", ii, "OK"
+                            end if
+                        end do
+                    end do
+
+                end function test_lib_math_list_list_cmplx_add
 
                 function test_lib_math_get_matrix_rot() result(rv)
                     implicit none
