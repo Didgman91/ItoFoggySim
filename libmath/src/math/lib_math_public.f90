@@ -33,7 +33,6 @@ module lib_math_public
     use lib_math_vector_spherical_harmonics
 #endif
     use lib_math_constants
-    use lib_hash_function
     implicit none
 
 end module lib_math_public
