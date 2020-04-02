@@ -82,6 +82,10 @@ module lib_math_type_operator
         module procedure lib_math_list_spherical_operator_0d_add_array_cmplx
         module procedure lib_math_list_spherical_operator_array_add_0d_cmplx
 
+        ! array
+        module procedure lib_math_real_array_add
+        module procedure lib_math_cmplx_array_add
+
         ! list
         module procedure lib_math_list_cmplx_add
 
@@ -3101,6 +3105,148 @@ module lib_math_type_operator
         !
         ! Arguments
         ! ----
+        !   lhs: real, dimension(:), allocatable
+        !   rhs: real, dimension(:), allocatable
+        !
+        ! Retruns
+        ! ----
+        !   rv: real, dimension(:), allocatable
+        function lib_math_real_array_add(lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            real(kind=lib_math_type_kind), dimension(:), allocatable, intent(in) :: lhs
+            real(kind=lib_math_type_kind), dimension(:), allocatable, intent(in) :: rhs
+
+            real(kind=lib_math_type_kind), dimension(:), allocatable :: rv
+
+            ! auxiliary
+            integer :: i
+
+            integer, dimension(2) :: n_range_mutual
+            integer, dimension(2) :: n_range_full
+
+            if (allocated(lhs) .and. allocated(rhs)) then
+                n_range_mutual(1) = max( lbound(lhs, 1), lbound(rhs, 1) )
+                n_range_mutual(2) = min( ubound(lhs, 1), ubound(rhs, 1) )
+
+                n_range_full(1) = min( lbound(lhs, 1), lbound(rhs, 1) )
+                n_range_full(2) = max( ubound(lhs, 1), ubound(rhs, 1) )
+
+                allocate (rv(n_range_full(1):n_range_full(2)))
+
+                do i = n_range_mutual(1), n_range_mutual(2)
+                    rv(i) = lhs(i) + rhs(i)
+                end do
+
+                ! fill entries with i < n_range_mutual(1)
+                if (lbound(lhs, 1) .lt. lbound(rhs, 1)) then
+                    do i = lbound(lhs, 1), lbound(rhs, 1) - 1
+                        rv(i) = lhs(i)
+                    end do
+                end if
+
+                if (lbound(rhs, 1) .lt. lbound(lhs, 1)) then
+                    do i = lbound(rhs, 1), lbound(lhs, 1) - 1
+                        rv(i) = rhs(i)
+                    end do
+                end if
+
+                ! fill entries with i > n_range_mutual(2)
+                if (ubound(lhs, 1) .gt. ubound(rhs, 1)) then
+                    do i = ubound(rhs, 1) + 1, ubound(rhs, 1)
+                        rv(i) = lhs(i)
+                    end do
+                end if
+
+                if (ubound(rhs, 1) .gt. ubound(lhs, 1)) then
+                    do i = ubound(lhs, 1) + 1, ubound(rhs, 1)
+                        rv(i) = rhs(i)
+                    end do
+                end if
+
+            else if (allocated(lhs)) then
+                rv = lhs
+            else if (allocated(rhs)) then
+                rv = rhs
+            end if
+
+        end function
+
+        ! Elementwise addition
+        !
+        ! Arguments
+        ! ----
+        !   lhs: double complex, dimension(:), allocatable
+        !   rhs: double complex, dimension(:), allocatable
+        !
+        ! Retruns
+        ! ----
+        !   rv: double complex, dimension(:), allocatable
+        function lib_math_cmplx_array_add(lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            complex(kind=lib_math_type_kind), dimension(:), allocatable, intent(in) :: lhs
+            complex(kind=lib_math_type_kind), dimension(:), allocatable, intent(in) :: rhs
+
+            complex(kind=lib_math_type_kind), dimension(:), allocatable :: rv
+
+            ! auxiliary
+            integer :: i
+
+            integer, dimension(2) :: n_range_mutual
+            integer, dimension(2) :: n_range_full
+
+            if (allocated(lhs) .and. allocated(rhs)) then
+                n_range_mutual(1) = max( lbound(lhs, 1), lbound(rhs, 1) )
+                n_range_mutual(2) = min( ubound(lhs, 1), ubound(rhs, 1) )
+
+                n_range_full(1) = min( lbound(lhs, 1), lbound(rhs, 1) )
+                n_range_full(2) = max( ubound(lhs, 1), ubound(rhs, 1) )
+
+                allocate (rv(n_range_full(1):n_range_full(2)))
+
+                do i = n_range_mutual(1), n_range_mutual(2)
+                    rv(i) = lhs(i) + rhs(i)
+                end do
+
+                ! fill entries with i < n_range_mutual(1)
+                if (lbound(lhs, 1) .lt. lbound(rhs, 1)) then
+                    do i = lbound(lhs, 1), lbound(rhs, 1) - 1
+                        rv(i) = lhs(i)
+                    end do
+                end if
+
+                if (lbound(rhs, 1) .lt. lbound(lhs, 1)) then
+                    do i = lbound(rhs, 1), lbound(lhs, 1) - 1
+                        rv(i) = rhs(i)
+                    end do
+                end if
+
+                ! fill entries with i > n_range_mutual(2)
+                if (ubound(lhs, 1) .gt. ubound(rhs, 1)) then
+                    do i = ubound(rhs, 1) + 1, ubound(rhs, 1)
+                        rv(i) = lhs(i)
+                    end do
+                end if
+
+                if (ubound(rhs, 1) .gt. ubound(lhs, 1)) then
+                    do i = ubound(lhs, 1) + 1, ubound(rhs, 1)
+                        rv(i) = rhs(i)
+                    end do
+                end if
+
+            else if (allocated(lhs)) then
+                rv = lhs
+            else if (allocated(rhs)) then
+                rv = rhs
+            end if
+
+        end function
+
+        ! Elementwise addition
+        !
+        ! Arguments
+        ! ----
         !   lhs: type(list_list_cmplx)
         !   rhs: type(list_list_cmplx)
         !
@@ -3115,56 +3261,58 @@ module lib_math_type_operator
 
             type(list_cmplx) :: rv
 
-            ! auxiliary
-            integer :: i
+            rv%item = lhs%item + rhs%item
 
-            integer, dimension(2) :: n_range_mutual
-            integer, dimension(2) :: n_range_full
-
-            if (allocated(lhs%item) .and. allocated(rhs%item)) then
-                n_range_mutual(1) = max( lbound(lhs%item, 1), lbound(rhs%item, 1) )
-                n_range_mutual(2) = min( ubound(lhs%item, 1), ubound(rhs%item, 1) )
-
-                n_range_full(1) = min( lbound(lhs%item, 1), lbound(rhs%item, 1) )
-                n_range_full(2) = max( ubound(lhs%item, 1), ubound(rhs%item, 1) )
-
-                call init_list(rv, n_range_full(1), n_range_full(2) - n_range_full(1) + 1)
-
-                do i = n_range_mutual(1), n_range_mutual(2)
-                    rv%item(i) = lhs%item(i) + rhs%item(i)
-                end do
-
-                ! fill entries with i < n_range_mutual(1)
-                if (lbound(lhs%item, 1) .lt. lbound(rhs%item, 1)) then
-                    do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
-                        rv%item(i) = lhs%item(i)
-                    end do
-                end if
-
-                if (lbound(rhs%item, 1) .lt. lbound(lhs%item, 1)) then
-                    do i = lbound(rhs%item, 1), lbound(lhs%item, 1) - 1
-                        rv%item(i) = rhs%item(i)
-                    end do
-                end if
-
-                ! fill entries with i > n_range_mutual(2)
-                if (ubound(lhs%item, 1) .gt. ubound(rhs%item, 1)) then
-                    do i = ubound(rhs%item, 1) + 1, ubound(rhs%item, 1)
-                        rv%item(i) = lhs%item(i)
-                    end do
-                end if
-
-                if (ubound(rhs%item, 1) .gt. ubound(lhs%item, 1)) then
-                    do i = ubound(lhs%item, 1) + 1, ubound(rhs%item, 1)
-                        rv%item(i) = rhs%item(i)
-                    end do
-                end if
-
-            else if (allocated(lhs%item)) then
-                rv = lhs
-            else if (allocated(rhs%item)) then
-                rv = rhs
-            end if
+!            ! auxiliary
+!            integer :: i
+!
+!            integer, dimension(2) :: n_range_mutual
+!            integer, dimension(2) :: n_range_full
+!
+!            if (allocated(lhs%item) .and. allocated(rhs%item)) then
+!                n_range_mutual(1) = max( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+!                n_range_mutual(2) = min( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+!
+!                n_range_full(1) = min( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+!                n_range_full(2) = max( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+!
+!                call init_list(rv, n_range_full(1), n_range_full(2) - n_range_full(1) + 1)
+!
+!                do i = n_range_mutual(1), n_range_mutual(2)
+!                    rv%item(i) = lhs%item(i) + rhs%item(i)
+!                end do
+!
+!                ! fill entries with i < n_range_mutual(1)
+!                if (lbound(lhs%item, 1) .lt. lbound(rhs%item, 1)) then
+!                    do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
+!                        rv%item(i) = lhs%item(i)
+!                    end do
+!                end if
+!
+!                if (lbound(rhs%item, 1) .lt. lbound(lhs%item, 1)) then
+!                    do i = lbound(rhs%item, 1), lbound(lhs%item, 1) - 1
+!                        rv%item(i) = rhs%item(i)
+!                    end do
+!                end if
+!
+!                ! fill entries with i > n_range_mutual(2)
+!                if (ubound(lhs%item, 1) .gt. ubound(rhs%item, 1)) then
+!                    do i = ubound(rhs%item, 1) + 1, ubound(rhs%item, 1)
+!                        rv%item(i) = lhs%item(i)
+!                    end do
+!                end if
+!
+!                if (ubound(rhs%item, 1) .gt. ubound(lhs%item, 1)) then
+!                    do i = ubound(lhs%item, 1) + 1, ubound(rhs%item, 1)
+!                        rv%item(i) = rhs%item(i)
+!                    end do
+!                end if
+!
+!            else if (allocated(lhs%item)) then
+!                rv = lhs
+!            else if (allocated(rhs%item)) then
+!                rv = rhs
+!            end if
 
         end function
 

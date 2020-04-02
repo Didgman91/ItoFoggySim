@@ -1461,33 +1461,83 @@ module lib_ml_fmm
             ground_truth_uindex_list_l_3(:)%l = 3
 
             allocate(ground_truth_coefficient_list_l_3(1)%r, source = (/0.0D0/))
+            allocate(ground_truth_coefficient_list_l_3(1)%c, source = (/dcmplx(0.0D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_3(1)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(1)%a_nm%item(1)%item, source = (/dcmplx(0, 0D0), dcmplx(0, 0D0)/))
+            allocate(ground_truth_coefficient_list_l_3(1)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(1)%b_nm%item(1)%item, source = (/dcmplx(0D0,0), dcmplx(0D0, 0)/))
             ground_truth_uindex_list_l_3(1)%n = 0
 
             allocate(ground_truth_coefficient_list_l_3(2)%r, source = (/13D0/))
+            allocate(ground_truth_coefficient_list_l_3(2)%c, source = (/dcmplx(13D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_3(2)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(2)%a_nm%item(1)%item, source = (/dcmplx(0, 13D0), dcmplx(0, 13D0)/))
+            allocate(ground_truth_coefficient_list_l_3(2)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(2)%b_nm%item(1)%item, source = (/dcmplx(13D0,0), dcmplx(13D0, 0)/))
             ground_truth_uindex_list_l_3(2)%n = 13
 
             allocate(ground_truth_coefficient_list_l_3(3)%r, source = (/49D0/))
+            allocate(ground_truth_coefficient_list_l_3(3)%c, source = (/dcmplx(49D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_3(3)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(3)%a_nm%item(1)%item, source = (/dcmplx(0, 49D0), dcmplx(0, 49D0)/))
+            allocate(ground_truth_coefficient_list_l_3(3)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(3)%b_nm%item(1)%item, source = (/dcmplx(49D0,0), dcmplx(49D0, 0)/))
             ground_truth_uindex_list_l_3(3)%n = 49
 
             allocate(ground_truth_coefficient_list_l_3(4)%r, source = (/6D0/))
+            allocate(ground_truth_coefficient_list_l_3(4)%c, source = (/dcmplx(6D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_3(4)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(4)%a_nm%item(1)%item, source =  (/dcmplx(0, 6D0), dcmplx(0, 6D0)/))
+            allocate(ground_truth_coefficient_list_l_3(4)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(4)%b_nm%item(1)%item, source =  (/dcmplx(6D0,0), dcmplx(6D0, 0)/))
             ground_truth_uindex_list_l_3(4)%n = 6
 
             allocate(ground_truth_coefficient_list_l_3(5)%r, source = (/63D0/))
+            allocate(ground_truth_coefficient_list_l_3(5)%c, source = (/dcmplx(63D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_3(5)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(5)%a_nm%item(1)%item, source = (/dcmplx(0, 63D0), dcmplx(0, 63D0)/))
+            allocate(ground_truth_coefficient_list_l_3(5)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(5)%b_nm%item(1)%item, source = (/dcmplx(63D0,0), dcmplx(63D0, 0)/))
             ground_truth_uindex_list_l_3(5)%n = 63
 
             allocate(ground_truth_coefficient_list_l_3(6)%r, source = (/48D0/))
+            allocate(ground_truth_coefficient_list_l_3(6)%c, source = (/dcmplx(48D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_3(6)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(6)%a_nm%item(1)%item, source = (/dcmplx(0, 48D0), dcmplx(0, 48D0)/))
+            allocate(ground_truth_coefficient_list_l_3(6)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(6)%b_nm%item(1)%item, source = (/dcmplx(48D0,0), dcmplx(48D0, 0)/))
             ground_truth_uindex_list_l_3(6)%n = 48
 
             allocate(ground_truth_coefficient_list_l_3(7)%r, source = (/61D0/))
+            allocate(ground_truth_coefficient_list_l_3(7)%c, source = (/dcmplx(61D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_3(7)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(7)%a_nm%item(1)%item, source = (/dcmplx(0, 61D0), dcmplx(0, 61D0)/))
+            allocate(ground_truth_coefficient_list_l_3(7)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(7)%b_nm%item(1)%item, source = (/dcmplx(61D0,0), dcmplx(61D0, 0)/))
             ground_truth_uindex_list_l_3(7)%n = 61
 
             allocate(ground_truth_coefficient_list_l_3(8)%r, source = (/1D0/))
+            allocate(ground_truth_coefficient_list_l_3(8)%c, source = (/dcmplx(1D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_3(8)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(8)%a_nm%item(1)%item, source =  (/dcmplx(0, 1D0), dcmplx(0, 1D0)/))
+            allocate(ground_truth_coefficient_list_l_3(8)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(8)%b_nm%item(1)%item, source =  (/dcmplx(1D0,0), dcmplx(1D0, 0)/))
             ground_truth_uindex_list_l_3(8)%n = 1
 
             allocate(ground_truth_coefficient_list_l_3(9)%r, source = (/54D0/))
+            allocate(ground_truth_coefficient_list_l_3(9)%c, source = (/dcmplx(54D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_3(9)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(9)%a_nm%item(1)%item, source = (/dcmplx(0, 54D0), dcmplx(0, 54D0)/))
+            allocate(ground_truth_coefficient_list_l_3(9)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(9)%b_nm%item(1)%item, source = (/dcmplx(54D0,0), dcmplx(54D0, 0)/))
             ground_truth_uindex_list_l_3(9)%n = 54
 
             allocate(ground_truth_coefficient_list_l_3(10)%r, source = (/15D0/))
+            allocate(ground_truth_coefficient_list_l_3(10)%c, source = (/dcmplx(15D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_3(10)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(10)%a_nm%item(1)%item, source = (/dcmplx(0, 15D0), dcmplx(0, 15D0)/))
+            allocate(ground_truth_coefficient_list_l_3(10)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_3(10)%b_nm%item(1)%item, source = (/dcmplx(15D0,0), dcmplx(15D0, 0)/))
             ground_truth_uindex_list_l_3(10)%n = 15
 
 
@@ -1496,21 +1546,51 @@ module lib_ml_fmm
             ground_truth_uindex_list_l_2(:)%l = 2
 
             allocate(ground_truth_coefficient_list_l_2(1)%r, source = (/1D0/))
+            allocate(ground_truth_coefficient_list_l_2(1)%c, source = (/dcmplx(1D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_2(1)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_2(1)%a_nm%item(1)%item, source = (/dcmplx(0, 1D0)/))
+            allocate(ground_truth_coefficient_list_l_2(1)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_2(1)%b_nm%item(1)%item, source = (/dcmplx(1D0, 0)/))
             ground_truth_uindex_list_l_2(1)%n = 0
 
             allocate(ground_truth_coefficient_list_l_2(2)%r, source = (/6D0/))
+            allocate(ground_truth_coefficient_list_l_2(2)%c, source = (/dcmplx(6D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_2(2)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_2(2)%a_nm%item(1)%item, source = (/dcmplx(0, 6D0)/))
+            allocate(ground_truth_coefficient_list_l_2(2)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_2(2)%b_nm%item(1)%item, source = (/dcmplx(6D0, 0)/))
             ground_truth_uindex_list_l_2(2)%n = 1
 
             allocate(ground_truth_coefficient_list_l_2(3)%r, source = (/28D0/))
+            allocate(ground_truth_coefficient_list_l_2(3)%c, source = (/dcmplx(28D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_2(3)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_2(3)%a_nm%item(1)%item, source = (/dcmplx(0, 28D0)/))
+            allocate(ground_truth_coefficient_list_l_2(3)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_2(3)%b_nm%item(1)%item, source = (/dcmplx(28D0, 0)/))
             ground_truth_uindex_list_l_2(3)%n = 3
 
             allocate(ground_truth_coefficient_list_l_2(4)%r, source = (/97D0/))
+            allocate(ground_truth_coefficient_list_l_2(4)%c, source = (/dcmplx(97D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_2(4)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_2(4)%a_nm%item(1)%item, source = (/dcmplx(0, 97D0)/))
+            allocate(ground_truth_coefficient_list_l_2(4)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_2(4)%b_nm%item(1)%item, source = (/dcmplx(97D0, 0)/))
             ground_truth_uindex_list_l_2(4)%n = 12
 
             allocate(ground_truth_coefficient_list_l_2(5)%r, source = (/54D0/))
+            allocate(ground_truth_coefficient_list_l_2(5)%c, source = (/dcmplx(54D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_2(5)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_2(5)%a_nm%item(1)%item, source = (/dcmplx(0, 54D0)/))
+            allocate(ground_truth_coefficient_list_l_2(5)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_2(5)%b_nm%item(1)%item, source = (/dcmplx(54D0, 0)/))
             ground_truth_uindex_list_l_2(5)%n = 13
 
             allocate(ground_truth_coefficient_list_l_2(6)%r, source = (/124D0/))
+            allocate(ground_truth_coefficient_list_l_2(6)%c, source = (/dcmplx(124D0, 0)/))
+            allocate(ground_truth_coefficient_list_l_2(6)%a_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_2(6)%a_nm%item(1)%item, source = (/dcmplx(0, 124D0)/))
+            allocate(ground_truth_coefficient_list_l_2(6)%b_nm%item(1))
+            allocate(ground_truth_coefficient_list_l_2(6)%b_nm%item(1)%item, source = (/dcmplx(124D0, 0)/))
             ground_truth_uindex_list_l_2(6)%n = 15
 
         end subroutine setup_ground_truth_C_coefficient_list_2D

@@ -102,33 +102,9 @@ module ml_fmm_math
         rv%a_nm = lhs%a_nm + rhs%a_nm
         rv%b_nm = lhs%b_nm + rhs%b_nm
 
-        if (allocated(lhs%c) .and. allocated(rhs%c)) then
-            if (lbound(lhs%c, 1) .eq. lbound(rhs%c, 1) &
-                .and. ubound(lhs%c, 1) .eq. ubound(rhs%c, 1)) then
-                allocate(rv%c(lbound(lhs%c, 1):ubound(lhs%c, 1)))
-                rv%c = lhs%c + rhs%c
-            end if
-        else if (allocated(lhs%c)) then
-            allocate(rv%c(lbound(lhs%c, 1):ubound(lhs%c, 1)))
-            rv%c = lhs%c
-        else if (allocated(rhs%c)) then
-            allocate(rv%c(lbound(rhs%c, 1):ubound(rhs%c, 1)))
-            rv%c = rhs%c
-        end if
+        rv%c = lhs%c + rhs%c
 
-        if (allocated(lhs%r) .and. allocated(rhs%r)) then
-            if (lbound(lhs%r, 1) .eq. lbound(rhs%r, 1) &
-                .and. ubound(lhs%r, 1) .eq. ubound(rhs%r, 1)) then
-                allocate(rv%c(lbound(lhs%r, 1):ubound(lhs%r, 1)))
-                rv%r = lhs%r + rhs%r
-            end if
-        else if (allocated(lhs%r)) then
-            allocate(rv%r(lbound(lhs%r, 1):ubound(lhs%r, 1)))
-            rv%r = lhs%r
-        else if (allocated(rhs%c)) then
-            allocate(rv%r(lbound(rhs%r, 1):ubound(rhs%r, 1)))
-            rv%r = rhs%r
-        end if
+        rv%r = lhs%r + rhs%r
 
     end function ml_fmm_coefficient_add_operator_list_2_cmplx
 
@@ -144,33 +120,9 @@ module ml_fmm_math
         rv%a_nm = lhs%a_nm + rhs%a_nm
         rv%b_nm = lhs%b_nm + rhs%b_nm
 
-        if (allocated(lhs%c) .and. allocated(rhs%c)) then
-            if (lbound(lhs%c, 1) .eq. lbound(rhs%c, 1) &
-                .and. ubound(lhs%c, 1) .eq. ubound(rhs%c, 1)) then
-                allocate(rv%c(lbound(lhs%c, 1):ubound(lhs%c, 1)))
-                rv%c = lhs%c + rhs%c
-            end if
-        else if (allocated(lhs%c)) then
-            allocate(rv%c(lbound(lhs%c, 1):ubound(lhs%c, 1)))
-            rv%c = lhs%c
-        else if (allocated(rhs%c)) then
-            allocate(rv%c(lbound(rhs%c, 1):ubound(rhs%c, 1)))
-            rv%c = rhs%c
-        end if
+        rv%c = lhs%c + rhs%c
 
-        if (allocated(lhs%r) .and. allocated(rhs%r)) then
-            if (lbound(lhs%r, 1) .eq. lbound(rhs%r, 1) &
-                .and. ubound(lhs%r, 1) .eq. ubound(rhs%r, 1)) then
-                allocate(rv%c(lbound(lhs%r, 1):ubound(lhs%r, 1)))
-                rv%r = lhs%r + rhs%r
-            end if
-        else if (allocated(lhs%r)) then
-            allocate(rv%r(lbound(lhs%r, 1):ubound(lhs%r, 1)))
-            rv%r = lhs%r
-        else if (allocated(rhs%c)) then
-            allocate(rv%r(lbound(rhs%r, 1):ubound(rhs%r, 1)))
-            rv%r = rhs%r
-        end if
+        rv%r = lhs%r + rhs%r
 
     end function ml_fmm_type_operator_v_add_0d_list_2_cmplx
 
@@ -201,6 +153,16 @@ module ml_fmm_math
         allocate(coefficient%b_nm%item(1))
         allocate(coefficient%b_nm%item(1)%item(1))
         coefficient%b_nm%item(1)%item(1) = 0d0
+
+        if (allocated(coefficient%c)) then
+            deallocate(coefficient%c)
+        end if
+        allocate(coefficient%c, source = (/cmplx(0, 0, kind=lib_math_type_kind)/))
+
+        if (allocated(coefficient%r)) then
+            deallocate(coefficient%r)
+        end if
+        allocate(coefficient%r, source = (/real(0, kind=lib_math_type_kind)/))
 
     end subroutine lib_ml_fmm_type_operator_set_coefficient_zero_list_2_c_alt
 
@@ -335,6 +297,19 @@ module ml_fmm_math
             end do
         end if
 
+        if (allocated(lhs%c) .and. allocated(rhs%c)) then
+            if (size(lhs%c) .eq. size(rhs%c)) then
+                length = size(lhs%c)
+                allocate (rv%c(length))
+                do i=1, length
+                    rv%c(i) = lhs%c(i) + rhs%c(i)
+                end do
+            end if
+        end if
+
+        rv%a_nm = lhs%a_nm + rhs%a_nm
+        rv%b_nm = lhs%b_nm + rhs%b_nm
+
     end function
 
     function test_u_dot_coefficient(lhs, rhs) result (rv)
@@ -421,6 +396,14 @@ module ml_fmm_math
             allocate(coefficient%r(1))
             coefficient%r(1) = 0
         end if
+
+        if (allocated(coefficient%c)) then
+            coefficient%c(:) = 0
+        else
+            allocate(coefficient%c(1))
+            coefficient%c(1) = 0
+        end if
+
     end subroutine
 
     function test_v_operator_add(lhs, rhs) result(rv)
@@ -559,6 +542,15 @@ module ml_fmm_math
 
 !        allocate(B_i%r, source = (/data_element%uindex%n + abs(x)/))
         allocate(u_B_i%r, source = (/real(data_element%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)/))
+
+        allocate(u_B_i%c, source =(/cmplx(data_element%uindex%n, 0, kind=LIB_ML_FMM_COEFFICIENT_KIND)/))
+
+        allocate(u_B_i%a_nm%item(1))
+        allocate(u_B_i%a_nm%item(1)%item, source =(/cmplx(0, data_element%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)/))
+
+        allocate(u_B_i%b_nm%item(1))
+        allocate(u_B_i%b_nm%item(1)%item, source =(/cmplx(data_element%uindex%n, 0, kind=LIB_ML_FMM_COEFFICIENT_KIND)/))
+
     end function
 
     function test_get_u_phi_i_j(data_element_i, element_number_i, data_element_j, element_number_j) result(rv)
@@ -593,6 +585,12 @@ module ml_fmm_math
 !        allocate(A_i_2%r, source = (/A_i_1%r + abs(x_2 - x_1)/))
         allocate(A_i_2%r, source = (/A_i_1%r(1)/))
 
+        allocate(A_i_2%c, source = A_i_1%c)
+
+        allocate(A_i_2%a_nm%item, source = A_i_1%a_nm%item)
+
+        allocate(A_i_2%b_nm%item, source = A_i_1%b_nm%item)
+
     end function
 
     function test_translation_SR(B_i_1, x_1, x_2) result(A_i_2)
@@ -608,6 +606,12 @@ module ml_fmm_math
 !        allocate(A_i_2%r, source = (/B_i_1%r + abs(x_2 - x_1)/))
         allocate(A_i_2%r, source = (/B_i_1%r(1)/))
 
+        allocate(A_i_2%c, source = B_i_1%c)
+
+        allocate(A_i_2%a_nm%item, source = B_i_1%a_nm%item)
+
+        allocate(A_i_2%b_nm%item, source = B_i_1%b_nm%item)
+
     end function
 
     function test_translation_SS(B_i_1, x_1, x_2) result(B_i_2)
@@ -622,6 +626,12 @@ module ml_fmm_math
 
 !        allocate(B_i_2%r, source = (/B_i_1%r(1) + abs(x_2 - x_1)/))
         allocate(B_i_2%r, source = (/B_i_1%r(1)/))
+
+        allocate(B_i_2%c, source = B_i_1%c)
+
+        allocate(B_i_2%a_nm%item, source = B_i_1%a_nm%item)
+
+        allocate(B_i_2%b_nm%item, source = B_i_1%b_nm%item)
 
     end function
 end module ml_fmm_math
