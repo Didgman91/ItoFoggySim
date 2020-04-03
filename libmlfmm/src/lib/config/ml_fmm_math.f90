@@ -53,7 +53,7 @@ module ml_fmm_math
 
         if (m_procedure_type .eq. 0) then
             ! load test procedure functions
-            operator_procedures%coefficient_add => test_c_add
+            operator_procedures%coefficient_add => ml_fmm_coefficient_add_operator_list_2_cmplx
             operator_procedures%coefficient_set_zero => test_set_coefficient_zero
 !            operator_procedures%u_dot_coefficient => test_u_dot_coefficient
             operator_procedures%coefficient_eq => test_coefficient_eq
@@ -102,9 +102,8 @@ module ml_fmm_math
         rv%a_nm = lhs%a_nm + rhs%a_nm
         rv%b_nm = lhs%b_nm + rhs%b_nm
 
-        rv%c = lhs%c + rhs%c
-
-        rv%r = lhs%r + rhs%r
+        rv%c = lib_math_cmplx_array_add(lhs%c, rhs%c)
+        rv%r = lib_math_real_array_add(lhs%r, rhs%r)
 
     end function ml_fmm_coefficient_add_operator_list_2_cmplx
 
@@ -120,9 +119,8 @@ module ml_fmm_math
         rv%a_nm = lhs%a_nm + rhs%a_nm
         rv%b_nm = lhs%b_nm + rhs%b_nm
 
-        rv%c = lhs%c + rhs%c
-
-        rv%r = lhs%r + rhs%r
+        rv%c = lib_math_cmplx_array_add(lhs%c, rhs%c)
+        rv%r = lib_math_real_array_add(lhs%r, rhs%r)
 
     end function ml_fmm_type_operator_v_add_0d_list_2_cmplx
 
@@ -238,7 +236,7 @@ module ml_fmm_math
 
             type(ml_fmm_type_operator_procedures) :: ml_fmm_operator_procedures
 
-            ml_fmm_operator_procedures%coefficient_add => test_c_add
+            ml_fmm_operator_procedures%coefficient_add => ml_fmm_coefficient_add_operator_list_2_cmplx
             ml_fmm_operator_procedures%coefficient_set_zero => test_set_coefficient_zero
 !            ml_fmm_operator_procedures%dor => test_dor
 !            ml_fmm_operator_procedures%u_dot_coefficient => test_u_dot_coefficient
@@ -347,11 +345,19 @@ module ml_fmm_math
 
         allocate (rv%r(1))
         rv%r(1) = 0
-
         length = size(D%r)
         do i=1, length
             rv%r(1) = rv%r(1) + D%r(i) * 2!(y_j%x(1) - x_c%x(1))
         end do
+
+        if (allocated(D%c)) then
+            allocate (rv%c(1))
+            rv%c(1) = 0
+            length = size(D%c)
+            do i=1, length
+                rv%c(1) = rv%c(1) + D%c(i) * 2!(y_j%x(1) - x_c%x(1))
+            end do
+        end if
 
     end function test_dor
 
@@ -362,10 +368,40 @@ module ml_fmm_math
         type(lib_ml_fmm_coefficient), intent(in) :: rhs
         logical :: rv
 
-        if (lhs%r(1) .eq. rhs%r(1)) then
-            rv = .true.
-        else
+        rv = .true.
+
+        if (lhs%r(1) .ne. rhs%r(1)) then
             rv = .false.
+        end if
+
+        if (allocated(lhs%c) .or. allocated(rhs%c)) then
+            if (lhs%c(1) .ne. rhs%c(1)) then
+                rv = .false.
+            end if
+        end if
+
+        if (allocated(lhs%a_nm%item) .or. allocated(rhs%a_nm%item)) then
+            if (allocated(lhs%a_nm%item) .and. allocated(rhs%a_nm%item)) then
+                if (lhs%a_nm%item(1)%item(1) .ne. rhs%a_nm%item(1)%item(1)) then
+                    rv = .false.
+                end if
+            else
+                if (sum(lhs%a_nm) .ne. 0d0 .or. sum(rhs%a_nm) .ne. 0) then
+                    rv = .false.
+                end if
+            end if
+        end if
+
+        if (allocated(lhs%b_nm%item) .or. allocated(rhs%b_nm%item)) then
+            if (allocated(lhs%b_nm%item) .and. allocated(rhs%b_nm%item)) then
+                if (lhs%b_nm%item(1)%item(1) .ne. rhs%b_nm%item(1)%item(1)) then
+                    rv = .false.
+                end if
+            else
+                if (sum(lhs%b_nm) .ne. 0d0 .or. sum(rhs%b_nm) .ne. 0) then
+                    rv = .false.
+                end if
+            end if
         end if
 
     end function test_coefficient_eq
@@ -377,10 +413,10 @@ module ml_fmm_math
         type(lib_ml_fmm_coefficient), intent(in) :: rhs
         logical :: rv
 
-        if (lhs%r(1) .ne. rhs%r(1)) then
-            rv = .true.
-        else
+        if (test_coefficient_eq(lhs, rhs)) then
             rv = .false.
+        else
+            rv = .true.
         end if
 
     end function test_coefficient_ne
@@ -568,6 +604,17 @@ module ml_fmm_math
 !        allocate(rv%r, source = (/data_element_i%uindex%n + abs(y_j)/))
         allocate(rv%r(1))
         rv%r(1) = real(data_element_i%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)
+
+        allocate(rv%c(1))
+        rv%c(1) = cmplx(data_element_i%uindex%n, 0, kind=LIB_ML_FMM_COEFFICIENT_KIND)
+
+        allocate(rv%a_nm%item(1))
+        allocate(rv%a_nm%item(1)%item(1))
+        rv%a_nm%item(1)%item(1) = cmplx(0, data_element_i%uindex%n, kind=LIB_ML_FMM_COEFFICIENT_KIND)
+
+        allocate(rv%b_nm%item(1))
+        allocate(rv%b_nm%item(1)%item(1))
+        rv%b_nm%item(1)%item(1) = cmplx(data_element_i%uindex%n, 0, kind=LIB_ML_FMM_COEFFICIENT_KIND)
 
     end function
 
