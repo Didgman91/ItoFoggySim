@@ -87,7 +87,7 @@ module lib_sie_ml_fmm_interface
 !            use lib_sie_data_container
             implicit none
             ! dummy
-            double complex, dimension(:), intent(in) :: vector_x
+            double complex, dimension(:), allocatable, intent(in) :: vector_x
 
             double complex, dimension(:), allocatable, intent(inout) :: vector_b
 

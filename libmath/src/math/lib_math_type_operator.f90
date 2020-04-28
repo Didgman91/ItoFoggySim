@@ -175,6 +175,10 @@ module lib_math_type_operator
 
         ! list
         module procedure lib_math_list_real_mul_real
+        module procedure lib_math_list_real_mul_cmplx
+
+        module procedure lib_math_list_real_mul_list_real
+        module procedure lib_math_list_cmplx_mul_list_cmplx
 
         ! list list
         module procedure lib_math_list_list_real_mul_real
@@ -256,6 +260,7 @@ module lib_math_type_operator
         module procedure lib_math_list_list_real_init
         module procedure lib_math_list_4_real_init
         module procedure lib_math_list_list_cmplx_init
+        module procedure lib_math_list_list_cmplx_init_with_shape
         module procedure lib_math_list_4_cmplx_init
         module procedure lib_math_list_real_init
         module procedure lib_math_list_cmplx_init
@@ -2146,7 +2151,9 @@ module lib_math_type_operator
 
             call lib_math_list_real_deallocate(lhs)
 
-            lhs%item = rhs%item
+            if (allocated(rhs%item)) then
+                lhs%item = rhs%item
+            end if
         end subroutine
 
         subroutine lib_math_list_cmplx_assignment(lhs, rhs)
@@ -2158,7 +2165,9 @@ module lib_math_type_operator
 
             call lib_math_list_cmplx_deallocate(lhs)
 
-            lhs%item = rhs%item
+            if (allocated(rhs%item)) then
+                lhs%item = rhs%item
+            end if
         end subroutine
 
         subroutine lib_math_list_list_real_deallocate(list)
@@ -2210,8 +2219,6 @@ module lib_math_type_operator
 
             if (allocated(rhs%item)) then
                 lhs%item = rhs%item
-            else
-                if (allocated(lhs%item)) deallocate(lhs%item)
             end if
         end subroutine
 
@@ -2226,8 +2233,6 @@ module lib_math_type_operator
 
             if (allocated(rhs%item)) then
                 lhs%item = rhs%item
-            else
-                if (allocated(lhs%item)) deallocate(lhs%item)
             end if
         end subroutine
 
@@ -2393,7 +2398,7 @@ module lib_math_type_operator
 
         ! Arguments
         ! ----
-        !   list: type (list_list_real)
+        !   list: type (list_list_cmplx)
         !       derived data type to initialize
         !   fnu: integer
         !       start index
@@ -2427,6 +2432,31 @@ module lib_math_type_operator
             end if
 
         end subroutine lib_math_list_list_cmplx_init
+
+        ! Arguments
+        ! ----
+        !   list: type (list_list_cmplx)
+        !       derived data type to initialize
+        !   shape: type (list_list_cmplx)
+        !       shape with which the list is to be initialized
+        subroutine lib_math_list_list_cmplx_init_with_shape(list, shape)
+            implicit none
+            ! dummy
+            type (list_list_cmplx), intent(inout) :: list
+            type (list_list_cmplx), intent(in) :: shape
+
+            ! auxiliary
+            integer :: i
+
+            call deallocate_list(list)
+
+            allocate(list%item(lbound(shape%item, 1):ubound(shape%item, 1)))
+
+            do i = lbound(list%item, 1), ubound(list%item, 1)
+                allocate(list%item(i)%item(lbound(shape%item(i)%item, 1):ubound(shape%item(i)%item, 1)))
+            end do
+
+        end subroutine lib_math_list_list_cmplx_init_with_shape
 
         ! Arguments
         ! ----
@@ -3468,9 +3498,60 @@ module lib_math_type_operator
 
             type(list_cmplx) :: rv
 
-            rv%item = lib_math_cmplx_array_add(lhs%item, rhs%item)
+            ! auxiliary
+            integer :: i
 
-        end function
+            integer, dimension(2) :: n_range_mutual
+            integer, dimension(2) :: n_range_full
+
+            if (allocated(lhs%item) .and. allocated(rhs%item)) then
+                n_range_mutual(1) = max( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+                n_range_mutual(2) = min( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+
+                n_range_full(1) = min( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+                n_range_full(2) = max( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+
+                allocate (rv%item(n_range_full(1):n_range_full(2)))
+
+                do i = n_range_mutual(1), n_range_mutual(2)
+                    rv%item(i) = lhs%item(i) + rhs%item(i)
+                end do
+
+                ! fill entries with i < n_range_mutual(1)
+                if (lbound(lhs%item, 1) .lt. lbound(rhs%item, 1)) then
+                    do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
+                        rv%item(i) = lhs%item(i)
+                    end do
+                end if
+
+                if (lbound(rhs%item, 1) .lt. lbound(lhs%item, 1)) then
+                    do i = lbound(rhs%item, 1), lbound(lhs%item, 1) - 1
+                        rv%item(i) = rhs%item(i)
+                    end do
+                end if
+
+                ! fill entries with i > n_range_mutual(2)
+                if (ubound(lhs%item, 1) .gt. ubound(rhs%item, 1)) then
+                    do i = ubound(rhs%item, 1) + 1, ubound(rhs%item, 1)
+                        rv%item(i) = lhs%item(i)
+                    end do
+                end if
+
+                if (ubound(rhs%item, 1) .gt. ubound(lhs%item, 1)) then
+                    do i = ubound(lhs%item, 1) + 1, ubound(rhs%item, 1)
+                        rv%item(i) = rhs%item(i)
+                    end do
+                end if
+
+            else if (allocated(lhs%item)) then
+                rv%item = lhs%item
+            else if (allocated(rhs%item)) then
+                rv%item = rhs%item
+            else
+                print *, "lib_math_list_cmplx_add: ERROR"
+            end if
+
+        end function lib_math_list_cmplx_add
 
         ! Elementwise addition
         !
@@ -3490,9 +3571,60 @@ module lib_math_type_operator
 
             type(list_real) :: rv
 
-            rv%item = lib_math_real_array_add(lhs%item, rhs%item)
+            ! auxiliary
+            integer :: i
 
-        end function
+            integer, dimension(2) :: n_range_mutual
+            integer, dimension(2) :: n_range_full
+
+            if (allocated(lhs%item) .and. allocated(rhs%item)) then
+                n_range_mutual(1) = max( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+                n_range_mutual(2) = min( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+
+                n_range_full(1) = min( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+                n_range_full(2) = max( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+
+                allocate (rv%item(n_range_full(1):n_range_full(2)))
+
+                do i = n_range_mutual(1), n_range_mutual(2)
+                    rv%item(i) = lhs%item(i) + rhs%item(i)
+                end do
+
+                ! fill entries with i < n_range_mutual(1)
+                if (lbound(lhs%item, 1) .lt. lbound(rhs%item, 1)) then
+                    do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
+                        rv%item(i) = lhs%item(i)
+                    end do
+                end if
+
+                if (lbound(rhs%item, 1) .lt. lbound(lhs%item, 1)) then
+                    do i = lbound(rhs%item, 1), lbound(lhs%item, 1) - 1
+                        rv%item(i) = rhs%item(i)
+                    end do
+                end if
+
+                ! fill entries with i > n_range_mutual(2)
+                if (ubound(lhs%item, 1) .gt. ubound(rhs%item, 1)) then
+                    do i = ubound(rhs%item, 1) + 1, ubound(rhs%item, 1)
+                        rv%item(i) = lhs%item(i)
+                    end do
+                end if
+
+                if (ubound(rhs%item, 1) .gt. ubound(lhs%item, 1)) then
+                    do i = ubound(lhs%item, 1) + 1, ubound(rhs%item, 1)
+                        rv%item(i) = rhs%item(i)
+                    end do
+                end if
+
+            else if (allocated(lhs%item)) then
+                rv%item = lhs%item
+            else if (allocated(rhs%item)) then
+                rv%item = rhs%item
+            else
+                print *, "lib_math_list_real_add: ERROR"
+            end if
+
+        end function lib_math_list_real_add
 
         ! Elementwise subtraction
         !
@@ -3512,9 +3644,60 @@ module lib_math_type_operator
 
             type(list_cmplx) :: rv
 
-            rv%item = lib_math_cmplx_array_add(lhs%item, rhs%item)
+            ! auxiliary
+            integer :: i
 
-        end function
+            integer, dimension(2) :: n_range_mutual
+            integer, dimension(2) :: n_range_full
+
+            if (allocated(lhs%item) .and. allocated(rhs%item)) then
+                n_range_mutual(1) = max( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+                n_range_mutual(2) = min( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+
+                n_range_full(1) = min( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+                n_range_full(2) = max( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+
+                allocate (rv%item(n_range_full(1):n_range_full(2)))
+
+                do i = n_range_mutual(1), n_range_mutual(2)
+                    rv%item(i) = lhs%item(i) - rhs%item(i)
+                end do
+
+                ! fill entries with i < n_range_mutual(1)
+                if (lbound(lhs%item, 1) .lt. lbound(rhs%item, 1)) then
+                    do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
+                        rv%item(i) = lhs%item(i)
+                    end do
+                end if
+
+                if (lbound(rhs%item, 1) .lt. lbound(lhs%item, 1)) then
+                    do i = lbound(rhs%item, 1), lbound(lhs%item, 1) - 1
+                        rv%item(i) = -1 * rhs%item(i)
+                    end do
+                end if
+
+                ! fill entries with i > n_range_mutual(2)
+                if (ubound(lhs%item, 1) .gt. ubound(rhs%item, 1)) then
+                    do i = ubound(rhs%item, 1) + 1, ubound(rhs%item, 1)
+                        rv%item(i) = lhs%item(i)
+                    end do
+                end if
+
+                if (ubound(rhs%item, 1) .gt. ubound(lhs%item, 1)) then
+                    do i = ubound(lhs%item, 1) + 1, ubound(rhs%item, 1)
+                        rv%item(i) = -1 * rhs%item(i)
+                    end do
+                end if
+
+            else if (allocated(lhs%item)) then
+                rv%item = lhs%item
+            else if (allocated(rhs%item)) then
+                rv%item = -1 * rhs%item
+            else
+                print *, "lib_math_list_cmplx_sub: ERROR"
+            end if
+
+        end function lib_math_list_cmplx_sub
 
         ! Elementwise subtraction
         !
@@ -3534,9 +3717,60 @@ module lib_math_type_operator
 
             type(list_real) :: rv
 
-            rv%item = lib_math_real_array_sub(lhs%item, rhs%item)
+            ! auxiliary
+            integer :: i
 
-        end function
+            integer, dimension(2) :: n_range_mutual
+            integer, dimension(2) :: n_range_full
+
+            if (allocated(lhs%item) .and. allocated(rhs%item)) then
+                n_range_mutual(1) = max( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+                n_range_mutual(2) = min( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+
+                n_range_full(1) = min( lbound(lhs%item, 1), lbound(rhs%item, 1) )
+                n_range_full(2) = max( ubound(lhs%item, 1), ubound(rhs%item, 1) )
+
+                allocate (rv%item(n_range_full(1):n_range_full(2)))
+
+                do i = n_range_mutual(1), n_range_mutual(2)
+                    rv%item(i) = lhs%item(i) - rhs%item(i)
+                end do
+
+                ! fill entries with i < n_range_mutual(1)
+                if (lbound(lhs%item, 1) .lt. lbound(rhs%item, 1)) then
+                    do i = lbound(lhs%item, 1), lbound(rhs%item, 1) - 1
+                        rv%item(i) = lhs%item(i)
+                    end do
+                end if
+
+                if (lbound(rhs%item, 1) .lt. lbound(lhs%item, 1)) then
+                    do i = lbound(rhs%item, 1), lbound(lhs%item, 1) - 1
+                        rv%item(i) = -1 * rhs%item(i)
+                    end do
+                end if
+
+                ! fill entries with i > n_range_mutual(2)
+                if (ubound(lhs%item, 1) .gt. ubound(rhs%item, 1)) then
+                    do i = ubound(rhs%item, 1) + 1, ubound(rhs%item, 1)
+                        rv%item(i) = lhs%item(i)
+                    end do
+                end if
+
+                if (ubound(rhs%item, 1) .gt. ubound(lhs%item, 1)) then
+                    do i = ubound(lhs%item, 1) + 1, ubound(rhs%item, 1)
+                        rv%item(i) = -1 * rhs%item(i)
+                    end do
+                end if
+
+            else if (allocated(lhs%item)) then
+                rv%item = lhs%item
+            else if (allocated(rhs)) then
+                rv%item = -1 * rhs%item
+            else
+                print *, "lib_math_list_real_sub: ERROR"
+            end if
+
+        end function lib_math_list_real_sub
 
         ! Elementwise addition
         !
@@ -3782,6 +4016,34 @@ module lib_math_type_operator
         !
         ! Arguments
         ! ----
+        !   lhs: cmplx(kind=lib_math_type_kind)
+        !   rhs: type(list_real)
+        !
+        ! Retruns
+        ! ----
+        !   rv: type(list_cmplx)
+        function lib_math_list_real_mul_cmplx(lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            complex(kind=lib_math_type_kind), intent(in) :: lhs
+            type(list_real), intent(in) :: rhs
+
+            type(list_cmplx) :: rv
+
+            ! auxiliary
+            integer :: i
+
+            call init_list(rv, lbound(rhs%item, 1), ubound(rhs%item, 1) - lbound(rhs%item, 1) + 1)
+
+            do i=lbound(rhs%item, 1), ubound(rhs%item, 1)
+                rv%item(i) = lhs * rhs%item(i)
+            end do
+        end function lib_math_list_real_mul_cmplx
+
+        ! Elementwise multiplication
+        !
+        ! Arguments
+        ! ----
         !   lhs: real(kind=lib_math_type_kind)
         !   rhs: type(list_list_real)
         !
@@ -3852,15 +4114,21 @@ module lib_math_type_operator
             integer :: n
             integer :: m
 
-            call init_list(rv, lbound(rhs%item, 1), ubound(rhs%item, 1) - lbound(rhs%item, 1) + 1)
+            call init_list(rv, rhs)
 
-            !$OMP PARALLEL DO PRIVATE(n, m)
-            do n=lbound(rhs%item, 1), ubound(rhs%item, 1)
-                do m=-n, n
-                    rv%item(n)%item(m) = lhs * rhs%item(n)%item(m)
+            if (lhs .eq. real(1, kind = lib_math_type_kind)) then
+                rv = rhs
+            else if (lhs .eq. real(0, kind = lib_math_type_kind)) then
+                call deallocate_list(rv)
+            else
+                !$OMP PARALLEL DO PRIVATE(n, m)
+                do n=lbound(rhs%item, 1), ubound(rhs%item, 1)
+                    do m=lbound(rhs%item(n)%item, 1), ubound(rhs%item(n)%item, 1)
+                        rv%item(n)%item(m) = lhs * rhs%item(n)%item(m)
+                    end do
                 end do
-            end do
-            !$OMP END PARALLEL DO
+                !$OMP END PARALLEL DO
+            end if
 
         end function lib_math_list_list_cmplx_mul_real
 
@@ -3886,15 +4154,21 @@ module lib_math_type_operator
             integer :: n
             integer :: m
 
-            call init_list(rv, lbound(rhs%item, 1), ubound(rhs%item, 1) - lbound(rhs%item, 1) + 1)
+            call init_list(rv, rhs)
 
-            !$OMP PARALLEL DO PRIVATE(n, m)
-            do n=lbound(rhs%item, 1), ubound(rhs%item, 1)
-                do m=-n, n
-                    rv%item(n)%item(m) = lhs * rhs%item(n)%item(m)
+            if (lhs .eq. cmplx(1, 0, kind = lib_math_type_kind)) then
+                rv = rhs
+            else if (lhs .eq. cmplx(0, 0, kind = lib_math_type_kind)) then
+                call deallocate_list(rv)
+            else
+                !$OMP PARALLEL DO PRIVATE(n, m)
+                do n=lbound(rhs%item, 1), ubound(rhs%item, 1)
+                    do m=lbound(rhs%item(n)%item, 1), ubound(rhs%item(n)%item, 1)
+                        rv%item(n)%item(m) = lhs * rhs%item(n)%item(m)
+                    end do
                 end do
-            end do
-            !$OMP END PARALLEL DO
+                !$OMP END PARALLEL DO
+            end if
 
         end function lib_math_cmplx_mul_list_list_cmplx
 
@@ -3922,14 +4196,37 @@ module lib_math_type_operator
 
         ! Elementwise multiplication
         !
+        ! HINT
+        ! ----
+        !   An uallocated list means that there are only zeros.
+        !
         ! Arguments
         ! ----
-        !   lhs: type(list_list_cmplx)
-        !   rhs: type(list_list_cmplx)
+        !   lhs: type(list_cmplx)
+        !   rhs: type(list_cmplx)
         !
         ! Retruns
         ! ----
-        !   rv: type(list_list_cmplx)
+        !   rv: type(list_cmplx)
+        !
+        ! Note
+        ! ----
+        !   lhs:   l-----u
+        !   rhs:       l-------u
+        !
+        !   lhs:       l-------u
+        !   rhs:   l-----u
+        !
+        !
+        !   lhs:   l-----u
+        !   rhs:     l-u
+        !
+        !
+        !   lhs:     l-u
+        !   rhs:   l-----u
+        !
+        !
+        !   overlap: l.u <= r.l  or  l.l >= r.u
         function lib_math_list_list_cmplx_mul_list_list_cmplx(lhs, rhs) result (rv)
             implicit none
             ! dummy
@@ -3940,22 +4237,38 @@ module lib_math_type_operator
 
             ! auxiliary
             integer :: n
-            integer :: m
+
             integer :: n_min
             integer :: n_max
 
-            n_min = max(lbound(lhs%item, 1), lbound(rhs%item, 1))
-            n_max = min(ubound(lhs%item, 1), ubound(rhs%item, 1))
+            logical :: calculate
 
-            call init_list(rv, n_min, n_max - n_min + 1)
+            calculate = .false.
+            if (allocated(lhs%item) .and. allocated(rhs%item)) then
+                if (lbound(lhs%item, 1) .ge. ubound(rhs%item, 1) &
+                    .or. ubound(lhs%item, 1) .le. lbound(rhs%item, 1)) then
+                    calculate = .true.
+                else if (lbound(lhs%item, 1) .ge. lbound(rhs%item, 1) &
+                         .and. ubound(lhs%item, 1) .le. ubound(rhs%item, 1)) then
+                    calculate = .true.
+                else if (lbound(lhs%item, 1) .le. lbound(rhs%item, 1) &
+                         .and. ubound(lhs%item, 1) .ge. ubound(rhs%item, 1)) then
+                    calculate = .true.
+                end if
 
-            !$OMP PARALLEL DO PRIVATE(n, m)
-            do n=n_min, n_max
-                do m=-n, n
-                    rv%item(n)%item(m) = lhs%item(n)%item(m) * rhs%item(n)%item(m)
-                end do
-            end do
-            !$OMP END PARALLEL DO
+                if (calculate) then
+                    n_min = max(lbound(lhs%item, 1), lbound(rhs%item, 1))
+                    n_max = min(ubound(lhs%item, 1), ubound(rhs%item, 1))
+
+                    allocate(rv%item(n_min:n_max))
+
+                    !$OMP PARALLEL DO PRIVATE(n)
+                    do n=lbound(rv%item, 1), ubound(rv%item, 1)
+                        rv%item(n) = lhs%item(n) * rhs%item(n)
+                    end do
+                    !$OMP END PARALLEL DO
+                end if
+            end if
 
         end function lib_math_list_list_cmplx_mul_list_list_cmplx
 
@@ -3984,21 +4297,172 @@ module lib_math_type_operator
             integer :: n_min
             integer :: n_max
 
-            n_min = max(lbound(lhs%item, 1), lbound(rhs%item, 1))
-            n_max = min(ubound(lhs%item, 1), ubound(rhs%item, 1))
+            if (lbound(lhs%item, 1) .eq. lbound(rhs%item, 1) &
+                .and. ubound(lhs%item, 1) .eq. ubound(rhs%item, 1)) then
 
-            call init_list(rv, n_min, n_max - n_min + 1)
+                n_min = lbound(lhs%item, 1)
+                n_max = ubound(lhs%item, 1)
+
+                call init_list(rv, n_min, n_max - n_min + 1)
 
 
-            !$OMP PARALLEL DO PRIVATE(n, m)
-            do n=n_min, n_max
-                do m=-n, n
-                    rv%item(n)%item(m) = lhs%item(n) * rhs%item(n)%item(m)
+                !$OMP PARALLEL DO PRIVATE(n, m)
+                do n=n_min, n_max
+                    do m=lbound(rhs%item(n)%item, 1), ubound(rhs%item(n)%item, 1)
+                        !rv%item(n)%item(m) = lhs%item(n) * rhs%item(n)%item(m)
+                        rv%item(n)%item = lhs%item(n) * rhs%item(n)%item
+                    end do
                 end do
-            end do
-            !$OMP END PARALLEL DO
+                !$OMP END PARALLEL DO
+            else
+                print *, "lib_math_list_cmplx_mul_list_list_cmplx: ERROR"
+            end if
 
         end function lib_math_list_cmplx_mul_list_list_cmplx
+
+        ! Elementwise multiplication
+        !
+        ! HINT
+        ! ----
+        !   An uallocated list means that there are only zeros.
+        !
+        ! Arguments
+        ! ----
+        !   lhs: type(list_real)
+        !   rhs: type(list_real)
+        !
+        ! Retruns
+        ! ----
+        !   rv: type(list_real)
+        !
+        ! Note
+        ! ----
+        !   lhs:   l-----u
+        !   rhs:       l-------u
+        !
+        !   lhs:       l-------u
+        !   rhs:   l-----u
+        !
+        !
+        !   lhs:   l-----u
+        !   rhs:     l-u
+        !
+        !
+        !   lhs:     l-u
+        !   rhs:   l-----u
+        !
+        !
+        !   overlap: l.u <= r.l  or  l.l >= r.u
+        function lib_math_list_real_mul_list_real(lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            type(list_real), intent(in) :: lhs
+            type(list_real), intent(in) :: rhs
+
+            type(list_real) :: rv
+
+            ! auxiliary
+            integer :: n
+
+            integer :: n_min
+            integer :: n_max
+
+            if (allocated(lhs%item) .and. allocated(rhs%item)) then
+                if (lbound(lhs%item, 1) .ge. ubound(rhs%item, 1) &
+                    .or. ubound(lhs%item, 1) .le. lbound(rhs%item, 1)) then
+
+                    n_min = max(lbound(lhs%item, 1), lbound(rhs%item, 1))
+                    n_max = min(ubound(lhs%item, 1), ubound(rhs%item, 1))
+
+                    allocate(rv%item(n_min:n_max))
+
+                    !$OMP PARALLEL DO PRIVATE(n)
+                    do n=lbound(rv%item, 1), ubound(rv%item, 1)
+                        rv%item(n) = lhs%item(n) * rhs%item(n)
+                    end do
+                    !$OMP END PARALLEL DO
+                end if
+            end if
+
+        end function lib_math_list_real_mul_list_real
+
+        ! Elementwise multiplication
+        !
+        ! HINT
+        ! ----
+        !   An uallocated list means that there are only zeros.
+        !
+        ! Arguments
+        ! ----
+        !   lhs: type(list_cmplx)
+        !   rhs: type(list_cmplx)
+        !
+        ! Retruns
+        ! ----
+        !   rv: type(list_cmplx)
+        !
+        ! Note
+        ! ----
+        !   lhs:   l-----u
+        !   rhs:       l-------u
+        !
+        !   lhs:       l-------u
+        !   rhs:   l-----u
+        !
+        !
+        !   lhs:   l-----u
+        !   rhs:     l-u
+        !
+        !
+        !   lhs:     l-u
+        !   rhs:   l-----u
+        !
+        !
+        !   overlap: l.u <= r.l  or  l.l >= r.u
+        function lib_math_list_cmplx_mul_list_cmplx(lhs, rhs) result (rv)
+            implicit none
+            ! dummy
+            type(list_cmplx), intent(in) :: lhs
+            type(list_cmplx), intent(in) :: rhs
+
+            type(list_cmplx) :: rv
+
+            ! auxiliary
+            integer :: n
+
+            integer :: n_min
+            integer :: n_max
+
+            logical :: calculate
+
+            calculate = .false.
+            if (allocated(lhs%item) .and. allocated(rhs%item)) then
+                if (lbound(lhs%item, 1) .ge. ubound(rhs%item, 1) &
+                    .or. ubound(lhs%item, 1) .le. lbound(rhs%item, 1)) then
+                    calculate = .true.
+                else if (lbound(lhs%item, 1) .ge. lbound(rhs%item, 1) &
+                         .and. ubound(lhs%item, 1) .le. ubound(rhs%item, 1)) then
+                    calculate = .true.
+                else if (lbound(lhs%item, 1) .le. lbound(rhs%item, 1) &
+                         .and. ubound(lhs%item, 1) .ge. ubound(rhs%item, 1)) then
+                    calculate = .true.
+                end if
+
+                if (calculate) then
+                    n_min = max(lbound(lhs%item, 1), lbound(rhs%item, 1))
+                    n_max = min(ubound(lhs%item, 1), ubound(rhs%item, 1))
+
+                    allocate(rv%item(n_min:n_max))
+
+                    !$OMP PARALLEL DO PRIVATE(n)
+                    do n=lbound(rv%item, 1), ubound(rv%item, 1)
+                        rv%item(n) = lhs%item(n) * rhs%item(n)
+                    end do
+                    !$OMP END PARALLEL DO
+                end if
+            end if
+
+        end function lib_math_list_cmplx_mul_list_cmplx
 
         ! Arguments
         ! ----
@@ -4744,7 +5208,17 @@ module lib_math_type_operator
                 rv = rv + 1
             end if
 
+            if (.not. test_lib_math_list_cmplx_add()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_cmplx_mul()) then
+                rv = rv + 1
+            end if
+
             if (.not. test_lib_math_list_list_cmplx_add()) then
+                rv = rv + 1
+            end if
+            if (.not. test_lib_math_list_list_cmplx_mul()) then
                 rv = rv + 1
             end if
 
@@ -6842,6 +7316,80 @@ module lib_math_type_operator
 
                 end function test_lib_math_array_make_list_of_list_list_cmplx
 
+                function test_lib_math_list_cmplx_add() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer :: i
+                    type(list_cmplx) :: lhs
+                    type(list_cmplx) :: rhs
+                    type(list_cmplx) :: res
+
+                    allocate(lhs%item(-1:-1))
+                    lhs%item(-1) = cmplx(0, 0, kind = lib_math_type_kind)
+
+                    allocate(rhs%item(-1:1))
+                    rhs%item(-1) = cmplx(1, 0, kind = lib_math_type_kind)
+                    rhs%item( 0) = cmplx(2, 0, kind = lib_math_type_kind)
+                    rhs%item( 1) = cmplx(4, 0, kind = lib_math_type_kind)
+
+                    res = lhs + rhs
+
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cmplx_add:"
+                    do i = lbound(rhs%item, 1), ubound(rhs%item, 1)
+                        if (res%item(i) .ne. rhs%item(i)) then
+                            write(*, '(4X, A, 1X, I2, 2X, A)') "i =", i, "FAILED"
+                            rv = .false.
+                        else
+                            write(*, '(4X, A, 1X, I2, 2X, A)') "i =", i, "OK"
+                        end if
+                    end do
+
+                end function test_lib_math_list_cmplx_add
+
+                function test_lib_math_list_cmplx_mul() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer :: i
+                    type(list_cmplx) :: lhs
+                    type(list_cmplx) :: rhs
+                    type(list_cmplx) :: res
+                    type(list_cmplx) :: ground_truth_res
+
+                    allocate(lhs%item(2:2))
+                    lhs%item(2) = cmplx(2, 0, kind=lib_math_type_kind)
+
+                    allocate(rhs%item(3))
+                    rhs%item(1) = cmplx(1, 0, kind=lib_math_type_kind)
+                    rhs%item(2) = cmplx(2, 0, kind=lib_math_type_kind)
+                    rhs%item(3) = cmplx(4, 0, kind=lib_math_type_kind)
+
+                    allocate(ground_truth_res%item(2:2))
+                    ground_truth_res%item(2) = cmplx(4, 0, kind=lib_math_type_kind)
+
+                    res = lhs * rhs
+
+
+                    rv = .true.
+                    print *, "test_lib_math_list_cmplx_mul:"
+                    do i = lbound(ground_truth_res%item, 1), ubound(ground_truth_res%item, 1)
+                        if (res%item(i) .ne. ground_truth_res%item(i)) then
+                            write(*, '(4X, A, 1X, I2, 2X, A)') "i =", i, "FAILED"
+                            rv = .false.
+                        else
+                            write(*, '(4X, A, 1X, I2, 2X, A)') "i =", i, "OK"
+                        end if
+                    end do
+
+                end function test_lib_math_list_cmplx_mul
+
                 function test_lib_math_list_list_cmplx_add() result(rv)
                     implicit none
                     ! dummy
@@ -6854,21 +7402,21 @@ module lib_math_type_operator
                     type(list_list_cmplx) :: rhs
                     type(list_list_cmplx) :: res
 
-                    allocate(lhs%item(2:2))
-                    allocate(lhs%item(2)%item, source = (/dcmplx(0,0)/))
+                    allocate(lhs%item(-1:-1))
+                    allocate(lhs%item(-1)%item, source = (/dcmplx(0,0)/))
 
-                    allocate(rhs%item(3))
-                    allocate(rhs%item(1)%item, source = (/dcmplx(1, 0), dcmplx(2,0)/))
-                    allocate(rhs%item(2)%item, source = (/dcmplx(2, 0), dcmplx(3,0)/))
-                    allocate(rhs%item(3)%item, source = (/dcmplx(4, 0), dcmplx(5,0)/))
+                    allocate(rhs%item(-1:1))
+                    allocate(rhs%item(-1)%item, source = (/dcmplx(1, 0), dcmplx(2,0)/))
+                    allocate(rhs%item(0)%item, source = (/dcmplx(2, 0), dcmplx(3,0)/))
+                    allocate(rhs%item(1)%item, source = (/dcmplx(4, 0), dcmplx(5,0)/))
 
                     res = lhs + rhs
 
 
                     rv = .true.
                     print *, "test_lib_math_list_list_cmplx_add:"
-                    do i = 1, 3
-                        do ii = 1, 2
+                    do i = lbound(rhs%item, 1), ubound(rhs%item, 1)
+                        do ii = lbound(rhs%item(i)%item, 1), ubound(rhs%item(i)%item, 1)
                             if (res%item(i)%item(ii) .ne. rhs%item(i)%item(ii)) then
                                 write(*, '(4X, A, 1X, I2, 2X, A, 1X, I2, 3X, A, 1X)') "i =", i, "ii = ", ii, "FAILED"
                                 rv = .false.
@@ -6879,6 +7427,50 @@ module lib_math_type_operator
                     end do
 
                 end function test_lib_math_list_list_cmplx_add
+
+                function test_lib_math_list_list_cmplx_mul() result(rv)
+                    implicit none
+                    ! dummy
+                    logical :: rv
+
+                    ! auxiliary
+                    integer :: i
+                    integer :: ii
+                    type(list_list_cmplx) :: lhs
+                    type(list_list_cmplx) :: rhs
+                    type(list_list_cmplx) :: res
+                    type(list_list_cmplx) :: ground_truth_res
+
+                    allocate(lhs%item(2:2))
+                    allocate(lhs%item(2)%item, source = (/dcmplx(2,0)/))
+
+                    allocate(rhs%item(3))
+                    allocate(rhs%item(1)%item, source = (/dcmplx(1, 0), dcmplx(2,0)/))
+                    allocate(rhs%item(2)%item, source = (/dcmplx(2, 0), dcmplx(3,0)/))
+                    allocate(rhs%item(3)%item, source = (/dcmplx(4, 0), dcmplx(5,0)/))
+
+                    allocate(ground_truth_res%item(2:2))
+                    !allocate(ground_truth_res%item(1)%item, source = (/dcmplx(1, 0), dcmplx(2,0)/))
+                    allocate(ground_truth_res%item(2)%item, source = (/dcmplx(4, 0)/))
+                    !allocate(ground_truth_res%item(3)%item, source = (/dcmplx(4, 0), dcmplx(5,0)/))
+
+                    res = lhs * rhs
+
+
+                    rv = .true.
+                    print *, "test_lib_math_list_list_cmplx_mul:"
+                    do i = lbound(ground_truth_res%item, 1), ubound(ground_truth_res%item, 1)
+                        do ii = lbound(ground_truth_res%item(i)%item, 1), ubound(ground_truth_res%item(i)%item, 1)
+                            if (res%item(i)%item(ii) .ne. ground_truth_res%item(i)%item(ii)) then
+                                write(*, '(4X, A, 1X, I2, 2X, A, 1X, I2, 3X, A, 1X)') "i =", i, "ii = ", ii, "FAILED"
+                                rv = .false.
+                            else
+                                write(*, '(4X, A, 1X, I2, 2X, A, 1X, I2, 3X, A, 1X)') "i =", i, "ii = ", ii, "OK"
+                            end if
+                        end do
+                    end do
+
+                end function test_lib_math_list_list_cmplx_mul
 
                 function test_lib_math_get_matrix_rot() result(rv)
                     implicit none

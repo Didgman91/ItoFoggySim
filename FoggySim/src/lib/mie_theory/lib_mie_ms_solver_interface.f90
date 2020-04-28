@@ -30,7 +30,7 @@ module lib_mie_ms_solver_interface
     use lib_mie_ms_solver_interface_helper_functions
     use lib_mie_ms_ml_fmm_interface
 
-    use lib_solver_GMRES
+    use lib_math_solver_GMRES
     implicit none
 
     private
@@ -104,7 +104,7 @@ module lib_mie_ms_solver_interface
 
             m_solver_parameter = solver_parameter
 
-            m_gmres_parameter = lib_mie_ms_solver_gmres_get_parameter_std_values()
+            m_gmres_parameter = lib_math_solver_gmres_get_parameter_std_values()
             m_gmres_parameter%use_initial_guess = m_solver_parameter%use_initial_guess
             m_gmres_parameter%convergence_tolerance = m_solver_parameter%convergence_tolerance
 
@@ -146,9 +146,9 @@ module lib_mie_ms_solver_interface
             logical, intent(in), optional :: save_solution
 
             if (present(save_solution)) then
-                call lib_mie_ms_solver_gmres_run(m_gmres_parameter, m_gmres_callback, save_solution)
+                call lib_math_solver_gmres_run(m_gmres_parameter, m_gmres_callback, save_solution)
             else
-                call lib_mie_ms_solver_gmres_run(m_gmres_parameter, m_gmres_callback, .true.)
+                call lib_math_solver_gmres_run(m_gmres_parameter, m_gmres_callback, .true.)
             end if
 
         end subroutine
@@ -744,7 +744,7 @@ module lib_mie_ms_solver_interface
 #endif
             implicit none
             ! dummy
-            double complex, dimension(:), intent(in) :: vector_x
+            double complex, dimension(:), allocatable, intent(in) :: vector_x
 
             double complex, dimension(:), allocatable, intent(inout) :: vector_b
 

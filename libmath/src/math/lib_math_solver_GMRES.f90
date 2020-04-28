@@ -14,18 +14,18 @@
 !    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 !
 ! Created on Thu Jan 30 13:07:51 2020
-! 
+!
 ! @author: Max Daiber-Huppert
 !
 
-module lib_solver_GMRES
+module lib_math_solver_GMRES
 !    use libmath
     implicit none
 
     private
 
-    public :: lib_mie_ms_solver_gmres_get_parameter_std_values
-    public :: lib_mie_ms_solver_gmres_run
+    public :: lib_math_solver_gmres_get_parameter_std_values
+    public :: lib_math_solver_gmres_run
 
     public :: solver_gmres_parameter_type
     public :: solver_gmres_callback_type
@@ -50,37 +50,45 @@ module lib_solver_GMRES
     end type solver_gmres_parameter_type
 
     type solver_gmres_callback_type
-        procedure(lib_solver_gmres_get_vector_x_init), pointer, nopass :: get_vector_x_init => null()
-        procedure(lib_solver_gmres_get_vector_b), pointer, nopass :: get_vector_b => null()
-        procedure(lib_solver_gmres_calculate_vector_b), pointer, nopass :: calc_vector_b => null()
-        procedure(lib_solver_gmres_save_vector_x), pointer, nopass :: save_vector_x => null()
+#ifdef __GFORTRAN__
+        procedure(lib_math_solver_gmres_get_vector_x_init), pointer, nopass :: get_vector_x_init => null()
+        procedure(lib_math_solver_gmres_get_vector_b), pointer, nopass :: get_vector_b => null()
+        procedure(lib_math_solver_gmres_calculate_vector_b), pointer, nopass :: calc_vector_b => null()
+        procedure(lib_math_solver_gmres_save_vector_x), pointer, nopass :: save_vector_x => null()
+#else
+        procedure(lib_math_solver_gmres_get_vector_x_init), pointer :: get_vector_x_init => null()
+        procedure(lib_math_solver_gmres_get_vector_b), pointer :: get_vector_b => null()
+        procedure(lib_math_solver_gmres_calculate_vector_b), pointer :: calc_vector_b => null()
+        procedure(lib_math_solver_gmres_save_vector_x), pointer :: save_vector_x => null()
+#endif
+
     end type solver_gmres_callback_type
 
     interface
-        subroutine lib_solver_gmres_get_vector_x_init(vector)
+        subroutine lib_math_solver_gmres_get_vector_x_init(vector)
             implicit none
             ! dummy
             double complex, dimension(:), allocatable, intent(inout) :: vector
-        end subroutine lib_solver_gmres_get_vector_x_init
+        end subroutine lib_math_solver_gmres_get_vector_x_init
 
-        subroutine lib_solver_gmres_get_vector_b(vector)
+        subroutine lib_math_solver_gmres_get_vector_b(vector)
             implicit none
             ! dummy
             double complex, dimension(:), allocatable, intent(inout) :: vector
-        end subroutine lib_solver_gmres_get_vector_b
+        end subroutine lib_math_solver_gmres_get_vector_b
 
-        subroutine lib_solver_gmres_calculate_vector_b(vector_x, vector_b)
+        subroutine lib_math_solver_gmres_calculate_vector_b(vector_x, vector_b)
             implicit none
             ! dummy
             double complex, dimension(:), allocatable, intent(in) :: vector_x
             double complex, dimension(:), allocatable, intent(inout) :: vector_b
-        end subroutine lib_solver_gmres_calculate_vector_b
+        end subroutine lib_math_solver_gmres_calculate_vector_b
 
-        subroutine lib_solver_gmres_save_vector_x(vector)
+        subroutine lib_math_solver_gmres_save_vector_x(vector)
             implicit none
             ! dummy
             double complex, dimension(:), allocatable, intent(in) :: vector
-        end subroutine lib_solver_gmres_save_vector_x
+        end subroutine lib_math_solver_gmres_save_vector_x
 
     end interface
 
@@ -90,7 +98,7 @@ module lib_solver_GMRES
         ! ----
         !   rv: type(solver_gmres_parameter_type)
         !       default values of the GMRES solver
-        function lib_mie_ms_solver_gmres_get_parameter_std_values() result(rv)
+        function lib_math_solver_gmres_get_parameter_std_values() result(rv)
             implicit none
             ! dummy
             type(solver_gmres_parameter_type) :: rv
@@ -103,7 +111,7 @@ module lib_solver_GMRES
             rv%use_recurence_formula_at_restart = .false.
             rv%residual_calc_explicitly = .true.
 
-        end function lib_mie_ms_solver_gmres_get_parameter_std_values
+        end function lib_math_solver_gmres_get_parameter_std_values
 
         ! Argument
         ! ----
@@ -113,7 +121,7 @@ module lib_solver_GMRES
         !       dataset of the simulation
         !   save_solution: logical, optional (std: .true.)
         !       true: save solution x into simulation_data
-        subroutine lib_mie_ms_solver_gmres_run(gmres_parameter, gmres_callback, save_solution)
+        subroutine lib_math_solver_gmres_run(gmres_parameter, gmres_callback, save_solution)
             implicit none
             ! dummy
             type(solver_gmres_parameter_type), intent(inout) :: gmres_parameter
@@ -259,14 +267,14 @@ module lib_solver_GMRES
                 else if (revcom.eq.precondLeft) then
                     ! perform the left preconditioning
                     !         work(colz) <-- M^{-1} * work(colx)
-                    print *, "lib_mie_ms_solver_gmres_run_without_ml_fmm: ERROR"
+                    print *, "lib_math_solver_gmres_run_without_ml_fmm: ERROR"
                     print *, "  no preconditioning (left), but required"
 
                     exit
 
                 else if (revcom.eq.precondRight) then
                     ! perform the right preconditioning
-                    print *, "lib_mie_ms_solver_gmres_run_without_ml_fmm: ERROR"
+                    print *, "lib_math_solver_gmres_run_without_ml_fmm: ERROR"
                     print *, "  no preconditioning (right), but required"
 
                     exit
@@ -315,7 +323,7 @@ module lib_solver_GMRES
                 call gmres_callback%save_vector_x(vector)
             end if
 
-        end subroutine lib_mie_ms_solver_gmres_run
+        end subroutine lib_math_solver_gmres_run
 
         subroutine GMRES_test()
             implicit none
@@ -503,4 +511,4 @@ module lib_solver_GMRES
             end do
     end subroutine
 
-end module lib_solver_GMRES
+end module lib_math_solver_GMRES

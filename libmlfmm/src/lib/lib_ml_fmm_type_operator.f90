@@ -519,11 +519,11 @@ module lib_ml_fmm_type_operator
             use ml_fmm_type
             implicit none
             ! dummy
-            type(lib_tree_data_element), intent(inout) :: data_element_y_j
-            integer(kind=CORRESPONDENCE_VECTOR_KIND) :: element_number_j
-            type(lib_tree_data_element), dimension(:), allocatable, intent(inout) :: data_element_e2
-            integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number_e2
-            type(lib_ml_fmm_coefficient), intent(inout) :: D
+            type(lib_tree_data_element), intent(in) :: data_element_y_j
+            integer(kind=CORRESPONDENCE_VECTOR_KIND), intent(in) :: element_number_j
+            type(lib_tree_data_element), dimension(:), allocatable, intent(in) :: data_element_e2
+            integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable, intent(in) :: element_number_e2
+            type(lib_ml_fmm_coefficient), intent(in) :: D
 
             type(lib_ml_fmm_v) :: rv
 

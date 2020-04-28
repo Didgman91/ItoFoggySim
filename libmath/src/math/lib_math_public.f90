@@ -26,6 +26,7 @@ module lib_math_public
     use lib_math_legendre
     use lib_math_hermite
     use lib_math_solver
+    use lib_math_solver_GMRES
     use lib_math_type
     use lib_math_type_operator
 #ifdef __GFORTRAN__
