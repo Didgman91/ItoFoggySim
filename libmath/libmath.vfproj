@@ -54,6 +54,7 @@
 		<File RelativePath=".\src\math\lib_math_legendre.f90"/>
 		<File RelativePath=".\src\math\lib_math_public.f90"/>
 		<File RelativePath=".\src\math\lib_math_solver.f90"/>
+		<File RelativePath=".\src\math\lib_math_solver_GMRES.f90"/>
 		<File RelativePath=".\src\math\lib_math_type.f90"/>
 		<File RelativePath=".\src\math\lib_math_type_operator.f90"/></Filter>
 		<File RelativePath="src\libmath.f90"/></Filter></Files>

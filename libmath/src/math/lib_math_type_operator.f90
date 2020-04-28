@@ -115,10 +115,6 @@ module lib_math_type_operator
         module procedure lib_math_list_spherical_operator_sub_array_cmplx
         module procedure lib_math_list_spherical_operator_array_sub_0d_cmplx
 
-        ! array
-        module procedure lib_math_real_array_sub
-        module procedure lib_math_cmplx_array_sub
-
         ! list
         module procedure lib_math_list_real_sub
         module procedure lib_math_list_cmplx_sub
@@ -3764,7 +3760,7 @@ module lib_math_type_operator
 
             else if (allocated(lhs%item)) then
                 rv%item = lhs%item
-            else if (allocated(rhs)) then
+            else if (allocated(rhs%item)) then
                 rv%item = -1 * rhs%item
             else
                 print *, "lib_math_list_real_sub: ERROR"

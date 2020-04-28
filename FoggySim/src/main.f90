@@ -39,12 +39,12 @@ program main
     use lib_field_plane_wave
     use lib_field_gaussian_beam
 
-    use lib_mie_single_sphere
-    use lib_mie_ss_helper_functions
+    !use lib_mie_single_sphere
+    !use lib_mie_ss_helper_functions
 
-    use lib_mie_ms_solver_interface_helper_functions
-    use lib_mie_multi_sphere
-    use lib_mie_ms_solver_interface
+    !use lib_mie_ms_solver_interface_helper_functions
+    !use lib_mie_multi_sphere
+    !use lib_mie_ms_solver_interface
 
     use light_scattering
     implicit none
@@ -79,9 +79,9 @@ program main
 !        npnts = 10
 !   call S2(1, 2*3.14159265358979*10, 1.33, 0.0, 10)
 !    call S2(1, 20.0, 1.50, 0.0, 10)
-    call S2(1, 20.0, 1.28, 1.37, 10)
+    !call S2(1, 20.0, 1.28, 1.37, 10)
 
-    call test_file_io
+    !call test_file_io
 
 !    call OMP_set_num_threads(16)
 !    call OMP_set_nested(.true.)
@@ -92,7 +92,7 @@ program main
 
    error_counter = 0
 !   error_counter = error_counter + lib_scene_generator_test_functions()
-!    error_counter = error_counter + test_lib_math()
+    error_counter = error_counter + test_lib_math()
 !    error_counter = error_counter + lib_sort_test_functions()
 !    error_counter = error_counter + lib_test_hash_function()
 !    error_counter = error_counter + lib_tree_hf_test_functions()
@@ -108,7 +108,7 @@ program main
 !    error_counter = error_counter + lib_mie_single_sphere_test_functions()
 !    error_counter = error_counter + lib_mie_ms_solver_interface_hf_helper_functions()
 !    error_counter = error_counter + lib_mie_ms_solver_interface_test_functions()
-    error_counter = error_counter + lib_mie_multi_sphere_test_functions()
+!    error_counter = error_counter + lib_mie_multi_sphere_test_functions()
 
 !    call lib_tree_benchmark
 !    call lib_mie_ss_helper_functions_benchmark

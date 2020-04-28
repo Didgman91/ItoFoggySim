@@ -50,18 +50,10 @@ module lib_math_solver_GMRES
     end type solver_gmres_parameter_type
 
     type solver_gmres_callback_type
-#ifdef __GFORTRAN__
         procedure(lib_math_solver_gmres_get_vector_x_init), pointer, nopass :: get_vector_x_init => null()
         procedure(lib_math_solver_gmres_get_vector_b), pointer, nopass :: get_vector_b => null()
         procedure(lib_math_solver_gmres_calculate_vector_b), pointer, nopass :: calc_vector_b => null()
         procedure(lib_math_solver_gmres_save_vector_x), pointer, nopass :: save_vector_x => null()
-#else
-        procedure(lib_math_solver_gmres_get_vector_x_init), pointer :: get_vector_x_init => null()
-        procedure(lib_math_solver_gmres_get_vector_b), pointer :: get_vector_b => null()
-        procedure(lib_math_solver_gmres_calculate_vector_b), pointer :: calc_vector_b => null()
-        procedure(lib_math_solver_gmres_save_vector_x), pointer :: save_vector_x => null()
-#endif
-
     end type solver_gmres_callback_type
 
     interface
