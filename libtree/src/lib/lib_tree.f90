@@ -467,9 +467,15 @@ module lib_tree
         ! dummy arguments
         type(lib_tree_universal_index), intent (in) :: uindex
         integer(kind=UINDEX_BYTES) :: k
-        type(lib_tree_universal_index), dimension(3**TREE_DIMENSIONS-1) :: rv
+        type(lib_tree_universal_index), dimension(:), allocatable :: rv
 
-        rv(:)%n = lib_tree_hf_get_neighbour_all_xD(k, uindex%n, uindex%l)
+        ! auxiliary
+        integer(kind=UINDEX_BYTES), dimension(:), allocatable :: neighbours
+
+        neighbours = lib_tree_hf_get_neighbour_all_xD(k, uindex%n, uindex%l)
+
+        allocate(rv(lbound(neighbours, 1):ubound(neighbours, 1)))
+        rv(:)%n = neighbours
         rv(:)%l = uindex%l
 
     end function lib_tree_get_neighbours
@@ -628,79 +634,34 @@ module lib_tree
         type(lib_tree_data_element), dimension(:), allocatable :: rv
 
         ! auxiliar
-        integer(kind=UINDEX_BYTES) :: number_of_boxes
-        type(lib_tree_universal_index), dimension(:, :), allocatable :: buffer_uindex
         integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: buffer_element_number
-!        integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number_temp
-        type(lib_tree_universal_index), dimension(:), allocatable :: buffer_uindex_reduced
-        type(lib_tree_universal_index), dimension(:), allocatable :: buffer_uindex_reduced_temp
+        type(lib_tree_universal_index), dimension(:), allocatable :: neighbours
+        type(lib_tree_universal_index), dimension(:), allocatable :: boxes
         type(lib_tree_data_element), dimension(:), allocatable :: buffer_data_element_list
         type(lib_tree_data_element), dimension(:), allocatable :: buffer_rv
 
         integer(kind=UINDEX_BYTES) :: i
-        integer(kind=UINDEX_BYTES) :: ii
-!        integer(kind=UINDEX_BYTES) :: index_number
 
         ! get all neighbours
-        allocate(buffer_uindex(k, 3**TREE_DIMENSIONS-1))
-        !$OMP PARALLEL DO PRIVATE(i)
-        do i=1, k
-            buffer_uindex(i, :) = lib_tree_get_neighbours(i, uindex)
-        end do
-        !$OMP END PARALLEL DO
+        neighbours = lib_tree_get_neighbours(k, uindex)
+        allocate(boxes(lbound(neighbours, 1)-1:ubound(neighbours, 1)))
+        boxes(lbound(neighbours, 1)-1) = uindex
+        boxes(lbound(neighbours, 1):ubound(neighbours, 1)) = neighbours
 
-
-        ! reduce neigbours list (remove invalide universal indices)
-        allocate(buffer_uindex_reduced_temp(k*(3**TREE_DIMENSIONS-1) + 1))
-        number_of_boxes = 1
-        buffer_uindex_reduced_temp(number_of_boxes) = uindex
-        do i=1, k
-            do ii=1, 3**TREE_DIMENSIONS-1
-                if (buffer_uindex(i,ii)%n .ne. TREE_BOX_IGNORE_ENTRY) then
-                    number_of_boxes = number_of_boxes + 1
-                    buffer_uindex_reduced_temp(number_of_boxes) = buffer_uindex(i,ii)
-                end if
-            end do
-        end do
-
-        ! clean up
-        if (allocated(buffer_uindex)) then
-            deallocate (buffer_uindex)
-        end if
-
-        allocate(buffer_uindex_reduced(number_of_boxes))
-        buffer_uindex_reduced = buffer_uindex_reduced_temp(:number_of_boxes)
-
-        ! clean up
-        if (allocated(buffer_uindex_reduced_temp)) then
-            deallocate (buffer_uindex_reduced_temp)
-        end if
+        if (allocated(neighbours)) deallocate(neighbours)
 
         ! get data elements
-        do i=1, number_of_boxes
-            buffer_data_element_list = lib_tree_get_domain_e1(buffer_uindex_reduced(i), buffer_element_number)
+        do i = lbound(boxes, 1), ubound(boxes, 1)
+            buffer_data_element_list = lib_tree_get_domain_e1(boxes(i), buffer_element_number)
 !            if (allocated(buffer_rv)) then
                 if ((allocated(buffer_data_element_list)) .and. (size(buffer_data_element_list).gt. 0)) then
 
                     call concatenate(buffer_rv, buffer_data_element_list)
-!                    index_number = size(buffer_rv) + 1
-!                    call reallocate(buffer_rv, size(buffer_data_element_list))  ! check replacement
-!                    buffer_rv(index_number:) = buffer_data_element_list
                 end if
 
                 ! copy buffer_element_number into element_number
                 if ((allocated(buffer_element_number)) .and. (size(buffer_element_number).gt. 0)) then
-
                     call concatenate(element_number, buffer_element_number)
-!                    allocate(element_number_temp(size(element_number)))
-!                    element_number_temp = element_number
-!
-!                    ii = size(buffer_element_number) + size(element_number)
-!                    deallocate(element_number)
-!                    allocate(element_number(ii))
-!                    ii = size(element_number_temp)
-!                    element_number(:ii) = element_number_temp
-!                    element_number(ii+1:) = buffer_element_number
                 end if
 
                 if (allocated(buffer_element_number)) then
@@ -709,15 +670,11 @@ module lib_tree
                 if (allocated(buffer_data_element_list)) then
                     deallocate (buffer_data_element_list)
                 end if
-!            else
-!                call move_alloc(buffer_element_number, element_number)
-!                call move_alloc(buffer_data_element_list, buffer_rv)
-!            end if
         end do
 
         ! clean up
-        if (allocated(buffer_uindex_reduced)) then
-            deallocate (buffer_uindex_reduced)
+        if (allocated(boxes)) then
+            deallocate (boxes)
         end if
 
         call move_alloc(buffer_rv, rv)
@@ -902,48 +859,9 @@ module lib_tree
         integer(kind=UINDEX_BYTES), intent (in) :: k
         type(lib_tree_universal_index), dimension(:), allocatable :: uindex_i2
 
-        ! auxiliary
-        integer(kind=UINDEX_BYTES) :: number_of_boxes
-        type(lib_tree_universal_index), dimension(:, :), allocatable :: buffer_uindex
-        type(lib_tree_universal_index), dimension(:), allocatable :: buffer_uindex_reduced_temp
 
-        integer(kind=UINDEX_BYTES) :: i
-        integer(kind=UINDEX_BYTES) :: ii
+        uindex_i2 = lib_tree_get_neighbours(k, uindex)
 
-        ! get all neighbours
-        allocate(buffer_uindex(k, 3**TREE_DIMENSIONS-1))
-        !$OMP PARALLEL DO PRIVATE(i)
-        do i=1, k
-            buffer_uindex(i, :) = lib_tree_get_neighbours(i, uindex)
-        end do
-        !$OMP END PARALLEL DO
-
-
-        ! reduce neigbours list (remove invalide universal indices)
-        allocate(buffer_uindex_reduced_temp(k*(3**TREE_DIMENSIONS-1) + 1))
-        number_of_boxes = 1
-        buffer_uindex_reduced_temp(number_of_boxes) = uindex
-        do i=1, k
-            do ii=1, 3**TREE_DIMENSIONS-1
-                if (buffer_uindex(i,ii)%n .ne. TREE_BOX_IGNORE_ENTRY) then
-                    number_of_boxes = number_of_boxes + 1
-                    buffer_uindex_reduced_temp(number_of_boxes) = buffer_uindex(i,ii)
-                end if
-            end do
-        end do
-
-        ! clean up
-        if (allocated(buffer_uindex)) then
-            deallocate (buffer_uindex)
-        end if
-
-        allocate(uindex_i2(number_of_boxes))
-        uindex_i2 = buffer_uindex_reduced_temp(:number_of_boxes)
-
-        ! clean up
-        if (allocated(buffer_uindex_reduced_temp)) then
-            deallocate (buffer_uindex_reduced_temp)
-        end if
     end function lib_tree_get_domain_i2
 
     function lib_tree_get_domain_i3(uindex, k) result(uindex_i3)
@@ -1814,6 +1732,10 @@ module lib_tree
             error_counter = error_counter + 1
         end if
         call lib_tree_destructor()
+        if (.not. test_lib_tree_get_domain_e2_2()) then
+            error_counter = error_counter + 1
+        end if
+        call lib_tree_destructor()
         if (.not. test_lib_tree_get_domain_e3()) then
             error_counter = error_counter + 1
         end if
@@ -2177,6 +2099,128 @@ module lib_tree
                 deallocate (element_number)
             end if
         end function test_lib_tree_get_domain_e2
+
+        function test_lib_tree_get_domain_e2_2() result(rv)
+            implicit none
+            ! dummy
+            logical :: rv
+
+            integer(kind=4), parameter :: list_length = 10**1
+
+            integer(kind=1), parameter :: l_th = 4 ! threshold level
+            type(lib_tree_data_element), dimension(list_length) :: element_list
+            integer(kind=2) :: margin
+
+            integer(kind=4) :: i
+            integer(kind=4) :: number
+
+            type(lib_tree_universal_index) :: uindex
+            integer(kind=UINDEX_BYTES) :: k
+            type(lib_tree_data_element), dimension(:), allocatable :: domain_element_list
+            integer(kind=CORRESPONDENCE_VECTOR_KIND), dimension(:), allocatable :: element_number
+
+            type(lib_tree_data_element), dimension(:), allocatable :: ground_truth_element_list
+            integer :: ground_truth_number_of_elements
+            integer :: number_of_elements
+            ! ---- create correspondece vector ----
+
+            margin = 300
+
+
+#if (_FMM_DIMENSION_ == 2)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = (0.999 * i)/(1.0*list_length)
+            end do
+            ground_truth_number_of_elements = 8
+            allocate(ground_truth_element_list(ground_truth_number_of_elements))
+            do i=1, ground_truth_number_of_elements
+                ground_truth_element_list(i) = element_list(i)
+            end do
+#elif (_FMM_DIMENSION_ == 3)
+            do i=1, list_length
+                element_list(i)%point_x%x(1) = (0.9 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(2) = (0.9 * i)/(1.0*list_length)
+                element_list(i)%point_x%x(3) = (0.9 * i)/(1.0*list_length)
+            end do
+            ground_truth_number_of_elements = 8
+            allocate(ground_truth_element_list(ground_truth_number_of_elements))
+            do i=1, ground_truth_number_of_elements
+                ground_truth_element_list(i) = element_list(i)
+            end do
+#endif
+            element_list(:)%element_type = 1
+
+            lib_tree_data_element_list = element_list
+            call lib_tree_create_correspondence_vector(l_th, margin)
+
+            number = 0
+            do i=1, size(lib_tree_correspondence_vector)
+                if (lib_tree_correspondence_vector(i)%number_of_hash_runs .ne. 0) then
+                    number = number + 1
+                end if
+            end do
+
+            if (number .ne. list_length) then
+                rv = .false.
+                print *, "test_lib_tree_get_domain_e2_create_correspondence_vector: FAILD"
+                print *, "  number of data points: ", list_length
+                print *, "  max number of hash runs: ", lib_tree_max_number_of_hash_runs
+                print *, "  number is NOT equal to list_length "
+                print *, "  number: ", number
+                print *, "  list_length: ", list_length
+                print *, "    -> ", 1.0*number / list_length, "%"
+
+                return
+            end if
+
+            ! ---- test get_domain_e2 ----
+            uindex%n = 0
+            uindex%l = 2
+            k = 2
+
+            domain_element_list = lib_tree_get_domain_e2(k,uindex, element_number)
+
+            print *, "test_lib_tree_get_domain_e2:"
+            rv = .true.
+            if (allocated(domain_element_list)) then
+                number_of_elements = size(domain_element_list)
+
+                if (number_of_elements .eq. ground_truth_number_of_elements) then
+                    do i=1, size(domain_element_list)
+                        if ((ground_truth_element_list(i)%point_x%x(1) .eq. domain_element_list(i)%point_x%x(1)) .and. &
+                            (ground_truth_element_list(i)%point_x%x(2) .eq. domain_element_list(i)%point_x%x(2))) then
+                            rv = .true.
+                            print *, "   ", i, ": OK"
+                        else
+                            rv = .false.
+                            print *, "   ", i, ": FAILED"
+                        end if
+                    end do
+                else
+                    rv = .false.
+                    print *, "   number of domain elements is NOT equal with the ground truth"
+                    print *, "   number of domain elements: ", size(domain_element_list)
+                    print *, "   number of ground truth elements: ", size(ground_truth_element_list)
+                end if
+            else
+                rv = .false.
+                print *, "   number of domain elements is NOT equal with the ground truth"
+                print *, "   number of domain elements: ", 0
+                print *, "   number of ground truth elements: ", size(ground_truth_element_list)
+            end if
+
+            ! clean up
+            if (allocated(ground_truth_element_list)) then
+                deallocate (ground_truth_element_list)
+            end if
+            if (allocated(domain_element_list)) then
+                deallocate (domain_element_list)
+            end if
+            if (allocated(element_number)) then
+                deallocate (element_number)
+            end if
+        end function test_lib_tree_get_domain_e2_2
 
         function test_lib_tree_get_domain_e3() result(rv)
             implicit none
