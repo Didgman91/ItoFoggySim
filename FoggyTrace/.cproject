@@ -53,6 +53,8 @@
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/librayrender/Debug}&quot;"/>
                                     									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libscene/Debug}&quot;"/>
+                                    									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libtoolbox/Debug}&quot;"/>
                                     								
                                 </option>
@@ -71,6 +73,8 @@
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/librayrender/Debug}&quot;"/>
                                     									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libscene/Debug}&quot;"/>
+                                    									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/libtoolbox/Debug}&quot;"/>
                                     								
                                 </option>
@@ -79,11 +83,13 @@
                                     									
                                     <listOptionValue builtIn="false" value="rayrender"/>
                                     									
+                                    <listOptionValue builtIn="false" value="scene"/>
+                                    									
                                     <listOptionValue builtIn="false" value="toolbox"/>
                                     								
                                 </option>
                                 								
-                                <option id="gnu.fortran.link.option.ldflags.1827930718" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-fopenmp -Wl,-rpath=&quot;${workspace_loc:/librayrender/Debug}&quot; -Wl,-rpath=&quot;${workspace_loc:/libtoolbox/Debug}&quot;" valueType="string"/>
+                                <option id="gnu.fortran.link.option.ldflags.1827930718" name="Linker flags" superClass="gnu.fortran.link.option.ldflags" useByScannerDiscovery="false" value="-fopenmp -Wl,-rpath=&quot;${workspace_loc:/librayrender/Debug}&quot; -Wl,-rpath=&quot;${workspace_loc:/libtoolbox/Debug}&quot; -Wl,-rpath=&quot;${workspace_loc:/libscene/Debug}&quot;" valueType="string"/>
                                 								
                                 <inputType id="photran.managedbuild.tool.gnu.fortran.linker.input.694377428" superClass="photran.managedbuild.tool.gnu.fortran.linker.input">
                                     									
