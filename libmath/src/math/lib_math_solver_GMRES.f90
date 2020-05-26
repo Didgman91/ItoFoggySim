@@ -36,6 +36,12 @@ module lib_math_solver_GMRES
     integer, parameter, public :: GMRES_ORTHOGONALIZATION_SCHEME_CGS = 2
     integer, parameter, public :: GMRES_ORTHOGONALIZATION_SCHEME_ICGS = 3
 
+    integer, parameter, public :: GMRES_PRECONDITIONING_NO = 0
+    integer, parameter, public :: GMRES_PRECONDITIONING_LEFT = 1
+    integer, parameter, public :: GMRES_PRECONDITIONING_RIGHT = 2
+    integer, parameter, public :: GMRES_PRECONDITIONING_DOUBLE_SIDE = 3
+    integer, parameter, public :: GMRES_PRECONDITIONING_ERROR = 4
+
     type solver_gmres_parameter_type
         integer :: max_iterations
         integer :: restart
@@ -46,6 +52,8 @@ module lib_math_solver_GMRES
         logical :: residual_calc_explicitly
         integer :: no_of_elements_vector_x
 
+        integer :: preconditioning
+
         double precision :: backward_error
     end type solver_gmres_parameter_type
 
@@ -54,6 +62,8 @@ module lib_math_solver_GMRES
         procedure(lib_math_solver_gmres_get_vector_b), pointer, nopass :: get_vector_b => null()
         procedure(lib_math_solver_gmres_calculate_vector_b), pointer, nopass :: calc_vector_b => null()
         procedure(lib_math_solver_gmres_save_vector_x), pointer, nopass :: save_vector_x => null()
+        procedure(lib_math_solver_gmres_preconditioner_left), pointer, nopass :: preconditioner_left => null()
+        procedure(lib_math_solver_gmres_preconditioner_right), pointer, nopass :: preconditioner_right => null()
     end type solver_gmres_callback_type
 
     interface
@@ -82,6 +92,20 @@ module lib_math_solver_GMRES
             double complex, dimension(:), allocatable, intent(in) :: vector
         end subroutine lib_math_solver_gmres_save_vector_x
 
+        subroutine lib_math_solver_gmres_preconditioner_left(vector_1, vector_2)
+            implicit none
+            ! dummy
+            double complex, dimension(:), allocatable, intent(in) :: vector_1
+            double complex, dimension(:), allocatable, intent(out) :: vector_2
+        end subroutine
+
+        subroutine lib_math_solver_gmres_preconditioner_right(vector_1, vector_2)
+            implicit none
+            ! dummy
+            double complex, dimension(:), allocatable, intent(in) :: vector_1
+            double complex, dimension(:), allocatable, intent(out) :: vector_2
+        end subroutine
+
     end interface
 
     contains
@@ -102,6 +126,7 @@ module lib_math_solver_GMRES
             rv%orthogonalization_scheme = GMRES_ORTHOGONALIZATION_SCHEME_MGS
             rv%use_recurence_formula_at_restart = .false.
             rv%residual_calc_explicitly = .true.
+            rv%preconditioning = GMRES_PRECONDITIONING_NO
 
         end function lib_math_solver_gmres_get_parameter_std_values
 
@@ -211,7 +236,7 @@ module lib_math_solver_GMRES
             icntl(7) = gmres_parameter%max_iterations
 
             ! preconditioner location
-            icntl(4) = 0
+            icntl(4) = gmres_parameter%preconditioning
             ! orthogonalization scheme
             icntl(5)=gmres_parameter%orthogonalization_scheme
             ! initial guess
@@ -259,17 +284,35 @@ module lib_math_solver_GMRES
                 else if (revcom.eq.precondLeft) then
                     ! perform the left preconditioning
                     !         work(colz) <-- M^{-1} * work(colx)
-                    print *, "lib_math_solver_gmres_run_without_ml_fmm: ERROR"
-                    print *, "  no preconditioning (left), but required"
 
-                    exit
+                    if (associated(gmres_callback%preconditioner_left)) then
+                        vector_2 = work(colx:colx+lda-1)
+                        call gmres_callback%preconditioner_left(vector_2, vector)
+                        work(colz:colz+lda-1) = vector
+
+                        cycle
+                    else
+                        print *, "lib_math_solver_gmres_run_without_ml_fmm: ERROR"
+                        print *, "  no preconditioning (left), but required"
+
+                        exit
+                    end if
 
                 else if (revcom.eq.precondRight) then
                     ! perform the right preconditioning
-                    print *, "lib_math_solver_gmres_run_without_ml_fmm: ERROR"
-                    print *, "  no preconditioning (right), but required"
 
-                    exit
+                    if (associated(gmres_callback%preconditioner_right)) then
+                        vector_2 = work(colx:colx+lda-1)
+                        call gmres_callback%preconditioner_right(vector_2, vector)
+                        work(colz:colz+lda-1) = vector
+
+                        cycle
+                    else
+                        print *, "lib_math_solver_gmres_run_without_ml_fmm: ERROR"
+                        print *, "  no preconditioning (right), but required"
+
+                        exit
+                    end if
 
                 else if (revcom.eq.dotProd) then
                     ! perform the scalar product
