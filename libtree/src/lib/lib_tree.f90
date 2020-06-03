@@ -859,8 +859,15 @@ module lib_tree
         integer(kind=UINDEX_BYTES), intent (in) :: k
         type(lib_tree_universal_index), dimension(:), allocatable :: uindex_i2
 
+        ! auxiliary
+        type(lib_tree_universal_index), dimension(:), allocatable :: m_uindex_i2
 
-        uindex_i2 = lib_tree_get_neighbours(k, uindex)
+        m_uindex_i2 = lib_tree_get_neighbours(k, uindex)
+        allocate(uindex_i2(size(m_uindex_i2) + 1))
+        uindex_i2(1) = uindex
+        uindex_i2(2:size(m_uindex_i2)+1) = m_uindex_i2(:)
+
+        deallocate(m_uindex_i2)
 
     end function lib_tree_get_domain_i2
 
@@ -2132,7 +2139,7 @@ module lib_tree
                 element_list(i)%point_x%x(1) = (0.999 * i)/(1.0*list_length)
                 element_list(i)%point_x%x(2) = (0.999 * i)/(1.0*list_length)
             end do
-            ground_truth_number_of_elements = 8
+            ground_truth_number_of_elements = 7
             allocate(ground_truth_element_list(ground_truth_number_of_elements))
             do i=1, ground_truth_number_of_elements
                 ground_truth_element_list(i) = element_list(i)
@@ -2584,7 +2591,7 @@ module lib_tree
             ! |       |       |       |    *  |  X: uindex
             ! ---------------------------------  *: ground_truth_uindex_i4
             uindex%n = 3
-            uindex%l = 3
+            uindex%l = 2
             k = 1
             allocate(uindex_i4, source=lib_tree_get_domain_i4(uindex, k))
 
